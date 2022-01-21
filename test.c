@@ -2,7 +2,7 @@
 #include <stdbool.h>
 
 #include "term.h"
-#include "tokenizer.h"
+#include "token.h"
 #include "util.h"
 #include "vec.h"
 

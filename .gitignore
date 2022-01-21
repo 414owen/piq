@@ -1,2 +1,6 @@
 .direnv/
 .gdb_history
+test
+*.out
+*.so
+*.o
