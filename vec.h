@@ -1,5 +1,8 @@
+#pragma once
+
 #include <stdint.h>
 #include <assert.h>
+
 #include "util.h"
 
 #define VEC_DECL(type) typedef struct { uint32_t len; uint32_t cap; type *data; } vec_ ## type;

@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <ctype.h>
 
+#include "consts.h"
 #include "token.h"
 
 static BUF_IND_T skip_ws(char *buf, BUF_IND_T pos) {
