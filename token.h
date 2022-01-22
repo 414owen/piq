@@ -1,6 +1,10 @@
+#pragma once
+
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "consts.h"
+#include "source.h"
 
 typedef enum {
   T_OPEN_PAREN,
@@ -8,6 +12,7 @@ typedef enum {
   T_NAME,
   T_INT,
   T_COMMA,
+  T_EOF,
 } token_type;
 
 typedef struct {
@@ -16,4 +21,12 @@ typedef struct {
   BUF_IND_T end;
 } token;
 
-token scan(char *buf, BUF_IND_T pos);
+typedef struct {
+  bool succeeded;
+  union {
+    token token;
+    char *error;
+  };
+} token_res;
+
+token_res scan(source_file file, BUF_IND_T pos);

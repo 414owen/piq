@@ -19,7 +19,11 @@ typedef struct {
     // parens
     struct {
       uint16_t sub_num;
-      struct parse_ast *sub;
+      uint32_t *subs;
     };
   };
-} parse_ast;
+} parse_ast_node;
+
+VEC_DECL(parse_ast_node);
+
+typedef vec_parse_ast_node parse_ast;

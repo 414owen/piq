@@ -1,3 +1,6 @@
+#define _GNU_SOURCE
+
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -40,9 +43,6 @@ static void test_group_end(test_state *state) {
   VEC_POP(&state->path);
 }
 
-static char *test_parens = "()";
-static token_type test_paren_tokens[] = {T_OPEN_PAREN, T_CLOSE_PAREN};
-
 static vec_string make_test_path(test_state *state) {
   vec_string path = VEC_CLONE(&state->path);
   VEC_PUSH(&path, state->current_name);
@@ -55,12 +55,18 @@ static char *ne_reason(char *a_name, char *b_name) {
   return res;
 }
 
+static void fail_with(test_state *state, char *reason) {
+  state->current_failed = true;
+  failure f = { .path = make_test_path(state), .reason = reason };
+  VEC_PUSH(&state->failures, f);
+}
+
+static void test_fail_eq(test_state *state, char *a, char *b) {
+  fail_with(state, ne_reason(a, b));
+}
+
 #define test_assert_eq(state, a, b) \
-  if ((a) != (b)) { \
-    state->current_failed = true; \
-    failure f = { .path = make_test_path(state), .reason = ne_reason(#a, #b) }; \
-    VEC_PUSH(&state->failures, f); \
-  }
+  if ((a) != (b)) test_fail_eq(state, #a, #b);
 
 static void test_start(test_state *state, char *name) {
   print_depth_indent(state);
@@ -73,20 +79,105 @@ static void test_end(test_state *state) {
   printf(" %s" RESET "\n", state->current_failed ? RED "❌" : GRN "✓");
 }
 
-static void test_scanner_parens(test_state *state) {
-  test_start(state, "Parens");
+static void test_scanner_tokens(test_state *state, char *buf, size_t token_amt, const token_type *tokens) {
   BUF_IND_T ind = 0;
-  for (int i = 0; i < STATIC_LEN(test_paren_tokens); i++) {
-    token t = scan(test_parens, ind);
-    test_assert_eq(state, t.type, test_paren_tokens[i]);
-    ind = t.end + 1;
+  source_file file = { .path = "TEST", .data = buf };
+  for (int i = 0; i < token_amt; i++) {
+    token_res t = scan(file, ind);
+    test_assert_eq(state, t.succeeded, true);
+    if (state->current_failed) break;
+    test_assert_eq(state, t.token.type, tokens[i]);
+    ind = t.token.end + 1;
   }
-  test_end(state);
+}
+
+static void failf(test_state *state, const char *restrict fmt, ...) {
+  char *err;
+	va_list ap;
+	va_start(ap, fmt);
+	vasprintf(&err, fmt, ap);
+  fail_with(state, err);
+	va_end(ap);
+}
+
+
+static void test_scanner_fails(test_state *state, char *buf, char *err) {
+  BUF_IND_T ind = 0;
+  source_file file = { .path = "TEST", .data = buf };
+  bool seen_failure = true;
+  for (;;) {
+    token_res t = scan(file, ind);
+    if (t.succeeded) {
+      if (t.token.type == T_EOF) break;
+      ind = t.token.end + 1;
+      continue;
+    }
+    seen_failure = true;
+    if (t.error != err) failf(state, "Wrong tokenizer error. Expected:\n%s\bGot:\n%s", err, t.error);
+    return;
+  }
+  if (!seen_failure) failf(state, "Expected to see a tokenizer error for input: %s", buf);
 }
 
 static void test_scanner(test_state *state) {
   test_group_start(state, "Scanner");
-  test_scanner_parens(state);
+
+  {
+    test_start(state, "Empty");
+    static const token_type tokens[] = {};
+    test_scanner_tokens(state, "", STATIC_LEN(tokens), tokens);
+    test_end(state);
+  }
+  
+  {
+    test_start(state, "Open Paren");
+    static const token_type tokens[] = {T_OPEN_PAREN};
+    test_scanner_tokens(state, "(", STATIC_LEN(tokens), tokens);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Close Paren");
+    static const token_type tokens[] = {T_CLOSE_PAREN};
+    test_scanner_tokens(state, ")", STATIC_LEN(tokens), tokens);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Parens");
+    static const token_type tokens[] = {T_OPEN_PAREN, T_CLOSE_PAREN};
+    test_scanner_tokens(state, "()", STATIC_LEN(tokens), tokens);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Nested Parens");
+    static const token_type tokens[] = {T_OPEN_PAREN, T_OPEN_PAREN, T_CLOSE_PAREN, T_CLOSE_PAREN};
+    test_scanner_tokens(state, "(())", STATIC_LEN(tokens), tokens);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Mismatching Parens");
+    static const token_type tokens[] = {T_CLOSE_PAREN, T_CLOSE_PAREN, T_OPEN_PAREN, T_OPEN_PAREN};
+    test_scanner_tokens(state, "))((", STATIC_LEN(tokens), tokens);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Name");
+    static const token_type tokens[] = {T_NAME};
+    test_scanner_tokens(state, "abc", STATIC_LEN(tokens), tokens);
+    test_end(state);
+  }
+  
+  {
+    test_start(state, "Names");
+    static const token_type tokens[] = {T_NAME, T_NAME};
+    test_scanner_tokens(state, "abc def", STATIC_LEN(tokens), tokens);
+    test_end(state);
+  }
+  
   test_group_end(state);
 }
 

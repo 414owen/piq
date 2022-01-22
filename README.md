@@ -1,0 +1,3 @@
+# Gnu extensions used
+
+* asprintf
