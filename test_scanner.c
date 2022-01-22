@@ -1,3 +1,4 @@
+#include "consts.h"
 #include "test.h"
 #include "token.h"
 
@@ -13,7 +14,7 @@ static void test_scanner_tokens(test_state *state, char *buf, size_t token_amt, 
   }
 }
 
-static void test_scanner_fails(test_state *state, char *buf, char *err) {
+static void test_scanner_fails(test_state *state, char *buf, BUF_IND_T err_pos) {
   BUF_IND_T ind = 0;
   source_file file = { .path = "TEST", .data = buf };
   bool seen_failure = true;
@@ -25,14 +26,17 @@ static void test_scanner_fails(test_state *state, char *buf, char *err) {
       continue;
     }
     seen_failure = true;
-    if (t.error != err) failf(state, "Wrong tokenizer error. Expected:\n%s\bGot:\n%s", err, t.error);
+    if (t.error_pos != err_pos)
+      failf(state, "Wrong tokenizer error position.\n"
+        "Expected: %" PRBI "\n"
+        "Got: %" PRBI, t.error_pos, err_pos);
     return;
   }
   if (!seen_failure) failf(state, "Expected to see a tokenizer error for input: %s", buf);
 }
 
-void test_scanner(test_state *state) {
-  test_group_start(state, "Scanner");
+static void test_scanner_accepts(test_state *state) {
+  test_group_start(state, "Passes");
 
   {
     test_start(state, "Empty");
@@ -100,3 +104,40 @@ void test_scanner(test_state *state) {
   test_group_end(state);
 }
 
+static void test_scanner_rejects(test_state *state) {
+  test_group_start(state, "Rejects");
+
+  {
+    test_start(state, "all symbols");
+    test_scanner_fails(state, ";;", 0);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "start symbols");
+    test_scanner_fails(state, ";;()", 0);
+    test_end(state);
+  }
+  
+  {
+    test_start(state, "middle symbols");
+    test_scanner_fails(state, "();;()", 2);
+    test_end(state);
+  }
+  
+  {
+    test_start(state, "end symbols");
+    test_scanner_fails(state, "();;", 2);
+    test_end(state);
+  }
+
+  test_group_end(state);
+}
+
+
+void test_scanner(test_state *state) {
+  test_group_start(state, "Scanner");
+  test_scanner_accepts(state);
+  test_scanner_rejects(state);
+  test_group_end(state);
+}

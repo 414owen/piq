@@ -25,7 +25,7 @@ typedef struct {
   bool succeeded;
   union {
     token token;
-    char *error;
+    BUF_IND_T error_pos;
   };
 } token_res;
 
