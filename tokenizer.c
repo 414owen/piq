@@ -1,9 +1,9 @@
 #define _GNU_SOURCE
 #include <assert.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include <ctype.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "consts.h"
 #include "source.h"
@@ -11,8 +11,9 @@
 #include "token.h"
 
 token_res scan(source_file file, BUF_IND_T pos) {
-  while (isspace(file.data[pos])) pos++;
-  token_res res = { .succeeded = true, .token = { .start = pos }};
+  while (isspace(file.data[pos]))
+    pos++;
+  token_res res = {.succeeded = true, .token = {.start = pos}};
   char c = file.data[pos];
   switch (c) {
     case '(':
@@ -29,7 +30,8 @@ token_res scan(source_file file, BUF_IND_T pos) {
       break;
     case 'A' ... 'Z':
     case 'a' ... 'z':
-      while (isalnum(file.data[pos])) pos++;
+      while (isalnum(file.data[pos]))
+        pos++;
       pos--;
       res.token.type = T_NAME;
       res.token.end = pos;

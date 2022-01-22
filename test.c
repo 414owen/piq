@@ -1,8 +1,8 @@
 #define _GNU_SOURCE
 
 #include <stdarg.h>
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "term.h"
 #include "test.h"
@@ -23,9 +23,7 @@ void test_group_start(test_state *state, char *name) {
   VEC_PUSH(&state->path, name);
 }
 
-void test_group_end(test_state *state) {
-  VEC_POP(&state->path);
-}
+void test_group_end(test_state *state) { VEC_POP(&state->path); }
 
 static vec_string make_test_path(test_state *state) {
   vec_string path = VEC_CLONE(&state->path);
@@ -41,7 +39,7 @@ static char *ne_reason(char *a_name, char *b_name) {
 
 void fail_with(test_state *state, char *reason) {
   state->current_failed = true;
-  failure f = { .path = make_test_path(state), .reason = reason };
+  failure f = {.path = make_test_path(state), .reason = reason};
   VEC_PUSH(&state->failures, f);
 }
 
@@ -62,11 +60,11 @@ void test_end(test_state *state) {
 
 void failf(test_state *state, const char *restrict fmt, ...) {
   char *err;
-	va_list ap;
-	va_start(ap, fmt);
-	int unused = vasprintf(&err, fmt, ap);
+  va_list ap;
+  va_start(ap, fmt);
+  int unused = vasprintf(&err, fmt, ap);
   fail_with(state, err);
-	va_end(ap);
+  va_end(ap);
 }
 
 test_state test_state_new(void) {
@@ -84,7 +82,8 @@ test_state test_state_new(void) {
 static void print_failure(failure f) {
   fputs("\n" RED "FAILED" RESET ": ", stdout);
   for (size_t i = 0; i < f.path.len; i++) {
-    if (i != 0) putc('/', stdout);
+    if (i != 0)
+      putc('/', stdout);
     fputs(f.path.data[i], stdout);
   }
   putc('\n', stdout);
