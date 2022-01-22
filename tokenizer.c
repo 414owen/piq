@@ -82,6 +82,10 @@ token_res scan(source_file file, BUF_IND_T pos) {
       res.token.type = T_CLOSE_PAREN;
       res.token.end = pos;
       break;
+    case ',':
+      res.token.type = T_COMMA;
+      res.token.end = pos;
+      break;
     case 'A' ... 'Z':
     case 'a' ... 'z':
       while (isalnum(file.data[pos])) pos++;

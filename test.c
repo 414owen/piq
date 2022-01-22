@@ -178,6 +178,13 @@ static void test_scanner(test_state *state) {
     test_end(state);
   }
   
+  {
+    test_start(state, "Kitchen Sink");
+    static const token_type tokens[] = {T_NAME, T_CLOSE_PAREN, T_NAME, T_OPEN_PAREN, T_NAME, T_COMMA, T_INT, T_NAME};
+    test_scanner_tokens(state, "abc)b3(def,234a", STATIC_LEN(tokens), tokens);
+    test_end(state);
+  }
+  
   test_group_end(state);
 }
 
