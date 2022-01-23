@@ -4,3 +4,4 @@ test
 *.out
 *.so
 *.o
+tokenizer.c

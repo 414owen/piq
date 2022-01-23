@@ -5,6 +5,7 @@
 
 #include "consts.h"
 #include "source.h"
+#include "vec.h"
 
 typedef enum {
   T_OPEN_PAREN,
@@ -23,10 +24,17 @@ typedef struct {
 
 typedef struct {
   bool succeeded;
+  token token;
+} token_res;
+
+VEC_DECL(token);
+
+typedef struct {
+  bool succeeded;
   union {
-    token token;
+    vec_token tokens;
     BUF_IND_T error_pos;
   };
-} token_res;
+} tokens_res;
 
 token_res scan(source_file file, BUF_IND_T pos);

@@ -62,7 +62,7 @@ void failf(test_state *state, const char *restrict fmt, ...) {
   char *err;
   va_list ap;
   va_start(ap, fmt);
-  int unused = vasprintf(&err, fmt, ap);
+  vasprintf(&err, fmt, ap);
   fail_with(state, err);
   va_end(ap);
 }

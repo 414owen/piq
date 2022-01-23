@@ -3,7 +3,7 @@
 #include "source.h"
 #include "token.h"
 
-parse_tree build_parse_tree(source_file file) {
+parse_tree build_parse_tree(vec_token tokens) {
   parse_tree res;
   BUF_IND_T token_ind = 0;
   for (;;) {

@@ -30,12 +30,12 @@ static void test_scanner_fails(test_state *state, char *buf,
       continue;
     }
     seen_failure = true;
-    if (t.error_pos != err_pos)
+    if (t.token.start != err_pos)
       failf(state,
             "Wrong tokenizer error position.\n"
             "Expected: %" PRBI "\n"
             "Got: %" PRBI,
-            t.error_pos, err_pos);
+            t.token.start, err_pos);
     return;
   }
   if (!seen_failure)

@@ -32,5 +32,10 @@
     .data = (vec)->cap == 0 ? NULL : memclone((vec)->data, sizeof((vec)->data[0]) * (vec)->cap) \
   })
 
+#define VEC_FINALIZE(vec) { \
+    (vec)->cap = (vec)->len; \
+    (vec)->data = realloc((vec)->data, (vec)->len * sizeof((vec)->data[0])); \
+  }
+
 typedef char* string;
 VEC_DECL(string);
