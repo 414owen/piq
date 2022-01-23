@@ -5,3 +5,4 @@ test
 *.so
 *.o
 tokenizer.c
+parser.c

@@ -37,18 +37,23 @@ token_res scan(source_file file, BUF_IND_T start) {
   re2c:yyfill:enable  = 0;
   re2c:flags:input = custom;
   re2c:indent:string = "  ";
+  re2c:eof = -1;
+  re2c:yyfill:enable = 0;
 
   alpha = [a-zA-Z];
   ident = alpha (alpha | [0-9])*;
   int = [0-9]+;
 
-  ident  { return mk_token(T_NAME, start, pos - 1);        }
-  [(]    { return mk_token(T_OPEN_PAREN, start, pos - 1);  }
-  [)]    { return mk_token(T_CLOSE_PAREN, start, pos - 1); }
-  [,]    { return mk_token(T_COMMA, start, pos - 1);       }
-  int    { return mk_token(T_INT, start, pos - 1);         }
-  [\x00] { return mk_token(T_EOF, start, pos - 1);         }
-  *      { return (token_res) {.succeeded = false, .token.start = pos - 1}; }
+  // "type"  { return mk_token(T_TYPE, start, pos - 1);          }
+  // "match" { return mk_token(T_MATCH, start, pos - 1);          }
+  "if"    { return mk_token(T_IF, start, pos - 1);          }
+  ident   { return mk_token(T_NAME, start, pos - 1);        }
+  [(]     { return mk_token(T_OPEN_PAREN, start, pos - 1);  }
+  [)]     { return mk_token(T_CLOSE_PAREN, start, pos - 1); }
+  [,]     { return mk_token(T_COMMA, start, pos - 1);       }
+  int     { return mk_token(T_INT, start, pos - 1);         }
+  [\x00]  { return mk_token(T_EOF, start, pos - 1);         }
+  *       { return (token_res) {.succeeded = false, .token.start = pos - 1}; }
 */
 }
 
