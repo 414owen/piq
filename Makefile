@@ -1,7 +1,7 @@
 CFLAGS ?= -O1 -Wall -Wno-unused-result
 
 tokenizer.c: tokenizer.re token.h consts.h source.h term.h vec.h
-	re2c -o tokenizer.c tokenizer.re
+	re2c tokenizer.re | clang-format > tokenizer.c
 
 util.so: util.h
 	cc $(CFLAGS) -fpic -shared -o util.so util.c
