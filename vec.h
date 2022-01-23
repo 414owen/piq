@@ -37,5 +37,10 @@
     (vec)->data = realloc((vec)->data, (vec)->len * sizeof((vec)->data[0])); \
   }
 
+#define VEC_CAT(v1, v2) { \
+    VEC_GROW(v1, (v1)->len + (v2)->len); \
+    memcpy((v1)->data, (v2)->data, (v2)->len * sizeof(v1->data[0]))); \
+  }
+
 typedef char* string;
 VEC_DECL(string);

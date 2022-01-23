@@ -6,15 +6,11 @@
 #include "consts.h"
 #include "source.h"
 #include "vec.h"
+#include "parser.h"
 
-typedef enum {
-  T_OPEN_PAREN,
-  T_CLOSE_PAREN,
-  T_NAME,
-  T_INT,
-  T_COMMA,
-  T_EOF,
-} token_type;
+#define T_EOF 0
+
+typedef unsigned char token_type;
 
 typedef struct {
   token_type type;
