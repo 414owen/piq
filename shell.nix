@@ -1,5 +1,8 @@
 { pkgs ? import <nixpkgs> {} }:
 
 pkgs.mkShell {
-  buildDepends = [];
+  nativeBuildInputs = with pkgs; [
+    re2c
+    clang-tools
+  ];
 }
