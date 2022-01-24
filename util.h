@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdarg.h>
 #include <stdlib.h>
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -8,3 +9,4 @@
 
 void *memclone(void *src, size_t bytes);
 char *join(size_t str_amt, char **strs);
+int vasprintf(char **buf, const char *restrict fmt, va_list rest);
