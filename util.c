@@ -1,3 +1,5 @@
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "util.h"
@@ -6,6 +8,15 @@ void *memclone(void *src, size_t bytes) {
   void *dest = malloc(bytes);
   memcpy(dest, src, bytes);
   return dest;
+}
+
+int vasprintf(char **buf, const char *restrict fmt, va_list rest) {
+  size_t bufferSize = 0;
+  FILE *stream = open_memstream(buf, &bufferSize);
+  putc(0, stream);
+  int res = vfprintf(stream, fmt, rest);
+  fclose(stream);
+  return res;
 }
 
 char *join(size_t str_amt, char **strs) {

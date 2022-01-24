@@ -15,6 +15,9 @@ test_scanner.so: tokenizer.so test.h test_scanner.c consts.h
 test.so: util.so term.h test.h test.h test.c
 	cc $(CFLAGS) -fpic -shared -o test.so test.c
 
+parse_tree.so: parse_tree.c parse_tree.h vec.h util.h token.h consts.h
+	cc $(CFLAGS) -fpic -shared -o parse_tree.so parse_tree.c
+
 parser.c: parser.y
 	lemon parser.y
 	# clang-format -i parser.c
@@ -24,7 +27,7 @@ parser.h: parser.c
 
 diagnostic.so: source.h
 
-test: $(common) test.so test_scanner.so tokenizer.so util.so test.c vec.h term.h test.h run_tests.c
+test: $(common) test.so test_scanner.so util.so test.c vec.h term.h test.h run_tests.c
 	cc $(CFLAGS) -L. -o test run_tests.c -l:test.so -l:test_scanner.so -l:util.so -l:tokenizer.so -Wl,-rpath=$(PWD)
 
 clean:
