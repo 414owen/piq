@@ -1,8 +1,8 @@
 #include <stdio.h>
 
 #include "parse_tree.h"
-#include "util.h"
 #include "vec.h"
+#include "util.h"
 
 typedef enum {
   PRINT_NODE,
@@ -21,8 +21,7 @@ typedef struct {
 static void print_compound_subs(FILE *f, printer_state s, parse_node node) {
   VEC_PUSH(&s.actions, PRINT_CLOSE_PAREN);
   for (uint16_t i = 0; i < node.sub_amt; i++) {
-    if (i > 0)
-      VEC_PUSH(&s.actions, PRINT_SPACE);
+    if (i > 0) VEC_PUSH(&s.actions, PRINT_SPACE);
     VEC_PUSH(&s.actions, PRINT_NODE);
     VEC_PUSH(&s.node_stack, s.tree.inds.data[node.subs_start + i]);
   }
@@ -32,16 +31,17 @@ static void print_node(FILE *f, printer_state s, NODE_IND_T node_ind) {
   parse_node node = s.tree.nodes.data[node_ind];
   switch (node.type) {
     case PT_COMPOUND:
-      putc('(', f);
+      fputs("(Call ", f);
       print_compound_subs(f, s, node);
       break;
     case PT_NUM:
+      fprintf(f, "(Num %.*s)", 1 + node.end - node.start, s.tree.file.data + node.start);
+      break;
     case PT_NAME:
-      fprintf(f, "%.*s", 1 + node.end - node.start,
-              s.tree.file.data + node.start);
+      fprintf(f, "(Name %.*s)", 1 + node.end - node.start, s.tree.file.data + node.start);
       break;
     case PT_IF:
-      fputs("(if ", f);
+      fputs("(If ", f);
       print_compound_subs(f, s, node);
       break;
   }
@@ -49,7 +49,7 @@ static void print_node(FILE *f, printer_state s, NODE_IND_T node_ind) {
 
 void print_parse_tree(FILE *f, parse_tree tree) {
   printer_state s = {
-    .actions = VEC_NEW,
+    .actions = VEC_NEW, 
     .node_stack = VEC_NEW,
     .tree = tree,
   };

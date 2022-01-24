@@ -1,6 +1,9 @@
 #pragma once
 
+#include <stdio.h>
+
 #include "consts.h"
+#include "parser.h"
 #include "token.h"
 #include "vec.h"
 
@@ -53,5 +56,7 @@ typedef struct {
     };
   };
 } parse_tree_res;
+
+parse_tree_res parse(vec_token tokens);
 
 void print_parse_tree(FILE *f, parse_tree t);

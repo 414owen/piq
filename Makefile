@@ -12,6 +12,9 @@ tokenizer.so: token.h consts.h source.h term.h tokenizer.c vec.h parser.h
 test_scanner.so: tokenizer.so test.h test_scanner.c consts.h
 	cc $(CFLAGS) -fpic -shared -o test_scanner.so test_scanner.c
 
+test_parser.so: tokenizer.so test.h test_parser.c parse_tree.h
+	cc $(CFLAGS) -fpic -shared -o test_parser.so test_parser.c
+
 test.so: util.so term.h test.h test.h test.c
 	cc $(CFLAGS) -fpic -shared -o test.so test.c
 
@@ -27,8 +30,8 @@ parser.h: parser.c
 
 diagnostic.so: source.h
 
-test: $(common) test.so test_scanner.so util.so test.c vec.h term.h test.h run_tests.c
-	cc $(CFLAGS) -L. -o test run_tests.c -l:test.so -l:test_scanner.so -l:util.so -l:tokenizer.so -Wl,-rpath=$(PWD)
+test: $(common) test.so test_scanner.so test_parser.so parse_tree.so util.so test.c vec.h term.h test.h run_tests.c
+	cc $(CFLAGS) -L. -o test run_tests.c -l:test.so -l:test_scanner.so -l:util.so -l:tokenizer.so -l:test_parser.so -Wl,-rpath=$(PWD)
 
 clean:
 	rm -f *.so test

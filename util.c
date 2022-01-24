@@ -10,12 +10,22 @@ void *memclone(void *src, size_t bytes) {
   return dest;
 }
 
-int vasprintf(char **buf, const char *restrict fmt, va_list rest) {
+void ss_init(stringstream *ss) {
   size_t bufferSize = 0;
-  FILE *stream = open_memstream(buf, &bufferSize);
-  putc(0, stream);
-  int res = vfprintf(stream, fmt, rest);
-  fclose(stream);
+  ss->stream = open_memstream(&ss->string, &bufferSize);
+}
+
+// Won't update copies of the stringstream that was used to `init`.
+void ss_finalize(stringstream *ss) {
+  putc(0, ss->stream);
+  fclose(ss->stream);
+}
+
+int vasprintf(char **buf, const char *restrict fmt, va_list rest) {
+  stringstream ss;
+  ss_init(&ss);
+  int res = vfprintf(ss.stream, fmt, rest);
+  ss_finalize(&ss);
   return res;
 }
 
