@@ -10,10 +10,12 @@
 #define NODE_IND_T BUF_IND_T
 
 typedef enum __attribute__ ((__packed__)) {
-  PT_COMPOUND,
+  PT_CALL,
   PT_NAME,
-  PT_NUM,
+  PT_INT,
   PT_IF,
+  PT_TUP,
+  PT_ROOT,
 } parse_node_type;
 
 typedef struct {
@@ -39,7 +41,6 @@ VEC_DECL(parse_node);
 VEC_DECL(node_ind);
 
 typedef struct {
-  source_file file;
   NODE_IND_T root_ind;
   vec_parse_node nodes;
   vec_node_ind inds;
@@ -59,4 +60,4 @@ typedef struct {
 
 parse_tree_res parse(vec_token tokens);
 
-void print_parse_tree(FILE *f, parse_tree t);
+void print_parse_tree(FILE *f, source_file file, parse_tree t);

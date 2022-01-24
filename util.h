@@ -18,4 +18,5 @@ void ss_finalize(stringstream *ss);
 
 void *memclone(void *src, size_t bytes);
 char *join(size_t str_amt, char **strs);
-int vasprintf(char **buf, const char * restrict fmt, va_list rest);
+int vasprintf(char **, const char * restrict, va_list);
+int asprintf(char **, const char *restrict, ...);

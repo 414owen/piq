@@ -1,3 +1,3 @@
-# Gnu extensions used
+# TODO
 
-* asprintf
+* print test passes / runs ratio

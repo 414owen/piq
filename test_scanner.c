@@ -104,6 +104,13 @@ static void test_scanner_accepts(test_state *state) {
   }
 
   {
+    test_start(state, "If");
+    static const token_type tokens[] = {T_IF};
+    test_scanner_tokens(state, "if", STATIC_LEN(tokens), tokens);
+    test_end(state);
+  }
+
+  {
     test_start(state, "Kitchen Sink");
     static const token_type tokens[] = {T_NAME,       T_CLOSE_PAREN, T_NAME,
                                         T_OPEN_PAREN, T_NAME,        T_COMMA,

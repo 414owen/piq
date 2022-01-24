@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string.h>
 #include <stdint.h>
 #include <assert.h>
 
@@ -22,6 +23,8 @@
     (vec)->data[(vec)->len++] = (el); \
   }
 
+#define VEC_POP_(vec) --(vec)->len
+
 #define VEC_POP(vec) ((vec)->data[--(vec)->len])
   
 #define VEC_BACK(vec) ((vec)->data[(vec)->len - 1])
@@ -41,7 +44,7 @@
 
 #define VEC_APPEND(v1, amt, els) { \
     VEC_GROW((v1), (amt) + (v1)->len); \
-    memcpy(&(v1)->data[(v1)->len], (els), amt * sizeof((v1)->data[0]))); \
+    memcpy(&(v1)->data[(v1)->len], (els), amt * sizeof((v1)->data[0])); \
     v1->len += amt; \
   }
 

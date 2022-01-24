@@ -26,6 +26,15 @@ int vasprintf(char **buf, const char *restrict fmt, va_list rest) {
   ss_init(&ss);
   int res = vfprintf(ss.stream, fmt, rest);
   ss_finalize(&ss);
+  *buf = ss.string;
+  return res;
+}
+
+int asprintf(char **buf, const char *restrict fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  int res = vasprintf(buf, fmt, ap);
+  va_end(ap);
   return res;
 }
 
