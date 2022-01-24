@@ -1,37 +1,34 @@
 CFLAGS ?= -O1 -Wall -Wno-unused-result
 
-tokenizer.c: tokenizer.re
-	re2c -o tokenizer.c tokenizer.re
+SRCS := $(wildcard *.c)
+DEPDIR := .deps
+DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 
-util.so: util.h
-	cc $(CFLAGS) -fpic -shared -o util.so util.c
+COMPILE.c = $(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
 
-tokenizer.so: token.h consts.h source.h term.h tokenizer.c vec.h parser.h
-	cc $(CFLAGS) -fpic -shared -o tokenizer.so tokenizer.c
+%.o : %.c
+%.o : %.c $(DEPDIR)/%.d | $(DEPDIR)
+	$(COMPILE.c) $(OUTPUT_OPTION) $<
 
-test_scanner.so: tokenizer.so test.h test_scanner.c consts.h
-	cc $(CFLAGS) -fpic -shared -o test_scanner.so test_scanner.c
+$(DEPDIR): ; @mkdir -p $@
 
-test_parser.so: tokenizer.so test.h test_parser.c parse_tree.h
-	cc $(CFLAGS) -fpic -shared -o test_parser.so test_parser.c
+DEPFILES := $(SRCS:%.c=$(DEPDIR)/%.d)
+$(DEPFILES):
 
-test.so: util.so term.h test.h test.h test.c
-	cc $(CFLAGS) -fpic -shared -o test.so test.c
+TEST_OBJS := test.o test_scanner.o test_parser.o parse_tree.o util.o tokenizer.o parser.o
 
-parse_tree.so: parse_tree.c parse_tree.h vec.h util.h token.h consts.h
-	cc $(CFLAGS) -fpic -shared -o parse_tree.so parse_tree.c
+test: run_tests.c $(TEST_OBJS)
+	cc $(CFLAGS) -o test run_tests.c $(TEST_OBJS)
 
 parser.c: parser.y
 	lemon parser.y
-	# clang-format -i parser.c
-	# clang-format -i parser.h
+
+tokenizer.c: tokenizer.re
+	re2c -o tokenizer.c tokenizer.re
 
 parser.h: parser.c
 
-diagnostic.so: source.h
-
-test: $(common) test.so test_scanner.so test_parser.so parse_tree.so util.so test.c vec.h term.h test.h run_tests.c
-	cc $(CFLAGS) -L. -o test run_tests.c -l:test.so -l:test_scanner.so -l:util.so -l:tokenizer.so -l:test_parser.so -Wl,-rpath=$(PWD)
-
 clean:
-	rm -f *.so test
+	rm -f *.so *.o test
+
+include $(wildcard $(DEPFILES))

@@ -1,4 +1,11 @@
+#include <stdlib.h>
+#include <string.h>
+
+#include "consts.h"
 #include "source.h"
+#include "util.h"
+#include "term.h"
+#include "util.h"
 
 typedef struct {
   BUF_IND_T start;
@@ -41,23 +48,20 @@ char *stralloc(char *src) {
   return res;
 }
 
-static const format_error_ctx(char *buf, BUF_IND_T pos) {
+static char *format_error_ctx(char *buf, BUF_IND_T pos) {
   line *lines = alloca(sizeof(line) * (ERROR_LINES_CTX + 1));
-  get_error_ctx(file, lines, pos);
-  char *res, *new_res = stralloc(RED "/---\n");
+  stringstream ss;
+  ss_init(&ss);
+  fprintf(ss.stream, RED "/---\n");
   for (size_t i = 0; i <= ERROR_LINES_CTX; i++) {
     line l = lines[i];
     if (l.start + 1 < l.end) {
-      ignore = asprintf(&new_res, "%s" RED "| " RESET "%.*s\n", res,
-                        l.end - l.start - 1, &file.data[l.start]);
-      free(res);
-      res = new_res;
+      fprintf(ss.stream, RED "| " RESET "%.*s\n", l.end - l.start - 1, &buf[l.start]);
     }
   }
-  ignore = asprintf(&new_res, "%s" RED "\\---", res);
-  free(res);
-  res = new_res;
-  return res;
+  fputs(RED "\\---" RESET, ss.stream);
+  ss_finalize(&ss);
+  return ss.string;
 }
 
 // SPEEDUP: this could get size before alloc

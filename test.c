@@ -21,7 +21,7 @@ void test_group_start(test_state *state, char *name) {
   VEC_PUSH(&state->path, name);
 }
 
-void test_group_end(test_state *state) { VEC_POP(&state->path); }
+void test_group_end(test_state *state) { VEC_POP_(&state->path); }
 
 static vec_string make_test_path(test_state *state) {
   vec_string path = VEC_CLONE(&state->path);
@@ -30,12 +30,13 @@ static vec_string make_test_path(test_state *state) {
 }
 
 static char *ne_reason(char *a_name, char *b_name) {
-  char *strs[] = {"Assert failed: ", a_name, " != ", b_name};
-  char *res = join(STATIC_LEN(strs), strs);
+  char *res;
+  asprintf(&res, "Assert failed: %s != %s", a_name, b_name);
   return res;
 }
 
-void fail_with(test_state *state, char *reason) {
+// Static to avoid someone failing with a non-alloced string
+static void fail_with(test_state *state, char *reason) {
   state->current_failed = true;
   failure f = {.path = make_test_path(state), .reason = reason};
   VEC_PUSH(&state->failures, f);

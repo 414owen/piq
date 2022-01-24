@@ -3,6 +3,8 @@
 %default_type int
 
 %type commalist vec_node_ind
+%type commapred vec_node_ind
+%type forms vec_node_ind
 
 %include {
 
@@ -15,64 +17,99 @@
 
   typedef struct {
     token *tokens;
-    parse_tree_res *res
+    parse_tree_res *res;
   } state;
 
-  #define mk_leaf(parse_node_type type, NODE_IND_T start, NODE_IND_T end) \
+  #define mk_leaf(type, start, end) \
     ((parse_node) { .type = type, .leaf_node = {.start = start, .end = end}})
 
 }
 
 %extra_argument { state s }
 
-root  ::= forms.
-
-forms ::= forms form.
-
-forms ::= .
-
-form(RES) ::= NAME(A). {
-  token t = res.tokens[A];
-  parse_node n = {.type = PT_NAME, .start = t.start, .end = t.end};
-  VEC_PUSH(&s.res->nodes, n);
-  RES = s.res->len - 1;
+root ::= forms(A). {
+  NODE_IND_T start = s.res->tree.inds.len;
+  VEC_CAT(&s.res->tree.inds, &A);
+  parse_node n = {.type = PT_ROOT, .subs_start = start, .sub_amt = A.len};
+  VEC_PUSH(&s.res->tree.nodes, n);
+  s.res->tree.root_ind = s.res->tree.nodes.len - 1;
+  VEC_FREE(&A);
 }
 
-form  ::= INT(A).  { printf("Got int %d!\n", A); }
-
-form  ::= if.
-
-form  ::= tuple.
-
-commalist(RES) ::= commalist(A) COMMA form(B). {
+forms(RES) ::= forms(A) form(B). {
   VEC_PUSH(&A, B);
   RES = A;
 }
 
-commalist(RES) ::= form(A) COMMA form(B). {
-  vec_node_ind inds = VEC_NEW;
-  VEC_PUSH(&inds, A);
-  VEC_PUSH(&inds, B);
-  RES = inds;
+forms(RES) ::= . { vec_node_ind res = VEC_NEW; RES = res; }
+
+form(RES) ::= NAME(A). {
+  token t = s.tokens[A];
+  parse_node n = {.type = PT_NAME, .start = t.start, .end = t.end};
+  VEC_PUSH(&s.res->tree.nodes, n);
+  RES = s.res->tree.nodes.len - 1;
 }
 
-tuple(RES) ::= OPEN_PAREN commalist(A) CLOSE_PAREN. {
-  NODE_IND_T start = s.res->inds.len;
-  VEC_CAT(s.res->inds, A);
-  VEC_FREE(A);
-  parse_node n = {.type = PT_TUP, .subs_start = start, sub_amt = A.len};
-  VEC_PUSH(&s.res->nodes, n);
-  RES = s.res->nodes.len - 1;
+form(RES) ::= INT(A).  { 
+  token t = s.tokens[A];
+  parse_node n = {.type = PT_INT, .start = t.start, .end = t.end};
+  VEC_PUSH(&s.res->tree.nodes, n);
+  RES = s.res->tree.nodes.len - 1;
 }
 
-if(RES) ::= OPEN_PAREN IF form(A) form(B) form(C) CLOSE_PAREN. {
-  NODE_IND_T start = s.res->inds.len;
-  VEC_PUSH(s.res->inds, A);
-  VEC_PUSH(s.res->inds, B);
-  VEC_PUSH(s.res->inds, C);
-  parse_node n = {.type = PT_IF, .subs_start = start, sub_amt = 3};
-  VEC_PUSH(&s.res->nodes, n);
-  RES = s.res->nodes.len - 1;
+form(RES) ::= OPEN_PAREN compound(A) CLOSE_PAREN.{
+  RES = A;
+}
+
+compound ::= if.
+
+compound ::= tuple.
+
+compound ::= call.
+
+tuple(RES) ::= form(A) COMMA commalist(B). {
+  NODE_IND_T start = s.res->tree.inds.len;
+  VEC_PUSH(&s.res->tree.inds, A);
+  VEC_CAT(&s.res->tree.inds, &B);
+  parse_node n = {.type = PT_TUP, .subs_start = start, .sub_amt = B.len + 1};
+  VEC_PUSH(&s.res->tree.nodes, n);
+  RES = s.res->tree.nodes.len - 1;
+  VEC_FREE(&B);
+}
+
+call(RES) ::= form(A) forms(B). {
+  NODE_IND_T start = s.res->tree.inds.len;
+  VEC_PUSH(&s.res->tree.inds, A);
+  VEC_CAT(&s.res->tree.inds, &B);
+  parse_node n = {.type = PT_CALL, .subs_start = start, .sub_amt = B.len + 1};
+  VEC_PUSH(&s.res->tree.nodes, n);
+  RES = s.res->tree.nodes.len - 1;
+  VEC_FREE(&B);
+}
+
+commalist(RES) ::= commapred(A) form(B). {
+  VEC_PUSH(&A, B);
+  RES = A;
+}
+
+commapred(RES) ::= commapred(A) form(B) COMMA. {
+  VEC_PUSH(&A, B);
+  RES = A;
+}
+
+commapred(RES) ::= . {
+  vec_node_ind res = VEC_NEW;
+  RES = res;
+}
+
+if(RES) ::= IF form(A) form(B) form(C). {
+  NODE_IND_T start = s.res->tree.inds.len;
+  VEC_PUSH(&s.res->tree.inds, A);
+  VEC_PUSH(&s.res->tree.inds, B);
+  VEC_PUSH(&s.res->tree.inds, C);
+  parse_node n = {.type = PT_IF, .subs_start = start, .sub_amt = 3};
+  VEC_PUSH(&s.res->tree.nodes, n);
+  RES = s.res->tree.nodes.len - 1;
 }
 
 %syntax_error {
@@ -87,24 +124,23 @@ if(RES) ::= OPEN_PAREN IF form(A) form(B) form(C) CLOSE_PAREN. {
   parse_tree_res parse(vec_token tokens) {
     yyParser xp;
     ParseInit(&xp);
-    parse_tree_res res;
+    parse_tree_res res =  {
+      .succeeded = true,
+      .tree = {
+        .root_ind = 0,
+        .nodes = VEC_NEW,
+        .inds = VEC_NEW,
+      },
+    };
+    state state = {
+      .tokens = tokens.data,
+      .res = &res,
+    };
     for (NODE_IND_T i = 0; i < tokens.len; i++) {
-      Parse(&xp, tokens.data[i].type, i, &res);
+      Parse(&xp, tokens.data[i].type, i, state);
     }
-    Parse(&xp, T_EOF, 0, &res);
+    Parse(&xp, 0, 0, state);
     ParseFinalize(&xp);
+    return res;
   }
-
-  /*
-  static token tt(token_type type) {
-    return (token) {.type = type};
-  }
-  
-  int main() {
-    vec_token test = VEC_NEW;
-    VEC_PUSH(&test, tt(T_NAME));
-    VEC_PUSH(&test, tt(T_INT));
-    parse(test);
-  }
-  */
 }
