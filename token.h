@@ -8,8 +8,6 @@
 #include "vec.h"
 #include "parser.h"
 
-#define T_EOF 0
-
 typedef unsigned char token_type;
 
 typedef struct {

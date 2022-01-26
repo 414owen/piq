@@ -18,6 +18,7 @@
   typedef struct {
     token *tokens;
     parse_tree_res *res;
+    NODE_IND_T pos;
   } state;
 
   #define mk_leaf(type, start, end) \
@@ -27,7 +28,7 @@
 
 %extra_argument { state s }
 
-root ::= forms(A). {
+root ::= forms(A) EOF . {
   NODE_IND_T start = s.res->tree.inds.len;
   VEC_CAT(&s.res->tree.inds, &A);
   parse_node n = {.type = PT_ROOT, .subs_start = start, .sub_amt = A.len};
@@ -113,11 +114,12 @@ if(RES) ::= IF form(A) form(B) form(C). {
 }
 
 %syntax_error {
-  // TODO
+  // TODO if we want error recovery
+  s.res->error_pos = s.pos;
 }
 
 %parse_failure {
-  // TODO
+  s.res->succeeded = false;
 }
 
 %code {
@@ -132,12 +134,15 @@ if(RES) ::= IF form(A) form(B) form(C). {
         .inds = VEC_NEW,
       },
     };
+
+    ParseTrace(stderr, "");
     state state = {
       .tokens = tokens.data,
       .res = &res,
+      .pos = 0,
     };
-    for (NODE_IND_T i = 0; i < tokens.len; i++) {
-      Parse(&xp, tokens.data[i].type, i, state);
+    for (; state.pos < tokens.len; state.pos++) {
+      Parse(&xp, tokens.data[state.pos].type, state.pos, state);
     }
     Parse(&xp, 0, 0, state);
     ParseFinalize(&xp);

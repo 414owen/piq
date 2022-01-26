@@ -3,7 +3,6 @@
 
 #include "consts.h"
 #include "source.h"
-#include "util.h"
 #include "term.h"
 #include "util.h"
 
@@ -56,7 +55,8 @@ static char *format_error_ctx(char *buf, BUF_IND_T pos) {
   for (size_t i = 0; i <= ERROR_LINES_CTX; i++) {
     line l = lines[i];
     if (l.start + 1 < l.end) {
-      fprintf(ss.stream, RED "| " RESET "%.*s\n", l.end - l.start - 1, &buf[l.start]);
+      fprintf(ss.stream, RED "| " RESET "%.*s\n", l.end - l.start - 1,
+              &buf[l.start]);
     }
   }
   fputs(RED "\\---" RESET, ss.stream);
