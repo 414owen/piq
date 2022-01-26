@@ -1,8 +1,8 @@
 #include <stdio.h>
 
 #include "parse_tree.h"
-#include "vec.h"
 #include "util.h"
+#include "vec.h"
 
 typedef enum {
   PRINT_NODE,
@@ -20,13 +20,16 @@ typedef struct {
   source_file file;
 } printer_state;
 
-static void print_compound(FILE *f, printer_state *s, char *prefix, parse_node node) {
+static void print_compound(FILE *f, printer_state *s, char *prefix,
+                           parse_node node) {
   fputs(prefix, f);
   VEC_PUSH(&s->actions, PRINT_CLOSE_PAREN);
   for (uint16_t i = 0; i < node.sub_amt; i++) {
-    if (i > 0) VEC_PUSH(&s->actions, PRINT_SPACE);
+    if (i > 0)
+      VEC_PUSH(&s->actions, PRINT_SPACE);
     VEC_PUSH(&s->actions, PRINT_NODE);
-    VEC_PUSH(&s->node_stack, s->tree.inds.data[node.subs_start + node.sub_amt - 1 - i]);
+    VEC_PUSH(&s->node_stack,
+             s->tree.inds.data[node.subs_start + node.sub_amt - 1 - i]);
   }
 }
 
@@ -35,19 +38,23 @@ static void print_node(FILE *f, printer_state *s, NODE_IND_T node_ind) {
   switch (node.type) {
     case PT_ROOT:
       for (size_t i = 0; i < node.sub_amt; i++) {
-        if (i > 0) VEC_PUSH(&s->actions, PRINT_NL);
+        if (i > 0)
+          VEC_PUSH(&s->actions, PRINT_NL);
         VEC_PUSH(&s->actions, PRINT_NODE);
-        VEC_PUSH(&s->node_stack, s->tree.inds.data[node.subs_start + node.sub_amt - 1 - i]);
+        VEC_PUSH(&s->node_stack,
+                 s->tree.inds.data[node.subs_start + node.sub_amt - 1 - i]);
       }
       break;
     case PT_CALL:
       print_compound(f, s, "(Call ", node);
       break;
     case PT_INT:
-      fprintf(f, "(Int %.*s)", 1 + node.end - node.start, s->file.data + node.start);
+      fprintf(f, "(Int %.*s)", 1 + node.end - node.start,
+              s->file.data + node.start);
       break;
     case PT_NAME:
-      fprintf(f, "(Name %.*s)", 1 + node.end - node.start, s->file.data + node.start);
+      fprintf(f, "(Name %.*s)", 1 + node.end - node.start,
+              s->file.data + node.start);
       break;
     case PT_IF:
       print_compound(f, s, "(If ", node);
@@ -60,7 +67,7 @@ static void print_node(FILE *f, printer_state *s, NODE_IND_T node_ind) {
 
 void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
   printer_state s = {
-    .actions = VEC_NEW, 
+    .actions = VEC_NEW,
     .node_stack = VEC_NEW,
     .tree = tree,
     .file = file,
