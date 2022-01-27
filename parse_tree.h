@@ -39,6 +39,7 @@ typedef NODE_IND_T node_ind;
 
 VEC_DECL(parse_node);
 VEC_DECL(node_ind);
+VEC_DECL(token_type);
 
 typedef struct {
   NODE_IND_T root_ind;

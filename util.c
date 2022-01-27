@@ -38,17 +38,23 @@ int asprintf(char **buf, const char *restrict fmt, ...) {
   return res;
 }
 
-char *join(size_t str_amt, char **strs) {
+char *join(size_t str_amt, char **strs, char *sep) {
   size_t space = 0;
-  size_t *lens = __builtin_alloca(str_amt * sizeof(size_t));
+  size_t *lens = alloca(str_amt * sizeof(size_t));
   for (size_t i = 0; i < str_amt; i++) {
     lens[i] = strlen(strs[i]);
     space += lens[i];
   }
+  size_t seplen = strlen(sep);
+  space += (((str_amt + 1) / 2) - 1) * seplen;
   char *res = malloc(space + 1);
   res[space] = '\0';
   size_t ind = 0;
   for (size_t i = 0; i < str_amt; i++) {
+    if (i > 0) {
+      memcpy(res + ind, sep, seplen);
+      ind += seplen;
+    }
     memcpy(res + ind, strs[i], lens[i]);
     ind += lens[i];
   }
