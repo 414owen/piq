@@ -40,8 +40,11 @@ ret_a:
   VEC_FREE(&tres.tokens);
 }
 
-static void test_parser_fails_on(test_state *state, char *input,
-                                 BUF_IND_T pos) {
+extern char *yyTokenName[];
+
+static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
+                                 NODE_IND_T expected_amt,
+                                 token_type *expected) {
 
   source_file test_file = {.path = "parser-test", .data = input};
   tokens_res tres = scan_all(test_file);
@@ -60,6 +63,30 @@ static void test_parser_fails_on(test_state *state, char *input,
   if (pos != pres.error_pos) {
     failf(state, "Parsing failed at wrong position.\nExpected: %d\nGot: %d",
           pos, pres.error_pos);
+  }
+
+  bool expected_tokens_match = pres.expected_amt == expected_amt;
+
+  for (NODE_IND_T i = 0; expected_tokens_match && i < expected_amt; i++) {
+    if (expected[i] != pres.expected[i])
+      expected_tokens_match = false;
+  }
+
+  if (!expected_tokens_match) {
+    char **a = alloca(sizeof(char *) * expected_amt);
+    for (size_t i = 0; i < expected_amt; i++) {
+      a[i] = yyTokenName[expected[i]];
+    }
+    char *as = join(expected_amt, a, ", ");
+    char **b = alloca(sizeof(char *) * pres.expected_amt);
+    for (size_t i = 0; i < pres.expected_amt; i++) {
+      b[i] = yyTokenName[pres.expected[i]];
+    }
+    char *bs = join(pres.expected_amt, b, ", ");
+    failf(state, "Expected token mismatch.\nExpected: [%s]\n, Got: [%s]", as,
+          bs);
+    free(as);
+    free(bs);
   }
 
 ret_b:
@@ -150,13 +177,15 @@ static void test_parser_fails(test_state *state) {
 
   {
     test_start(state, "too many open parens");
-    test_parser_fails_on(state, "(", 1);
+    static token_type expected[] = {T_INT, T_NAME, T_OPEN_PAREN, T_IF};
+    test_parser_fails_on(state, "(", 1, STATIC_LEN(expected), expected);
     test_end(state);
   }
 
   {
     test_start(state, "too many close parens");
-    test_parser_fails_on(state, ")", 0);
+    static token_type expected[] = {T_INT, T_NAME, T_OPEN_PAREN};
+    test_parser_fails_on(state, ")", 0, STATIC_LEN(expected), expected);
     test_end(state);
   }
 

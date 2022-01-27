@@ -30,7 +30,7 @@
 
 %extra_argument { state s }
 
-root ::= forms(A) form(B) EOF . {
+root ::= form(B) forms(A) EOF . {
   NODE_IND_T start = s.res->tree.inds.len;
   VEC_CAT(&s.res->tree.inds, &A);
   VEC_PUSH(&s.res->tree.inds, B);
@@ -50,16 +50,16 @@ forms(RES) ::= . {
   RES = res;
 }
 
-form(RES) ::= NAME(A). {
+form(RES) ::= INT(A).  { 
   token t = s.tokens[A];
-  parse_node n = {.type = PT_NAME, .start = t.start, .end = t.end};
+  parse_node n = {.type = PT_INT, .start = t.start, .end = t.end};
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
 }
 
-form(RES) ::= INT(A).  { 
+form(RES) ::= NAME(A). {
   token t = s.tokens[A];
-  parse_node n = {.type = PT_INT, .start = t.start, .end = t.end};
+  parse_node n = {.type = PT_NAME, .start = t.start, .end = t.end};
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
 }
@@ -116,8 +116,16 @@ if(RES) ::= IF form(A) form(B) form(C). {
 }
 
 %syntax_error {
-  // TODO if we want error recovery
-  if (s.res->succeeded) s.res->error_pos = s.pos;
+  vec_token_type expected = VEC_NEW;
+  if (s.res->succeeded) {
+    s.res->error_pos = s.pos;
+    for (int i = 0; i < YYNTOKEN; i++) {
+      int a = yy_find_shift_action((YYCODETYPE)i, yypParser->yytos->stateno);
+      if (a != YY_ERROR_ACTION) VEC_PUSH(&expected, i);
+    }
+    s.res->expected_amt = expected.len;
+    s.res->expected = expected.data;
+  }
   s.res->succeeded = false;
 }
 
@@ -138,7 +146,11 @@ if(RES) ::= IF form(A) form(B) form(C). {
       },
     };
 
-    // ParseTrace(stderr, "");
+    /*
+    FILE *f = fopen("parser.log", "w");
+    fprintf(f, "\n\n\n");
+    ParseTrace(f, "");
+    */
     state state = {
       .tokens = tokens.data,
       .res = &res,
