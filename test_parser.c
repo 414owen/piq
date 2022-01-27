@@ -13,15 +13,13 @@ static void test_parser_succeeds_on(test_state *state, char *input,
     failf(state, "Parser test \"%s\" failed tokenization at position %d", input,
           tres.error_pos);
     VEC_FREE(&tres.tokens);
-    return;
+    goto ret_a;
   }
 
   parse_tree_res pres = parse(tres.tokens);
   if (!pres.succeeded) {
     failf(state, "Parsing \"%s\" failed.", input);
-    VEC_FREE(&pres.tree.inds);
-    VEC_FREE(&pres.tree.nodes);
-    return;
+    goto ret_b;
   }
 
   stringstream ss;
@@ -32,10 +30,14 @@ static void test_parser_succeeds_on(test_state *state, char *input,
   if (strcmp(ss.string, output) != 0) {
     failf(state, "Different parse trees.\nExpected: '%s'\nGot: '%s'", output,
           ss.string);
-    VEC_FREE(&pres.tree.inds);
-    VEC_FREE(&pres.tree.nodes);
-    free(ss.string);
   }
+
+  free(ss.string);
+ret_b:
+  VEC_FREE(&pres.tree.inds);
+  VEC_FREE(&pres.tree.nodes);
+ret_a:
+  VEC_FREE(&tres.tokens);
 }
 
 static void test_parser_fails_on(test_state *state, char *input,
@@ -46,22 +48,24 @@ static void test_parser_fails_on(test_state *state, char *input,
   if (!tres.succeeded) {
     failf(state, "Parser test \"%s\" failed tokenization at position %d", input,
           tres.error_pos);
-    goto ret;
+    goto ret_a;
   }
 
   parse_tree_res pres = parse(tres.tokens);
   if (pres.succeeded) {
     failf(state, "Parsing \"%s\" was supposed to fail.", input);
-    goto ret;
+    goto ret_b;
   }
 
   if (pos != pres.error_pos) {
     failf(state, "Parsing failed at wrong position.\nExpected: %d\nGot: %d",
           pos, pres.error_pos);
-    goto ret;
   }
 
-ret:
+ret_b:
+  VEC_FREE(&pres.tree.inds);
+  VEC_FREE(&pres.tree.nodes);
+ret_a:
   VEC_FREE(&tres.tokens);
 }
 
@@ -146,7 +150,7 @@ static void test_parser_fails(test_state *state) {
 
   {
     test_start(state, "too many open parens");
-    test_parser_fails_on(state, "(", 0);
+    test_parser_fails_on(state, "(", 1);
     test_end(state);
   }
 

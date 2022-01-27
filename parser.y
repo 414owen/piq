@@ -15,6 +15,8 @@
   #include "token.h"
   #include "vec.h"
 
+  #define YYNOERRORRECOVERY 1
+
   typedef struct {
     token *tokens;
     parse_tree_res *res;
@@ -28,10 +30,11 @@
 
 %extra_argument { state s }
 
-root ::= forms(A) EOF . {
+root ::= forms(A) form(B) EOF . {
   NODE_IND_T start = s.res->tree.inds.len;
   VEC_CAT(&s.res->tree.inds, &A);
-  parse_node n = {.type = PT_ROOT, .subs_start = start, .sub_amt = A.len};
+  VEC_PUSH(&s.res->tree.inds, B);
+  parse_node n = {.type = PT_ROOT, .subs_start = start, .sub_amt = A.len + 1};
   VEC_PUSH(&s.res->tree.nodes, n);
   s.res->tree.root_ind = s.res->tree.nodes.len - 1;
   VEC_FREE(&A);
@@ -42,7 +45,10 @@ forms(RES) ::= forms(A) form(B). {
   RES = A;
 }
 
-forms(RES) ::= . { vec_node_ind res = VEC_NEW; RES = res; }
+forms(RES) ::= . {
+  vec_node_ind res = VEC_NEW;
+  RES = res;
+}
 
 form(RES) ::= NAME(A). {
   token t = s.tokens[A];
@@ -68,7 +74,7 @@ compound ::= tuple.
 
 compound ::= call.
 
-tuple(RES) ::= form(A) COMMA commalist(B). {
+tuple(RES) ::= form(A) COMMA commapred(B). {
   NODE_IND_T start = s.res->tree.inds.len;
   VEC_PUSH(&s.res->tree.inds, A);
   VEC_CAT(&s.res->tree.inds, &B);
@@ -88,18 +94,14 @@ call(RES) ::= form(A) forms(B). {
   VEC_FREE(&B);
 }
 
-commalist(RES) ::= commapred(A) form(B). {
+commapred(RES) ::= commapred(A) COMMA form(B). {
   VEC_PUSH(&A, B);
   RES = A;
 }
 
-commapred(RES) ::= commapred(A) form(B) COMMA. {
-  VEC_PUSH(&A, B);
-  RES = A;
-}
-
-commapred(RES) ::= . {
+commapred(RES) ::= form(A). {
   vec_node_ind res = VEC_NEW;
+  VEC_PUSH(&res, A);
   RES = res;
 }
 
@@ -115,7 +117,8 @@ if(RES) ::= IF form(A) form(B) form(C). {
 
 %syntax_error {
   // TODO if we want error recovery
-  s.res->error_pos = s.pos;
+  if (s.res->succeeded) s.res->error_pos = s.pos;
+  s.res->succeeded = false;
 }
 
 %parse_failure {
@@ -135,7 +138,7 @@ if(RES) ::= IF form(A) form(B) form(C). {
       },
     };
 
-    ParseTrace(stderr, "");
+    // ParseTrace(stderr, "");
     state state = {
       .tokens = tokens.data,
       .res = &res,
