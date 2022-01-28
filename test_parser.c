@@ -45,48 +45,45 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
   if (!tres.succeeded) {
     failf(state, "Parser test \"%s\" failed tokenization at position %d", input,
           tres.error_pos);
-    goto ret_a;
-  }
+  } else {
 
-  parse_tree_res pres = parse(tres.tokens);
-  if (pres.succeeded) {
-    failf(state, "Parsing \"%s\" was supposed to fail.", input);
-    goto ret_b;
-  }
+    parse_tree_res pres = parse(tres.tokens);
+    if (pres.succeeded) {
+      failf(state, "Parsing \"%s\" was supposed to fail.", input);
+    } else {
+  
+      if (pos != pres.error_pos) {
+        failf(state, "Parsing failed at wrong position.\nExpected: %d\nGot: %d",
+              pos, pres.error_pos);
+      }
 
-  if (pos != pres.error_pos) {
-    failf(state, "Parsing failed at wrong position.\nExpected: %d\nGot: %d",
-          pos, pres.error_pos);
-  }
+      bool expected_tokens_match = pres.expected_amt == expected_amt;
 
-  bool expected_tokens_match = pres.expected_amt == expected_amt;
+      for (NODE_IND_T i = 0; expected_tokens_match && i < expected_amt; i++) {
+        if (expected[i] != pres.expected[i])
+          expected_tokens_match = false;
+      }
 
-  for (NODE_IND_T i = 0; expected_tokens_match && i < expected_amt; i++) {
-    if (expected[i] != pres.expected[i])
-      expected_tokens_match = false;
-  }
-
-  if (!expected_tokens_match) {
-    char **a = alloca(sizeof(char *) * expected_amt);
-    for (size_t i = 0; i < expected_amt; i++) {
-      a[i] = yyTokenName[expected[i]];
+      if (!expected_tokens_match) {
+        char **a = alloca(sizeof(char *) * expected_amt);
+        for (size_t i = 0; i < expected_amt; i++) {
+          a[i] = yyTokenName[expected[i]];
+        }
+        char *as = join(expected_amt, a, ", ");
+        char **b = alloca(sizeof(char *) * pres.expected_amt);
+        for (size_t i = 0; i < pres.expected_amt; i++) {
+          b[i] = yyTokenName[pres.expected[i]];
+        }
+        char *bs = join(pres.expected_amt, b, ", ");
+        failf(state, "Expected token mismatch.\nExpected: [%s]\n, Got: [%s]", as,
+              bs);
+        free(as);
+        free(bs);
+      }
     }
-    char *as = join(expected_amt, a, ", ");
-    char **b = alloca(sizeof(char *) * pres.expected_amt);
-    for (size_t i = 0; i < pres.expected_amt; i++) {
-      b[i] = yyTokenName[pres.expected[i]];
-    }
-    char *bs = join(pres.expected_amt, b, ", ");
-    failf(state, "Expected token mismatch.\nExpected: [%s]\n, Got: [%s]", as,
-          bs);
-    free(as);
-    free(bs);
+    VEC_FREE(&pres.tree.inds);
+    VEC_FREE(&pres.tree.nodes);
   }
-
-ret_b:
-  VEC_FREE(&pres.tree.inds);
-  VEC_FREE(&pres.tree.nodes);
-ret_a:
   VEC_FREE(&tres.tokens);
 }
 
