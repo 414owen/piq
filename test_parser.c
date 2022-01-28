@@ -23,8 +23,8 @@ static void test_parser_succeeds_on(test_state *state, char *input,
       print_parse_tree(ss.stream, test_file, pres.tree);
       ss_finalize(&ss);
       if (strcmp(ss.string, output) != 0) {
-        failf(state, "Different parse trees.\nExpected: '%s'\nGot: '%s'", output,
-              ss.string);
+        failf(state, "Different parse trees.\nExpected: '%s'\nGot: '%s'",
+              output, ss.string);
       }
       free(ss.string);
     }
@@ -51,7 +51,7 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
     if (pres.succeeded) {
       failf(state, "Parsing \"%s\" was supposed to fail.", input);
     } else {
-  
+
       if (pos != pres.error_pos) {
         failf(state, "Parsing failed at wrong position.\nExpected: %d\nGot: %d",
               pos, pres.error_pos);
@@ -75,8 +75,8 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
           b[i] = yyTokenName[pres.expected[i]];
         }
         char *bs = join(pres.expected_amt, b, ", ");
-        failf(state, "Expected token mismatch.\nExpected: [%s]\n, Got: [%s]", as,
-              bs);
+        failf(state, "Expected token mismatch.\nExpected: [%s]\n, Got: [%s]",
+              as, bs);
         free(as);
         free(bs);
       }
