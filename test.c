@@ -55,6 +55,9 @@ void test_start(test_state *state, char *name) {
 
 void test_end(test_state *state) {
   printf(" %s" RESET "\n", state->current_failed ? RED "❌" : GRN "✓");
+  if (!state->current_failed)
+    state->tests_passed++;
+  state->tests_run++;
 }
 
 void failf(test_state *state, const char *restrict fmt, ...) {

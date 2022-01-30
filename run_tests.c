@@ -1,3 +1,6 @@
+#include <inttypes.h>
+#include <stdint.h>
+
 #include "test.h"
 
 int main(int argc, char **argv) {
@@ -11,6 +14,10 @@ int main(int argc, char **argv) {
     free(f.reason);
     VEC_FREE(&f.path);
   }
+
+  printf("Tests passed: %" PRIu32 "/%" PRIu32 "\n", state.tests_passed,
+         state.tests_run);
+
   VEC_FREE(&state.failures);
   VEC_FREE(&state.path);
   if (state.failures.len > 0)
