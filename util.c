@@ -12,7 +12,6 @@ void *memclone(void *src, size_t bytes) {
 
 void ss_init(stringstream *ss) {
   ss->stream = open_memstream(&ss->string, &ss->size);
-  ss->string = calloc(1, 1);
   if (ss->stream != NULL)
     return;
   perror("Can't make string stream");
@@ -51,7 +50,7 @@ char *join(size_t str_amt, char **strs, char *sep) {
   }
   size_t seplen = strlen(sep);
   space += (str_amt / 2) * seplen;
-  if ((space & 1) == 0)
+  if ((space & 1) == 1)
     space += seplen;
   char *res = malloc(space + 1);
   res[space] = '\0';
