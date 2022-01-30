@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "vec.h"
 
@@ -16,8 +17,8 @@ VEC_DECL(failure);
 
 typedef struct {
   vec_string path;
-  unsigned tests_passed;
-  unsigned tests_run;
+  uint32_t tests_passed;
+  uint32_t tests_run;
   char *current_name;
   bool current_failed;
   vec_failure failures;
@@ -31,7 +32,7 @@ void test_group_start(test_state *state, char *name);
 void test_end(test_state *state);
 void test_start(test_state *state, char *name);
 
-void failf(test_state *state, const char *restrict fmt, ...);
+void failf(test_state *state, const char *fmt, ...);
 
 void test_fail_eq(test_state *state, char *a, char *b);
 
