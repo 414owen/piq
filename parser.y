@@ -4,6 +4,7 @@
 
 %type commalist vec_node_ind
 %type commapred vec_node_ind
+%type params vec_node_ind
 %type forms vec_node_ind
 
 %include {
@@ -52,27 +53,56 @@ forms(RES) ::= . {
 
 form(RES) ::= INT(A).  { 
   token t = s.tokens[A];
-  parse_node n = {.type = PT_INT, .start = t.start, .end = t.end};
+  parse_node n = {.type = PT_INT, .start = t.start, .end = t.end, .sub_amt = 0};
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
 }
 
 form(RES) ::= NAME(A). {
   token t = s.tokens[A];
-  parse_node n = {.type = PT_NAME, .start = t.start, .end = t.end};
+  parse_node n = {.type = PT_NAME, .start = t.start, .end = t.end, .sub_amt = 0};
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
 }
 
-form(RES) ::= OPEN_PAREN compound(A) CLOSE_PAREN.{
-  RES = A;
+form(RES) ::= OPEN_PAREN(A) compound(B) CLOSE_PAREN(C). {
+  token a = s.tokens[A];
+  s.res->tree.nodes.data[B].start = a.start;
+  a = s.tokens[C];
+  s.res->tree.nodes.data[B].start = a.end;
+  RES = B;
 }
 
 compound ::= if.
 
+compound ::= fn.
+
 compound ::= tuple.
 
 compound ::= call.
+
+fn(RES) ::= FN OPEN_PAREN params(A) CLOSE_PAREN form(B). {
+  NODE_IND_T start = s.res->tree.inds.len;
+  VEC_CAT(&s.res->tree.inds, &A);
+  VEC_PUSH(&s.res->tree.inds, B);
+  parse_node n = {.type = T_FN, .subs_start = start, .sub_amt = A.len + 1};
+  VEC_PUSH(&s.res->tree.nodes, n);
+  RES = s.res->tree.nodes.len - 1;
+  VEC_FREE(&A);
+}
+
+params(RES) ::= . {
+  vec_node_ind v = VEC_NEW;
+  RES = v;
+}
+
+params(RES) ::= params(A) NAME(B). {
+  token t = s.tokens[B];
+  parse_node n = {.type = PT_NAME, .start = t.start, .end = t.end};
+  VEC_PUSH(&s.res->tree.nodes, n);
+  VEC_PUSH(&A, s.res->tree.nodes.len - 1);
+  RES = A;
+}
 
 tuple(RES) ::= form(A) COMMA commapred(B). {
   NODE_IND_T start = s.res->tree.inds.len;

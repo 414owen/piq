@@ -3,5 +3,6 @@
 #define T_NAME                             3
 #define T_OPEN_PAREN                       4
 #define T_CLOSE_PAREN                      5
-#define T_COMMA                            6
-#define T_IF                               7
+#define T_FN                               6
+#define T_COMMA                            7
+#define T_IF                               8

@@ -45,7 +45,7 @@
 #define VEC_APPEND(v1, amt, els) { \
     VEC_GROW((v1), (amt) + (v1)->len); \
     memcpy(&(v1)->data[(v1)->len], (els), amt * sizeof((v1)->data[0])); \
-    v1->len += amt; \
+    (v1)->len += amt; \
   }
 
 #define VEC_CAT(v1, v2) VEC_APPEND((v1), (v2)->len, (v2)->data)

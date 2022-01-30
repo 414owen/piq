@@ -10,7 +10,7 @@ COMPILE.c = $(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
 %.o : %.c $(DEPDIR)/%.d | $(DEPDIR)
 	$(COMPILE.c) $(OUTPUT_OPTION) $<
 
-tokenizer.o : tokenizer.c
+tokenizer.o : tokenizer.c parser.h
 	$(COMPILE.c) $(OUTPUT_OPTION) $<
 
 parser.o : parser.c
@@ -34,6 +34,8 @@ clean:
 parser.c: parser.y
 	lemon parser.y
 	sed -i 's/^static \(const char \*.*yyTokenName\[\].*\)$$/\1/g' parser.c
+
+parser.h: parser.c
 
 tokenizer.c: tokenizer.re
 	re2c -o tokenizer.c tokenizer.re

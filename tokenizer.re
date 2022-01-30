@@ -47,6 +47,7 @@ token_res scan(source_file file, BUF_IND_T start) {
   // "type"  { return mk_token(T_TYPE, start, pos - 1);          }
   // "match" { return mk_token(T_MATCH, start, pos - 1);          }
   "if"    { return mk_token(T_IF, start, pos - 1);          }
+  "fn"    { return mk_token(T_FN, start, pos - 1);          }
   ident   { return mk_token(T_NAME, start, pos - 1);        }
   [(]     { return mk_token(T_OPEN_PAREN, start, pos - 1);  }
   [)]     { return mk_token(T_CLOSE_PAREN, start, pos - 1); }
