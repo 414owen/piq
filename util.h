@@ -11,6 +11,7 @@
 typedef struct {
   char *string;
   FILE *stream;
+  size_t size;
 } stringstream;
 
 void ss_init(stringstream *ss);

@@ -26,7 +26,7 @@ parser.h: parser.c
 TEST_OBJS := test.o test_scanner.o test_parser.o parse_tree.o util.o tokenizer.o parser.o
 
 test: run_tests.c $(TEST_OBJS)
-	cc $(CFLAGS) -o test run_tests.c $(TEST_OBJS)
+	$(CC) $(CFLAGS) -o test run_tests.c $(TEST_OBJS)
 
 clean:
 	rm -f *.so *.o test parser.c tokenizer.c
