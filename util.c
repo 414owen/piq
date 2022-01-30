@@ -11,8 +11,12 @@ void *memclone(void *src, size_t bytes) {
 }
 
 void ss_init(stringstream *ss) {
-  size_t bufferSize = 0;
-  ss->stream = open_memstream(&ss->string, &bufferSize);
+  ss->stream = open_memstream(&ss->string, &ss->size);
+  ss->string = calloc(1, 1);
+  if (ss->stream != NULL)
+    return;
+  perror("Can't make string stream");
+  exit(1);
 }
 
 // Won't update copies of the stringstream that was used to `init`.
