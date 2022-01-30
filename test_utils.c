@@ -1,17 +1,16 @@
-#include "util.h"
 #include "test.h"
+#include "util.h"
 
 static char *sep = " . ";
 
 void test_join(test_state *state, char **strs, size_t amt, char *exp) {
   char *join_res = join(amt, strs, sep);
-  if (strcmp(join_res, exp) != 0) test_fail_eq(state, join_res, exp);
+  if (strcmp(join_res, exp) != 0)
+    test_fail_eq(state, join_res, exp);
   free(join_res);
 }
 
-void test_utils(test_state *state) {
-  test_group_start(state, "Utils");
-
+void run_join_tests(test_state *state) {
   test_group_start(state, "Join");
   {
     test_start(state, "Empty");
@@ -38,6 +37,10 @@ void test_utils(test_state *state) {
     test_end(state);
   }
   test_group_end(state);
+}
 
+void test_utils(test_state *state) {
+  test_group_start(state, "Utils");
+  run_join_tests(state);
   test_group_end(state);
 }
