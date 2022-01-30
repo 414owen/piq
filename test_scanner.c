@@ -24,7 +24,7 @@ static void test_scanner_fails(test_state *state, char *buf,
   for (;;) {
     token_res t = scan(file, ind);
     if (t.succeeded) {
-      if (t.token.type == T_EOF)
+      if (t.token.type == TK_EOF)
         break;
       ind = t.token.end + 1;
       continue;
@@ -54,67 +54,67 @@ static void test_scanner_accepts(test_state *state) {
 
   {
     test_start(state, "Open Paren");
-    static const token_type tokens[] = {T_OPEN_PAREN};
+    static const token_type tokens[] = {TK_OPEN_PAREN};
     test_scanner_tokens(state, "(", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Close Paren");
-    static const token_type tokens[] = {T_CLOSE_PAREN};
+    static const token_type tokens[] = {TK_CLOSE_PAREN};
     test_scanner_tokens(state, ")", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Parens");
-    static const token_type tokens[] = {T_OPEN_PAREN, T_CLOSE_PAREN};
+    static const token_type tokens[] = {TK_OPEN_PAREN, TK_CLOSE_PAREN};
     test_scanner_tokens(state, "()", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Nested Parens");
-    static const token_type tokens[] = {T_OPEN_PAREN, T_OPEN_PAREN,
-                                        T_CLOSE_PAREN, T_CLOSE_PAREN};
+    static const token_type tokens[] = {TK_OPEN_PAREN, TK_OPEN_PAREN,
+                                        TK_CLOSE_PAREN, TK_CLOSE_PAREN};
     test_scanner_tokens(state, "(())", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Mismatching Parens");
-    static const token_type tokens[] = {T_CLOSE_PAREN, T_CLOSE_PAREN,
-                                        T_OPEN_PAREN, T_OPEN_PAREN};
+    static const token_type tokens[] = {TK_CLOSE_PAREN, TK_CLOSE_PAREN,
+                                        TK_OPEN_PAREN, TK_OPEN_PAREN};
     test_scanner_tokens(state, "))((", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Name");
-    static const token_type tokens[] = {T_NAME};
+    static const token_type tokens[] = {TK_NAME};
     test_scanner_tokens(state, "abc", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Names");
-    static const token_type tokens[] = {T_NAME, T_NAME};
+    static const token_type tokens[] = {TK_NAME, TK_NAME};
     test_scanner_tokens(state, "abc def", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "If");
-    static const token_type tokens[] = {T_IF};
+    static const token_type tokens[] = {TK_IF};
     test_scanner_tokens(state, "if", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Kitchen Sink");
-    static const token_type tokens[] = {T_NAME,       T_CLOSE_PAREN, T_NAME,
-                                        T_OPEN_PAREN, T_NAME,        T_COMMA,
-                                        T_INT,        T_NAME};
+    static const token_type tokens[] = {TK_NAME,       TK_CLOSE_PAREN, TK_NAME,
+                                        TK_OPEN_PAREN, TK_NAME,        TK_COMMA,
+                                        TK_INT,        TK_NAME};
     test_scanner_tokens(state, "abc)b3(def,234a", STATIC_LEN(tokens), tokens);
     test_end(state);
   }

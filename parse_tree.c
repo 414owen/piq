@@ -50,8 +50,10 @@ static void print_node(FILE *f, printer_state *s, NODE_IND_T node_ind) {
       for (size_t i = 0; i < node.sub_amt - 1; i++) {
         if (i > 0)
           putc(' ', f);
-        fprintf(f, "%.*s", 1 + node.end - node.start,
-                s->file.data + node.start);
+        parse_node param =
+          s->tree.nodes.data[s->tree.inds.data[node.subs_start + i]];
+        fprintf(f, "%.*s", 1 + param.end - param.start,
+                s->file.data + param.start);
       }
       fputs(") ", f);
       VEC_PUSH(&s->node_stack,

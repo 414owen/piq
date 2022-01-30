@@ -44,16 +44,16 @@ token_res scan(source_file file, BUF_IND_T start) {
   ident = alpha (alpha | [0-9])*;
   int = [0-9]+;
 
-  // "type"  { return mk_token(T_TYPE, start, pos - 1);          }
-  // "match" { return mk_token(T_MATCH, start, pos - 1);          }
-  "if"    { return mk_token(T_IF, start, pos - 1);          }
-  "fn"    { return mk_token(T_FN, start, pos - 1);          }
-  ident   { return mk_token(T_NAME, start, pos - 1);        }
-  [(]     { return mk_token(T_OPEN_PAREN, start, pos - 1);  }
-  [)]     { return mk_token(T_CLOSE_PAREN, start, pos - 1); }
-  [,]     { return mk_token(T_COMMA, start, pos - 1);       }
-  int     { return mk_token(T_INT, start, pos - 1);         }
-  [\x00]  { return mk_token(T_EOF, start, pos - 1);         }
+  // "type"  { return mk_token(TK_TYPE, start, pos - 1);          }
+  // "match" { return mk_token(TK_MATCH, start, pos - 1);          }
+  "if"    { return mk_token(TK_IF, start, pos - 1);          }
+  "fn"    { return mk_token(TK_FN, start, pos - 1);          }
+  ident   { return mk_token(TK_NAME, start, pos - 1);        }
+  [(]     { return mk_token(TK_OPEN_PAREN, start, pos - 1);  }
+  [)]     { return mk_token(TK_CLOSE_PAREN, start, pos - 1); }
+  [,]     { return mk_token(TK_COMMA, start, pos - 1);       }
+  int     { return mk_token(TK_INT, start, pos - 1);         }
+  [\x00]  { return mk_token(TK_EOF, start, pos - 1);         }
   *       { return (token_res) {.succeeded = false, .token.start = pos - 1}; }
 */
 }
@@ -70,7 +70,7 @@ tokens_res scan_all(source_file file) {
         .error_pos = tres.token.start,
       };
     VEC_PUSH(&res.tokens, tres.token);
-    if (tres.token.type == T_EOF) {
+    if (tres.token.type == TK_EOF) {
       VEC_FINALIZE(&res.tokens);
       return res;
     }
