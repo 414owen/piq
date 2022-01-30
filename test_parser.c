@@ -75,7 +75,7 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
           b[i] = yyTokenName[pres.expected[i]];
         }
         char *bs = join(pres.expected_amt, b, ", ");
-        failf(state, "Expected token mismatch.\nExpected: [%s]\n, Got: [%s]",
+        failf(state, "Expected token mismatch.\nExpected: [%s]\nGot: [%s]",
               as, bs);
         free(as);
         free(bs);
@@ -168,7 +168,7 @@ static void test_parser_fails(test_state *state) {
 
   {
     test_start(state, "too many open parens");
-    static token_type expected[] = {T_INT, T_NAME, T_OPEN_PAREN, T_IF};
+    static token_type expected[] = {T_INT, T_NAME, T_OPEN_PAREN, T_FN, T_IF};
     test_parser_fails_on(state, "(", 1, STATIC_LEN(expected), expected);
     test_end(state);
   }

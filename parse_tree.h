@@ -16,23 +16,17 @@ typedef enum __attribute__ ((__packed__)) {
   PT_IF,
   PT_TUP,
   PT_ROOT,
+  PT_FN,
 } parse_node_type;
 
 typedef struct {
   parse_node_type type;
-  union {
-    // parens
-    struct {
-      NODE_IND_T subs_start;
-      uint16_t sub_amt;
-    };
 
-    // name, num
-    struct {
-      BUF_IND_T start;
-      BUF_IND_T end;
-    };
-  };
+  BUF_IND_T start;
+  BUF_IND_T end;
+
+  NODE_IND_T subs_start;
+  uint16_t sub_amt;
 } parse_node;
 
 typedef NODE_IND_T node_ind;
