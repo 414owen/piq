@@ -1,4 +1,4 @@
-%token_prefix T_
+%token_prefix TK_
 %token_type   int // index into token vec
 %default_type int
 
@@ -85,7 +85,7 @@ fn(RES) ::= FN OPEN_PAREN params(A) CLOSE_PAREN form(B). {
   NODE_IND_T start = s.res->tree.inds.len;
   VEC_CAT(&s.res->tree.inds, &A);
   VEC_PUSH(&s.res->tree.inds, B);
-  parse_node n = {.type = T_FN, .subs_start = start, .sub_amt = A.len + 1};
+  parse_node n = {.type = TK_FN, .subs_start = start, .sub_amt = A.len + 1};
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
   VEC_FREE(&A);
