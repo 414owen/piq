@@ -75,8 +75,8 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
           b[i] = yyTokenName[pres.expected[i]];
         }
         char *bs = join(pres.expected_amt, b, ", ");
-        failf(state, "Expected token mismatch.\nExpected: [%s]\nGot: [%s]",
-              as, bs);
+        failf(state, "Expected token mismatch.\nExpected: [%s]\nGot: [%s]", as,
+              bs);
         free(as);
         free(bs);
       }

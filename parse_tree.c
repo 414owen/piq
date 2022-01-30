@@ -48,11 +48,14 @@ static void print_node(FILE *f, printer_state *s, NODE_IND_T node_ind) {
     case PT_FN:
       fputs("(Fn (", f);
       for (size_t i = 0; i < node.sub_amt - 1; i++) {
-        if (i > 0) putc(' ', f);
-        fprintf(f, "%.*s", 1 + node.end - node.start, s->file.data + node.start);
+        if (i > 0)
+          putc(' ', f);
+        fprintf(f, "%.*s", 1 + node.end - node.start,
+                s->file.data + node.start);
       }
       fputs(") ", f);
-      VEC_PUSH(&s->node_stack, s->tree.inds.data[node.subs_start + node.sub_amt - 1]);
+      VEC_PUSH(&s->node_stack,
+               s->tree.inds.data[node.subs_start + node.sub_amt - 1]);
       static const print_action actions[] = {PRINT_CLOSE_PAREN, PRINT_NODE};
       VEC_APPEND(&s->actions, STATIC_LEN(actions), actions);
       break;

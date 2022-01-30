@@ -2,6 +2,7 @@
 
 int main(int argc, char **argv) {
   test_state state = test_state_new();
+  test_utils(&state);
   test_scanner(&state);
   test_parser(&state);
   print_failures(&state);

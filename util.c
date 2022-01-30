@@ -50,7 +50,9 @@ char *join(size_t str_amt, char **strs, char *sep) {
     space += lens[i];
   }
   size_t seplen = strlen(sep);
-  space += (((str_amt + 1) / 2) - 1) * seplen;
+  space += (str_amt / 2) * seplen;
+  if ((space & 1) == 0)
+    space += seplen;
   char *res = malloc(space + 1);
   res[space] = '\0';
   size_t ind = 0;
