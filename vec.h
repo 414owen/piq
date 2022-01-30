@@ -8,20 +8,25 @@
 
 #define VEC_DECL(type) typedef struct { uint32_t len; uint32_t cap; type *data; } vec_ ## type;
 
+VEC_DECL(void);
+
 #define VEC_NEW { .len = 0, .cap = 0, .data = NULL }
 
-#define VEC_RESIZE(vec, _cap) { \
-    (vec)->data = realloc((vec)->data, (_cap) * sizeof((vec)->data[0])); \
-    assert((vec)->data != NULL); \
-    (vec)->cap = (_cap); \
-  }
+void __vec_resize(vec_void *vec, size_t cap, size_t elemsize);
 
-#define VEC_GROW(vec, _cap) if ((vec)->cap < (_cap)) { VEC_RESIZE((vec), (_cap)); }
+#define VEC_RESIZE(vec, _cap) __vec_resize((vec_void*) vec, _cap, sizeof((vec)->data[0]))
+
+void __vec_grow(vec_void *vec, size_t cap, size_t elemsize);
+
+#define VEC_GROW(vec, _cap) __vec_grow((vec_void*) vec, _cap, sizeof((vec)->data[0]))
+
+void __vec_push(vec_void *vec, void *el, size_t elemsize);
 
 #define VEC_PUSH(vec, el) { \
-    if ((vec)->cap == (vec)->len) { VEC_RESIZE((vec), MAX(20, (vec)->len * 2)); } \
-    (vec)->data[(vec)->len++] = (el); \
-  }
+  assert(sizeof((vec)->data[0]) == sizeof(el)); \
+  typeof(el) __el = el; \
+  __vec_push((vec_void*) vec, (void*) &__el, sizeof(el)); \
+}
 
 #define VEC_POP_(vec) --(vec)->len
 
@@ -42,10 +47,11 @@
     (vec)->data = realloc((vec)->data, (vec)->len * sizeof((vec)->data[0])); \
   }
 
-#define VEC_APPEND(v1, amt, els) { \
-    VEC_GROW((v1), (amt) + (v1)->len); \
-    memcpy(&(v1)->data[(v1)->len], (els), amt * sizeof((v1)->data[0])); \
-    (v1)->len += amt; \
+void __vec_append(vec_void *vec, void *els, size_t amt, size_t elemsize);
+
+#define VEC_APPEND(vec, amt, els) { \
+    assert(sizeof((vec)->data[0]) == sizeof(els[0])); \
+    __vec_append((vec_void*) vec, (void*) els, amt, sizeof(els[0])); \
   }
 
 #define VEC_CAT(v1, v2) VEC_APPEND((v1), (v2)->len, (v2)->data)

@@ -149,7 +149,7 @@ if(RES) ::= IF form(A) form(B) form(C). {
   vec_token_type expected = VEC_NEW;
   if (s.res->succeeded) {
     s.res->error_pos = s.pos;
-    for (int i = 0; i < YYNTOKEN; i++) {
+    for (token_type i = 0; i < YYNTOKEN; i++) {
       int a = yy_find_shift_action((YYCODETYPE)i, yypParser->yytos->stateno);
       if (a != YY_ERROR_ACTION) VEC_PUSH(&expected, i);
     }
