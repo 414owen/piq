@@ -43,14 +43,16 @@ typedef struct {
 
 typedef struct {
   bool succeeded;
-  union {
+
+  // TODO restore union when I figure out how to disable lemon's error recovery
+  // union {
     parse_tree tree;
     struct {
       NODE_IND_T error_pos;
       uint8_t expected_amt;
       token_type *expected;
     };
-  };
+  // };
 } parse_tree_res;
 
 parse_tree_res parse(vec_token tokens);
