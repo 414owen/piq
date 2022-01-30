@@ -170,23 +170,88 @@ static void test_parser_succeeds(test_state *state) {
   test_group_end(state);
 }
 
-static void test_parser_fails(test_state *state) {
-  test_group_start(state, "Fails");
+static token_type form_start[] = {T_INT, T_NAME, T_OPEN_PAREN};
+
+static void test_if_failures(test_state *state) {
+  test_group_start(state, "If");
 
   {
-    test_start(state, "too many open parens");
+    test_start(state, "Empty");
+    test_parser_fails_on(state, "(if)", 2, STATIC_LEN(form_start), form_start);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "One form");
+    static token_type expected[] = {T_INT, T_NAME, T_OPEN_PAREN};
+    test_parser_fails_on(state, "(if 1)", 3, STATIC_LEN(expected), expected);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Two form");
+    static token_type expected[] = {T_INT, T_NAME, T_OPEN_PAREN};
+    test_parser_fails_on(state, "(if 1 2)", 4, STATIC_LEN(expected), expected);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Four form");
+    static token_type expected[] = {T_CLOSE_PAREN};
+    test_parser_fails_on(state, "(if 1 2 3 4)", 5, STATIC_LEN(expected),
+                         expected);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Adjacent");
+    static token_type expected[] = {T_INT, T_NAME, T_OPEN_PAREN};
+    test_parser_fails_on(state, "(if if 1 2 3)", 2, STATIC_LEN(expected),
+                         expected);
+    test_end(state);
+  }
+
+  test_group_end(state);
+}
+
+static void test_mismatched_parens(test_state *state) {
+  test_group_start(state, "Parens");
+
+  {
+    test_start(state, "Single open");
     static token_type expected[] = {T_INT, T_NAME, T_OPEN_PAREN, T_FN, T_IF};
     test_parser_fails_on(state, "(", 1, STATIC_LEN(expected), expected);
     test_end(state);
   }
 
   {
-    test_start(state, "too many close parens");
+    test_start(state, "Three open");
+    static token_type expected[] = {T_INT, T_NAME, T_OPEN_PAREN, T_FN, T_IF};
+    test_parser_fails_on(state, "(((", 3, STATIC_LEN(expected), expected);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Single close");
     static token_type expected[] = {T_INT, T_NAME, T_OPEN_PAREN};
     test_parser_fails_on(state, ")", 0, STATIC_LEN(expected), expected);
     test_end(state);
   }
 
+  {
+    test_start(state, "Three close");
+    static token_type expected[] = {T_INT, T_NAME, T_OPEN_PAREN};
+    test_parser_fails_on(state, ")))", 0, STATIC_LEN(expected), expected);
+    test_end(state);
+  }
+
+  test_group_end(state);
+}
+
+static void test_parser_fails(test_state *state) {
+  test_group_start(state, "Fails");
+  test_mismatched_parens(state);
+  test_if_failures(state);
   test_group_end(state);
 }
 

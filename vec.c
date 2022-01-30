@@ -1,4 +1,5 @@
 #include "vec.h"
+#include "util.h"
 
 void __vec_resize(vec_void *vec, size_t cap, size_t elemsize) {
   vec->data = realloc(vec->data, cap * elemsize);
@@ -8,11 +9,12 @@ void __vec_resize(vec_void *vec, size_t cap, size_t elemsize) {
 
 void __vec_grow(vec_void *vec, size_t cap, size_t elemsize) {
   if (vec->cap < cap)
-    __vec_resize(vec, cap, elemsize);
+    __vec_resize(vec, MAX(cap, 10), elemsize);
 }
 
 void __vec_push(vec_void *vec, void *el, size_t elemsize) {
   __vec_grow(vec, vec->len + 1, elemsize);
+  // SPEEDUP: Probably faster to do this one by hand
   memcpy(((char *)vec->data) + elemsize * vec->len, el, elemsize);
   vec->len++;
 }

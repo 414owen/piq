@@ -155,8 +155,8 @@ if(RES) ::= IF form(A) form(B) form(C). {
     }
     s.res->expected_amt = expected.len;
     s.res->expected = expected.data;
+    s.res->succeeded = false;
   }
-  s.res->succeeded = false;
 }
 
 %parse_failure {
