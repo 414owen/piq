@@ -18,6 +18,12 @@ int main(int argc, char **argv) {
   printf("Tests passed: %" PRIu32 "/%" PRIu32 "\n", state.tests_passed,
          state.tests_run);
 
+#ifdef JUNIT
+  write_test_results(&state);
+  VEC_FREE(&state.actions);
+  VEC_FREE(&state.strs);
+#endif
+
   VEC_FREE(&state.failures);
   VEC_FREE(&state.path);
   if (state.failures.len > 0)
