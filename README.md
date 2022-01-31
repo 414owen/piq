@@ -1,3 +1,5 @@
+![example workflow](https://github.com/414owen/lang-c/actions/workflows/ci.yml/badge.svg)
+
 # Goal
 
 A language that does everything right
