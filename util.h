@@ -18,6 +18,8 @@ void ss_init(stringstream *ss);
 void ss_finalize(stringstream *ss);
 
 void *memclone(void *src, size_t bytes);
+void memset_arbitrary(void *dest, void* el, size_t amt, size_t elsize);
 char *join(size_t str_amt, char **strs, char *sep);
 int vasprintf(char **, const char * restrict, va_list);
 int asprintf(char **, const char *restrict, ...);
+void reverse_arbitrary(void *dest, size_t amt, size_t elsize);

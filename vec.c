@@ -24,3 +24,10 @@ void __vec_append(vec_void *vec, void *els, size_t amt, size_t elemsize) {
   memcpy(((char *)vec->data) + elemsize * vec->len, els, amt * elemsize);
   vec->len += amt;
 }
+
+void __vec_replicate(vec_void *vec, void *el, size_t amt, size_t elemsize) {
+  __vec_grow(vec, vec->len + amt, elemsize);
+  memset_arbitrary(((char *)vec->data) + elemsize * vec->len, el, amt,
+                   elemsize);
+  vec->len += amt;
+}

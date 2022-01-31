@@ -4,7 +4,9 @@
 
 %type commalist vec_node_ind
 %type commapred vec_node_ind
+%type param node_ind_tup
 %type params vec_node_ind
+%type params_tuple vec_node_ind
 %type forms vec_node_ind
 
 %include {
@@ -27,6 +29,10 @@
   #define mk_leaf(type, start, end) \
     ((parse_node) { .type = type, .leaf_node = {.start = start, .end = end}})
 
+  typedef struct {
+    NODE_IND_T a;
+    NODE_IND_T b;
+  } node_ind_tup;
 }
 
 %extra_argument { state s }
@@ -58,9 +64,21 @@ form(RES) ::= INT(A).  {
   RES = s.res->tree.nodes.len - 1;
 }
 
-form(RES) ::= NAME(A). {
+form ::= name.
+
+name ::= upper_name.
+name ::= lower_name.
+
+upper_name(RES) ::= UPPER_NAME(A). {
   token t = s.tokens[A];
-  parse_node n = {.type = PT_NAME, .start = t.start, .end = t.end, .sub_amt = 0};
+  parse_node n = {.type = PT_UPPER_NAME, .start = t.start, .end = t.end, .sub_amt = 0};
+  VEC_PUSH(&s.res->tree.nodes, n);
+  RES = s.res->tree.nodes.len - 1;
+}
+
+lower_name(RES) ::= LOWER_NAME(A). {
+  token t = s.tokens[A];
+  parse_node n = {.type = PT_LOWER_NAME, .start = t.start, .end = t.end, .sub_amt = 0};
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
 }
@@ -69,7 +87,7 @@ form(RES) ::= OPEN_PAREN(A) compound(B) CLOSE_PAREN(C). {
   token a = s.tokens[A];
   s.res->tree.nodes.data[B].start = a.start;
   a = s.tokens[C];
-  s.res->tree.nodes.data[B].start = a.end;
+  s.res->tree.nodes.data[B].end = a.end;
   RES = B;
 }
 
@@ -85,7 +103,7 @@ fn(RES) ::= FN OPEN_PAREN params(A) CLOSE_PAREN form(B). {
   NODE_IND_T start = s.res->tree.inds.len;
   VEC_CAT(&s.res->tree.inds, &A);
   VEC_PUSH(&s.res->tree.inds, B);
-  parse_node n = {.type = TK_FN, .subs_start = start, .sub_amt = A.len + 1};
+  parse_node n = {.type = PT_FN, .subs_start = start, .sub_amt = A.len + 1};
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
   VEC_FREE(&A);
@@ -96,13 +114,27 @@ params(RES) ::= . {
   RES = v;
 }
 
-params(RES) ::= params(A) NAME(B). {
-  token t = s.tokens[B];
-  parse_node n = {.type = PT_NAME, .start = t.start, .end = t.end};
-  VEC_PUSH(&s.res->tree.nodes, n);
-  VEC_PUSH(&A, s.res->tree.nodes.len - 1);
+params ::= params_tuple.
+
+params_tuple(RES) ::= param(A). {
+  vec_node_ind v = VEC_NEW;
+  VEC_PUSH(&v, A.a);
+  VEC_PUSH(&v, A.b);
+  RES = v;
+}
+
+params_tuple(RES) ::= params_tuple(A) COMMA param(B). {
+  VEC_PUSH(&A, B.a);
+  VEC_PUSH(&A, B.b);
   RES = A;
 }
+
+param(RES) ::= lower_name(A) COLON type(B). {
+  node_ind_tup res = { .a = A, .b = B };
+  RES = res;
+}
+
+type ::= upper_name.
 
 tuple(RES) ::= form(A) COMMA commapred(B). {
   NODE_IND_T start = s.res->tree.inds.len;

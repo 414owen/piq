@@ -2,7 +2,8 @@
 #include "vec.h"
 
 typedef enum {
-  I8, U8, I16, U16, I32, U32, I64, U64,
+  T_UNKNOWN,
+  T_I8, T_U8, T_I16, T_U16, T_I32, T_U32, T_I64, T_U64,
 } type;
 
 VEC_DECL(type);
@@ -17,8 +18,6 @@ VEC_DECL(tc_error);
 
 typedef struct {
   bool successful;
-  union {
-    vec_tc_error errors;
-    vec_type types;
-  };
+  vec_tc_error errors;
+  vec_type types;
 } tc_res;
