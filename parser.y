@@ -2,6 +2,9 @@
 %token_type   int // index into token vec
 %default_type int
 
+// This is so that parser.h changes less
+%token EOF INT UPPER_NAME LOWER_NAME OPEN_PAREN CLOSE_PAREN FN COMMA COLON IF.
+
 %type commalist vec_node_ind
 %type commapred vec_node_ind
 %type param node_ind_tup
