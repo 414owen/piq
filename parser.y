@@ -102,6 +102,8 @@ compound ::= tuple.
 
 compound ::= call.
 
+compound ::= typed.
+
 fn(RES) ::= FN OPEN_PAREN params(A) CLOSE_PAREN form(B). {
   NODE_IND_T start = s.res->tree.inds.len;
   VEC_CAT(&s.res->tree.inds, &A);
@@ -138,6 +140,15 @@ param(RES) ::= lower_name(A) COLON type(B). {
 }
 
 type ::= upper_name.
+
+typed(RES) ::= form(A) COLON type(B). {
+  NODE_IND_T start = s.res->tree.inds.len;
+  VEC_PUSH(&s.res->tree.inds, A);
+  VEC_PUSH(&s.res->tree.inds, B);
+  parse_node n = {.type = PT_TYPED, .subs_start = start, .sub_amt = 2};
+  VEC_PUSH(&s.res->tree.nodes, n);
+  RES = s.res->tree.nodes.len - 1;
+}
 
 tuple(RES) ::= form(A) COMMA commapred(B). {
   NODE_IND_T start = s.res->tree.inds.len;
