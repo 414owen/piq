@@ -1,3 +1,4 @@
+#pragma once
 #define TK_EOF                              1
 #define TK_INT                              2
 #define TK_UPPER_NAME                       3

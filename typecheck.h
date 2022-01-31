@@ -1,3 +1,5 @@
+#pragma once
+
 #include "parse_tree.h"
 #include "vec.h"
 

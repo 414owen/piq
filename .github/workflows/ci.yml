@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install lemon and re2c
+      run: sudo apt-get install -y lemon re2c
+    - name: make check
+      run: make check
+    - name: check pragmas
+      run: ./scripts/checks/headers-have-pragmas.sh
