@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-set -e -o pipefail
+set -euxo pipefail
+
+fail="false"
 
 for i in *.h; do
   if ! cat $i | grep 'pragma once' > /dev/null; then
