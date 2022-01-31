@@ -18,7 +18,6 @@ typedef enum __attribute__ ((__packed__)) {
   PT_TUP,
   PT_ROOT,
   PT_FN,
-  PT_PRIMITIVE,
   PT_TYPED,
 } parse_node_type;
 
