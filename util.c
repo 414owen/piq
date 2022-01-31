@@ -41,6 +41,31 @@ int asprintf(char **buf, const char *restrict fmt, ...) {
   return res;
 }
 
+void memset_arbitrary(void *dest, void *el, size_t amt, size_t elsize) {
+  while (amt--) {
+    for (size_t i = 0; i < elsize; i++) {
+      *((char *)dest) = ((char *)el)[i];
+      dest = ((char *)dest) + 1;
+    }
+  }
+}
+
+void reverse_arbitrary(void *dest, size_t amt, size_t elsize) {
+  if (amt == 0)
+    return;
+  size_t start = 0;
+  size_t end = amt - 1;
+  void *tmp = alloca(elsize);
+  while (start < end) {
+    memcpy(tmp, ((char *)dest) + elsize * start, elsize);
+    memcpy(((char *)dest) + elsize * start, ((char *)dest) + elsize * end,
+           elsize);
+    memcpy(((char *)dest) + elsize * end, tmp, elsize);
+    start++;
+    end--;
+  }
+}
+
 char *join(size_t str_amt, char **strs, char *sep) {
   size_t space = 0;
   size_t *lens = alloca(str_amt * sizeof(size_t));

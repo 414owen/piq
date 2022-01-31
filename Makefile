@@ -32,7 +32,8 @@ clean:
 	rm -f *.so *.o test parser.c tokenizer.c
 
 parser.c: parser.y
-	lemon parser.y
+	# -c is worse, but leaves better error messages
+	lemon -c parser.y
 	sed -i 's/^static \(const char \*.*yyTokenName\[\].*\)$$/\1/g' parser.c
 
 parser.h: parser.c

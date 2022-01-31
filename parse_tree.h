@@ -11,12 +11,15 @@
 
 typedef enum __attribute__ ((__packed__)) {
   PT_CALL,
-  PT_NAME,
+  PT_UPPER_NAME,
+  PT_LOWER_NAME,
   PT_INT,
   PT_IF,
   PT_TUP,
   PT_ROOT,
   PT_FN,
+  PT_PRIMITIVE,
+  PT_TYPED,
 } parse_node_type;
 
 typedef struct {

@@ -41,19 +41,24 @@ token_res scan(source_file file, BUF_IND_T start) {
   re2c:yyfill:enable = 0;
 
   alpha = [a-zA-Z];
-  ident = alpha (alpha | [0-9])*;
+  lowerAlpha = [a-z];
+  upperAlpha = [A-Z];
+  lower_ident = lowerAlpha (alpha | [0-9])*;
+  upper_ident = upperAlpha (alpha | [0-9])*;
   int = [0-9]+;
 
-  // "type"  { return mk_token(TK_TYPE, start, pos - 1);          }
-  // "match" { return mk_token(TK_MATCH, start, pos - 1);          }
-  "if"    { return mk_token(TK_IF, start, pos - 1);          }
-  "fn"    { return mk_token(TK_FN, start, pos - 1);          }
-  ident   { return mk_token(TK_NAME, start, pos - 1);        }
-  [(]     { return mk_token(TK_OPEN_PAREN, start, pos - 1);  }
-  [)]     { return mk_token(TK_CLOSE_PAREN, start, pos - 1); }
-  [,]     { return mk_token(TK_COMMA, start, pos - 1);       }
-  int     { return mk_token(TK_INT, start, pos - 1);         }
-  [\x00]  { return mk_token(TK_EOF, start, pos - 1);         }
+  // "type"  { return mk_token(TK_TYPE, start, pos - 1);        }
+  // "match" { return mk_token(TK_MATCH, start, pos - 1);       }
+  "if"    { return mk_token(TK_IF, start, pos - 1);             }
+  "fn"    { return mk_token(TK_FN, start, pos - 1);             }
+  ":"     { return mk_token(TK_COLON, start, pos - 1);          }
+  lower_ident { return mk_token(TK_LOWER_NAME, start, pos - 1); }
+  upper_ident { return mk_token(TK_UPPER_NAME, start, pos - 1); }
+  [(]     { return mk_token(TK_OPEN_PAREN, start, pos - 1);     }
+  [)]     { return mk_token(TK_CLOSE_PAREN, start, pos - 1);    }
+  [,]     { return mk_token(TK_COMMA, start, pos - 1);          }
+  int     { return mk_token(TK_INT, start, pos - 1);            }
+  [\x00]  { return mk_token(TK_EOF, start, pos - 1);            }
   *       { return (token_res) {.succeeded = false, .token.start = pos - 1}; }
 */
 }

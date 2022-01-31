@@ -54,6 +54,15 @@ void __vec_append(vec_void *vec, void *els, size_t amt, size_t elemsize);
     __vec_append((vec_void*) vec, (void*) els, amt, sizeof(els[0])); \
   }
 
+void __vec_replicate(vec_void *vec, void *el, size_t amt, size_t elemsize);
+
+// appends el to vec amt times
+#define VEC_REPLICATE(vec, amt, el) { \
+    assert(sizeof((vec)->data[0]) == sizeof(el)); \
+    typeof(el) __el = el; \
+    __vec_replicate((vec_void*) vec, (void*) &__el, amt, sizeof(el)); \
+  }
+
 #define VEC_CAT(v1, v2) VEC_APPEND((v1), (v2)->len, (v2)->data)
 
 typedef char* string;

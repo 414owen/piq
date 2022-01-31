@@ -99,7 +99,7 @@ static void test_parser_succeeds_atomic(test_state *state) {
   test_group_start(state, "Atomic forms");
   {
     test_start(state, "Name");
-    test_parser_succeeds_on(state, "hello", "(Name hello)");
+    test_parser_succeeds_on(state, "hello", "(Lname hello)");
     test_end(state);
   }
 
@@ -117,14 +117,15 @@ static void test_parser_succeeds_kitchen_sink(test_state *state) {
   {
     test_start(state, "Lots of indentation");
     test_parser_succeeds_on(state, " ( ( hi 1   ) , 2 ) ",
-                            "(Tup (Call (Name hi) (Int 1)) (Int 2))");
+                            "(Tup (Call (Lname hi) (Int 1)) (Int 2))");
     test_end(state);
   }
 
   test_group_end(state);
 }
 
-static const token_type form_start[] = {TK_INT, TK_NAME, TK_OPEN_PAREN};
+static const token_type form_start[] = {TK_INT, TK_UPPER_NAME, TK_LOWER_NAME,
+                                        TK_OPEN_PAREN};
 
 static void test_if_failures(test_state *state) {
   test_group_start(state, "If");
@@ -187,15 +188,15 @@ static void test_fn_failures(test_state *state) {
   test_group_start(state, "Params");
   {
     test_start(state, "Numeric param");
-    static token_type expected[] = {TK_NAME, TK_CLOSE_PAREN};
-    test_parser_fails_on(state, "(fn (123))", 3, STATIC_LEN(expected),
+    static token_type expected[] = {TK_LOWER_NAME, TK_CLOSE_PAREN};
+    test_parser_fails_on(state, "(fn (123: I32) 1)", 3, STATIC_LEN(expected),
                          expected);
     test_end(state);
   }
 
   {
     test_start(state, "Nest");
-    static token_type expected[] = {TK_NAME, TK_CLOSE_PAREN};
+    static token_type expected[] = {TK_LOWER_NAME, TK_CLOSE_PAREN};
     test_parser_fails_on(state, "(fn (()))", 3, STATIC_LEN(expected), expected);
     test_end(state);
   }
@@ -215,13 +216,16 @@ static void test_fn_succeeds(test_state *state) {
 
   {
     test_start(state, "One arg");
-    test_parser_succeeds_on(state, "(fn (a) 1)", "(Fn (a) (Int 1))");
+    test_parser_succeeds_on(state, "(fn (a: I32) 1)",
+                            "(Fn ((Lname a): (Uname I32)) (Int 1))");
     test_end(state);
   }
 
   {
     test_start(state, "Two args");
-    test_parser_succeeds_on(state, "(fn (ab cd) 1)", "(Fn (ab cd) (Int 1))");
+    test_parser_succeeds_on(
+      state, "(fn (ab: I16, cd: U64) 1)",
+      "(Fn ((Lname ab): (Uname I16), (Lname cd): (Uname U64)) (Int 1))");
     test_end(state);
   }
 
@@ -240,14 +244,14 @@ static void test_parser_succeeds_compound(test_state *state) {
 
   {
     test_start(state, "Call without params");
-    test_parser_succeeds_on(state, "(add)", "(Call (Name add))");
+    test_parser_succeeds_on(state, "(add)", "(Call (Lname add))");
     test_end(state);
   }
 
   {
     test_start(state, "Call");
     test_parser_succeeds_on(state, "(add 1 2)",
-                            "(Call (Name add) (Int 1) (Int 2))");
+                            "(Call (Lname add) (Int 1) (Int 2))");
     test_end(state);
   }
 
@@ -260,7 +264,7 @@ static void test_parser_succeeds_compound(test_state *state) {
   {
     test_start(state, "Big tuple");
     test_parser_succeeds_on(state, "(1, 2, 3, hi, 4)",
-                            "(Tup (Int 1) (Int 2) (Int 3) (Name hi) (Int 4))");
+                            "(Tup (Int 1) (Int 2) (Int 3) (Lname hi) (Int 4))");
     test_end(state);
   }
 
@@ -274,30 +278,32 @@ static void test_mismatched_parens(test_state *state) {
 
   {
     test_start(state, "Single open");
-    static token_type expected[] = {TK_INT, TK_NAME, TK_OPEN_PAREN, TK_FN,
-                                    TK_IF};
+    static token_type expected[] = {TK_INT,        TK_UPPER_NAME, TK_LOWER_NAME,
+                                    TK_OPEN_PAREN, TK_FN,         TK_IF};
     test_parser_fails_on(state, "(", 1, STATIC_LEN(expected), expected);
     test_end(state);
   }
 
   {
     test_start(state, "Three open");
-    static token_type expected[] = {TK_INT, TK_NAME, TK_OPEN_PAREN, TK_FN,
-                                    TK_IF};
+    static token_type expected[] = {TK_INT,        TK_UPPER_NAME, TK_LOWER_NAME,
+                                    TK_OPEN_PAREN, TK_FN,         TK_IF};
     test_parser_fails_on(state, "(((", 3, STATIC_LEN(expected), expected);
     test_end(state);
   }
 
   {
     test_start(state, "Single close");
-    static token_type expected[] = {TK_INT, TK_NAME, TK_OPEN_PAREN};
+    static token_type expected[] = {TK_INT, TK_UPPER_NAME, TK_LOWER_NAME,
+                                    TK_OPEN_PAREN};
     test_parser_fails_on(state, ")", 0, STATIC_LEN(expected), expected);
     test_end(state);
   }
 
   {
     test_start(state, "Three close");
-    static token_type expected[] = {TK_INT, TK_NAME, TK_OPEN_PAREN};
+    static token_type expected[] = {TK_INT, TK_UPPER_NAME, TK_LOWER_NAME,
+                                    TK_OPEN_PAREN};
     test_parser_fails_on(state, ")))", 0, STATIC_LEN(expected), expected);
     test_end(state);
   }

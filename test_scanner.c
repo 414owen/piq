@@ -91,14 +91,14 @@ static void test_scanner_accepts(test_state *state) {
 
   {
     test_start(state, "Name");
-    static const token_type tokens[] = {TK_NAME};
+    static const token_type tokens[] = {TK_LOWER_NAME};
     test_scanner_tokens(state, "abc", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Names");
-    static const token_type tokens[] = {TK_NAME, TK_NAME};
+    static const token_type tokens[] = {TK_LOWER_NAME, TK_LOWER_NAME};
     test_scanner_tokens(state, "abc def", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
@@ -112,10 +112,10 @@ static void test_scanner_accepts(test_state *state) {
 
   {
     test_start(state, "Kitchen Sink");
-    static const token_type tokens[] = {TK_NAME,       TK_CLOSE_PAREN, TK_NAME,
-                                        TK_OPEN_PAREN, TK_NAME,        TK_COMMA,
-                                        TK_INT,        TK_NAME};
-    test_scanner_tokens(state, "abc)b3(def,234a", STATIC_LEN(tokens), tokens);
+    static const token_type tokens[] = {
+      TK_LOWER_NAME, TK_CLOSE_PAREN, TK_LOWER_NAME, TK_OPEN_PAREN,
+      TK_UPPER_NAME, TK_COMMA,       TK_INT,        TK_LOWER_NAME};
+    test_scanner_tokens(state, "abc)b3(Aef,234a", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
