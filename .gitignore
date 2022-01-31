@@ -7,3 +7,4 @@ test
 tokenizer.c
 parser.c
 .deps
+*.xml
