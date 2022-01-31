@@ -136,7 +136,6 @@ void write_test_results(test_state *state) {
 
   for (size_t i = 0; i < state->actions.len; i++) {
     test_action action = state->actions.data[state->actions.len - 1 - i];
-    printf("%d\n", action);
     switch (action) {
       case GROUP_LEAVE:
         VEC_PUSH(&agg_stack, current)
