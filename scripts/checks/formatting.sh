@@ -3,5 +3,7 @@
 set -euxo pipefail
 shopt -s extglob
 
-GLOBIGNORE="tokenizer.c:parser.c:parser.h" 
-for i in *.c; do clang-format -n --Werror $i; done
+MY_PATH=$(dirname "$0")
+source "${MY_PATH}/../globs.sh"
+
+for i in $handwritten_c_files;  do clang-format -n --Werror $i; done
