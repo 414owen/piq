@@ -29,6 +29,13 @@ check: test
 clean:
 	rm -f *.so *.o test parser.c tokenizer.c
 
+reports/coverage:
+	mkdir -p reports
+
+reports/coverage/index.html: reports/coverage
+	lcov --capture --directory . --output-file reports/coverage.info
+	genhtml coverage.info --output-directory reports/coverage
+
 parser.c parser.h &: parser.y
 	lemon -c parser.y
 	sed -i 's/^static \(const char \*.*yyTokenName\[\].*\)$$/\1/g' parser.c
