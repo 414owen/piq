@@ -8,5 +8,6 @@ pkgs.mkShell {
     clang-tools
     lcov
     lemon
+    valgrind
   ];
 }
