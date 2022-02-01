@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "term.h"
 #include "test.h"
@@ -40,7 +41,7 @@ static vec_string make_test_path(test_state *state) {
 
 static char *ne_reason(char *a_name, char *b_name) {
   char *res;
-  asprintf(&res, "Assert failed: %s != %s", a_name, b_name);
+  asprintf(&res, "Assert failed: '%s' != '%s'", a_name, b_name);
   return res;
 }
 
@@ -93,11 +94,18 @@ test_state test_state_new(void) {
     .path = VEC_NEW,
     .tests_passed = 0,
     .tests_run = 0,
+    .start_time = 0,
+    .end_time = 0,
     .current_name = NULL,
     .current_failed = false,
     .failures = VEC_NEW,
   };
+  clock_gettime(CLOCK_MONOTONIC, &res.start_time);
   return res;
+}
+
+void test_state_finalize(test_state *state) {
+  clock_gettime(CLOCK_MONOTONIC, &state->end_time);
 }
 
 static void print_failure(failure f) {
@@ -166,11 +174,14 @@ void write_test_results(test_state *state) {
 
   VEC_FREE(&agg_stack);
 
+  struct timespec elapsed;
+  timespec_subtract(&elapsed, &state->end_time, &state->start_time);
+
   fprintf(f,
           "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
           "<testsuites name=\"Unit tests\" tests=\"%u\" disabled=\"0\" "
-          "errors=\"0\" failures=\"%u\" time=\"0\">\n",
-          current.tests, current.failures);
+          "errors=\"0\" failures=\"%u\" time=\"%lld\">\n",
+          current.tests, current.failures, (long long)elapsed.tv_sec);
 
   size_t agg_ind = aggs.len - 1;
   size_t str_ind = 0;

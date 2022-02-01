@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <time.h>
 
 #include "vec.h"
 
@@ -31,6 +32,8 @@ typedef struct {
   vec_string path;
   uint32_t tests_passed;
   uint32_t tests_run;
+  struct timespec start_time;
+  struct timespec end_time;
   char *current_name;
   bool current_failed;
   vec_failure failures;
@@ -43,6 +46,7 @@ typedef struct {
 
 
 test_state test_state_new(void);
+void test_state_finalize(test_state *state);
 
 void test_group_end(test_state *state);
 void test_group_start(test_state *state, char *name);
