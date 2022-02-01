@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -17,6 +18,7 @@ static void print_depth_indent(test_state *state) {
 }
 
 void test_group_start(test_state *state, char *name) {
+  assert(!state->in_test);
   print_depth_indent(state);
   printf("%s\n", name);
   VEC_PUSH(&state->path, name);
@@ -27,6 +29,7 @@ void test_group_start(test_state *state, char *name) {
 }
 
 void test_group_end(test_state *state) {
+  assert(!state->in_test);
   VEC_POP_(&state->path);
 #ifdef JUNIT
   VEC_PUSH(&state->actions, GROUP_LEAVE);
@@ -60,10 +63,12 @@ void test_fail_eq(test_state *state, char *a, char *b) {
 }
 
 void test_start(test_state *state, char *name) {
+  assert(!state->in_test);
   print_depth_indent(state);
   fputs(name, stdout);
   state->current_name = name;
   state->current_failed = false;
+  state->in_test = true;
 #ifdef JUNIT
   VEC_PUSH(&state->actions, TEST_ENTER);
   VEC_PUSH(&state->strs, name);
@@ -75,6 +80,7 @@ void test_end(test_state *state) {
   if (!state->current_failed)
     state->tests_passed++;
   state->tests_run++;
+  state->in_test = false;
 #ifdef JUNIT
   VEC_PUSH(&state->actions, TEST_LEAVE);
 #endif
