@@ -19,41 +19,19 @@ jobs:
       run: sudo apt-get install -y lemon re2c valgrind lcov
     - name: make test
       run: CFLAGS="-O1 -DJUNIT --coverage" make check
-      # run after make, so we check generated headers too
     - name: check pragmas
       run: ./scripts/checks/headers-have-pragmas.sh
     - name: run tests
       run: ./test >/dev/null
     - name: Generate code coverage report
       run: make reports/coverage.info
-    - name: Setup .NET Core # Required to execute ReportGenerator
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 6.0.101
-    - name: Make coverage dir
-      run: mkdir -p reports/coverage
-    - name: ReportGenerator
-      uses: danielpalme/ReportGenerator-GitHub-Action@5.0.3
-      with:
-        reports: 'reports/coverage.info' # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
-        targetdir: 'reports/coverage' # REQUIRED # The directory where the generated report should be saved.
-        reporttypes: 'MarkdownSummary' 
-    - name: Upload coverage report artifact
-      uses: actions/upload-artifact@v2.2.3
-      with:
-        name: CoverageReport # Artifact name        
-        path: reports/coverage # Directory containing files to upload
-    - name: Fixup coverage report
-      run: sed -i 's/\/home\/runner\/work\/lang-c\/lang-c\///g; /\/usr\/include/d; /parser.c/d; /tokenizer.c/d; /LCovParser/d; /Tag:/d' reports/coverage/Summary.md
-
     - name: Codecov upload
       uses: codecov/codecov-action@v2
       with:
-        token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-        files: ./reports/coverage.info # optional
-        flags: unittests # optional
-        name: codecov-umbrella # optional
-      
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./reports/coverage.info
+        flags: unittests
+        name: codecov-umbrella
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1
     - name: Valgrind
