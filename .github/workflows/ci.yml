@@ -15,8 +15,8 @@ jobs:
     - uses: actions/checkout@v2
     - name: check formatting
       run: ./scripts/checks/formatting.sh
-    - name: Install lemon and re2c
-      run: sudo apt-get install -y lemon re2c
+    - name: Install lemon, re2c and valgrind
+      run: sudo apt-get install -y lemon re2c valgrind
     - name: make check
       run: CFLAGS="-O1 -DJUNIT" make check
       # run after make, so we check generated headers too
@@ -24,3 +24,5 @@ jobs:
       run: ./scripts/checks/headers-have-pragmas.sh
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1
+    - name: Valgrind
+      run: valgrind --leak-check=full --track-origins=yes --error-exitcode=1  ./test >/dev/null
