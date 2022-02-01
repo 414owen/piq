@@ -6,6 +6,7 @@ pkgs.mkShell {
     gcc11
     re2c
     clang-tools
+    lcov
     lemon
   ];
 }
