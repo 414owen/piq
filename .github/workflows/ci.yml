@@ -46,11 +46,13 @@ jobs:
     - name: Fixup coverage report
       run: sed -i 's/\/home\/runner\/work\/lang-c\/lang-c\///g; /\/usr\/include/d; /parser.c/d; /tokenizer.c/d; /LCovParser/d; /Tag:/d' reports/coverage/Summary.md
 
-    - name: Partial LCOV Code Coverage Report
-      uses: Nef10/lcov-reporter-action@v0.3.0
+    - name: Codecov upload
+      uses: codecov/codecov-action@v2
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        lcov-file: ./reports/coverage.info
+        token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+        files: ./reports/coverage.info # optional
+        flags: unittests # optional
+        name: codecov-umbrella # optional
       
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1
