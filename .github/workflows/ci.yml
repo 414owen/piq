@@ -43,6 +43,8 @@ jobs:
       with:
         name: CoverageReport # Artifact name        
         path: reports/coverage # Directory containing files to upload
+    - name: Fixup coverage report
+      run: sed -i 's/\/home\/runner\/work\/lang-c\/lang-c\///g; /\/usr\/include/d; /parser.c/d; /tokenizer.c/d; /LCovParser/d; /Tag:/d' reports/coverage/Summary.md
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1
     - name: Valgrind
