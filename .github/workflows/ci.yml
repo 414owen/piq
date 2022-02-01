@@ -15,13 +15,23 @@ jobs:
     - uses: actions/checkout@v2
     - name: check formatting
       run: ./scripts/checks/formatting.sh
-    - name: Install lemon, re2c and valgrind
-      run: sudo apt-get install -y lemon re2c valgrind
-    - name: make check
-      run: CFLAGS="-O1 -DJUNIT" make check
+    - name: Install dependencies
+      run: sudo apt-get install -y lemon re2c valgrind lcov
+    - name: make test
+      run: CFLAGS="-O1 -DJUNIT --coverage" make check
       # run after make, so we check generated headers too
     - name: check pragmas
       run: ./scripts/checks/headers-have-pragmas.sh
+    - name: run tests
+      run: ./test >/dev/null
+    - name: Generate code coverage report
+      run: make reports/coverage.info
+    - name: Upload code coverage results
+      uses: zgosalvez/github-actions-report-lcov@v1
+      with:
+        coverage-files: reports/coverage.info
+        artifact-name: code-coverage-report
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1
     - name: Valgrind

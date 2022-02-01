@@ -26,15 +26,18 @@ test: $(DEPDIR) run_tests.c $(TEST_OBJS)
 check: test
 	./test
 
-clean:
-	rm -f *.so *.o test parser.c tokenizer.c
-
-reports/coverage:
+# requires --coverage CFLAG
+reports/coverage.info: test
 	mkdir -p reports
-
-reports/coverage/index.html: reports/coverage
+	./test >/dev/null
 	lcov --capture --directory . --output-file reports/coverage.info
-	genhtml coverage.info --output-directory reports/coverage
+
+clean:
+	rm -rf *.so *.o test parser.c tokenizer.c *.gcda *.gcno *.gcov reports
+
+reports/coverage/index.html: reports/coverage.info
+	mkdir -p reports/coverage
+	genhtml reports/coverage.info --output-directory reports/coverage
 
 parser.c parser.h &: parser.y
 	lemon -c parser.y

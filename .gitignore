@@ -4,6 +4,9 @@ test
 *.out
 *.so
 *.o
+*.gcno
+*.gcda
+reports/
 tokenizer.c
 parser.c
 .deps
