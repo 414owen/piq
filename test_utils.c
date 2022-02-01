@@ -51,9 +51,22 @@ void run_join_tests(test_state *state) {
   test_group_end(state);
 }
 
+void test_asprintf(test_state *state) {
+  test_start(state, "asprintf");
+  char *res;
+  static const char *fmt = "Hello World! %d";
+  asprintf(&res, fmt, 42);
+  static const char *exp = "Hello World! 42";
+  if (strcmp(exp, res) != 0)
+    failf(state, "'%s' didn't format to '%s'", fmt, exp);
+  free(res);
+  test_end(state);
+}
+
 void test_utils(test_state *state) {
   test_group_start(state, "Utils");
   run_join_tests(state);
   test_memclone(state);
+  test_asprintf(state);
   test_group_end(state);
 }
