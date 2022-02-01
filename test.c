@@ -173,6 +173,7 @@ void write_test_results(test_state *state) {
   }
 
   VEC_FREE(&agg_stack);
+  vec_string class_path = VEC_NEW;
 
   struct timespec elapsed;
   timespec_subtract(&elapsed, &state->end_time, &state->start_time);
@@ -193,6 +194,8 @@ void write_test_results(test_state *state) {
     switch (action) {
       case GROUP_LEAVE:
         depth--;
+        VEC_POP_(&class_path);
+        break;
       default:
         break;
     }
@@ -201,14 +204,22 @@ void write_test_results(test_state *state) {
     switch (action) {
       case GROUP_ENTER: {
         test_aggregate agg = aggs.data[agg_ind--];
+        char *str = state->strs.data[str_ind++];
         fprintf(f, "<testsuite name=\"%s\" tests=\"%u\" failures=\"%u\">\n",
-                state->strs.data[str_ind++], agg.tests, agg.failures);
+                str, agg.tests, agg.failures);
+        VEC_PUSH(&class_path, str);
         depth++;
         break;
       }
       case TEST_ENTER:
-        fprintf(f, "<testcase name=\"%s\" classname=\"\">\n",
+        fprintf(f, "<testcase name=\"%s\" classname=\"",
                 state->strs.data[str_ind++]);
+        for (size_t i = 0; i < class_path.len; i++) {
+          if (i > 0)
+            putc('/', f);
+          fputs(class_path.data[i], f);
+        }
+        fputs("\">\n", f);
         break;
       case TEST_LEAVE:
         fputs("</testcase>\n", f);
@@ -226,5 +237,6 @@ void write_test_results(test_state *state) {
 
   fflush(f);
   VEC_FREE(&aggs);
+  VEC_FREE(&class_path);
 }
 #endif
