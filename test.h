@@ -36,6 +36,7 @@ typedef struct {
   struct timespec end_time;
   char *current_name;
   bool current_failed;
+  bool in_test;
   vec_failure failures;
 #ifdef JUNIT
   vec_test_action actions;
