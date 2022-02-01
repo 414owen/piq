@@ -133,5 +133,6 @@ void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
   }
 
   VEC_FREE(&s.actions);
+  VEC_FREE(&s.string_stack);
   VEC_FREE(&s.node_stack);
 }

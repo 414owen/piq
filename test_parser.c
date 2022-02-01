@@ -56,9 +56,6 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
   parse_tree_res pres = parse(tres.tokens);
   if (pres.succeeded) {
     failf(state, "Parsing \"%s\" was supposed to fail.", input);
-    VEC_FREE(&pres.tree.inds);
-    VEC_FREE(&pres.tree.nodes);
-    return;
   }
 
   if (pos != pres.error_pos) {
@@ -90,6 +87,8 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
   }
 
   free(pres.expected);
+  VEC_FREE(&pres.tree.inds);
+  VEC_FREE(&pres.tree.nodes);
 
 end_a:
   VEC_FREE(&tres.tokens);
