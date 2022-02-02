@@ -30,6 +30,7 @@ check: test
 reports/coverage.info: test
 	mkdir -p reports
 	./test >/dev/null
+	rm test*.gc*
 	lcov --capture --directory . --output-file reports/coverage.info
 
 clean:
