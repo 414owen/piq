@@ -1,13 +1,20 @@
+#include <stdbool.h>
+
 #include "consts.h"
 #include "test.h"
 #include "token.h"
 
-static void test_scanner_tokens(test_state *state, char *buf, size_t token_amt,
-                                const token_type *tokens) {
+static source_file test_file(const char *restrict input) {
+  source_file file = {.path = "TEST", .data = (char *)input};
+  return file;
+}
+
+static void test_scanner_tokens(test_state *restrict state, char *restrict buf,
+                                size_t token_amt,
+                                const token_type *restrict tokens) {
   BUF_IND_T ind = 0;
-  source_file file = {.path = "TEST", .data = buf};
   for (int i = 0; i < token_amt; i++) {
-    token_res t = scan(file, ind);
+    token_res t = scan(test_file(buf), ind);
     test_assert_eq(state, t.succeeded, true);
     if (state->current_failed)
       break;
@@ -16,13 +23,12 @@ static void test_scanner_tokens(test_state *state, char *buf, size_t token_amt,
   }
 }
 
-static void test_scanner_fails(test_state *state, char *buf,
+static void test_scanner_fails(test_state *restrict state, char *restrict buf,
                                BUF_IND_T err_pos) {
   BUF_IND_T ind = 0;
-  source_file file = {.path = "TEST", .data = buf};
   bool seen_failure = true;
   for (;;) {
-    token_res t = scan(file, ind);
+    token_res t = scan(test_file(buf), ind);
     if (t.succeeded) {
       if (t.token.type == TK_EOF)
         break;
@@ -42,7 +48,7 @@ static void test_scanner_fails(test_state *state, char *buf,
     failf(state, "Expected to see a tokenizer error for input: %s", buf);
 }
 
-static void test_scanner_accepts(test_state *state) {
+static void test_scanner_accepts(test_state *restrict state) {
   test_group_start(state, "Passes");
 
   {
@@ -122,7 +128,31 @@ static void test_scanner_accepts(test_state *state) {
   test_group_end(state);
 }
 
-static void test_scanner_rejects(test_state *state) {
+static void test_scan_all(test_state *restrict state) {
+  test_group_start(state, "Scan all");
+
+  {
+    test_start(state, "Success");
+    char *input = "(a)()";
+    tokens_res res = scan_all(test_file(input));
+    test_assert_eq(state, res.succeeded, true);
+    test_assert_eq(state, res.tokens.len, 6);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Failure");
+    char *input = "();()";
+    tokens_res res = scan_all(test_file(input));
+    test_assert_eq(state, res.succeeded, false);
+    test_assert_eq(state, res.error_pos, 2);
+    test_end(state);
+  }
+
+  test_group_end(state);
+}
+
+static void test_scanner_rejects(test_state *restrict state) {
   test_group_start(state, "Rejects");
 
   {
@@ -156,5 +186,6 @@ void test_scanner(test_state *state) {
   test_group_start(state, "Scanner");
   test_scanner_accepts(state);
   test_scanner_rejects(state);
+  test_scan_all(state);
   test_group_end(state);
 }
