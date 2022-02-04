@@ -129,6 +129,7 @@ void test_vec(test_state *state) {
     test_assert(state, v.cap >= v.len);
     for (int i = 0; i < 102; i++)
       test_assert_eq(state, strcmp(v.data[i], str), 0);
+    VEC_FREE(&v);
 
     test_end(state);
   }

@@ -69,11 +69,11 @@ tokens_res scan_all(source_file file) {
   token_res tres;
   for (;;) {
     tres = scan(file, ind);
-    if (!tres.succeeded)
-      return (tokens_res) {
-        .succeeded = false,
-        .error_pos = tres.token.start,
-      };
+    if (!tres.succeeded) {
+      res.succeeded = false;
+      res.error_pos = tres.token.start;
+      return res;
+    }
     VEC_PUSH(&res.tokens, tres.token);
     if (tres.token.type == TK_EOF) {
       VEC_FINALIZE(&res.tokens);
