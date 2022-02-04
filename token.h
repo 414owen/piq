@@ -25,10 +25,8 @@ VEC_DECL(token);
 
 typedef struct {
   bool succeeded;
-  union {
-    vec_token tokens;
-    BUF_IND_T error_pos;
-  };
+  vec_token tokens;
+  BUF_IND_T error_pos;
 } tokens_res;
 
 token_res scan(source_file file, BUF_IND_T pos);

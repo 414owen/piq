@@ -137,6 +137,7 @@ static void test_scan_all(test_state *restrict state) {
     tokens_res res = scan_all(test_file(input));
     test_assert_eq(state, res.succeeded, true);
     test_assert_eq(state, res.tokens.len, 6);
+    VEC_FREE(&res.tokens);
     test_end(state);
   }
 
@@ -146,6 +147,7 @@ static void test_scan_all(test_state *restrict state) {
     tokens_res res = scan_all(test_file(input));
     test_assert_eq(state, res.succeeded, false);
     test_assert_eq(state, res.error_pos, 2);
+    VEC_FREE(&res.tokens);
     test_end(state);
   }
 
