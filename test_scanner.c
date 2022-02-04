@@ -99,6 +99,12 @@ static void test_scanner_accepts(test_state *restrict state) {
     test_start(state, "Name");
     static const token_type tokens[] = {TK_LOWER_NAME};
     test_scanner_tokens(state, "abc", STATIC_LEN(tokens), tokens);
+
+    // These exercise some branches for code coverage
+    test_scanner_tokens(state, "fa", STATIC_LEN(tokens), tokens);
+    test_scanner_tokens(state, "fna", STATIC_LEN(tokens), tokens);
+    test_scanner_tokens(state, "il", STATIC_LEN(tokens), tokens);
+    test_scanner_tokens(state, "ifl", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
