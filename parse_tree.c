@@ -7,6 +7,7 @@
 typedef enum {
   PRINT_NODE,
   PRINT_STR,
+  PRINT_SOURCE,
 } print_action;
 
 VEC_DECL(print_action);
@@ -17,6 +18,7 @@ typedef struct {
   vec_string string_stack;
   parse_tree tree;
   source_file file;
+  FILE *out;
 } printer_state;
 
 static void push_str(printer_state *s, char *str) {
@@ -29,9 +31,9 @@ static void push_node(printer_state *s, NODE_IND_T node) {
   VEC_PUSH(&s->node_stack, node);
 }
 
-static void print_compound(FILE *f, printer_state *s, char *prefix, char *sep,
+static void print_compound(printer_state *s, char *prefix, char *sep,
                            parse_node node) {
-  fputs(prefix, f);
+  fputs(prefix, s->out);
   for (uint16_t i = 0; i < node.sub_amt; i++) {
     if (i > 0)
       push_str(s, sep);
@@ -40,7 +42,19 @@ static void print_compound(FILE *f, printer_state *s, char *prefix, char *sep,
   push_str(s, ")");
 }
 
-static void print_node(FILE *f, printer_state *s, NODE_IND_T node_ind) {
+static void push_params(printer_state *s, NODE_IND_T start, NODE_IND_T amt) {
+  for (size_t i = 0; i < amt; i++) {
+    if (i > 0)
+      push_str(s, ", ");
+    NODE_IND_T param = s->tree.inds.data[start + i * 2];
+    NODE_IND_T type = s->tree.inds.data[start + i * 2 + 1];
+    push_node(s, param);
+    push_str(s, ": ");
+    push_node(s, type);
+  }
+}
+
+static void print_node(printer_state *s, NODE_IND_T node_ind) {
   parse_node node = s->tree.nodes.data[node_ind];
   switch (node.type) {
     case PT_ROOT:
@@ -50,44 +64,44 @@ static void print_node(FILE *f, printer_state *s, NODE_IND_T node_ind) {
         push_node(s, s->tree.inds.data[node.subs_start + i]);
       }
       break;
+    case PT_TOP_LEVEL:
+      fprintf(s->out, "(Let ");
+      VEC_PUSH(&s->actions, PRINT_SOURCE);
+      VEC_PUSH(&s->node_stack, s->tree.inds.data[node.subs_start]);
+      push_str(s, " ");
+      push_node(s, s->tree.inds.data[node.subs_start + 1]);
+      push_str(s, ")");
+      break;
     case PT_FN:
-      fputs("(Fn (", f);
-      for (size_t i = 0; i < (node.sub_amt - 1) / 2; i++) {
-        if (i > 0)
-          push_str(s, ", ");
-        NODE_IND_T param = s->tree.inds.data[node.subs_start + i * 2];
-        NODE_IND_T type = s->tree.inds.data[node.subs_start + i * 2 + 1];
-        push_node(s, param);
-        push_str(s, ": ");
-        push_node(s, type);
-      }
+      fputs("(Fn (", s->out);
+      push_params(s, node.subs_start, (node.sub_amt / 2));
       push_str(s, ") ");
       push_node(s, s->tree.inds.data[node.subs_start + node.sub_amt - 1]);
       push_str(s, ")");
       break;
     case PT_CALL:
-      print_compound(f, s, "(Call ", " ", node);
+      print_compound(s, "(Call ", " ", node);
       break;
     case PT_INT:
-      fprintf(f, "(Int %.*s)", 1 + node.end - node.start,
+      fprintf(s->out, "(Int %.*s)", 1 + node.end - node.start,
               s->file.data + node.start);
       break;
     case PT_UPPER_NAME:
-      fprintf(f, "(Uname %.*s)", 1 + node.end - node.start,
+      fprintf(s->out, "(Uname %.*s)", 1 + node.end - node.start,
               s->file.data + node.start);
       break;
     case PT_LOWER_NAME:
-      fprintf(f, "(Lname %.*s)", 1 + node.end - node.start,
+      fprintf(s->out, "(Lname %.*s)", 1 + node.end - node.start,
               s->file.data + node.start);
       break;
     case PT_IF:
-      print_compound(f, s, "(If ", " ", node);
+      print_compound(s, "(If ", " ", node);
       break;
     case PT_TUP:
-      print_compound(f, s, "(Tup ", " ", node);
+      print_compound(s, "(Tup ", " ", node);
       break;
     case PT_TYPED:
-      print_compound(f, s, "(", ": ", node);
+      print_compound(s, "(", ": ", node);
       break;
   }
 }
@@ -99,12 +113,19 @@ void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
     .string_stack = VEC_NEW,
     .tree = tree,
     .file = file,
+    .out = f,
   };
   push_node(&s, tree.root_ind);
 
   while (s.actions.len > 0) {
+    fflush(f);
     print_action action = VEC_POP(&s.actions);
     switch (action) {
+      case PRINT_SOURCE: {
+        parse_node node = tree.nodes.data[VEC_POP(&s.node_stack)];
+        fprintf(f, "%.*s", 1 + node.end - node.start, file.data + node.start);
+        break;
+      }
       case PRINT_STR:
         fputs(VEC_POP(&s.string_stack), f);
         break;
@@ -114,7 +135,7 @@ void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
         uint32_t first_node = s.node_stack.len;
         uint32_t first_string = s.string_stack.len;
 
-        print_node(f, &s, node);
+        print_node(&s, node);
 
         reverse_arbitrary(&s.node_stack.data[first_node],
                           MAX(first_node, s.node_stack.len) - first_node,
