@@ -51,6 +51,21 @@ void run_join_tests(test_state *state) {
   test_group_end(state);
 }
 
+void test_timespec_subtract(test_state *state) {
+  test_start(state, "Timespec subtract");
+
+  struct timespec res;
+  struct timespec x;
+  struct timespec y;
+  timespec_get(&x, TIME_UTC);
+  y = x;
+  x.tv_sec++;
+  timespec_subtract(&res, &x, &y);
+  test_assert_eq(state, res.tv_sec, 1);
+
+  test_end(state);
+}
+
 void test_asprintf(test_state *state) {
   test_start(state, "asprintf");
   char *res;
@@ -68,5 +83,6 @@ void test_utils(test_state *state) {
   run_join_tests(state);
   test_memclone(state);
   test_asprintf(state);
+  test_timespec_subtract(state);
   test_group_end(state);
 }
