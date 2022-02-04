@@ -6,6 +6,8 @@
 
 #include "util.h"
 
+#define VEC_FIRST_SIZE 10
+
 #define VEC_DECL(type) typedef struct { uint32_t len; uint32_t cap; type *data; } vec_ ## type;
 
 VEC_DECL(void);
@@ -34,7 +36,7 @@ void __vec_push(vec_void *vec, void *el, size_t elemsize);
   
 #define VEC_BACK(vec) ((vec)->data[(vec)->len - 1])
 
-#define VEC_FREE(vec) { if ((vec)->data != NULL) free((vec)->data); }
+#define VEC_FREE(vec) { if ((vec)->data != NULL) { free((vec)->data); (vec)->data = NULL; } }
 
 #define VEC_CLONE(vec) ((typeof(*vec)) { \
     .len = (vec)->len, \

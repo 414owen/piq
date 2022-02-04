@@ -6,6 +6,9 @@
 
 #include "vec.h"
 
+#define test_assert(state, b) \
+  if (!(b)) test_fail_eq(state, #b, "true");
+
 #define test_assert_eq(state, a, b) \
   if ((a) != (b)) test_fail_eq(state, #a, #b);
 
@@ -61,6 +64,7 @@ void test_fail_eq(test_state *state, char *a, char *b);
 
 void print_failures(test_state *state);
 
+void test_vec(test_state *state);
 void test_utils(test_state *state);
 void test_scanner(test_state *state);
 void test_parser(test_state *state);
