@@ -18,7 +18,7 @@ parser.o : parser.c
 DEPFILES := $(SRCS:%.c=$(DEPDIR)/%.d)
 $(DEPFILES):
 
-TEST_OBJS := parser.o tokenizer.o test.o test_scanner.o test_parser.o parse_tree.o test_utils.o util.o vec.o
+TEST_OBJS := parser.o tokenizer.o test.o test_scanner.o test_parser.o parse_tree.o test_utils.o test_vec.o util.o vec.o
 
 test: $(DEPDIR) run_tests.c $(TEST_OBJS)
 	$(CC) $(CFLAGS) -o test run_tests.c $(TEST_OBJS)

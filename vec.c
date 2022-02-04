@@ -9,7 +9,7 @@ void __vec_resize(vec_void *vec, size_t cap, size_t elemsize) {
 
 void __vec_grow(vec_void *vec, size_t cap, size_t elemsize) {
   if (vec->cap < cap)
-    __vec_resize(vec, MAX(cap, 10), elemsize);
+    __vec_resize(vec, MAX(vec->cap * 2, MAX(cap, VEC_FIRST_SIZE)), elemsize);
 }
 
 void __vec_push(vec_void *vec, void *el, size_t elemsize) {
