@@ -33,40 +33,50 @@ typedef struct {
 
 VEC_DECL(binding);
 
-static bool bnds_eq(source_file source, binding a, binding b) {
+typedef struct {
+  tc_res res;
+  vec_tc_action stack;
+  vec_binding env;
+  source_file source;
+} typecheck_state;
+
+static bool bnds_eq(typecheck_state *state, binding a, binding b) {
   size_t la = a.end - a.start;
   if (la != b.end - b.start)
     return false;
-  return strncmp(source.data + a.start, source.data + b.start, la) == 0;
+  return strncmp(state->source.data + a.start, state->source.data + b.start,
+                 la) == 0;
 }
 
-static size_t lookup_bnd(source_file source, vec_binding bnds, binding bnd) {
+static size_t lookup_bnd(typecheck_state *state, vec_binding bnds,
+                         binding bnd) {
   for (size_t i = 0; i < bnds.len; i++) {
     size_t ind = bnds.len - i;
-    if (bnds_eq(source, bnds.data[ind], bnd))
+    if (bnds_eq(state, bnds.data[ind], bnd))
       return ind;
   }
   return bnds.len;
 }
 
-static size_t lookup_bnd_node(source_file source, vec_binding bnds,
-                              parse_node node) {
+static size_t lookup_bnd_node(typecheck_state *state, parse_node node) {
   binding bnd = {.start = node.start, .end = node.end};
-  return lookup_bnd(source, bnds, bnd);
+  return lookup_bnd(state, state->env, bnd);
 }
 
 tc_res typecheck(source_file source, parse_tree tree) {
 
-  tc_res res = {.successful = true, .types = VEC_NEW, .errors = VEC_NEW};
+  typecheck_state state = {
+    .res = {.successful = true, .types = VEC_NEW, .errors = VEC_NEW},
+    .stack = VEC_NEW,
+    .env = VEC_NEW,
+    .source = source,
+  };
 
   vec_tc_action stack = VEC_NEW;
   VEC_PUSH(&stack, tree.root_ind);
-  VEC_REPLICATE(&res.types, T_UNKNOWN, tree.nodes.len);
-  VEC_PUSH(&res.types, T_UNKNOWN);
-
-  size_t unknown_type_ind = res.types.len - 1;
-
-  vec_binding env = VEC_NEW;
+  VEC_REPLICATE(&state.res.types, T_UNKNOWN, tree.nodes.len);
+  VEC_PUSH(&state.res.types, T_UNKNOWN);
+  size_t unknown_type_ind = state.res.types.len - 1;
 
   while (stack.len > 0) {
     tc_action action = VEC_POP(&stack);
@@ -74,7 +84,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
 
     switch (action.tag) {
       case POP_VARS: {
-        env.len -= action.amt;
+        state.env.len -= action.amt;
         break;
       }
       case TC_NODE: {
@@ -82,8 +92,15 @@ tc_res typecheck(source_file source, parse_tree tree) {
         switch (node.type) {
           case PT_ROOT: {
             for (size_t i = 0; i < node.sub_amt; i++) {
-              tc_action a = {.tag = TC_NODE, .node_ind = node.subs_start + i};
-              VEC_PUSH(&stack, a);
+              parse_node toplevel = tree.nodes.data[node.subs_start + i];
+              assert(toplevel.type == PT_TOP_LEVEL);
+              NODE_IND_T name_ind = tree.inds.data[toplevel.subs_start];
+              NODE_IND_T val_ind = tree.inds.data[toplevel.subs_start];
+              parse_node val = tree.nodes.data[val_ind];
+              switch (val.type) {
+                case PT_FN:
+                  break;
+              }
             }
             break;
           }
@@ -152,6 +169,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
   }
 
 ret:
-  VEC_FREE(&bnd_env);
-  return res;
+  VEC_FREE(&env);
+  VEC_FREE(&stack);
+  return state.res;
 }

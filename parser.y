@@ -61,7 +61,7 @@ toplevels(RES) ::= toplevels(A) toplevel(B) . {
   RES = A;
 }
 
-toplevel(RES) ::= OPEN_PAREN(Open) FN lower_name(A) OPEN_PAREN params(B) CLOSE_PAREN form(C) CLOSE_PAREN(Close). {
+toplevel(RES) ::= OPEN_PAREN(Open) FN lower_name(A) OPEN_PAREN params(B) CLOSE_PAREN type(D) form(C) CLOSE_PAREN(Close). {
 
   token open = s.tokens[Open];
   token close = s.tokens[Close];
@@ -69,12 +69,13 @@ toplevel(RES) ::= OPEN_PAREN(Open) FN lower_name(A) OPEN_PAREN params(B) CLOSE_P
   parse_node fn_node = {
     .type = PT_FN,
     .subs_start = start_fn,
-    .sub_amt = B.len + 1,
+    .sub_amt = B.len + 2,
     .start = open.start,
     .end = close.end,
   };
   VEC_PUSH(&s.res->tree.nodes, fn_node);
   VEC_CAT(&s.res->tree.inds, &B);
+  VEC_PUSH(&s.res->tree.inds, D);
   VEC_PUSH(&s.res->tree.inds, C);
 
   NODE_IND_T start_tl = s.res->tree.inds.len;
@@ -146,11 +147,12 @@ compound ::= call.
 
 compound ::= typed.
 
-fn(RES) ::= FN OPEN_PAREN params(A) CLOSE_PAREN form(B). {
+fn(RES) ::= FN OPEN_PAREN params(A) CLOSE_PAREN type(C) form(B). {
   NODE_IND_T start = s.res->tree.inds.len;
   VEC_CAT(&s.res->tree.inds, &A);
+  VEC_PUSH(&s.res->tree.inds, C);
   VEC_PUSH(&s.res->tree.inds, B);
-  parse_node n = {.type = PT_FN, .subs_start = start, .sub_amt = A.len + 1};
+  parse_node n = {.type = PT_FN, .subs_start = start, .sub_amt = A.len + 2};
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
   VEC_FREE(&A);

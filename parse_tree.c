@@ -31,6 +31,11 @@ static void push_node(printer_state *s, NODE_IND_T node) {
   VEC_PUSH(&s->node_stack, node);
 }
 
+static void push_source(printer_state *s, NODE_IND_T node) {
+  VEC_PUSH(&s->actions, PRINT_SOURCE);
+  VEC_PUSH(&s->node_stack, node);
+}
+
 static void print_compound(printer_state *s, char *prefix, char *sep,
                            parse_node node) {
   fputs(prefix, s->out);
@@ -74,8 +79,10 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
       break;
     case PT_FN:
       fputs("(Fn (", s->out);
-      push_params(s, node.subs_start, (node.sub_amt / 2));
+      push_params(s, node.subs_start, (node.sub_amt - 2) / 2);
       push_str(s, ") ");
+      push_source(s, s->tree.inds.data[node.subs_start + node.sub_amt - 2]);
+      push_str(s, " ");
       push_node(s, s->tree.inds.data[node.subs_start + node.sub_amt - 1]);
       push_str(s, ")");
       break;
