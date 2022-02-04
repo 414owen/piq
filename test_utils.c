@@ -52,7 +52,7 @@ void run_join_tests(test_state *state) {
 }
 
 void test_timespec_subtract(test_state *state) {
-  test_start(state, "Timespec subtract");
+  test_group_start(state, "Timespec");
 
   struct timespec res;
   struct timespec x;
@@ -60,10 +60,42 @@ void test_timespec_subtract(test_state *state) {
   timespec_get(&x, TIME_UTC);
   y = x;
   x.tv_sec++;
-  timespec_subtract(&res, &x, &y);
-  test_assert_eq(state, res.tv_sec, 1);
 
-  test_end(state);
+  {
+    test_start(state, "subtract pos");
+    int neg = timespec_subtract(&res, &x, &y);
+    test_assert_eq(state, neg, 0);
+    test_assert_eq(state, res.tv_sec, 1);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "subtract neg");
+    int neg = timespec_subtract(&res, &y, &x);
+    test_assert_eq(state, neg, 1);
+    test_assert_eq(state, res.tv_sec, -1);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "carries nsec");
+    x.tv_nsec--;
+    int neg = timespec_subtract(&res, &y, &x);
+    test_assert_eq(state, neg, 1);
+    test_assert_eq(state, res.tv_sec, -1);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "overflows nsecs");
+    x.tv_nsec = 1 + 1000000000 + y.tv_nsec;
+    int neg = timespec_subtract(&res, &x, &y);
+    test_assert_eq(state, neg, 0);
+    test_assert_eq(state, res.tv_sec, 2);
+    test_end(state);
+  }
+
+  test_group_end(state);
 }
 
 void test_asprintf(test_state *state) {
