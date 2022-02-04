@@ -100,7 +100,8 @@ static void test_scanner_accepts(test_state *restrict state) {
     static const token_type tokens[] = {TK_LOWER_NAME};
     test_scanner_tokens(state, "abc", STATIC_LEN(tokens), tokens);
 
-    // These exercise some branches for code coverage
+    // These exercise some branches for code coverage, as well as testing close
+    // shaves
     test_scanner_tokens(state, "fa", STATIC_LEN(tokens), tokens);
     test_scanner_tokens(state, "fna", STATIC_LEN(tokens), tokens);
     test_scanner_tokens(state, "il", STATIC_LEN(tokens), tokens);

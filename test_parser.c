@@ -42,8 +42,8 @@ end_a:
 static void test_parser_succeeds_on_form(test_state *state, char *input,
                                          char *output) {
   char *new_input, *new_output;
-  asprintf(&new_input, "(fn a () %s)", input);
-  asprintf(&new_output, "(Let a (Fn () %s))", output);
+  asprintf(&new_input, "(fn a () I32 %s)", input);
+  asprintf(&new_output, "(Let a (Fn () I32 %s))", output);
   test_parser_succeeds_on(state, new_input, new_output);
   free(new_input);
   free(new_output);
@@ -108,8 +108,8 @@ static void test_parser_fails_on_form(test_state *state, char *input,
                                       BUF_IND_T pos, NODE_IND_T expected_amt,
                                       const token_type *expected) {
   char *new_input;
-  asprintf(&new_input, "(fn a () %s)", input);
-  test_parser_fails_on(state, new_input, pos + 5, expected_amt, expected);
+  asprintf(&new_input, "(fn a () I32 %s)", input);
+  test_parser_fails_on(state, new_input, pos + 6, expected_amt, expected);
   free(new_input);
 }
 
@@ -199,8 +199,9 @@ static void test_fn_failures(test_state *state) {
 
   {
     test_start(state, "Without body");
-    test_parser_fails_on_form(state, "(fn ())", 4, STATIC_LEN(form_start),
-                              form_start);
+    static token_type expected[] = {TK_UPPER_NAME};
+    test_parser_fails_on_form(state, "(fn ())", 4, STATIC_LEN(expected),
+                              expected);
     test_end(state);
   }
 
@@ -230,22 +231,22 @@ static void test_fn_succeeds(test_state *state) {
 
   {
     test_start(state, "Minimal");
-    test_parser_succeeds_on_form(state, "(fn () 1)", "(Fn () (Int 1))");
+    test_parser_succeeds_on_form(state, "(fn () I32 1)", "(Fn () I32 (Int 1))");
     test_end(state);
   }
 
   {
     test_start(state, "One arg");
-    test_parser_succeeds_on_form(state, "(fn (a: I32) 1)",
-                                 "(Fn ((Lname a): (Uname I32)) (Int 1))");
+    test_parser_succeeds_on_form(state, "(fn (a: I32) I16 1)",
+                                 "(Fn ((Lname a): (Uname I32)) I16 (Int 1))");
     test_end(state);
   }
 
   {
     test_start(state, "Two args");
     test_parser_succeeds_on_form(
-      state, "(fn (ab: I16, cd: U64) 1)",
-      "(Fn ((Lname ab): (Uname I16), (Lname cd): (Uname U64)) (Int 1))");
+      state, "(fn (ab: I16, cd: U64) I32 1)",
+      "(Fn ((Lname ab): (Uname I16), (Lname cd): (Uname U64)) I32 (Int 1))");
     test_end(state);
   }
 
@@ -342,8 +343,8 @@ static void test_parser_succeeds_root(test_state *state) {
   test_start(state, "Multiple top levels");
 
   test_parser_succeeds_on(
-    state, "(fn a () a)(fn b () b)",
-    "(Let a (Fn () (Lname a)))\n(Let b (Fn () (Lname b)))");
+    state, "(fn a () I16 a)(fn b () I32 b)",
+    "(Let a (Fn () I16 (Lname a)))\n(Let b (Fn () I32 (Lname b)))");
 
   test_end(state);
 }
