@@ -127,8 +127,6 @@ void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
                           sizeof(print_action));
         break;
       }
-      default:
-        break;
     }
   }
 
