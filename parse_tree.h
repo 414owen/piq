@@ -10,6 +10,7 @@
 #define NODE_IND_T BUF_IND_T
 
 typedef enum __attribute__ ((__packed__)) {
+  PT_TOP_LEVEL,
   PT_CALL,
   PT_UPPER_NAME,
   PT_LOWER_NAME,

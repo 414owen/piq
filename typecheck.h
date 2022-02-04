@@ -8,12 +8,21 @@ typedef struct {
   enum {
     BINDING_NOT_FOUND,
     TYPE_MISMATCH,
+    WRONG_ARITY,
   } err_type;
 
   NODE_IND_T pos;
 
-  type expected;
-  type got;
+  union {
+    struct {
+      type expected;
+      type got;
+    };
+    struct {
+      NODE_IND_T exp_param_amt;
+      NODE_IND_T got_param_amt;
+    };
+  };
 
 } tc_error;
 

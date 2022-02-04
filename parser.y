@@ -1,6 +1,6 @@
 %token_prefix TK_
 %token_type   int // index into token vec
-%default_type int
+%default_type NODE_IND_T
 
 // This is so that parser.h changes less
 %token EOF INT UPPER_NAME LOWER_NAME OPEN_PAREN CLOSE_PAREN FN COMMA COLON IF.
@@ -11,6 +11,7 @@
 %type params vec_node_ind
 %type params_tuple vec_node_ind
 %type forms vec_node_ind
+%type toplevels vec_node_ind
 
 %include {
 
@@ -40,14 +41,55 @@
 
 %extra_argument { state s }
 
-root ::= forms(A) form(B) EOF . {
+root(RES) ::= toplevels(A) EOF . {
   NODE_IND_T start = s.res->tree.inds.len;
   VEC_CAT(&s.res->tree.inds, &A);
-  VEC_PUSH(&s.res->tree.inds, B);
-  parse_node n = {.type = PT_ROOT, .subs_start = start, .sub_amt = A.len + 1};
+  parse_node n = {.type = PT_ROOT, .subs_start = start, .sub_amt = A.len};
   VEC_PUSH(&s.res->tree.nodes, n);
   s.res->tree.root_ind = s.res->tree.nodes.len - 1;
   VEC_FREE(&A);
+  RES = s.res->tree.nodes.len - 1;
+}
+
+toplevels(RES) ::= . {
+  vec_node_ind res = VEC_NEW;
+  RES = res;
+}
+
+toplevels(RES) ::= toplevels(A) toplevel(B) . {
+  VEC_PUSH(&A, B);
+  RES = A;
+}
+
+toplevel(RES) ::= OPEN_PAREN(Open) FN lower_name(A) OPEN_PAREN params(B) CLOSE_PAREN form(C) CLOSE_PAREN(Close). {
+
+  token open = s.tokens[Open];
+  token close = s.tokens[Close];
+  NODE_IND_T start_fn = s.res->tree.inds.len;
+  parse_node fn_node = {
+    .type = PT_FN,
+    .subs_start = start_fn,
+    .sub_amt = B.len + 1,
+    .start = open.start,
+    .end = close.end,
+  };
+  VEC_PUSH(&s.res->tree.nodes, fn_node);
+  VEC_CAT(&s.res->tree.inds, &B);
+  VEC_PUSH(&s.res->tree.inds, C);
+
+  NODE_IND_T start_tl = s.res->tree.inds.len;
+  VEC_PUSH(&s.res->tree.inds, A);                         // name
+  VEC_PUSH(&s.res->tree.inds, s.res->tree.nodes.len - 1); // fn
+  parse_node tl_node = {
+    .type = PT_TOP_LEVEL,
+    .subs_start = start_tl,
+    .sub_amt = 2,
+    .start = open.start,
+    .end = close.end,
+  };
+  VEC_PUSH(&s.res->tree.nodes, tl_node);
+  VEC_FREE(&B);
+  RES = s.res->tree.nodes.len - 1;
 }
 
 forms(RES) ::= forms(A) form(B). {
