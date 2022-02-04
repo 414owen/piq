@@ -261,6 +261,12 @@ static void test_parser_succeeds_compound(test_state *state) {
   }
 
   {
+    test_start(state, "Typed");
+    test_parser_succeeds_on(state, "(1 : I32)", "((Int 1): (Uname I32))");
+    test_end(state);
+  }
+
+  {
     test_start(state, "Big tuple");
     test_parser_succeeds_on(state, "(1, 2, 3, hi, 4)",
                             "(Tup (Int 1) (Int 2) (Int 3) (Lname hi) (Int 4))");
@@ -310,12 +316,22 @@ static void test_mismatched_parens(test_state *state) {
   test_group_end(state);
 }
 
+static void test_parser_succeeds_root(test_state *state) {
+  test_start(state, "Multiple top levels");
+
+  test_parser_succeeds_on(state, "(1, 2) 3 4",
+                          "(Tup (Int 1) (Int 2))\n(Int 3)\n(Int 4)");
+
+  test_end(state);
+}
+
 static void test_parser_succeeds(test_state *state) {
   test_group_start(state, "Succeeds");
 
   test_parser_succeeds_atomic(state);
   test_parser_succeeds_compound(state);
   test_parser_succeeds_kitchen_sink(state);
+  test_parser_succeeds_root(state);
 
   test_group_end(state);
 }

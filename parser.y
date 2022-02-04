@@ -40,7 +40,7 @@
 
 %extra_argument { state s }
 
-root ::= form(B) forms(A) EOF . {
+root ::= forms(A) form(B) EOF . {
   NODE_IND_T start = s.res->tree.inds.len;
   VEC_CAT(&s.res->tree.inds, &A);
   VEC_PUSH(&s.res->tree.inds, B);
