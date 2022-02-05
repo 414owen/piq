@@ -1,4 +1,4 @@
-CFLAGS ?= -O1 -Wall -Wno-unused-result
+CFLAGS ?= -O1 -Wall -Wextra -Wno-unused-result
 
 SRCS := $(wildcard *.c)
 DEPDIR := .deps

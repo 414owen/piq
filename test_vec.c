@@ -106,12 +106,12 @@ void test_vec(test_state *state) {
     VEC_PUSH(&v, str);
     VEC_PUSH(&v, str);
     static const char *strs[20];
-    for (int i = 0; i < STATIC_LEN(strs); i++)
+    for (size_t i = 0; i < STATIC_LEN(strs); i++)
       strs[i] = str;
     VEC_APPEND(&v, STATIC_LEN(strs), strs);
     test_assert_eq(state, v.len, STATIC_LEN(strs) + 2);
     test_assert(state, v.cap >= v.len);
-    for (int i = 0; i < STATIC_LEN(strs) + 2; i++)
+    for (size_t i = 0; i < STATIC_LEN(strs) + 2; i++)
       test_assert_eq(state, strcmp(v.data[i], str), 0);
     VEC_FREE(&v);
 
