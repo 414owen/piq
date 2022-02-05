@@ -4,7 +4,7 @@
 
 #include "test.h"
 
-int main(int argc, char **argv) {
+int main(void) {
   test_state state = test_state_new();
 
   test_vec(&state);
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   VEC_FREE(&state.strs);
 #endif
 
-  for (int i = 0; i < state.failures.len; i++) {
+  for (uint32_t i = 0; i < state.failures.len; i++) {
     failure f = state.failures.data[i];
     free(f.reason);
     VEC_FREE(&f.path);

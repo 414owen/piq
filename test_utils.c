@@ -7,7 +7,7 @@ void test_memclone(test_state *state) {
   test_start(state, "memclone");
   static int arr[] = {1, 2, 3, 4, 5};
   int *res = memclone(arr, STATIC_LEN(arr) * sizeof(arr[0]));
-  for (int i = 0; i < STATIC_LEN(arr); i++) {
+  for (size_t i = 0; i < STATIC_LEN(arr); i++) {
     if (res[i] != arr[i])
       failf(state, "%d != %d", res[i], arr[i]);
   }

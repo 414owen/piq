@@ -13,7 +13,7 @@ static void test_scanner_tokens(test_state *restrict state, char *restrict buf,
                                 size_t token_amt,
                                 const token_type *restrict tokens) {
   BUF_IND_T ind = 0;
-  for (int i = 0; i < token_amt; i++) {
+  for (size_t i = 0; i < token_amt; i++) {
     token_res t = scan(test_file(buf), ind);
     test_assert_eq(state, t.succeeded, true);
     if (state->current_failed)

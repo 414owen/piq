@@ -12,7 +12,7 @@
 static const int test_indent = 2;
 
 static void print_depth_indent(test_state *state) {
-  for (int i = 0; i < state->path.len * test_indent; i++) {
+  for (uint32_t i = 0; i < state->path.len * test_indent; i++) {
     putc(' ', stdout);
   }
 }
@@ -100,8 +100,8 @@ test_state test_state_new(void) {
     .path = VEC_NEW,
     .tests_passed = 0,
     .tests_run = 0,
-    .start_time = 0,
-    .end_time = 0,
+    .start_time = {0},
+    .end_time = {0},
     .current_name = NULL,
     .current_failed = false,
     .failures = VEC_NEW,
