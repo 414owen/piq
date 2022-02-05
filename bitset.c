@@ -1,0 +1,60 @@
+#include <assert.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdlib.h>
+
+#include "bitset.h"
+#include "vec.h"
+
+#define BITMASK(b) (1 << ((b) % CHAR_BIT))
+#define BITSLOT(b) ((b) / CHAR_BIT)
+#define BITSET(a, b) ((a)[BITSLOT(b)] |= BITMASK(b))
+#define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
+#define BITTEST(a, b) ((a)[BITSLOT(b)] & BITMASK(b))
+#define BITNSLOTS(nb) ((nb + CHAR_BIT - 1) / CHAR_BIT)
+
+bitset bs_new(void) {
+  bitset res = {
+    .len = 0,
+    .cap = 0,
+    .data = NULL,
+  };
+  return res;
+}
+
+void bs_resize(bitset *bs, size_t bits) {
+  size_t bytes_needed = bits / CHAR_BIT + (bits % 8 > 0 ? 1 : 0);
+  bs->data = realloc(bs->data, bytes_needed);
+  assert(bs->data != NULL);
+  bs->cap = bytes_needed;
+}
+
+void bs_grow(bitset *bs, size_t bits) {
+  if (bits > CHAR_BIT * bs->cap) {
+    size_t new_size = CHAR_BIT * MAX(VEC_FIRST_SIZE, bs->cap * 2);
+    new_size = MAX(bits, new_size);
+    bs_resize(bs, new_size);
+  }
+}
+
+bool bs_get(bitset bs, size_t ind) {
+  return (bs.data[ind / 8] & (1 << (ind % 8))) > 0;
+}
+
+void bs_set(bitset *bs, size_t ind, bool b) {
+  if (b) {
+    bs->data[BITSLOT(ind)] |= BITMASK(ind);
+  } else {
+    bs->data[BITSLOT(ind)] &= ~(BITMASK(ind));
+  }
+}
+
+void bs_push(bitset *bs, bool bit) {
+  bs_grow(bs, bs->len + 1);
+  bs_set(bs, bs->len++, bit);
+}
+
+void bs_free(bitset *bs) {
+  free(bs->data);
+  bs->data = NULL;
+}

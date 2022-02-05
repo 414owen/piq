@@ -65,6 +65,7 @@ void test_fail_eq(test_state *state, char *a, char *b);
 void print_failures(test_state *state);
 
 void test_vec(test_state *state);
+void test_bitset(test_state *state);
 void test_utils(test_state *state);
 void test_scanner(test_state *state);
 void test_parser(test_state *state);

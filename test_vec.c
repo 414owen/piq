@@ -28,7 +28,7 @@ void test_vec(test_state *state) {
   }
 
   {
-    test_start(state, "FREE");
+    test_start(state, "Free");
     vec_string v = VEC_NEW;
     VEC_RESIZE(&v, 2);
     VEC_FREE(&v);
