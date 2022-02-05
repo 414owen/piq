@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "bitset.h"
 #include "consts.h"
 #include "source.h"
 #include "typecheck.h"
@@ -14,11 +15,8 @@ typedef struct {
   } tag;
 
   union {
-    struct {
-      NODE_IND_T node_ind;
-      NODE_IND_T type_goal;
-    };
     NODE_IND_T amt;
+    NODE_IND_T node_ind;
   };
 
 } tc_action;
@@ -35,7 +33,11 @@ VEC_DECL(binding);
 
 typedef struct {
   tc_res res;
+  parse_tree tree;
   vec_tc_action stack;
+  vec_string known_type_names;
+  vec_node_ind known_type_inds;
+  bitset is_wanted;
   vec_binding env;
   source_file source;
 } typecheck_state;
@@ -68,24 +70,65 @@ static void give_up(char *err) {
   exit(1);
 }
 
+static void fill_in_types(typecheck_state *state) {
+
+  // Nodes have initial type
+  VEC_REPLICATE(&state->res.types, T_UNKNOWN, state->tree.nodes.len);
+  bs_resize(&state->is_wanted, state->tree.nodes.len);
+  state->is_wanted.len = state->tree.nodes.len;
+  memset(&state->is_wanted.data, 0, state->is_wanted.cap);
+
+  // Prelude
+  {
+    static const char *builtin_names[] = {
+      "U8", "U16", "U32", "U64", "I8", "I16", "I32", "I64",
+    };
+
+    static const type_tag builtin_types[] = {T_U8, T_U16, T_U32, T_U64,
+                                             T_I8, T_I16, T_I32, T_I64};
+
+    VEC_APPEND(&state->known_type_names, STATIC_LEN(builtin_names),
+               builtin_names);
+    size_t start_type_ind = state->res.types.len;
+    for (size_t i = 0; i < STATIC_LEN(builtin_types); i++) {
+      VEC_PUSH(&state->known_type_inds, start_type_ind + i);
+    }
+    VEC_APPEND(&state->res.types, STATIC_LEN(builtin_types), builtin_types);
+  }
+
+  // Declared here
+  {
+    for (size_t i = 0; i < state->tree.nodes.len; i++) {
+      parse_node node = state->tree.nodes.data[i];
+      switch (node.type) {
+        // TODO fill in user declared types here
+        default:
+          break;
+      }
+    }
+  }
+}
+
 tc_res typecheck(source_file source, parse_tree tree) {
 
   typecheck_state state = {
     .res = {.successful = true, .types = VEC_NEW, .errors = VEC_NEW},
+    .tree = tree,
+    .known_type_names = VEC_NEW,
+    .known_type_inds = VEC_NEW,
+    .is_wanted = bs_new(),
     .stack = VEC_NEW,
     .env = VEC_NEW,
     .source = source,
   };
 
-  vec_tc_action stack = VEC_NEW;
-  VEC_PUSH(&stack, tree.root_ind);
-  VEC_REPLICATE(&state.res.types, T_UNKNOWN, tree.nodes.len);
+  VEC_PUSH(&state.stack, tree.root_ind);
   VEC_PUSH(&state.res.types, T_UNKNOWN);
   size_t unknown_type_ind = state.res.types.len - 1;
 
-  while (stack.len > 0) {
-    tc_action action = VEC_POP(&stack);
-    size_t actions_start = stack.len;
+  while (state.stack.len > 0) {
+    tc_action action = VEC_POP(&state.stack);
+    size_t actions_start = state.stack.len;
 
     switch (action.tag) {
       case POP_VARS: {
@@ -96,7 +139,6 @@ tc_res typecheck(source_file source, parse_tree tree) {
         parse_node node = tree.nodes.data[action.node_ind];
         switch (node.type) {
           case PT_INT: {
-            switch
           }
           case PT_TOP_LEVEL: {
             give_up("Top level node as child of non-root");
