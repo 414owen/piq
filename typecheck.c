@@ -1,9 +1,9 @@
-#include "typecheck.h"
-
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "consts.h"
 #include "source.h"
+#include "typecheck.h"
 #include "vec.h"
 
 typedef struct {
@@ -63,6 +63,11 @@ static size_t lookup_bnd_node(typecheck_state *state, parse_node node) {
   return lookup_bnd(state, state->env, bnd);
 }
 
+static void give_up(char *err) {
+  fprintf(stderr, "%s.\nThis is a compiler bug! Giving up.", err);
+  exit(1);
+}
+
 tc_res typecheck(source_file source, parse_tree tree) {
 
   typecheck_state state = {
@@ -90,6 +95,13 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_NODE: {
         parse_node node = tree.nodes.data[action.node_ind];
         switch (node.type) {
+          case PT_INT: {
+            switch
+          }
+          case PT_TOP_LEVEL: {
+            give_up("Top level node as child of non-root");
+            break;
+          }
           case PT_ROOT: {
             for (size_t i = 0; i < node.sub_amt; i++) {
               parse_node toplevel = tree.nodes.data[node.subs_start + i];
@@ -98,25 +110,30 @@ tc_res typecheck(source_file source, parse_tree tree) {
               NODE_IND_T val_ind = tree.inds.data[toplevel.subs_start];
               parse_node val = tree.nodes.data[val_ind];
               switch (val.type) {
-                case PT_FN:
+                case PT_FN: {
+
                   break;
+                }
+                default: {
+                  give_up("Unhandled case. This is a compiler bug!");
+                }
               }
             }
             break;
           }
           case PT_LOWER_NAME:
           case PT_UPPER_NAME: {
-            size_t ind = lookup_bnd_node(source, env, node);
-            if (ind == env.len) {
-              res.successful = false;
+            size_t ind = lookup_bnd_node(&state, node);
+            if (ind == state.env.len) {
+              state.res.successful = false;
               tc_error err = {
                 .err_type = BINDING_NOT_FOUND,
                 .pos = ind,
               };
-              VEC_PUSH(&res.errors, err);
+              VEC_PUSH(&state.res.errors, err);
             }
-            type t = res.types.data[env.data[ind].type_ind];
-            res.types.data[action.node_ind] = t;
+            type t = state.res.types.data[state.env.data[ind].type_ind];
+            state.res.types.data[action.node_ind] = t;
             break;
           }
           case PT_FN: {
@@ -126,7 +143,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
               parse_node param = tree.nodes.data[param_ind];
               binding b = {
                 .start = param.start, .end = param.end, .type_ind = type_ind};
-              VEC_PUSH(&env, b);
+              VEC_PUSH(&state.env, b);
             }
             tc_action a = {.tag = POP_VARS, .amt = (node.sub_amt - 1) / 2};
             VEC_PUSH(&stack, a);
@@ -135,7 +152,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
           case PT_CALL: {
 
             NODE_IND_T callee_ind = tree.inds.data[node.subs_start];
-            type fn_type = res.types.data[callee_ind];
+            type fn_type = state.res.types.data[callee_ind];
             if (fn_type.tag == T_UNKNOWN) {
               VEC_PUSH(&stack, callee_ind);
               VEC_PUSH(&stack, action.node_ind);
@@ -145,19 +162,19 @@ tc_res typecheck(source_file source, parse_tree tree) {
             NODE_IND_T exp_param_amt = fn_type.sub_amt - 1;
             NODE_IND_T got_param_amt = node.sub_amt - 1;
             if (exp_param_amt != got_param_amt) {
-              res.successful = false;
+              state.res.successful = false;
               tc_error err = {
                 .err_type = WRONG_ARITY,
                 .pos = action.node_ind,
                 .exp_param_amt = exp_param_amt,
                 .got_param_amt = got_param_amt,
               };
-              VEC_PUSH(&res.errors, err);
+              VEC_PUSH(&state.res.errors, err);
               goto ret;
             }
 
             for (size_t i = 1; i < node.sub_amt; i++) {
-              VEC_PUSH(&stack, );
+              // VEC_PUSH(&state.stack, );
             }
           }
         }
