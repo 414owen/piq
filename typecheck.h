@@ -6,9 +6,13 @@
 
 typedef struct {
   enum {
+    INT_LARGER_THAN_UINT64,
+    INT_LARGER_THAN_MAX,
     TYPE_NOT_FOUND,
+    AMBIGUOUS_TYPE,
     BINDING_NOT_FOUND,
     TYPE_MISMATCH,
+    LITERAL_MISMATCH,
     WRONG_ARITY,
   } err_type;
 

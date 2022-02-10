@@ -69,6 +69,7 @@ void test_bitset(test_state *state);
 void test_utils(test_state *state);
 void test_scanner(test_state *state);
 void test_parser(test_state *state);
+void test_typecheck(test_state *state);
 
 #ifdef JUNIT
 void write_test_results(test_state *state);
