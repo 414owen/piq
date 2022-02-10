@@ -4,6 +4,7 @@
 pkgs.mkShell {
   nativeBuildInputs = with pkgs; [
     gcc11
+    cgdb
     re2c
     clang-tools
     lcov

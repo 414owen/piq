@@ -28,6 +28,8 @@ TEST_OBJS := \
 	test_scanner.o \
 	test_utils.o \
 	test_vec.o \
+	typecheck.o \
+	test_typecheck.o \
 	tokenizer.o \
 	util.o \
 	vec.o \
