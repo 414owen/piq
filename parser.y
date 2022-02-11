@@ -23,6 +23,7 @@
   #include "vec.h"
 
   #define YYNOERRORRECOVERY 1
+  #define YYSTACKDEPTH 0
 
   typedef struct {
     token *tokens;

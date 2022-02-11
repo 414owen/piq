@@ -22,18 +22,18 @@ void test_group_start(test_state *state, char *name) {
   print_depth_indent(state);
   printf("%s\n", name);
   VEC_PUSH(&state->path, name);
-#ifdef JUNIT
-  VEC_PUSH(&state->actions, GROUP_ENTER);
-  VEC_PUSH(&state->strs, name);
-#endif
+  if (state->junit) {
+    VEC_PUSH(&state->actions, GROUP_ENTER);
+    VEC_PUSH(&state->strs, name);
+  }
 }
 
 void test_group_end(test_state *state) {
   assert(!state->in_test);
   VEC_POP_(&state->path);
-#ifdef JUNIT
-  VEC_PUSH(&state->actions, GROUP_LEAVE);
-#endif
+  if (state->junit) {
+    VEC_PUSH(&state->actions, GROUP_LEAVE);
+  }
 }
 
 static vec_string make_test_path(test_state *state) {
@@ -53,9 +53,9 @@ static void fail_with(test_state *state, char *reason) {
   state->current_failed = true;
   failure f = {.path = make_test_path(state), .reason = reason};
   VEC_PUSH(&state->failures, f);
-#ifdef JUNIT
-  VEC_PUSH(&state->actions, TEST_FAIL);
-#endif
+  if (state->junit) {
+    VEC_PUSH(&state->actions, TEST_FAIL);
+  }
 }
 
 void test_fail_eq(test_state *state, char *a, char *b) {
@@ -69,10 +69,10 @@ void test_start(test_state *state, char *name) {
   state->current_name = name;
   state->current_failed = false;
   state->in_test = true;
-#ifdef JUNIT
-  VEC_PUSH(&state->actions, TEST_ENTER);
-  VEC_PUSH(&state->strs, name);
-#endif
+  if (state->junit) {
+    VEC_PUSH(&state->actions, TEST_ENTER);
+    VEC_PUSH(&state->strs, name);
+  }
 }
 
 void test_end(test_state *state) {
@@ -81,9 +81,9 @@ void test_end(test_state *state) {
     state->tests_passed++;
   state->tests_run++;
   state->in_test = false;
-#ifdef JUNIT
-  VEC_PUSH(&state->actions, TEST_LEAVE);
-#endif
+  if (state->junit) {
+    VEC_PUSH(&state->actions, TEST_LEAVE);
+  }
 }
 
 void failf(test_state *state, const char *restrict fmt, ...) {
@@ -105,6 +105,8 @@ test_state test_state_new(void) {
     .current_name = NULL,
     .current_failed = false,
     .failures = VEC_NEW,
+    .lite = false,
+    .junit = false,
   };
   clock_gettime(CLOCK_MONOTONIC, &res.start_time);
   return res;
@@ -130,8 +132,6 @@ void print_failures(test_state *state) {
     print_failure(state->failures.data[i]);
   }
 }
-
-#ifdef JUNIT
 
 typedef struct {
   unsigned int tests;
@@ -245,4 +245,3 @@ void write_test_results(test_state *state) {
   VEC_FREE(&aggs);
   VEC_FREE(&class_path);
 }
-#endif

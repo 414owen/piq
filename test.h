@@ -19,7 +19,6 @@ typedef struct {
 
 VEC_DECL(failure);
 
-#ifdef JUNIT
 typedef enum {
   GROUP_ENTER,
   TEST_ENTER,
@@ -29,7 +28,6 @@ typedef enum {
 } test_action;
 
 VEC_DECL(test_action);
-#endif
 
 typedef struct {
   vec_string path;
@@ -41,13 +39,11 @@ typedef struct {
   bool current_failed;
   bool in_test;
   vec_failure failures;
-#ifdef JUNIT
+  bool junit;
   vec_test_action actions;
   vec_string strs;
-#endif
+  bool lite;
 } test_state;
-
-
 
 test_state test_state_new(void);
 void test_state_finalize(test_state *state);
@@ -71,6 +67,4 @@ void test_scanner(test_state *state);
 void test_parser(test_state *state);
 void test_typecheck(test_state *state);
 
-#ifdef JUNIT
 void write_test_results(test_state *state);
-#endif

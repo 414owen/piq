@@ -20,8 +20,8 @@ typedef struct {
 
   union {
     struct {
-      type expected;
-      type got;
+      NODE_IND_T expected;
+      NODE_IND_T got;
     };
     struct {
       NODE_IND_T exp_param_amt;
@@ -34,7 +34,6 @@ typedef struct {
 VEC_DECL(tc_error);
 
 typedef struct {
-  bool successful;
   vec_tc_error errors;
   // all the types
   vec_type types;
@@ -43,3 +42,5 @@ typedef struct {
   // index into types, one per parse_node
   vec_node_ind node_types;
 } tc_res;
+
+tc_res typecheck(source_file source, parse_tree tree);

@@ -11,3 +11,5 @@ tokenizer.c
 parser.c
 .deps
 *.xml
+vgcore*
+
