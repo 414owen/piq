@@ -8,13 +8,15 @@
 #include "typecheck.h"
 #include "vec.h"
 
+// TODO: replace TC_CLONE_LAST with TC_COMBINE
+
 typedef struct {
 
   enum {
     POP_VARS,
     TC_NODE,
+    TC_NOT_WANTED,
     TC_CLONE_LAST,
-    TC_PUSH_TYPE,
     TC_COMBINE,
   } tag;
 
@@ -49,6 +51,9 @@ typedef struct {
   parse_tree tree;
   NODE_IND_T current_node_ind;
 
+  // TODO technically it's more efficient to have a stack of NODE_IND_T,
+  // and a separate stack of actions. It would also let us `VEC_APPEND` node
+  // inds in the rest of this file.
   vec_tc_action stack;
 
   // type names in scope
@@ -69,9 +74,6 @@ typedef struct {
 
   // last type ind typechecked
   NODE_IND_T last_type_ind;
-
-  // for combining later
-  vec_node_ind type_stack;
 
   source_file source;
 } typecheck_state;
@@ -119,10 +121,15 @@ static void give_up(char *err) {
 // Add builtin types and custom types to type env
 static void setup_type_env(typecheck_state *state) {
 
-  VEC_PUSH(&state->res.types, T_UNKNOWN);
+  NODE_IND_T unknown_ind;
+  {
+    type t = {.tag = T_UNKNOWN, .sub_amt = 0, .sub_start = 0};
+    VEC_PUSH(&state->res.types, t);
+    unknown_ind = state->res.types.len - 1;
+  }
 
   // Nodes have initial type UNKNOWN and not is_wanted
-  VEC_REPLICATE(&state->res.node_types, T_UNKNOWN, state->tree.nodes.len);
+  VEC_REPLICATE(&state->res.node_types, state->tree.nodes.len, unknown_ind);
   bs_resize(&state->is_wanted, state->tree.nodes.len);
   state->is_wanted.len = state->tree.nodes.len;
   memset(&state->is_wanted.data, 0, state->is_wanted.cap);
@@ -137,11 +144,12 @@ static void setup_type_env(typecheck_state *state) {
                                              T_I8, T_I16, T_I32, T_I64};
 
     VEC_APPEND(&state->type_env, STATIC_LEN(builtin_names), builtin_names);
-    size_t start_type_ind = state->res.types.len;
-    for (size_t i = 0; i < STATIC_LEN(builtin_types); i++) {
+    NODE_IND_T start_type_ind = state->res.types.len;
+    for (NODE_IND_T i = 0; i < STATIC_LEN(builtin_types); i++) {
       VEC_PUSH(&state->type_type_inds, start_type_ind + i);
+      type t = {.tag = builtin_types[i], .sub_start = 0, .sub_amt = 0};
+      VEC_PUSH(&state->res.types, t);
     }
-    VEC_APPEND(&state->res.types, STATIC_LEN(builtin_types), builtin_types);
   }
 
   // Declared here
@@ -155,28 +163,6 @@ static void setup_type_env(typecheck_state *state) {
       }
     }
   }
-}
-
-static void resolve_fn(typecheck_state *state, parse_node node) {
-  for (uint16_t i = 0; i < (node.sub_amt - 1) / 2; i++) {
-    NODE_IND_T type_ind = state->tree.inds.data[node.subs_start + i * 2 + 1];
-    NODE_IND_T param_ind = state->tree.inds.data[node.subs_start + i * 2];
-    const tc_action actions[4] = {
-      {.tag = TC_NODE, .node_ind = type_ind},
-      {.tag = TC_PUSH_TYPE},
-      {.tag = TC_CLONE_LAST, .node_ind = param_ind},
-      {.tag = TC_PUSH_TYPE, .node_ind = param_ind},
-    };
-    VEC_APPEND(&state->stack, 4, actions);
-  }
-  NODE_IND_T ret_type_ind =
-    state->tree.inds.data[node.subs_start + node.sub_amt - 2];
-  const tc_action actions[3] = {
-    {.tag = TC_NODE, .node_ind = ret_type_ind},
-    {.tag = TC_PUSH_TYPE},
-    {.tag = TC_COMBINE, .node_ind = ret_type_ind},
-  };
-  VEC_APPEND(&state->stack, 3, actions);
 }
 
 static void check_int_fits(typecheck_state *state, parse_node node,
@@ -252,6 +238,11 @@ static size_t prim_ind(typecheck_state *state, type_tag tag) {
   return 0;
 }
 
+static binding node_to_binding(parse_node node) {
+  binding b = {.start = node.start, .end = node.end};
+  return b;
+}
+
 static void tc_node(typecheck_state *state) {
 
   NODE_IND_T node_ind = state->current_node_ind;
@@ -261,9 +252,40 @@ static void tc_node(typecheck_state *state) {
   type t = state->res.types.data[type_ind];
 
   switch (node.type) {
+    case PT_TYPED: {
+#define action_amt 3
+      tc_action actions[action_amt] = {
+        {.tag = TC_NODE, .node_ind = node.subs_start + 1},
+        {.tag = TC_CLONE_LAST, .node_ind = node_ind},
+        {.tag = TC_CLONE_LAST, .node_ind = node.subs_start},
+      };
+      VEC_APPEND(&state->stack, action_amt, actions);
+#undef action_amt
+      break;
+    }
     case PT_TUP: {
       if (is_wanted) {
+        if (t.tag != T_TUP || t.sub_amt != node.sub_amt) {
+          tc_error err = {
+            .err_type = LITERAL_MISMATCH,
+            .pos = state->current_node_ind,
+            .expected = type_ind,
+          };
+          VEC_PUSH(&state->res.errors, err);
+        }
       }
+      for (NODE_IND_T i = 0; i < node.sub_amt; i++) {
+#define action_amt 3
+        tc_action actions[action_amt] = {
+          {.tag = TC_NODE, .node_ind = node.subs_start + i},
+          {.tag = TC_NODE, .node_ind = node.subs_start + i},
+        };
+        VEC_APPEND(&state->stack, action_amt, actions);
+#undef action_amt
+      }
+      tc_action action = {.tag = TC_COMBINE, .node_ind = node_ind};
+      VEC_PUSH(&state->stack, action);
+      break;
     }
     case PT_IF: {
       // TODO benchmark: could skip if not is_wanted
@@ -279,48 +301,46 @@ static void tc_node(typecheck_state *state) {
       // second branch wanted == first branch
       state->is_wanted.data[node.subs_start + 2] = true;
 
-#define action_amt 8
+#define action_amt 5
       const tc_action actions[action_amt] = {
         {.tag = TC_NODE, .node_ind = node.subs_start},
-        {.tag = TC_PUSH_TYPE},
         {.tag = TC_NODE, .node_ind = node.subs_start + 1},
         // second branch wanted == first branch
         {.tag = TC_CLONE_LAST, .node_ind = node.subs_start + 2},
-        {.tag = TC_PUSH_TYPE},
         {.tag = TC_NODE, .node_ind = node.subs_start + 2},
-        {.tag = TC_PUSH_TYPE},
         {.tag = TC_COMBINE, .node_ind = node_ind},
       };
       VEC_APPEND(&state->stack, action_amt, actions);
+#undef action_amt
       break;
     }
     case PT_INT: {
       if (is_wanted) {
         switch (t.tag) {
-        T_U8:
-          check_int_fits(state, node, UINT8_MAX);
-          break;
-        T_U16:
-          check_int_fits(state, node, UINT16_MAX);
-          break;
-        T_U32:
-          check_int_fits(state, node, UINT32_MAX);
-          break;
-        T_U64:
-          check_int_fits(state, node, UINT64_MAX);
-          break;
-        T_I8:
-          check_int_fits(state, node, INT8_MAX);
-          break;
-        T_I16:
-          check_int_fits(state, node, INT16_MAX);
-          break;
-        T_I32:
-          check_int_fits(state, node, INT32_MAX);
-          break;
-        T_I64:
-          check_int_fits(state, node, INT64_MAX);
-          break;
+          case T_U8:
+            check_int_fits(state, node, UINT8_MAX);
+            break;
+          case T_U16:
+            check_int_fits(state, node, UINT16_MAX);
+            break;
+          case T_U32:
+            check_int_fits(state, node, UINT32_MAX);
+            break;
+          case T_U64:
+            check_int_fits(state, node, UINT64_MAX);
+            break;
+          case T_I8:
+            check_int_fits(state, node, INT8_MAX);
+            break;
+          case T_I16:
+            check_int_fits(state, node, INT16_MAX);
+            break;
+          case T_I32:
+            check_int_fits(state, node, INT32_MAX);
+            break;
+          case T_I64:
+            check_int_fits(state, node, INT64_MAX);
+            break;
           default: {
             tc_error err = {
               .err_type = LITERAL_MISMATCH,
@@ -345,32 +365,40 @@ static void tc_node(typecheck_state *state) {
       break;
     }
     case PT_ROOT: {
+      // TODO for mutually recursive functions, we need the function names to be
+      // in scope, so we need to reserve type nodes and such
       for (NODE_IND_T i = 0; i < node.sub_amt; i++) {
         parse_node toplevel = state->tree.nodes.data[node.subs_start + i];
         assert(toplevel.type == PT_TOP_LEVEL);
         NODE_IND_T name_ind = state->tree.inds.data[toplevel.subs_start];
-        NODE_IND_T val_ind = state->tree.inds.data[toplevel.subs_start];
+        NODE_IND_T val_ind = state->tree.inds.data[toplevel.subs_start + 1];
         state->current_node_ind = val_ind;
         parse_node val = state->tree.nodes.data[val_ind];
         switch (val.type) {
           case PT_FN: {
-            resolve_fn(state, val);
+#define action_amt 3
+            tc_action actions[action_amt] = {
+              {.tag = TC_NODE, .node_ind = val_ind},
+              {.tag = TC_CLONE_LAST, .node_ind = name_ind},
+              {.tag = TC_COMBINE, .node_ind = node_ind},
+            };
+            VEC_APPEND(&state->stack, action_amt, actions);
+#undef action_amt
             break;
           }
-          default: {
-            give_up("Unhandled case");
-          }
+          default:
+            give_up("At the moment only functions can be top levels");
+            break;
         }
       }
       break;
     }
     case PT_LOWER_NAME: {
-      binding b = {.start = node.start, .end = node.end};
+      binding b = node_to_binding(node);
       size_t ind =
         lookup_bnd(state, state->term_env, state->term_is_builtin, b);
       NODE_IND_T term_ind = state->term_type_inds.data[ind];
       if (ind == state->term_env.len) {
-        state->res.successful = false;
         tc_error err = {
           .err_type = BINDING_NOT_FOUND,
           .pos = ind,
@@ -386,7 +414,6 @@ static void tc_node(typecheck_state *state) {
         lookup_bnd(state, state->type_env, state->type_is_builtin, b);
       NODE_IND_T type_ind = state->type_type_inds.data[ind];
       if (ind == state->type_env.len) {
-        state->res.successful = false;
         tc_error err = {
           .err_type = TYPE_NOT_FOUND,
           .pos = ind,
@@ -394,9 +421,35 @@ static void tc_node(typecheck_state *state) {
         VEC_PUSH(&state->res.errors, err);
       }
       state->res.node_types.data[node_ind] = type_ind;
+      state->last_type_ind = ind;
       break;
     }
     case PT_FN: {
+      for (uint16_t i = 0; i < (node.sub_amt - 1) / 2; i++) {
+        NODE_IND_T type_ind =
+          state->tree.inds.data[node.subs_start + i * 2 + 1];
+        NODE_IND_T param_ind = state->tree.inds.data[node.subs_start + i * 2];
+#define action_amt 2
+        const tc_action actions[action_amt] = {
+          {.tag = TC_NODE, .node_ind = type_ind},
+          {.tag = TC_CLONE_LAST, .node_ind = param_ind},
+        };
+        VEC_APPEND(&state->stack, action_amt, actions);
+#undef action_amt
+      }
+      NODE_IND_T ret_type_ind =
+        state->tree.inds.data[node.subs_start + node.sub_amt - 2];
+      NODE_IND_T body_ind =
+        state->tree.inds.data[node.subs_start + node.sub_amt - 1];
+      bs_set(&state->is_wanted, body_ind, true);
+#define action_amt 3
+      const tc_action actions[action_amt] = {
+        {.tag = TC_NODE, .node_ind = ret_type_ind},
+        {.tag = TC_CLONE_LAST, .node_ind = body_ind},
+        {.tag = TC_COMBINE, .node_ind = node_ind},
+      };
+      VEC_APPEND(&state->stack, action_amt, actions);
+#undef action_amt
       break;
     }
     case PT_CALL: {
@@ -412,7 +465,6 @@ static void tc_node(typecheck_state *state) {
       NODE_IND_T exp_param_amt = fn_type.sub_amt - 1;
       NODE_IND_T got_param_amt = node.sub_amt - 1;
       if (exp_param_amt != got_param_amt) {
-        state->res.successful = false;
         tc_error err = {
           .err_type = WRONG_ARITY,
           .pos = node_ind,
@@ -427,11 +479,14 @@ static void tc_node(typecheck_state *state) {
       }
     }
   }
+
+  tc_action action = {.tag = TC_NOT_WANTED, .node_ind = node_ind};
+  VEC_PUSH(&state->stack, action);
 }
 
 static typecheck_state tc_new_state(source_file source, parse_tree tree) {
   typecheck_state state = {
-    .res = {.successful = true, .types = VEC_NEW, .errors = VEC_NEW},
+    .res = {.types = VEC_NEW, .errors = VEC_NEW},
     .tree = tree,
     .is_wanted = bs_new(),
 
@@ -444,31 +499,89 @@ static typecheck_state tc_new_state(source_file source, parse_tree tree) {
     .term_type_inds = VEC_NEW,
 
     .stack = VEC_NEW,
-    .type_stack = VEC_NEW,
 
     .source = source,
   };
-  VEC_PUSH(&state.stack, tree.root_ind);
+  tc_action action = {.tag = TC_NODE, .node_ind = tree.root_ind};
+  VEC_PUSH(&state.stack, action);
   return state;
 }
 
 static void tc_combine(typecheck_state *state) {
   NODE_IND_T node_ind = state->current_node_ind;
   parse_node node = state->tree.nodes.data[node_ind];
+  NODE_IND_T param_amt = (node.sub_amt - 2) / 2;
   switch (node.type) {
     case PT_FN: {
-      NODE_IND_T sub_start = state->res.type_inds.len;
-      for (NODE_IND_T i = 0; i < node.sub_amt / 2; i++) {
-        NODE_IND_T type_ind =
-          state->type_stack.data[state->type_stack.len - 1 - node.sub_amt + i];
-        VEC_PUSH(&state->res.type_inds, type_ind);
+
+      for (size_t i = 0; i < state->res.types.len; i++) {
+        type t = state->res.types.data[i];
+        if (t.tag != T_FN)
+          continue;
+        if (t.sub_amt != param_amt + 1)
+          continue;
+        bool match = true;
+        for (size_t j = 0; j < param_amt; j++) {
+          NODE_IND_T sub_node_ind =
+            state->tree.inds.data[node.subs_start + j * 2 + 1];
+          if (state->type_type_inds.data[t.sub_amt + j] !=
+              state->res.node_types.data[sub_node_ind]) {
+            match = false;
+            break;
+          }
+        }
+        if (!match)
+          continue;
+        state->last_type_ind = i;
+        state->res.node_types.data[node_ind] = i;
+        return;
       }
-      type t = {
-        .sub_start = sub_start, .sub_amt = node.sub_amt / 2, .tag = T_FN};
+
+      NODE_IND_T sub_start = state->res.type_inds.len;
+      for (NODE_IND_T i = 0; i < param_amt; i++) {
+        VEC_PUSH(&state->res.type_inds,
+                 state->res.node_types.data[node.subs_start + i * 2 + 1]);
+      }
+      VEC_PUSH(&state->res.type_inds,
+               state->res.node_types.data[node.start + node.sub_amt - 1]);
+      type t = {.sub_start = sub_start, .sub_amt = param_amt + 1, .tag = T_FN};
       VEC_PUSH(&state->res.types, t);
+      state->last_type_ind = state->res.types.len - 1;
       state->res.node_types.data[state->current_node_ind] =
         state->res.types.len - 1;
-      state->res.type_inds.len -= node.sub_amt / 2;
+      break;
+    }
+    case PT_TUP: {
+      for (size_t i = 0; i < state->res.types.len; i++) {
+        type t = state->res.types.data[i];
+        if (t.tag != T_TUP)
+          continue;
+        if (t.sub_amt != node.sub_amt)
+          continue;
+        bool match = true;
+        for (size_t j = 0; j < param_amt; j++) {
+          NODE_IND_T sub_node_ind = state->tree.inds.data[node.subs_start + j];
+          if (state->type_type_inds.data[t.sub_amt + j] !=
+              state->res.node_types.data[sub_node_ind]) {
+            match = false;
+            break;
+          }
+        }
+        if (!match)
+          continue;
+        state->last_type_ind = i;
+        state->res.node_types.data[node_ind] = i;
+        return;
+      }
+
+      NODE_IND_T sub_start = state->res.type_inds.len;
+      VEC_APPEND(&state->res.type_inds, node.sub_amt,
+                 &state->res.node_types.data[node.subs_start]);
+      type t = {.sub_start = sub_start, .sub_amt = node.sub_amt, .tag = T_TUP};
+      VEC_PUSH(&state->res.types, t);
+      state->last_type_ind = state->res.types.len - 1;
+      state->res.node_types.data[state->current_node_ind] =
+        state->res.types.len - 1;
       break;
     }
     default:
@@ -487,11 +600,12 @@ tc_res typecheck(source_file source, parse_tree tree) {
     tc_action action = VEC_POP(&state.stack);
     size_t actions_start = state.stack.len;
     switch (action.tag) {
+      case TC_NOT_WANTED: {
+        bs_set(&state.is_wanted, action.node_ind, false);
+        break;
+      }
       case TC_CLONE_LAST:
         state.res.node_types.data[action.amt] = state.last_type_ind;
-        break;
-      case TC_PUSH_TYPE:
-        VEC_PUSH(&state.type_stack, state.last_type_ind);
         break;
       case TC_COMBINE:
         state.current_node_ind = action.node_ind;
@@ -505,7 +619,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
         tc_node(&state);
         break;
     }
-    reverse_arbitrary(&state.stack,
+    reverse_arbitrary(&state.stack.data[actions_start],
                       MAX(actions_start, state.stack.len) - actions_start,
                       sizeof(tc_action));
   }

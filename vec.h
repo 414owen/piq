@@ -52,14 +52,15 @@ void __vec_push(vec_void *vec, void *el, size_t elemsize);
 void __vec_append(vec_void *vec, void *els, size_t amt, size_t elemsize);
 
 #define VEC_APPEND(vec, amt, els) { \
-    assert(sizeof((vec)->data[0]) == sizeof(els[0])); \
-    __vec_append((vec_void*) vec, (void*) els, amt, sizeof(els[0])); \
+    assert(sizeof((vec)->data[0]) == sizeof((els)[0])); \
+    __vec_append((vec_void*) vec, (void*) (els), amt, sizeof((els)[0])); \
   }
 
 void __vec_replicate(vec_void *vec, void *el, size_t amt, size_t elemsize);
 
 // appends el to vec amt times
 #define VEC_REPLICATE(vec, amt, el) { \
+    assert(sizeof((vec)->len) == sizeof(amt)); \
     assert(sizeof((vec)->data[0]) == sizeof(el)); \
     typeof(el) __el = el; \
     __vec_replicate((vec_void*) vec, (void*) &__el, amt, sizeof(el)); \

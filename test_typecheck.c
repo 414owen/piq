@@ -2,7 +2,7 @@
 #include "test.h"
 #include "typecheck.h"
 
-void test_typecheck_succeeds(test_state *state, char *input, char *output) {
+static void test_typecheck_succeeds(test_state *state, char *input) {
   source_file test_file = {.path = "parser-test", .data = input};
   tokens_res tres = scan_all(test_file);
   if (!tres.succeeded) {
@@ -17,15 +17,10 @@ void test_typecheck_succeeds(test_state *state, char *input, char *output) {
     goto end_b;
   }
 
-  stringstream ss;
-  ss_init(&ss);
-  print_parse_tree(ss.stream, test_file, pres.tree);
-  ss_finalize(&ss);
-  if (strcmp(ss.string, output) != 0) {
-    failf(state, "Different parse trees.\nExpected: '%s'\nGot: '%s'", output,
-          ss.string);
+  tc_res res = typecheck(test_file, pres.tree);
+  if (res.errors.len > 0) {
+    failf(state, "Typechecking failed for '%s", input);
   }
-  free(ss.string);
 
 end_b:
   VEC_FREE(&pres.tree.inds);
@@ -38,7 +33,9 @@ end_a:
 void test_typecheck(test_state *state) {
   test_group_start(state, "Typecheck");
 
-  // test_start(state, )
+  test_start(state, "An I32");
+  // test_typecheck_succeeds(state, "(fn a () I32 1)");
+  test_end(state);
 
   test_group_end(state);
 }

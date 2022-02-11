@@ -1,17 +1,32 @@
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "test.h"
 
-int main(void) {
+int main(int argc, char **argv) {
+
   test_state state = test_state_new();
+
+  for (int i = 0; i < argc; i++) {
+    char *arg = argv[i];
+    if (strcmp(arg, "--lite") == 0) {
+      puts("Test lite mode");
+      state.lite = true;
+    }
+    if (strcmp(arg, "--junit") == 0) {
+      state.junit = true;
+    }
+  }
 
   test_vec(&state);
   test_bitset(&state);
   test_utils(&state);
   test_scanner(&state);
   test_parser(&state);
+  test_typecheck(&state);
 
   test_state_finalize(&state);
 
@@ -19,11 +34,11 @@ int main(void) {
   printf("Tests passed: %" PRIu32 "/%" PRIu32 "\n", state.tests_passed,
          state.tests_run);
 
-#ifdef JUNIT
-  write_test_results(&state);
-  VEC_FREE(&state.actions);
-  VEC_FREE(&state.strs);
-#endif
+  if (state.junit) {
+    write_test_results(&state);
+    VEC_FREE(&state.actions);
+    VEC_FREE(&state.strs);
+  }
 
   for (uint32_t i = 0; i < state.failures.len; i++) {
     failure f = state.failures.data[i];
