@@ -4,18 +4,18 @@
 #include "vec.h"
 #include "types.h"
 
-typedef struct {
-  enum {
-    INT_LARGER_THAN_UINT64,
-    INT_LARGER_THAN_MAX,
-    TYPE_NOT_FOUND,
-    AMBIGUOUS_TYPE,
-    BINDING_NOT_FOUND,
-    TYPE_MISMATCH,
-    LITERAL_MISMATCH,
-    WRONG_ARITY,
-  } err_type;
+typedef enum {
+  INT_LARGER_THAN_MAX,
+  TYPE_NOT_FOUND,
+  AMBIGUOUS_TYPE,
+  BINDING_NOT_FOUND,
+  TYPE_MISMATCH,
+  LITERAL_MISMATCH,
+  WRONG_ARITY,
+} tc_error_type;
 
+typedef struct {
+  tc_error_type type;
   NODE_IND_T pos;
 
   union {
@@ -41,6 +41,9 @@ typedef struct {
   vec_node_ind type_inds;
   // index into types, one per parse_node
   vec_node_ind node_types;
+
+  parse_tree tree;
+  source_file source;
 } tc_res;
 
 tc_res typecheck(source_file source, parse_tree tree);

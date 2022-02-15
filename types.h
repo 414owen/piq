@@ -15,4 +15,6 @@ typedef struct {
   NODE_IND_T sub_amt;
 } type;
 
+void print_type(FILE *f, type *a, NODE_IND_T *inds);
+
 VEC_DECL(type);
