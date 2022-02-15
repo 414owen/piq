@@ -33,15 +33,14 @@ static void test_parser_succeeds_on(test_state *state, char *input,
     case ANY:
       break;
     case STRING: {
-      stringstream ss;
-      ss_init(&ss);
-      print_parse_tree(ss.stream, test_file, pres.tree);
-      ss_finalize(&ss);
-      if (strcmp(ss.string, output.str) != 0) {
+      stringstream *ss = ss_init();
+      print_parse_tree(ss->stream, test_file, pres.tree);
+      char *str = ss_finalize(ss);
+      if (strcmp(str, output.str) != 0) {
         failf(state, "Different parse trees.\nExpected: '%s'\nGot: '%s'",
-              output, ss.string);
+              output, str);
       }
-      free(ss.string);
+      free(str);
       break;
     }
   }
@@ -165,20 +164,18 @@ static void test_parser_robustness(test_state *state) {
 
   {
     test_start(state, "Nested calls");
-    stringstream in;
-    ss_init(&in);
+    stringstream *in = ss_init();
     static const size_t depth = 1000000;
     for (size_t i = 0; i < depth; i++) {
-      fputs("(add 1 ", in.stream);
+      fputs("(add 1 ", in->stream);
     }
-    fputs("1", in.stream);
+    fputs("1", in->stream);
     for (size_t i = 0; i < depth; i++) {
-      putc(')', in.stream);
+      putc(')', in->stream);
     }
-    ss_finalize(&in);
+    char *str = ss_finalize(in);
     expected_output out = {.tag = ANY};
-    test_parser_succeeds_on_form(state, in.string, out);
-    free(in.string);
+    test_parser_succeeds_on_form(state, str, out);
     test_end(state);
   }
 

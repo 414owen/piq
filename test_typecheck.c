@@ -1,8 +1,122 @@
+#include <stdbool.h>
+#include <stdio.h>
+
+#include "diagnostic.h"
 #include "parse_tree.h"
 #include "test.h"
 #include "typecheck.h"
+#include "util.h"
 
-static void test_typecheck_succeeds(test_state *state, char *input) {
+static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
+  tc_error error = res.errors.data[err_ind];
+  switch (error.type) {
+    case INT_LARGER_THAN_MAX:
+      fputs("Int doesn't fit into type", f);
+      break;
+    case TYPE_NOT_FOUND:
+      fputs("Type not in scope", f);
+      break;
+    case AMBIGUOUS_TYPE:
+      fputs("Ambiguouus type", f);
+      break;
+    case BINDING_NOT_FOUND:
+      fputs("Binding not found", f);
+      break;
+    case TYPE_MISMATCH:
+      fputs("Type mismatch", f);
+      break;
+    case LITERAL_MISMATCH:
+      fputs("Ambiguouus type", f);
+      break;
+    case WRONG_ARITY:
+      fputs("Wrong arity", f);
+      break;
+  }
+  fputs(":\n", f);
+  parse_node node = res.tree.nodes.data[err_ind];
+  format_error_ctx(f, res.source.data, node.start, node.end);
+}
+
+typedef struct test_type {
+  type_tag tag;
+  struct test_type *subs;
+  size_t sub_amt;
+} test_type;
+
+VEC_DECL(test_type);
+
+typedef struct {
+  tc_error_type type;
+  NODE_IND_T pos;
+  union {
+    struct {
+      test_type type_exp;
+      test_type type_got;
+    };
+  };
+} tc_err_test;
+
+static bool test_type_eq(vec_type types, vec_node_ind inds, NODE_IND_T root,
+                         test_type t) {
+  vec_node_ind stackA = VEC_NEW;
+  VEC_PUSH(&stackA, root);
+  vec_test_type stackB;
+  VEC_PUSH(&stackB, t);
+  bool res = true;
+  while (stackA.len > 0) {
+    type tA = types.data[VEC_POP(&stackA)];
+    test_type tB = VEC_POP(&stackB);
+    if (tA.tag != tB.tag || tA.sub_amt != tB.sub_amt) {
+      res = false;
+      break;
+    }
+    for (node_ind i = 0; i < tA.sub_amt; i++) {
+      VEC_PUSH(&stackA, inds.data[tA.sub_start + i]);
+      VEC_PUSH(&stackB, tB.subs[i]);
+    }
+  }
+  VEC_FREE(&stackA);
+  VEC_FREE(&stackB);
+  return res;
+}
+
+static bool test_err_eq(tc_res res, size_t err_ind, tc_err_test test_err) {
+  tc_error eA = res.errors.data[err_ind];
+  if (eA.type != test_err.type || eA.pos != test_err.pos)
+    return false;
+  switch (eA.type) {
+    case TYPE_MISMATCH: {
+      return test_type_eq(res.types, res.type_inds, eA.expected,
+                          test_err.type_exp) &&
+             test_type_eq(res.types, res.type_inds, eA.got, test_err.type_got);
+    }
+    default:
+      break;
+  }
+  return true;
+}
+
+static bool all_errors_match(tc_res res, size_t exp_err_amt,
+                             tc_err_test *exp_errs) {
+  if (res.errors.len != exp_err_amt)
+    return false;
+  for (size_t i = 0; i < exp_err_amt; i++) {
+    tc_err_test exp_err = exp_errs[i];
+    bool match = false;
+    for (size_t j = 0; j < exp_err_amt; j++) {
+      if (test_err_eq(res, j, exp_err)) {
+        match = true;
+        break;
+      }
+    }
+    if (!match)
+      return false;
+  }
+  return true;
+}
+
+static void test_typecheck_produces(test_state *state, char *input,
+                                    size_t error_amt, tc_err_test *errors) {
   source_file test_file = {.path = "parser-test", .data = input};
   tokens_res tres = scan_all(test_file);
   if (!tres.succeeded) {
@@ -18,9 +132,22 @@ static void test_typecheck_succeeds(test_state *state, char *input) {
   }
 
   tc_res res = typecheck(test_file, pres.tree);
-  if (res.errors.len > 0) {
-    failf(state, "Typechecking failed for '%s", input);
+  if (!all_errors_match(res, error_amt, errors)) {
+    stringstream *ss = ss_init();
+    fprintf(ss->stream, "Expected %zu errors, got %d.\nErrors:\n", error_amt,
+            res.errors.len);
+    for (size_t i = 0; i < res.errors.len; i++) {
+      print_tc_error(ss->stream, res, i);
+    }
+    char *str = ss_finalize(ss);
+    failf(state, str, input);
+    free(str);
   }
+
+  VEC_FREE(&res.errors);
+  VEC_FREE(&res.types);
+  VEC_FREE(&res.type_inds);
+  VEC_FREE(&res.node_types);
 
 end_b:
   VEC_FREE(&pres.tree.inds);
@@ -34,7 +161,13 @@ void test_typecheck(test_state *state) {
   test_group_start(state, "Typecheck");
 
   test_start(state, "An I32");
-  // test_typecheck_succeeds(state, "(fn a () I32 1)");
+  {
+    tc_err_test err = {
+      .type = TYPE_MISMATCH,
+      .pos = 4,
+    };
+    // test_typecheck_produces(state, "(fn a () I32 (1, 2))", 1, &err);
+  }
   test_end(state);
 
   test_group_end(state);

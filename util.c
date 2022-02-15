@@ -33,26 +33,29 @@ int timespec_subtract(struct timespec *result, struct timespec *x,
   return x->tv_sec < y->tv_sec;
 }
 
-void ss_init(stringstream *ss) {
+stringstream *ss_init(void) {
+  stringstream *ss = malloc(sizeof(stringstream));
   ss->stream = open_memstream(&ss->string, &ss->size);
-  if (ss->stream != NULL)
-    return;
-  perror("Can't make string stream");
-  exit(1);
+  if (ss->stream == NULL) {
+    perror("Can't make string stream");
+    exit(1);
+  }
+  return ss;
 }
 
 // Won't update copies of the stringstream that was used to `init`.
-void ss_finalize(stringstream *ss) {
+char *ss_finalize(stringstream *ss) {
   putc(0, ss->stream);
   fclose(ss->stream);
+  char *res = ss->string;
+  free(ss);
+  return res;
 }
 
 int vasprintf(char **buf, const char *restrict fmt, va_list rest) {
-  stringstream ss;
-  ss_init(&ss);
-  int res = vfprintf(ss.stream, fmt, rest);
-  ss_finalize(&ss);
-  *buf = ss.string;
+  stringstream *ss = ss_init();
+  int res = vfprintf(ss->stream, fmt, rest);
+  *buf = ss_finalize(ss);
   return res;
 }
 

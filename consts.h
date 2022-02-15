@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdint.h>
 #include <inttypes.h>
 
 #define BUF_IND_T uint32_t

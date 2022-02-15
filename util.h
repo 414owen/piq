@@ -14,8 +14,8 @@ typedef struct {
   size_t size;
 } stringstream;
 
-void ss_init(stringstream *ss);
-void ss_finalize(stringstream *ss);
+stringstream *ss_init(void);
+char *ss_finalize(stringstream *ss);
 
 int timespec_subtract(struct timespec *result, struct timespec *x, struct timespec *y);
 void *memclone(void *src, size_t bytes);
