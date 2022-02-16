@@ -2,6 +2,8 @@
 
 set -euxo pipefail
 
-if ! grep 'pragma once' parser.h; then
-	echo -e "#pragma once\n$(cat parser.h)" > parser.h
-fi
+for i in *.h; do
+	if ! grep 'pragma once' $i; then
+		echo -e "#pragma once\n\n$(cat $i)" > $i
+	fi
+done

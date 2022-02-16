@@ -14,6 +14,9 @@ typedef struct {
   size_t size;
 } stringstream;
 
+size_t find_el(const void *haystack, size_t haystacklen, const void *needle, size_t needlelen);
+size_t find_range(const void *haystack, size_t el_size, size_t el_amt, const void *needle, size_t needle_els);
+
 stringstream *ss_init(void);
 char *ss_finalize(stringstream *ss);
 

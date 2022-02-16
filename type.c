@@ -48,8 +48,7 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
         size_t stack_top = stack.len;
         switch (node.tag) {
           case T_UNKNOWN:
-            fprintf(stderr, "Un-typechecked node. This is a compiler bug.");
-            exit(1);
+            fputs("<unknown>", f);
             break;
           case T_I8:
             fputs("I8", f);
@@ -76,10 +75,12 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
             fputs("U64", f);
             break;
           case T_FN:
-            fputs("(fn ", f);
-            for (size_t i = 0; i < node.sub_amt; i++) {
-              push_node(&stack, node.sub_start + node.sub_amt);
+            fputs("(fn (", f);
+            for (size_t i = 0; i < node.sub_amt - 1; i++) {
+              push_node(&stack, inds[node.sub_start + node.sub_amt]);
             }
+            push_str(&stack, ") -> ");
+            push_node(&stack, inds[node.sub_start + node.sub_amt - 1]);
             push_str(&stack, ")");
             break;
           case T_BOOL:
