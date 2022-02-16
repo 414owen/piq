@@ -20,6 +20,7 @@
 
   #include "parse_tree.h"
   #include "token.h"
+  #include "util.h"
   #include "vec.h"
 
   #define YYNOERRORRECOVERY 1
@@ -45,7 +46,17 @@
 root(RES) ::= toplevels(A) EOF . {
   NODE_IND_T start = s.res->tree.inds.len;
   VEC_CAT(&s.res->tree.inds, &A);
-  parse_node n = {.type = PT_ROOT, .subs_start = start, .sub_amt = A.len};
+  parse_node n = {
+    .type = PT_ROOT,
+    .subs_start = start,
+    .sub_amt = A.len,
+    .start = 0,
+    .end = 0,
+  };
+  if (A.len > 0) {
+    n.start = s.res->tree.nodes.data[A.data[0]].start;
+    n.end = s.res->tree.nodes.data[A.data[A.len - 1]].end;
+  }
   VEC_PUSH(&s.res->tree.nodes, n);
   s.res->tree.root_ind = s.res->tree.nodes.len - 1;
   VEC_FREE(&A);
@@ -199,7 +210,11 @@ tuple(RES) ::= form(A) COMMA commapred(B). {
   NODE_IND_T start = s.res->tree.inds.len;
   VEC_PUSH(&s.res->tree.inds, A);
   VEC_CAT(&s.res->tree.inds, &B);
-  parse_node n = {.type = PT_TUP, .subs_start = start, .sub_amt = B.len + 1};
+  parse_node n = {
+    .type = PT_TUP,
+    .subs_start = start,
+    .sub_amt = B.len + 1,
+  };
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
   VEC_FREE(&B);

@@ -12,6 +12,19 @@ typedef enum {
 
 VEC_DECL(print_action);
 
+const char *const parse_node_strings[] = {
+  [PT_TOP_LEVEL] = "Top level",
+  [PT_CALL] = "Call",
+  [PT_UPPER_NAME] = "Upper name",
+  [PT_LOWER_NAME] = "Lower name",
+  [PT_INT] = "Int",
+  [PT_IF] = "If",
+  [PT_TUP] = "Tuple",
+  [PT_ROOT] = "Root",
+  [PT_FN] = "Fn",
+  [PT_TYPED] = "Typed",
+};
+
 typedef struct {
   vec_print_action actions;
   vec_node_ind node_stack;

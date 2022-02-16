@@ -1,7 +1,8 @@
 #include <stdio.h>
 
 #include "consts.h"
-#include "type.h"
+#include "types.h"
+#include "vec.h"
 
 typedef struct {
   enum {
@@ -22,15 +23,15 @@ static void push_node(vec_print_action *stack, NODE_IND_T type_ind) {
     .tag = PRINT_TYPE,
     .type_ind = type_ind,
   };
-  VEC_PUSH(stack, type_ind);
+  VEC_PUSH(stack, act);
 }
 
-static void push_str(vec_print_action *stack, static const char *volatile str) {
+static void push_str(vec_print_action *stack, char *str) {
   print_action act = {
     .tag = PRINT_STRING,
     .str = str,
   };
-  VEC_PUSH(stack, str);
+  VEC_PUSH(stack, act);
 }
 
 void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
@@ -43,10 +44,11 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
         fputs(action.str, f);
         break;
       case PRINT_TYPE: {
-        parse_node node = action.node_ind size_t stack_top = types.len;
-        switch (node) {
+        type node = types[action.type_ind];
+        size_t stack_top = stack.len;
+        switch (node.tag) {
           case T_UNKNOWN:
-            fpritnf(stderr, "Un-typechecked node. This is a compiler bug.");
+            fprintf(stderr, "Un-typechecked node. This is a compiler bug.");
             exit(1);
             break;
           case T_I8:
@@ -76,7 +78,7 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
           case T_FN:
             fputs("(fn ", f);
             for (size_t i = 0; i < node.sub_amt; i++) {
-              push_node(&stack, node.subs_start + node.sub_amt);
+              push_node(&stack, node.sub_start + node.sub_amt);
             }
             push_str(&stack, ")");
             break;
@@ -86,7 +88,7 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
           case T_TUP:
             putc('(', f);
             for (size_t i = 0; i < node.sub_amt; i++) {
-              push_node(&stack, node.subs_start + node.sub_amt);
+              push_node(&stack, node.sub_start + node.sub_amt);
               push_str(&stack, ", ");
             }
             push_str(&stack, ")");

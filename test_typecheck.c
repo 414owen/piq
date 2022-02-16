@@ -11,29 +11,31 @@ static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
   tc_error error = res.errors.data[err_ind];
   switch (error.type) {
     case INT_LARGER_THAN_MAX:
-      fputs("Int doesn't fit into type", f);
+      fputs("Int doesn't fit into type:\n", f);
       break;
     case TYPE_NOT_FOUND:
-      fputs("Type not in scope", f);
+      fputs("Type not in scope:\n", f);
       break;
     case AMBIGUOUS_TYPE:
-      fputs("Ambiguouus type", f);
+      fputs("Ambiguous type:\n", f);
       break;
     case BINDING_NOT_FOUND:
-      fputs("Binding not found", f);
+      fputs("Binding not found:\n", f);
       break;
     case TYPE_MISMATCH:
-      fputs("Type mismatch", f);
+      fputs("Type mismatch:\n", f);
       break;
     case LITERAL_MISMATCH:
-      fputs("Ambiguouus type", f);
+      fputs("Literal mismatch. Expected '", f);
+      print_type(f, res.types.data, res.type_inds.data, error.expected);
+      fputs("':\n", f);
       break;
     case WRONG_ARITY:
-      fputs("Wrong arity", f);
+      fputs("Wrong arity:\n", f);
       break;
   }
-  fputs(":\n", f);
-  parse_node node = res.tree.nodes.data[err_ind];
+  // fputs(":\n", f);
+  parse_node node = res.tree.nodes.data[error.pos];
   format_error_ctx(f, res.source.data, node.start, node.end);
 }
 
@@ -47,7 +49,8 @@ VEC_DECL(test_type);
 
 typedef struct {
   tc_error_type type;
-  NODE_IND_T pos;
+  BUF_IND_T start;
+  BUF_IND_T end;
   union {
     struct {
       test_type type_exp;
@@ -82,7 +85,12 @@ static bool test_type_eq(vec_type types, vec_node_ind inds, NODE_IND_T root,
 
 static bool test_err_eq(tc_res res, size_t err_ind, tc_err_test test_err) {
   tc_error eA = res.errors.data[err_ind];
-  if (eA.type != test_err.type || eA.pos != test_err.pos)
+  if (eA.type != test_err.type)
+    return false;
+  parse_node node = res.tree.nodes.data[eA.pos];
+  if (node.start != test_err.start)
+    return false;
+  if (node.end != test_err.end)
     return false;
   switch (eA.type) {
     case TYPE_MISMATCH: {
@@ -101,15 +109,7 @@ static bool all_errors_match(tc_res res, size_t exp_err_amt,
   if (res.errors.len != exp_err_amt)
     return false;
   for (size_t i = 0; i < exp_err_amt; i++) {
-    tc_err_test exp_err = exp_errs[i];
-    bool match = false;
-    for (size_t j = 0; j < exp_err_amt; j++) {
-      if (test_err_eq(res, j, exp_err)) {
-        match = true;
-        break;
-      }
-    }
-    if (!match)
+    if (!test_err_eq(res, i, exp_errs[i]))
       return false;
   }
   return true;
@@ -137,6 +137,7 @@ static void test_typecheck_produces(test_state *state, char *input,
     fprintf(ss->stream, "Expected %zu errors, got %d.\nErrors:\n", error_amt,
             res.errors.len);
     for (size_t i = 0; i < res.errors.len; i++) {
+      putc('\n', ss->stream);
       print_tc_error(ss->stream, res, i);
     }
     char *str = ss_finalize(ss);
@@ -162,11 +163,24 @@ void test_typecheck(test_state *state) {
 
   test_start(state, "An I32");
   {
-    tc_err_test err = {
-      .type = TYPE_MISMATCH,
-      .pos = 4,
+    tc_err_test errs[] = {
+      {
+        .type = LITERAL_MISMATCH,
+        .start = 13,
+        .end = 18,
+      },
+      {
+        .type = AMBIGUOUS_TYPE,
+        .start = 14,
+        .end = 14,
+      },
+      {
+        .type = AMBIGUOUS_TYPE,
+        .start = 17,
+        .end = 17,
+      },
     };
-    // test_typecheck_produces(state, "(fn a () I32 (1, 2))", 1, &err);
+    test_typecheck_produces(state, "(fn a () I32 (1, 2))", 3, errs);
   }
   test_end(state);
 
