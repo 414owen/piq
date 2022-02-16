@@ -1,4 +1,6 @@
+#define _GNU_SOURCE
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -8,6 +10,35 @@ void *memclone(void *src, size_t bytes) {
   void *dest = malloc(bytes);
   memcpy(dest, src, bytes);
   return dest;
+}
+
+size_t find_el(const void *haystack, size_t haystacklen, const void *needle,
+               size_t needlelen) {
+  void *ptr = memmem(haystack, haystacklen, needle, needlelen);
+  return (size_t)((ptr - haystack) / needlelen);
+}
+
+// TODO(speedup) Boyer-Moore
+size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
+                  const void *needle, size_t needle_els) {
+  if (el_amt == 0 || needle_els > el_amt)
+    return el_amt;
+  for (size_t i = 0; i < el_amt - needle_els + 1; i++) {
+    bool matches = true;
+    for (size_t k = 0; matches && k < needle_els; k++) {
+      for (size_t j = 0; j < el_size; j++) {
+        if (((char *)haystack)[(i + k) * el_size + j] !=
+            ((char *)needle)[k * el_size + j]) {
+          matches = false;
+          break;
+        }
+      }
+    }
+    if (matches) {
+      return i;
+    }
+  }
+  return el_amt;
 }
 
 int timespec_subtract(struct timespec *result, struct timespec *x,

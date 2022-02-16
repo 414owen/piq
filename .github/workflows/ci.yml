@@ -35,4 +35,4 @@ jobs:
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1
     - name: Valgrind
-      run: valgrind --leak-check=full --track-origins=yes --error-exitcode=1  ./test >/dev/null
+      run: valgrind --leak-check=full --track-origins=yes --error-exitcode=1  ./test >/dev/null -- --lite
