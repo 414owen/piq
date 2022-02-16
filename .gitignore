@@ -12,4 +12,5 @@ parser.c
 .deps
 *.xml
 vgcore*
+debug*
 

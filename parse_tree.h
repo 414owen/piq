@@ -22,6 +22,8 @@ typedef enum __attribute__ ((__packed__)) {
   PT_TYPED,
 } parse_node_type;
 
+extern const char *const parse_node_strings[];
+
 typedef struct {
   parse_node_type type;
 

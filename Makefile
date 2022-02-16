@@ -23,6 +23,7 @@ TEST_OBJS := \
 	parser.o \
 	parse_tree.o \
     diagnostic.c \
+    type.o \
 	test.o \
     test_bitset.c \
 	test_parser.o \
