@@ -6,9 +6,20 @@
 A language that does everything right
 
 * Fast compile times
+* Low memory footprint
+  * Have you every compiled a large template-heavy C++/D project?
+    It's horrible. You need 128gb of ram just for it to terminate.
 * Fast runtimes
 * Portable compiler
-* Compiler doesn't use recustion -> doesn't stackoverflow
+* Compiler doesn't stackoverflow
+  * On my machine, parsing nested additions (`1 + (1 + (...`), 
+    fails on every compiler I've tried.
+    | Compiler | Version    | Max depth |
+    | -------- | ---------- | --------- |
+    | clang    | 13.0.0     | 1701      |
+    | gcc      | 10.3.0     | 33268     |
+    | tcc      | 2021-10-09 | 253       |
+    | zig      |            | 1700      |
 * Strongly typed
 * Correct abstractions
   * Sum types
@@ -23,6 +34,30 @@ A language that does everything right
 * Memory
   * Explicit allocation API
     * Arenas / manual / gc
+
+
+# Measures
+
+* Compiler:
+  * Written in C
+  * Struct-Of-Arrays used over Array-Of-Structs in key places
+    * Representing ASTs / Types.
+  * Equal types are only represented once
+    * TODO should do same with AST?
+  * CI enforces pleasing valgrind
+  * Bunch of unit tests
+  * No C extensions
+    * Current exceptions (will replace eventually):
+      * `memmem`
+  * Doesn't use recursion
+    * Parsing: `LR(1)` grammar, state transition table compiled by `lemon`
+    * Everything else recursive:
+      * Maintain a heap-allocated stack of actions
+* Language
+  * Lisp-like syntax
+  * Most forms are decideable based on their opening token
+  * TODO...
+
 
 
 # Notes
