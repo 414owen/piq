@@ -472,7 +472,6 @@ static void tc_node(typecheck_state *state) {
     }
     case PT_FN: {
       NODE_IND_T param_amt = (node.sub_amt - 2) / 2;
-      bool matches = true;
       for (uint16_t i = 0; i < param_amt; i++) {
         NODE_IND_T type_ind =
           state->res.tree.inds.data[node.subs_start + i * 2 + 1];

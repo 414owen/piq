@@ -5,7 +5,6 @@
 // This is so that parser.h changes less
 %token EOF INT UPPER_NAME LOWER_NAME OPEN_PAREN CLOSE_PAREN FN COMMA COLON IF.
 
-%type commalist vec_node_ind
 %type commapred vec_node_ind
 %type param node_ind_tup
 %type params vec_node_ind
@@ -137,6 +136,37 @@ upper_name(RES) ::= UPPER_NAME(A). {
 lower_name(RES) ::= LOWER_NAME(A). {
   token t = s.tokens[A];
   parse_node n = {.type = PT_LOWER_NAME, .start = t.start, .end = t.end, .sub_amt = 0};
+  VEC_PUSH(&s.res->tree.nodes, n);
+  RES = s.res->tree.nodes.len - 1;
+}
+
+form(RES) ::= OPEN_BRACKET(A) list_contents(B) CLOSE_BRACKET(C). {
+  token a = s.tokens[A];
+  s.res->tree.nodes.data[B].start = a.start;
+  a = s.tokens[C];
+  s.res->tree.nodes.data[B].end = a.end;
+  RES = B;
+}
+
+list_contents(RES) ::= commapred(C). {
+  NODE_IND_T subs_start = s.res->tree.inds.len;
+  VEC_CAT(&s.res->tree.inds, &C);
+  parse_node n = {
+    .type = PT_LIST,
+    .subs_start = subs_start,
+    .sub_amt = C.len,
+  };
+  VEC_PUSH(&s.res->tree.nodes, n);
+  VEC_FREE(&C);
+  RES = s.res->tree.nodes.len - 1;
+}
+
+list_contents(RES) ::= . {
+  parse_node n = {
+    .type = PT_LIST,
+    .subs_start = 0,
+    .sub_amt = 0,
+  };
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
 }

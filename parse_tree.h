@@ -9,7 +9,7 @@
 
 #define NODE_IND_T BUF_IND_T
 
-typedef enum __attribute__ ((__packed__)) {
+typedef enum {
   PT_TOP_LEVEL,
   PT_CALL,
   PT_UPPER_NAME,
@@ -20,6 +20,7 @@ typedef enum __attribute__ ((__packed__)) {
   PT_ROOT,
   PT_FN,
   PT_TYPED,
+  PT_LIST,
 } parse_node_type;
 
 extern const char *const parse_node_strings[];
