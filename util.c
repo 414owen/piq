@@ -124,26 +124,11 @@ void reverse_arbitrary(void *dest, size_t amt, size_t elsize) {
 }
 
 char *join(size_t str_amt, char **strs, char *sep) {
-  size_t space = 0;
-  size_t *lens = alloca(str_amt * sizeof(size_t));
+  stringstream *ss = ss_init();
   for (size_t i = 0; i < str_amt; i++) {
-    lens[i] = strlen(strs[i]);
-    space += lens[i];
+    if (i > 0)
+      fputs(sep, ss->stream);
+    fputs(strs[i], ss->stream);
   }
-  size_t seplen = strlen(sep);
-  space += (str_amt / 2) * seplen;
-  if ((space & 1) == 1)
-    space += seplen;
-  char *res = malloc(space + 1);
-  res[space] = '\0';
-  size_t ind = 0;
-  for (size_t i = 0; i < str_amt; i++) {
-    if (i > 0) {
-      memcpy(res + ind, sep, seplen);
-      ind += seplen;
-    }
-    memcpy(res + ind, strs[i], lens[i]);
-    ind += lens[i];
-  }
-  return res;
+  return ss_finalize(ss);
 }
