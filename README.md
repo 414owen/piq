@@ -63,3 +63,4 @@ A language that does everything right
 # Notes
 
 * ~Search index arrays instead of adding to them?~
+* make ss_init return struct, with a char**, rather than a struct*
