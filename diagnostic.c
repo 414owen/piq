@@ -43,12 +43,12 @@ static void get_error_ctx_down(char *data, line *out, BUF_IND_T pos) {
   pos = skip_to_line_end(data, pos);
   for (size_t i = 0; i < ERROR_LINES_CTX; i++) {
     if (data[pos] == '\0') {
-      out[ERROR_LINES_CTX] = (line){.start = pos, .end = pos};
+      out[i] = (line){.start = pos, .end = pos};
       continue;
     }
-    out[ERROR_LINES_CTX].start = skip_to_line_start(data, pos);
-    out[ERROR_LINES_CTX].end = skip_to_line_end(data, pos);
-    pos = out[ERROR_LINES_CTX].end + 1;
+    out[i].start = skip_to_line_start(data, pos);
+    out[i].end = skip_to_line_end(data, pos);
+    pos = out[i].end + 1;
   }
 }
 
