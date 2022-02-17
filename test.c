@@ -86,16 +86,17 @@ void test_end(test_state *state) {
   }
 }
 
-void failf_(test_state *state, char *file, size_t line,
-            const char *restrict fmt, ...) {
+void failf_(test_state *state, char *file, size_t line, const char *fmt, ...) {
   stringstream *ss = ss_init();
+  fprintf(ss->stream, "In %s line %zu: ", file, line);
+
   va_list ap;
   va_start(ap, fmt);
-  fprintf(ss->stream, "In %s line %zu: ", file, line);
   vfprintf(ss->stream, fmt, ap);
+  va_end(ap);
+
   char *err = ss_finalize(ss);
   fail_with(state, err);
-  va_end(ap);
 }
 
 test_state test_state_new(void) {

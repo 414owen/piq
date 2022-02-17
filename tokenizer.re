@@ -49,11 +49,14 @@ token_res scan(source_file file, BUF_IND_T start) {
 
   // "type"  { return mk_token(TK_TYPE, start, pos - 1);        }
   // "match" { return mk_token(TK_MATCH, start, pos - 1);       }
+  // "do"    { return mk_token(TK_DO, start, pos - 1)}
   "if"    { return mk_token(TK_IF, start, pos - 1);             }
   "fn"    { return mk_token(TK_FN, start, pos - 1);             }
   ":"     { return mk_token(TK_COLON, start, pos - 1);          }
   lower_ident { return mk_token(TK_LOWER_NAME, start, pos - 1); }
   upper_ident { return mk_token(TK_UPPER_NAME, start, pos - 1); }
+  "["     { return mk_token(TK_OPEN_BRACKET, start, pos - 1);   }
+  "]"     { return mk_token(TK_CLOSE_BRACKET, start, pos - 1);  }
   [(]     { return mk_token(TK_OPEN_PAREN, start, pos - 1);     }
   [)]     { return mk_token(TK_CLOSE_PAREN, start, pos - 1);    }
   [,]     { return mk_token(TK_COMMA, start, pos - 1);          }

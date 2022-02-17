@@ -38,7 +38,7 @@ static void test_parser_succeeds_on(test_state *state, char *input,
       char *str = ss_finalize(ss);
       if (strcmp(str, output.str) != 0) {
         failf(state, "Different parse trees.\nExpected: '%s'\nGot: '%s'",
-              output, str);
+              output.str, str);
       }
       free(str);
       break;
@@ -198,7 +198,7 @@ static void test_parser_succeeds_kitchen_sink(test_state *state) {
 }
 
 static const token_type form_start[] = {TK_INT, TK_UPPER_NAME, TK_LOWER_NAME,
-                                        TK_OPEN_PAREN};
+                                        TK_OPEN_PAREN, TK_OPEN_BRACKET};
 
 static void test_if_failures(test_state *state) {
   test_group_start(state, "If");
@@ -315,6 +315,13 @@ static void test_parser_succeeds_compound(test_state *state) {
   test_group_start(state, "Compound forms");
 
   {
+    test_start(state, "List");
+    test_parser_succeeds_on_form(state, "[1, 2, 3]",
+                                 expect_string("[(Int 1), (Int 2), (Int 3)]"));
+    test_end(state);
+  }
+
+  {
     test_start(state, "If");
     test_parser_succeeds_on_form(state, "(if 1 2 3)",
                                  expect_string("(If (Int 1) (Int 2) (Int 3))"));
@@ -367,16 +374,18 @@ static void test_mismatched_parens(test_state *state) {
 
   {
     test_start(state, "Single open");
-    static token_type expected[] = {TK_INT,        TK_UPPER_NAME, TK_LOWER_NAME,
-                                    TK_OPEN_PAREN, TK_FN,         TK_IF};
+    static token_type expected[] = {
+      TK_INT, TK_UPPER_NAME, TK_LOWER_NAME,  TK_OPEN_PAREN,
+      TK_FN,  TK_IF,         TK_OPEN_BRACKET};
     test_parser_fails_on_form(state, "(", 1, STATIC_LEN(expected), expected);
     test_end(state);
   }
 
   {
     test_start(state, "Three open");
-    static token_type expected[] = {TK_INT,        TK_UPPER_NAME, TK_LOWER_NAME,
-                                    TK_OPEN_PAREN, TK_FN,         TK_IF};
+    static token_type expected[] = {
+      TK_INT, TK_UPPER_NAME, TK_LOWER_NAME,  TK_OPEN_PAREN,
+      TK_FN,  TK_IF,         TK_OPEN_BRACKET};
     test_parser_fails_on_form(state, "(((", 3, STATIC_LEN(expected), expected);
     test_end(state);
   }
@@ -384,7 +393,7 @@ static void test_mismatched_parens(test_state *state) {
   {
     test_start(state, "Single close");
     static token_type expected[] = {TK_INT, TK_UPPER_NAME, TK_LOWER_NAME,
-                                    TK_OPEN_PAREN};
+                                    TK_OPEN_PAREN, TK_OPEN_BRACKET};
     test_parser_fails_on_form(state, ")", 0, STATIC_LEN(expected), expected);
     test_end(state);
   }
@@ -392,7 +401,7 @@ static void test_mismatched_parens(test_state *state) {
   {
     test_start(state, "Three close");
     static token_type expected[] = {TK_INT, TK_UPPER_NAME, TK_LOWER_NAME,
-                                    TK_OPEN_PAREN};
+                                    TK_OPEN_PAREN, TK_OPEN_BRACKET};
     test_parser_fails_on_form(state, ")))", 0, STATIC_LEN(expected), expected);
     test_end(state);
   }

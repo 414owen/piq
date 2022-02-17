@@ -23,6 +23,7 @@ const char *const parse_node_strings[] = {
   [PT_ROOT] = "Root",
   [PT_FN] = "Fn",
   [PT_TYPED] = "Typed",
+  [PT_LIST] = "List",
 };
 
 typedef struct {
@@ -50,14 +51,14 @@ static void push_source(printer_state *s, NODE_IND_T node) {
 }
 
 static void print_compound(printer_state *s, char *prefix, char *sep,
-                           parse_node node) {
+                           char *terminator, parse_node node) {
   fputs(prefix, s->out);
   for (uint16_t i = 0; i < node.sub_amt; i++) {
     if (i > 0)
       push_str(s, sep);
     push_node(s, s->tree.inds.data[node.subs_start + i]);
   }
-  push_str(s, ")");
+  push_str(s, terminator);
 }
 
 static void push_params(printer_state *s, NODE_IND_T start, NODE_IND_T amt) {
@@ -100,7 +101,7 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
       push_str(s, ")");
       break;
     case PT_CALL:
-      print_compound(s, "(Call ", " ", node);
+      print_compound(s, "(Call ", " ", ")", node);
       break;
     case PT_INT:
       fprintf(s->out, "(Int %.*s)", 1 + node.end - node.start,
@@ -115,14 +116,16 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
               s->file.data + node.start);
       break;
     case PT_IF:
-      print_compound(s, "(If ", " ", node);
+      print_compound(s, "(If ", " ", ")", node);
       break;
     case PT_TUP:
-      print_compound(s, "(Tup ", " ", node);
+      print_compound(s, "(Tup ", " ", ")", node);
       break;
     case PT_TYPED:
-      print_compound(s, "(", ": ", node);
+      print_compound(s, "(", ": ", ")", node);
       break;
+    case PT_LIST:
+      print_compound(s, "[", ", ", "]", node);
   }
 }
 
