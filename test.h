@@ -12,6 +12,9 @@
 #define test_assert_eq(state, a, b) \
   if ((a) != (b)) test_fail_eq(state, #a, #b);
 
+#define failf(state, fmt, ...) \
+  failf_(state, __FILE__, __LINE__, fmt, __VA_ARGS__)
+
 typedef struct {
   vec_string path;
   char *reason;
@@ -54,7 +57,7 @@ void test_group_start(test_state *state, char *name);
 void test_end(test_state *state);
 void test_start(test_state *state, char *name);
 
-void failf(test_state *state, const char *fmt, ...);
+void failf_(test_state *state, char *file, size_t line, const char *fmt, ...);
 
 void test_fail_eq(test_state *state, char *a, char *b);
 
