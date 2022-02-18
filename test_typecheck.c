@@ -140,11 +140,14 @@ static void test_typecheck_produces(test_state *state, char *input,
   tc_res res = typecheck(test_file, pres.tree);
   if (!all_errors_match(res, error_amt, errors)) {
     stringstream *ss = ss_init();
-    fprintf(ss->stream, "Expected %zu errors, got %d.\nErrors:\n", error_amt,
+    fprintf(ss->stream, "Expected %zu errors, got %d.\n", error_amt,
             res.errors.len);
-    for (size_t i = 0; i < res.errors.len; i++) {
-      putc('\n', ss->stream);
-      print_tc_error(ss->stream, res, i);
+    if (res.errors.len > 0) {
+      fputs("Errors:\n", ss->stream);
+      for (size_t i = 0; i < res.errors.len; i++) {
+        putc('\n', ss->stream);
+        print_tc_error(ss->stream, res, i);
+      }
     }
     char *str = ss_finalize(ss);
     failf(state, str, input);
@@ -233,6 +236,31 @@ void test_typecheck(test_state *state) {
                             errs);
   }
   test_end(state);
+
+  test_start(state, "String vs I32");
+  {
+    const tc_err_test errs[] = {
+      {
+        .type = LITERAL_MISMATCH,
+        .start = 16,
+        .end = 18,
+      },
+    };
+    test_typecheck_produces(state, "(fn a () String 321)", STATIC_LEN(errs),
+                            errs);
+  }
+  test_end(state);
+
+  test_start(state, "String vs String");
+  { test_typecheck_produces(state, "(fn a () String \"hi\")", 0, NULL); }
+  test_end(state);
+
+  // TODO enable when I add list type parsing
+  // test_start(state, "[U8] vsString");
+  // {
+  //   test_typecheck_produces(state, "(fn a () [U8] \"hi\")", 0, NULL);
+  // }
+  // test_end(state);
 
   test_group_end(state);
 }

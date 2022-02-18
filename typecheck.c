@@ -131,6 +131,42 @@ static void give_up(char *err) {
   exit(1);
 }
 
+static NODE_IND_T find_type(typecheck_state *state, type_tag tag,
+                            NODE_IND_T *subs, NODE_IND_T sub_amt) {
+  for (NODE_IND_T i = 0; i < state->res.types.len; i++) {
+    type t = state->res.types.data[i];
+    if (t.tag != tag || t.sub_amt != sub_amt)
+      continue;
+    if (memcmp(&state->res.type_inds.data[t.sub_start], subs, sub_amt) != 0)
+      continue;
+    return i;
+  }
+  return state->res.types.len;
+}
+
+static NODE_IND_T mk_type(typecheck_state *state, type_tag tag,
+                          NODE_IND_T *subs, NODE_IND_T sub_amt) {
+  NODE_IND_T ind = find_type(state, tag, subs, sub_amt);
+  if (ind < state->res.types.len)
+    return ind;
+  assert(sizeof(subs[0]) == sizeof(state->res.type_inds.data[0]));
+  // size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
+  // const void *needle, size_t needle_els);
+  ind = find_range(state->res.type_inds.data, sizeof(subs[0]),
+                   state->res.type_inds.len, subs, sub_amt);
+  if (ind == state->res.type_inds.len) {
+    ind = state->res.type_inds.len;
+    VEC_APPEND(&state->res.type_inds, sub_amt, subs);
+  }
+  type t = {
+    .tag = tag,
+    .sub_amt = sub_amt,
+    .sub_start = ind,
+  };
+  VEC_PUSH(&state->res.types, t);
+  return state->res.types.len - 1;
+}
+
 // Add builtin types and custom types to type env
 static void setup_type_env(typecheck_state *state) {
 
@@ -150,9 +186,8 @@ static void setup_type_env(typecheck_state *state) {
 
   // Prelude
   {
-#define U8_IND 0
-    static const char *builtin_names[] = {
-      [0] = "U8", "U16", "U32", "U64", "I8", "I16", "I32", "I64", "String"};
+    static const char *builtin_names[] = {"U8",  "U16", "U32", "U64",   "I8",
+                                          "I16", "I32", "I64", "String"};
 
     static const type_tag primitive_types[] = {T_U8, T_U16, T_U32, T_U64,
                                                T_I8, T_I16, T_I32, T_I64};
@@ -167,11 +202,12 @@ static void setup_type_env(typecheck_state *state) {
     }
 
     {
-      type t = {.tag = T_LIST, .sub_start = U8_IND, .sub_amt = 1};
-      VEC_PUSH(&state->res.types, t);
+      NODE_IND_T u8_ind = mk_type(state, T_U8, NULL, 0);
+      NODE_IND_T list_ind = mk_type(state, T_LIST, &u8_ind, 1);
+      state->string_type_ind = list_ind;
+      VEC_PUSH(&state->type_type_inds, state->res.types.len - 1);
       bs_push(&state->type_is_builtin, true);
     }
-#undef U8_IND
   }
 
   // Declared here
@@ -246,42 +282,6 @@ static bool types_equal(typecheck_state *state, NODE_IND_T a, NODE_IND_T b) {
   }
   VEC_FREE(&stack);
   return true;
-}
-
-static NODE_IND_T find_type(typecheck_state *state, type_tag tag,
-                            NODE_IND_T *subs, NODE_IND_T sub_amt) {
-  for (NODE_IND_T i = 0; i < state->res.types.len; i++) {
-    type t = state->res.types.data[i];
-    if (t.tag != tag || t.sub_amt != sub_amt)
-      continue;
-    if (memcmp(&state->res.type_inds.data[t.sub_start], subs, sub_amt) != 0)
-      continue;
-    return i;
-  }
-  return state->res.types.len;
-}
-
-static NODE_IND_T mk_type(typecheck_state *state, type_tag tag,
-                          NODE_IND_T *subs, NODE_IND_T sub_amt) {
-  NODE_IND_T ind = find_type(state, tag, subs, sub_amt);
-  if (ind < state->res.types.len)
-    return ind;
-  assert(sizeof(subs[0]) == sizeof(state->res.type_inds.data[0]));
-  // size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
-  // const void *needle, size_t needle_els);
-  ind = find_range(state->res.type_inds.data, sizeof(subs[0]),
-                   state->res.type_inds.len, subs, sub_amt);
-  if (ind == state->res.type_inds.len) {
-    ind = state->res.type_inds.len;
-    VEC_APPEND(&state->res.type_inds, sub_amt, subs);
-  }
-  type t = {
-    .tag = tag,
-    .sub_amt = sub_amt,
-    .sub_start = ind,
-  };
-  VEC_PUSH(&state->res.types, t);
-  return state->res.types.len - 1;
 }
 
 static size_t prim_ind(typecheck_state *state, type_tag tag) {
