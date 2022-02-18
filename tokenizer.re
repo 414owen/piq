@@ -31,6 +31,7 @@ token_res scan(source_file file, BUF_IND_T start) {
   while (isspace(file.data[start]))
     start++;
   BUF_IND_T pos = start;
+  BUF_IND_T marker = start;
 
 /*!re2c
   re2c:define:YYCTYPE = char;
@@ -50,6 +51,9 @@ token_res scan(source_file file, BUF_IND_T start) {
   // "type"  { return mk_token(TK_TYPE, start, pos - 1);        }
   // "match" { return mk_token(TK_MATCH, start, pos - 1);       }
   // "do"    { return mk_token(TK_DO, start, pos - 1)}
+
+  str = ["]([^"\\\n] | "\\.")*["];
+  str     { return mk_token(TK_STRING, start, pos - 1);         }
   "if"    { return mk_token(TK_IF, start, pos - 1);             }
   "fn"    { return mk_token(TK_FN, start, pos - 1);             }
   ":"     { return mk_token(TK_COLON, start, pos - 1);          }

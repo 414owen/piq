@@ -126,6 +126,15 @@ form ::= name.
 name ::= upper_name.
 name ::= lower_name.
 
+form ::= string.
+
+string(RES) ::= STRING(A). {
+  token t = s.tokens[A];
+  parse_node n = {.type = PT_STRING, .start = t.start, .end = t.end, .sub_amt = 0};
+  VEC_PUSH(&s.res->tree.nodes, n);
+  RES = s.res->tree.nodes.len - 1;
+}
+
 upper_name(RES) ::= UPPER_NAME(A). {
   token t = s.tokens[A];
   parse_node n = {.type = PT_UPPER_NAME, .start = t.start, .end = t.end, .sub_amt = 0};

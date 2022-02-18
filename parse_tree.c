@@ -126,6 +126,10 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
       break;
     case PT_LIST:
       print_compound(s, "[", ", ", "]", node);
+      break;
+    case PT_STRING:
+      push_source(s, node_ind);
+      break;
   }
 }
 

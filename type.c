@@ -94,6 +94,11 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
             }
             push_str(&stack, ")");
             break;
+          case T_LIST:
+            fputs("[", f);
+            push_node(&stack, node.sub_start);
+            push_str(&stack, "]");
+            break;
         }
         reverse_arbitrary(&stack.data[stack_top], stack.len - stack_top,
                           sizeof(print_action));
