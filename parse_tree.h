@@ -21,6 +21,7 @@ typedef enum {
   PT_FN,
   PT_TYPED,
   PT_LIST,
+  PT_STRING,
 } parse_node_type;
 
 extern const char *const parse_node_strings[];

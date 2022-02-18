@@ -156,6 +156,13 @@ static void test_parser_succeeds_atomic(test_state *state) {
     test_end(state);
   }
 
+  {
+    test_start(state, "String");
+    test_parser_succeeds_on_form(state, "\"hello\"",
+                                 expect_string("\"hello\""));
+    test_end(state);
+  }
+
   test_group_end(state);
 }
 
@@ -197,8 +204,9 @@ static void test_parser_succeeds_kitchen_sink(test_state *state) {
   test_group_end(state);
 }
 
-static const token_type form_start[] = {TK_INT, TK_UPPER_NAME, TK_LOWER_NAME,
-                                        TK_OPEN_PAREN, TK_OPEN_BRACKET};
+static const token_type form_start[] = {TK_INT,        TK_UPPER_NAME,
+                                        TK_LOWER_NAME, TK_OPEN_PAREN,
+                                        TK_STRING,     TK_OPEN_BRACKET};
 
 static void test_if_failures(test_state *state) {
   test_group_start(state, "If");
@@ -375,8 +383,8 @@ static void test_mismatched_parens(test_state *state) {
   {
     test_start(state, "Single open");
     static token_type expected[] = {
-      TK_INT, TK_UPPER_NAME, TK_LOWER_NAME,  TK_OPEN_PAREN,
-      TK_FN,  TK_IF,         TK_OPEN_BRACKET};
+      TK_INT, TK_UPPER_NAME, TK_LOWER_NAME, TK_OPEN_PAREN,
+      TK_FN,  TK_IF,         TK_STRING,     TK_OPEN_BRACKET};
     test_parser_fails_on_form(state, "(", 1, STATIC_LEN(expected), expected);
     test_end(state);
   }
@@ -384,24 +392,26 @@ static void test_mismatched_parens(test_state *state) {
   {
     test_start(state, "Three open");
     static token_type expected[] = {
-      TK_INT, TK_UPPER_NAME, TK_LOWER_NAME,  TK_OPEN_PAREN,
-      TK_FN,  TK_IF,         TK_OPEN_BRACKET};
+      TK_INT, TK_UPPER_NAME, TK_LOWER_NAME, TK_OPEN_PAREN,
+      TK_FN,  TK_IF,         TK_STRING,     TK_OPEN_BRACKET};
     test_parser_fails_on_form(state, "(((", 3, STATIC_LEN(expected), expected);
     test_end(state);
   }
 
   {
     test_start(state, "Single close");
-    static token_type expected[] = {TK_INT, TK_UPPER_NAME, TK_LOWER_NAME,
-                                    TK_OPEN_PAREN, TK_OPEN_BRACKET};
+    static token_type expected[] = {TK_INT,        TK_UPPER_NAME,
+                                    TK_LOWER_NAME, TK_OPEN_PAREN,
+                                    TK_STRING,     TK_OPEN_BRACKET};
     test_parser_fails_on_form(state, ")", 0, STATIC_LEN(expected), expected);
     test_end(state);
   }
 
   {
     test_start(state, "Three close");
-    static token_type expected[] = {TK_INT, TK_UPPER_NAME, TK_LOWER_NAME,
-                                    TK_OPEN_PAREN, TK_OPEN_BRACKET};
+    static token_type expected[] = {TK_INT,        TK_UPPER_NAME,
+                                    TK_LOWER_NAME, TK_OPEN_PAREN,
+                                    TK_STRING,     TK_OPEN_BRACKET};
     test_parser_fails_on_form(state, ")))", 0, STATIC_LEN(expected), expected);
     test_end(state);
   }

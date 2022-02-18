@@ -10,5 +10,6 @@
 #define TK_COMMA                            8
 #define TK_COLON                            9
 #define TK_IF                              10
-#define TK_OPEN_BRACKET                    11
-#define TK_CLOSE_BRACKET                   12
+#define TK_STRING                          11
+#define TK_OPEN_BRACKET                    12
+#define TK_CLOSE_BRACKET                   13

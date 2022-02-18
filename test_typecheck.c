@@ -207,5 +207,32 @@ void test_typecheck(test_state *state) {
   }
   test_end(state);
 
+  test_start(state, "I32 vs [I32]");
+  {
+    const tc_err_test errs[] = {
+      {
+        .type = LITERAL_MISMATCH,
+        .start = 13,
+        .end = 15,
+      },
+    };
+    test_typecheck_produces(state, "(fn a () I32 [3])", STATIC_LEN(errs), errs);
+  }
+  test_end(state);
+
+  test_start(state, "I32 vs String");
+  {
+    const tc_err_test errs[] = {
+      {
+        .type = LITERAL_MISMATCH,
+        .start = 13,
+        .end = 16,
+      },
+    };
+    test_typecheck_produces(state, "(fn a () I32 \"hi\")", STATIC_LEN(errs),
+                            errs);
+  }
+  test_end(state);
+
   test_group_end(state);
 }
