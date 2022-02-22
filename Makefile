@@ -1,4 +1,4 @@
-CFLAGS ?= -O2 -Wall -Wextra -Wno-unused-result
+CFLAGS ?= -O2 -Wall -Wextra
 
 SRCS := $(wildcard *.c)
 DEPDIR := .deps
@@ -18,11 +18,15 @@ parser.o : parser.c
 DEPFILES := $(SRCS:%.c=$(DEPDIR)/%.d)
 $(DEPFILES):
 
+LDFLAGS=`llvm-config --cflags --ldflags --libs core executionengine mcjit interpreter analysis native bitwriter --system-libs`
+
 TEST_OBJS := \
     bitset.o \
 	parser.o \
 	parse_tree.o \
     diagnostic.c \
+    run_tests.o \
+    scope.o \
     type.o \
 	test.o \
     test_bitset.c \
@@ -37,7 +41,7 @@ TEST_OBJS := \
 	vec.o \
 
 test: $(DEPDIR) run_tests.c $(TEST_OBJS)
-	$(CC) $(CFLAGS) -o test run_tests.c $(TEST_OBJS)
+	$(CC) $(CFLAGS) -DDEBUG $(LDFLAGS) -o test $(TEST_OBJS)
 
 check: test
 	./test
@@ -65,6 +69,6 @@ tokenizer.o : tokenizer.c parser.h
 	$(COMPILE.c) $(OUTPUT_OPTION) $<
 
 tokenizer.c: tokenizer.re
-	re2c -o tokenizer.c tokenizer.re
+	re2c --case-ranges -o tokenizer.c tokenizer.re
 
 include $(wildcard $(DEPFILES))

@@ -2,17 +2,18 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "binding.h"
 #include "bitset.h"
 #include "consts.h"
 #include "diagnostic.h"
+#include "scope.h"
 #include "source.h"
 #include "typecheck.h"
+#include "util.h"
 #include "vec.h"
 
 // TODO: replace TC_CLONE_LAST with TC_COMBINE
-
 typedef struct {
-
   enum {
     TC_POP_VARS,
     TC_NODE,
@@ -33,27 +34,9 @@ typedef struct {
       NODE_IND_T to;
     };
   };
-
 } tc_action;
 
 VEC_DECL(tc_action);
-
-typedef struct {
-  BUF_IND_T start;
-  BUF_IND_T end;
-} binding;
-
-VEC_DECL(binding);
-
-typedef union {
-  char *builtin;
-  struct {
-    BUF_IND_T start;
-    BUF_IND_T end;
-  };
-} str_ref;
-
-VEC_DECL(str_ref);
 
 typedef struct {
   tc_res res;
@@ -87,48 +70,8 @@ typedef struct {
   source_file source;
 } typecheck_state;
 
-// For a known-length, and a null-terminated string
-static bool strn1eq(char *a, char *b, size_t alen) {
-  size_t i;
-  for (i = 0; i < alen; i++) {
-    // handles b '\0'
-    if (a[i] != b[i])
-      return false;
-  }
-  if (b[i] != '\0')
-    return false;
-  return true;
-}
-
-// Find index of binding, return bindings.len if not found
-static size_t lookup_bnd(typecheck_state *state, vec_str_ref bnds,
-                         bitset is_builtin, binding bnd) {
-  size_t len = bnd.end - bnd.start + 1;
-  char *bndp = state->source.data + bnd.start;
-  for (size_t i = 0; i < bnds.len; i++) {
-    size_t ind = bnds.len - 1 - i;
-    str_ref a = bnds.data[ind];
-    if (bs_get(is_builtin, ind)) {
-      if (strn1eq(bndp, a.builtin, len)) {
-        return ind;
-      }
-    } else {
-      if (a.end - a.start != len)
-        continue;
-      if (strncmp(bndp, state->source.data + a.start, len) == 0)
-        return ind;
-    }
-  }
-  return bnds.len;
-}
-
 static void push_tc_err(typecheck_state *state, tc_error err) {
   VEC_PUSH(&state->res.errors, err);
-}
-
-static void give_up(char *err) {
-  fprintf(stderr, "%s.\nThis is a compiler bug! Giving up.\n", err);
-  exit(1);
 }
 
 static NODE_IND_T find_type(typecheck_state *state, type_tag tag,
@@ -149,7 +92,7 @@ static NODE_IND_T mk_type(typecheck_state *state, type_tag tag,
   NODE_IND_T ind = find_type(state, tag, subs, sub_amt);
   if (ind < state->res.types.len)
     return ind;
-  assert(sizeof(subs[0]) == sizeof(state->res.type_inds.data[0]));
+  debug_assert(sizeof(subs[0]) == sizeof(state->res.type_inds.data[0]));
   // size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
   // const void *needle, size_t needle_els);
   ind = find_range(state->res.type_inds.data, sizeof(subs[0]),
@@ -492,8 +435,8 @@ static void tc_node(typecheck_state *state) {
 
     case PT_LOWER_NAME: {
       binding b = node_to_binding(node);
-      size_t ind =
-        lookup_bnd(state, state->term_env, state->term_is_builtin, b);
+      size_t ind = lookup_bnd(state->source.data, state->term_env,
+                              state->term_is_builtin, b);
       if (ind == state->term_env.len) {
         tc_error err = {
           .type = BINDING_NOT_FOUND,
@@ -509,8 +452,8 @@ static void tc_node(typecheck_state *state) {
 
     case PT_UPPER_NAME: {
       binding b = {.start = node.start, .end = node.end};
-      size_t ind =
-        lookup_bnd(state, state->type_env, state->type_is_builtin, b);
+      size_t ind = lookup_bnd(state->source.data, state->type_env,
+                              state->type_is_builtin, b);
       NODE_IND_T type_ind = state->type_type_inds.data[ind];
       if (ind == state->type_env.len) {
         tc_error err = {
@@ -620,11 +563,8 @@ static void tc_combine(typecheck_state *state) {
 
     case PT_FN: {
       NODE_IND_T param_amt = (node.sub_amt - 2) / 2;
-      if (param_amt < 20) {
-        sub_type_inds = alloca(sizeof(NODE_IND_T) * param_amt + 1);
-      } else {
-        sub_type_inds = malloc(sizeof(NODE_IND_T) * param_amt + 1);
-      }
+      size_t param_bytes = sizeof(NODE_IND_T) * param_amt + 1;
+      sub_type_inds = stalloc(param_bytes);
       for (NODE_IND_T i = 0; i < param_amt; i++) {
         NODE_IND_T sub_ind =
           state->res.tree.inds.data[node.subs_start + i * 2 + 1];
@@ -635,27 +575,20 @@ static void tc_combine(typecheck_state *state) {
       sub_type_inds[param_amt] = state->res.node_types.data[sub_ind];
 
       type_ind = mk_type(state, T_FN, sub_type_inds, param_amt + 1);
-      if (param_amt >= 20) {
-        free(sub_type_inds);
-      }
+      stfree(sub_type_inds, param_bytes);
       break;
     }
 
     case PT_TUP: {
-      if (node.sub_amt < 20) {
-        sub_type_inds = alloca(sizeof(NODE_IND_T) * node.sub_amt + 1);
-      } else {
-        sub_type_inds = malloc(sizeof(NODE_IND_T) * node.sub_amt + 1);
-      }
+      size_t sub_bytes = sizeof(NODE_IND_T) * node.sub_amt + 1;
+      sub_type_inds = stalloc(sub_bytes);
       for (NODE_IND_T i = 0; i < node.sub_amt; i++) {
         NODE_IND_T sub_ind =
           state->res.tree.inds.data[node.subs_start + i * 2 + 1];
         sub_type_inds[i] = state->res.node_types.data[sub_ind];
       }
       type_ind = mk_type(state, T_FN, sub_type_inds, node.sub_amt);
-      if (node.sub_amt >= 20) {
-        free(sub_type_inds);
-      }
+      stfree(sub_type_inds, sub_bytes);
       break;
     }
 
@@ -763,6 +696,12 @@ tc_res typecheck(source_file source, parse_tree tree) {
                       MAX(actions_start, state.stack.len) - actions_start,
                       sizeof(tc_action));
   }
+
+#ifdef DEBUG
+  for (size_t i = 0; i < tree.nodes.len; i++) {
+    debug_assert(state.res.node_types.data[i] != T_UNDEFINED);
+  }
+#endif
 
   VEC_FREE(&state.stack);
 

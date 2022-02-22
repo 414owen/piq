@@ -15,4 +15,7 @@ pkgs.mkShell {
     lemon
     valgrind
   ];
+  buildInputs = with pkgs; [
+    llvmPackages_13.libllvm
+  ];
 }

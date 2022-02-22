@@ -132,3 +132,8 @@ char *join(size_t str_amt, char **strs, char *sep) {
   }
   return ss_finalize(ss);
 }
+
+void give_up(char *err) {
+  fprintf(stderr, "%s.\nThis is a compiler bug! Giving up.\n", err);
+  exit(1);
+}

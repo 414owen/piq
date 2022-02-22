@@ -60,7 +60,8 @@ A language that does everything right
 
 
 
-# Notes
+# Ideas
 
 * ~Search index arrays instead of adding to them?~
-* make ss_init return struct, with a char**, rather than a struct*
+* make ss_init return struct, with a char**, rather than a struct
+* Get rid of PT_TOP_LEVEL, it's just more indirection
