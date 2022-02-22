@@ -52,7 +52,7 @@ token_res scan(source_file file, BUF_IND_T start) {
   // "match" { return mk_token(TK_MATCH, start, pos - 1);       }
   // "do"    { return mk_token(TK_DO, start, pos - 1)}
 
-  str = ["]([^"\\\n] | "\\.")*["];
+  str = ["]([^"\\\n] | "\\" [^\n])*["];
   str     { return mk_token(TK_STRING, start, pos - 1);         }
   "if"    { return mk_token(TK_IF, start, pos - 1);             }
   "fn"    { return mk_token(TK_FN, start, pos - 1);             }

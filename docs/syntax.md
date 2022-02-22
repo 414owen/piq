@@ -93,8 +93,4 @@ U8, U16, U32, U64
 (type Animal
   (Dog String)
   (Cat String))
-
-
-// gadts
-(type (Vec
 ```

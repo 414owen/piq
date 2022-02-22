@@ -1,5 +1,6 @@
 #pragma once
 
+#include <alloca.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -7,6 +8,26 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define STATIC_LEN(arr) (sizeof(arr) / sizeof((arr)[0]))
+
+#define STRINGIZE_DETAIL(x) #x
+#define STRINGIZE(x) STRINGIZE_DETAIL(x)
+
+#ifdef DEBUG
+#define debug_assert(b) \
+  if (!b) \
+    fputs("Assertion failed at " ## __FILE__ ## ":" ## STRINGIZE(__LINE__); \
+    abort(); \
+  }
+#else
+#define debug_assert(b) do {} while (0);
+#endif
+
+#define MAX_STACK_ALLOC 1024
+#define stalloc(bytes) \
+  (((bytes) <= MAX_STACK_ALLOC) ? alloca(bytes) : malloc(bytes))
+
+#define stfree(ptr, bytes) \
+  if ((bytes) > MAX_STACK_ALLOC) { free(ptr); }
 
 typedef struct {
   char *string;
@@ -27,3 +48,4 @@ char *join(size_t str_amt, char **strs, char *sep);
 int vasprintf(char **, const char * restrict, va_list);
 int asprintf(char **, const char *restrict, ...);
 void reverse_arbitrary(void *dest, size_t amt, size_t elsize);
+void give_up(char *err);

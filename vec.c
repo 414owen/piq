@@ -3,7 +3,7 @@
 
 void __vec_resize(vec_void *vec, size_t cap, size_t elemsize) {
   vec->data = realloc(vec->data, cap * elemsize);
-  assert(vec->data != NULL);
+  debug_assert(vec->data != NULL);
   vec->cap = cap;
 }
 

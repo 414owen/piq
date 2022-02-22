@@ -132,6 +132,13 @@ static void test_scanner_accepts(test_state *restrict state) {
     test_end(state);
   }
 
+  {
+    test_start(state, "String");
+    static const token_type tokens[] = {TK_STRING};
+    test_scanner_tokens(state, "\"hi\"", STATIC_LEN(tokens), tokens);
+    test_end(state);
+  }
+
   test_group_end(state);
 }
 
