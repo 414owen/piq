@@ -13,4 +13,5 @@ parser.c
 *.xml
 vgcore*
 debug*
-
+*.ll
+*.bc

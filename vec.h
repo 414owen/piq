@@ -33,6 +33,8 @@ void __vec_push(vec_void *vec, void *el, size_t elemsize);
 #define VEC_POP_(vec) --(vec)->len
 
 #define VEC_POP(vec) ((vec)->data[--(vec)->len])
+
+#define VEC_PEEK(vec) ((vec).data[(vec).len - 1])
   
 #define VEC_BACK(vec) ((vec)->data[(vec)->len - 1])
 
