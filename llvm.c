@@ -16,7 +16,11 @@
 
 typedef enum {
   CG_NODE,
+  CG_COMBINE,
   CG_GEN_FUNCTION_BODY,
+  CG_GEN_END_IF,
+  CG_GEN_BLOCK,
+  CG_PUSH_VAL,
 } cg_action;
 
 VEC_DECL(cg_action);
@@ -27,21 +31,34 @@ VEC_DECL(llvm_value);
 typedef LLVMTypeRef llvm_type;
 VEC_DECL(llvm_type);
 
+typedef LLVMBasicBlockRef llvm_block;
+VEC_DECL(llvm_block);
+
+typedef LLVMValueRef llvm_function;
+VEC_DECL(llvm_function);
+
 typedef struct {
-  LLVMModuleRef mod;
+  LLVMModuleRef module;
   LLVMContextRef context;
+  LLVMBuilderRef builder;
 
   vec_cg_action actions;
   vec_llvm_value act_fns;
+  vec_llvm_value act_vals;
   vec_node_ind act_nodes;
 
+  vec_llvm_block blocks;
+  vec_string strs;
+
+  // TODO do we need this?
   vec_llvm_value val_stack;
+  vec_llvm_function functions;
 
   tc_res in;
 
   // corresponds to in.types
   LLVMTypeRef *llvm_types;
-  bitset llvm_type_generated;
+  bitset_data llvm_type_generated;
 
   vec_str_ref env_bnds;
   vec_llvm_value env_vals;
@@ -49,24 +66,6 @@ typedef struct {
   // TODO do we need this?
   vec_node_ind env_nodes;
 } cg_state;
-
-static void cg_combine_node(cg_state *state, node_ind ind) {
-  parse_node node = state->in.tree.nodes.data[ind];
-  switch (node.type) {
-    case PT_CALL: {
-      for (size_t i = 0; i < node.sub_amt; i++) {
-        parse_node sub = state->in.tree.nodes
-                           .data[state->in.tree.inds.data[node.subs_start + i]];
-      }
-      // TODO
-      break;
-    }
-    default:
-      fputs("Unimplemented\n", stderr);
-      abort();
-      break;
-  }
-}
 
 typedef enum {
   GEN_TYPE,
@@ -86,13 +85,13 @@ static LLVMTypeRef construct_type(cg_state *state, NODE_IND_T root_type_ind) {
     type t = state->in.types.data[type_ind];
     switch (action) {
       case GEN_TYPE: {
-        if (bs_get(state->llvm_type_generated, type_ind))
+        if (bs_data_get(state->llvm_type_generated, type_ind))
           break;
         switch (t.tag) {
           case T_BOOL: {
             state->llvm_types[type_ind] =
               LLVMIntTypeInContext(state->context, 1);
-            bs_set(&state->llvm_type_generated, type_ind, true);
+            bs_data_set(state->llvm_type_generated, type_ind, true);
             break;
           }
           case T_LIST: {
@@ -105,28 +104,28 @@ static LLVMTypeRef construct_type(cg_state *state, NODE_IND_T root_type_ind) {
           case T_I8:
           case T_U8: {
             state->llvm_types[type_ind] = LLVMInt8TypeInContext(state->context);
-            bs_set(&state->llvm_type_generated, type_ind, true);
+            bs_data_set(state->llvm_type_generated, type_ind, true);
             break;
           }
           case T_I16:
           case T_U16: {
             state->llvm_types[type_ind] =
               LLVMInt16TypeInContext(state->context);
-            bs_set(&state->llvm_type_generated, type_ind, true);
+            bs_data_set(state->llvm_type_generated, type_ind, true);
             break;
           }
           case T_I32:
           case T_U32: {
             state->llvm_types[type_ind] =
               LLVMInt32TypeInContext(state->context);
-            bs_set(&state->llvm_type_generated, type_ind, true);
+            bs_data_set(state->llvm_type_generated, type_ind, true);
             break;
           }
           case T_I64:
           case T_U64: {
             state->llvm_types[type_ind] =
               LLVMInt64TypeInContext(state->context);
-            bs_set(&state->llvm_type_generated, type_ind, true);
+            bs_data_set(state->llvm_type_generated, type_ind, true);
             break;
           }
           case T_TUP: {
@@ -157,7 +156,7 @@ static LLVMTypeRef construct_type(cg_state *state, NODE_IND_T root_type_ind) {
       case COMBINE_TYPE: {
         size_t sub_bytes = sizeof(LLVMTypeRef) * t.sub_amt;
         LLVMTypeRef *subs = stalloc(sub_bytes);
-        bs_set(&state->llvm_type_generated, type_ind, true);
+        bs_data_set(state->llvm_type_generated, type_ind, true);
         switch (t.tag) {
           case T_LIST: {
             NODE_IND_T sub_ind = state->in.type_inds.data[t.sub_start];
@@ -195,6 +194,42 @@ static LLVMTypeRef construct_type(cg_state *state, NODE_IND_T root_type_ind) {
   return state->llvm_types[root_type_ind];
 }
 
+static void cg_combine_node(cg_state *state, node_ind ind) {
+  parse_node node = state->in.tree.nodes.data[ind];
+  switch (node.type) {
+    case PT_CALL: {
+      for (size_t i = 0; i < node.sub_amt; i++) {
+        parse_node sub = state->in.tree.nodes
+                           .data[state->in.tree.inds.data[node.subs_start + i]];
+      }
+      // TODO
+      break;
+    }
+    case PT_IF: {
+      LLVMBasicBlockRef thenBlock = VEC_POP(&state->blocks);
+      LLVMBasicBlockRef elseBlock = VEC_POP(&state->blocks);
+      // TODO
+      // LLVMBuildPhi();
+    }
+    case PT_TUP: {
+      LLVMTypeRef tup_type = construct_type(state, state->in.node_types.data[ind]);
+      static const char *name = "tuple";
+      LLVMValueRef allocated = LLVMBuildAlloca(state->builder, tup_type, name);
+      for (size_t i = 0; i < node.sub_amt; i++) {
+        size_t j = node.sub_amt - 1 - i;
+        LLVMValueRef ptr = LLVMBuildStructGEP2(state->builder, tup_type, allocated, j, name);
+        LLVMValueRef val = VEC_POP(&state->val_stack);
+        LLVMBuildStore(state->builder, val, ptr);
+      }
+      VEC_PUSH(&state->val_stack, allocated);
+    }
+    default:
+      fputs("Unimplemented\n", stderr);
+      abort();
+      break;
+  }
+}
+
 static void cg_node(cg_state *state, node_ind ind) {
   parse_node node = state->in.tree.nodes.data[ind];
   switch (node.type) {
@@ -204,10 +239,12 @@ static void cg_node(cg_state *state, node_ind ind) {
       break;
     }
     case PT_CALL: {
+      VEC_PUSH(&state->actions, CG_COMBINE);
+      VEC_PUSH(&state->act_nodes, ind);
       for (size_t i = 0; i < node.sub_amt; i++) {
         VEC_PUSH(&state->actions, CG_NODE);
+        VEC_PUSH(&state->act_nodes, state->in.tree.nodes.data[node.subs_start + i]);
       }
-      VEC_PUSH(&state->act_nodes, ind);
       break;
     }
     case PT_LOWER_NAME: {
@@ -233,9 +270,32 @@ static void cg_node(cg_state *state, node_ind ind) {
         break;
       }
       case PT_IF: {
+        VEC_PUSH(&state->actions, CG_COMBINE);
+        VEC_PUSH(&state->act_nodes, ind);
+
+        // else
+        VEC_PUSH(&state->actions, CG_NODE);
+        VEC_PUSH(&state->act_nodes, state->in.tree.inds.data[node.subs_start + 2]);
+        VEC_PUSH(&state->strs, "else");
+        VEC_PUSH(&state->actions, CG_GEN_BLOCK);
+
+        // then
+        VEC_PUSH(&state->actions, CG_NODE);
+        VEC_PUSH(&state->act_nodes, state->in.tree.inds.data[node.subs_start + 1]);
+        VEC_PUSH(&state->strs, "then");
+        VEC_PUSH(&state->actions, CG_GEN_BLOCK);
+
+        // cond
+        VEC_PUSH(&state->actions, CG_NODE);
+        VEC_PUSH(&state->act_nodes, state->in.tree.inds.data[node.subs_start]);
         break;
       }
       case PT_TUP: {
+        for (size_t i = 0; i < node.sub_amt / 2; i++) {
+          NODE_IND_T sub_ind = state->in.tree.inds.data[node.subs_start + i];
+          VEC_PUSH(&state->actions, CG_NODE);
+          VEC_PUSH(&state->act_nodes, sub_ind);
+        }
         break;
       }
       case PT_ROOT: {
@@ -252,10 +312,16 @@ static void cg_node(cg_state *state, node_ind ind) {
 
           debug_assert(sub.type == PT_TOP_LEVEL);
 
-          LLVMTypeRef param_types[] = {LLVMInt32Type(), LLVMInt32Type()};
-          LLVMTypeRef ret_type =
-            LLVMFunctionType(LLVMInt32Type(), param_types, 2, 0);
-          LLVMValueRef fn = LLVMAddFunction(state->mod, "sum", ret_type);
+          LLVMTypeRef fn_type = construct_type(state, state->in.node_types.data[ind]);
+
+          size_t bnd_len = bnd.end - bnd.start + 1;
+
+          // TODO does this need to stay alive for the codegen stage?
+          // char *name = alloca(bnd_len + 1);
+          char *name = malloc(bnd_len + 1);
+          name[bnd_len] = '\0';
+          strncpy(name, &state->in.source.data[bnd.start], bnd_len);
+          LLVMValueRef fn = LLVMAddFunction(state->module, name, fn_type);
 
           binding b = {
             .start = bnd.start,
@@ -272,14 +338,18 @@ static void cg_node(cg_state *state, node_ind ind) {
         break;
       }
       case PT_FN: {
-        LLVMTypeRef param_types[] = {LLVMInt32Type(), LLVMInt32Type()};
-        LLVMTypeRef ret_type =
-          LLVMFunctionType(LLVMInt32Type(), param_types, 2, 0);
-        LLVMValueRef fn = LLVMAddFunction(state->mod, "sum", ret_type);
+        LLVMTypeRef fn_type = construct_type(state, state->in.node_types.data[ind]);
+        char *name = "fn";
+        LLVMValueRef fn = LLVMAddFunction(state->module, name, fn_type);
+        VEC_PUSH(&state->actions, CG_PUSH_VAL);
+        VEC_PUSH(&state->act_vals, fn);
         VEC_PUSH(&state->actions, CG_GEN_FUNCTION_BODY);
+        VEC_PUSH(&state->act_nodes, ind);
         break;
       }
       case PT_TYPED: {
+        VEC_PUSH(&state->actions, CG_NODE);
+        VEC_PUSH(&state->act_nodes, state->in.tree.inds.data[node.subs_start + 1]);
         break;
       }
       case PT_LIST: {
@@ -290,105 +360,147 @@ static void cg_node(cg_state *state, node_ind ind) {
       }
     }
   }
+}
 
-  static void codegen(tc_res in) {
-    cg_state state = {
-      .actions = VEC_NEW,
-      .in = in,
-      .inds = VEC_NEW,
-      .env_strs = VEC_NEW,
-      .env_vals = VEC_NEW,
-      .env_nodes = VEC_NEW,
-    };
-    VEC_PUSH(&state.actions, CG_NODE);
-    VEC_PUSH(&state.inds, in.tree.root_ind);
+static void codegen(tc_res in) {
 
-    LLVMInitializeNativeAsmPrinter();
-    LLVMInitializeNativeAsmParser();
 
-    state.mod = LLVMModuleCreateWithName("my_module");
-    state.context = LLVMContextCreate();
+  cg_state state = {
+    .actions = VEC_NEW,
+    .in = in,
+    .strs = VEC_NEW,
+    .blocks = VEC_NEW,
+    .act_fns = VEC_NEW,
+    .act_vals = VEC_NEW,
+    .act_nodes = VEC_NEW,
+    .env_bnds = VEC_NEW,
+    .env_vals = VEC_NEW,
+    .env_nodes = VEC_NEW,
+    .val_stack = VEC_NEW,
+    .functions = VEC_NEW,
+    .llvm_type_generated = bs_new(),
+  };
+  VEC_PUSH(&state.actions, CG_NODE);
+  VEC_PUSH(&state.inds, in.tree.root_ind);
+  state.llvm_types = malloc(sizeof(LLVMTypeRef) * in.tree.nodes.len);
+  state.llvm_type_generated = calloc(sizeof(LLVMTypeRef) * in.tree.nodes.len);
 
-    while (state.actions.len > 0) {
-      cg_action action = VEC_POP(&state.actions);
-      switch (action) {
-        case CG_NODE: {
-          cg_node(&state, VEC_POP(&state.inds));
-          break;
-        }
+  LLVMInitializeNativeAsmPrinter();
+  LLVMInitializeNativeAsmParser();
+
+  state.context = LLVMContextCreate();
+  state.module = LLVMModuleCreateWithNameInContext("my_module", state.context);
+  state.builder = LLVMCreateBuilderInContext(state.context);
+
+
+  // corresponds to in.types
+  LLVMTypeRef *llvm_types;
+  bitset llvm_type_generated;
+
+  vec_str_ref env_bnds;
+  vec_llvm_value env_vals;
+  bitset env_is_builtin;
+  // TODO do we need this?
+  vec_node_ind env_nodes;
+
+
+  while (state.actions.len > 0) {
+    cg_action action = VEC_POP(&state.actions);
+    switch (action) {
+      case CG_NODE: {
+        cg_node(&state, VEC_POP(&state.act_nodes));
+        break;
       }
+      case CG_GEN_BLOCK: {
+        LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(state.context, VEC_PEEK(state.functions), VEC_POP(&state.strs));
+        VEC_PUSH(&state.blocks, block);
+        break;
+      }
+      case CG_PUSH_VAL: {
+        VEC_PUSH(&state.val_stack, VEC_POP(&state.act_vals));
+        break;
+      }
+  // CG_COMBINE,
+  // CG_GEN_FUNCTION_BODY,
+  // CG_GEN_END_IF,
+
     }
   }
 
-  int main() {
+  LLVMDisposeBuilder(state.builder);
+  LLVMDisposeModule(state.module);
+  LLVMContextDispose(state.context);
+}
 
-    LLVMInitializeNativeAsmPrinter();
-    LLVMInitializeNativeAsmParser();
+int main() {
 
-    LLVMModuleRef mod = LLVMModuleCreateWithName("my_module");
-    LLVMTypeRef param_types[] = {LLVMInt32Type(), LLVMInt32Type()};
-    LLVMTypeRef ret_type = LLVMFunctionType(LLVMInt32Type(), param_types, 2, 0);
-    LLVMValueRef sum = LLVMAddFunction(mod, "sum", ret_type);
-    LLVMBasicBlockRef entry = LLVMAppendBasicBlock(sum, "entry");
-    LLVMBuilderRef builder = LLVMCreateBuilder();
-    LLVMPositionBuilderAtEnd(builder, entry);
-    LLVMValueRef tmp =
-      LLVMBuildAdd(builder, LLVMGetParam(sum, 0), LLVMGetParam(sum, 1), "tmp");
-    LLVMBuildRet(builder, tmp);
+  LLVMInitializeNativeAsmPrinter();
+  LLVMInitializeNativeAsmParser();
 
-    char *error = NULL;
-    LLVMVerifyModule(mod, LLVMAbortProcessAction, &error);
-    LLVMDisposeMessage(error);
+  LLVMModuleRef mod = LLVMModuleCreateWithName("my_module");
+  LLVMTypeRef param_types[] = {LLVMInt32Type(), LLVMInt32Type()};
+  LLVMTypeRef ret_type = LLVMFunctionType(LLVMInt32Type(), param_types, 2, 0);
+  LLVMValueRef sum = LLVMAddFunction(mod, "sum", ret_type);
+  LLVMBasicBlockRef entry = LLVMAppendBasicBlock(sum, "entry");
+  LLVMBuilderRef builder = LLVMCreateBuilder();
+  LLVMPositionBuilderAtEnd(builder, entry);
+  LLVMValueRef tmp =
+    LLVMBuildAdd(builder, LLVMGetParam(sum, 0), LLVMGetParam(sum, 1), "tmp");
+  LLVMBuildRet(builder, tmp);
 
-    LLVMExecutionEngineRef engine;
-    error = NULL;
-    LLVMLinkInMCJIT();
-    LLVMInitializeNativeTarget();
+  char *error = NULL;
+  LLVMVerifyModule(mod, LLVMAbortProcessAction, &error);
+  LLVMDisposeMessage(error);
 
-    if (LLVMCreateExecutionEngineForModule(&engine, mod, &error) != 0) {
-      fprintf(stderr, "failed to create execution engine\n");
-      abort();
-    }
+  LLVMExecutionEngineRef engine;
+  error = NULL;
+  LLVMLinkInMCJIT();
+  LLVMInitializeNativeTarget();
 
-    if (error) {
-      fprintf(stderr, "error: %s\n", error);
-      LLVMDisposeMessage(error);
-      exit(EXIT_FAILURE);
-    }
-
-    if (LLVMWriteBitcodeToFile(mod, "test.bc") != 0) {
-      fprintf(stderr, "error writing bitcode to file, skipping\n");
-    }
-
-    LLVMInitializeAllTargetInfos();
-    LLVMInitializeAllTargets();
-    LLVMInitializeAllTargetMCs();
-    LLVMInitializeAllAsmParsers();
-    LLVMInitializeAllAsmPrinters();
-
-    LLVMTargetRef target;
-    LLVMGetTargetFromTriple(LLVMGetDefaultTargetTriple(), &target, &error);
-    printf("error: %s\n", error);
-    LLVMDisposeMessage(error);
-    printf("target: %s, [%s], %d, %d\n", LLVMGetTargetName(target),
-           LLVMGetTargetDescription(target), LLVMTargetHasJIT(target),
-           LLVMTargetHasTargetMachine(target));
-    printf("triple: %s\n", LLVMGetDefaultTargetTriple());
-    printf("features: %s\n", LLVMGetHostCPUFeatures());
-    LLVMTargetMachineRef machine = LLVMCreateTargetMachine(
-      target, LLVMGetDefaultTargetTriple(), "generic", LLVMGetHostCPUFeatures(),
-      LLVMCodeGenLevelDefault, LLVMRelocDefault, LLVMCodeModelDefault);
-
-    LLVMSetTarget(mod, LLVMGetDefaultTargetTriple());
-    LLVMTargetDataRef datalayout = LLVMCreateTargetDataLayout(machine);
-    char *datalayout_str = LLVMCopyStringRepOfTargetData(datalayout);
-    printf("datalayout: %s\n", datalayout_str);
-    LLVMSetDataLayout(mod, datalayout_str);
-    LLVMDisposeMessage(datalayout_str);
-
-    LLVMTargetMachineEmitToFile(machine, mod, "result.o", LLVMObjectFile,
-                                &error);
-    printf("error: %s\n", error);
-    LLVMDisposeMessage(error);
-    return 0;
+  if (LLVMCreateExecutionEngineForModule(&engine, mod, &error) != 0) {
+    fprintf(stderr, "failed to create execution engine\n");
+    abort();
   }
+
+  if (error) {
+    fprintf(stderr, "error: %s\n", error);
+    LLVMDisposeMessage(error);
+    exit(EXIT_FAILURE);
+  }
+
+  if (LLVMWriteBitcodeToFile(mod, "test.bc") != 0) {
+    fprintf(stderr, "error writing bitcode to file, skipping\n");
+  }
+
+  LLVMInitializeAllTargetInfos();
+  LLVMInitializeAllTargets();
+  LLVMInitializeAllTargetMCs();
+  LLVMInitializeAllAsmParsers();
+  LLVMInitializeAllAsmPrinters();
+
+  LLVMTargetRef target;
+  LLVMGetTargetFromTriple(LLVMGetDefaultTargetTriple(), &target, &error);
+  printf("error: %s\n", error);
+  LLVMDisposeMessage(error);
+  printf("target: %s, [%s], %d, %d\n", LLVMGetTargetName(target),
+         LLVMGetTargetDescription(target), LLVMTargetHasJIT(target),
+         LLVMTargetHasTargetMachine(target));
+  printf("triple: %s\n", LLVMGetDefaultTargetTriple());
+  printf("features: %s\n", LLVMGetHostCPUFeatures());
+  LLVMTargetMachineRef machine = LLVMCreateTargetMachine(
+    target, LLVMGetDefaultTargetTriple(), "generic", LLVMGetHostCPUFeatures(),
+    LLVMCodeGenLevelDefault, LLVMRelocDefault, LLVMCodeModelDefault);
+
+  LLVMSetTarget(mod, LLVMGetDefaultTargetTriple());
+  LLVMTargetDataRef datalayout = LLVMCreateTargetDataLayout(machine);
+  char *datalayout_str = LLVMCopyStringRepOfTargetData(datalayout);
+  printf("datalayout: %s\n", datalayout_str);
+  LLVMSetDataLayout(mod, datalayout_str);
+  LLVMDisposeMessage(datalayout_str);
+
+  LLVMTargetMachineEmitToFile(machine, mod, "result.o", LLVMObjectFile,
+                              &error);
+  printf("error: %s\n", error);
+  LLVMDisposeMessage(error);
+  return 0;
+}
