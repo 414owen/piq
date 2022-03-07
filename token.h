@@ -18,7 +18,7 @@ typedef struct {
 
 typedef struct {
   bool succeeded;
-  token token;
+  token tok;
 } token_res;
 
 VEC_DECL(token);

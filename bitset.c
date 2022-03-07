@@ -41,9 +41,7 @@ bool bs_data_get(bitset_data data, size_t ind) {
   return (data[ind / 8] & (1 << (ind % 8))) > 0;
 }
 
-bool bs_get(bitset bs, size_t ind) {
-  return bs_data_get(bs.data, ind);
-}
+bool bs_get(bitset bs, size_t ind) { return bs_data_get(bs.data, ind); }
 
 void bs_data_set(bitset_data data, size_t ind, bool b) {
   if (b) {
@@ -53,9 +51,7 @@ void bs_data_set(bitset_data data, size_t ind, bool b) {
   }
 }
 
-void bs_set(bitset bs, size_t ind, bool b) {
-  bs_data_set(bs.data, ind, b);
-}
+void bs_set(bitset bs, size_t ind, bool b) { bs_data_set(bs.data, ind, b); }
 
 void bs_push(bitset *bs, bool bit) {
   bs_grow(bs, bs->len + 1);
