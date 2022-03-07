@@ -18,8 +18,8 @@ static void test_scanner_tokens(test_state *restrict state, char *restrict buf,
     test_assert_eq(state, t.succeeded, true);
     if (state->current_failed)
       break;
-    test_assert_eq(state, t.token.type, tokens[i]);
-    ind = t.token.end + 1;
+    test_assert_eq(state, t.tok.type, tokens[i]);
+    ind = t.tok.end + 1;
   }
 }
 
@@ -30,18 +30,18 @@ static void test_scanner_fails(test_state *restrict state, char *restrict buf,
   for (;;) {
     token_res t = scan(test_file(buf), ind);
     if (t.succeeded) {
-      if (t.token.type == TK_EOF)
+      if (t.tok.type == TK_EOF)
         break;
-      ind = t.token.end + 1;
+      ind = t.tok.end + 1;
       continue;
     }
     seen_failure = true;
-    if (t.token.start != err_pos)
+    if (t.tok.start != err_pos)
       failf(state,
             "Wrong tokenizer error position.\n"
             "Expected: %" PRBI "\n"
             "Got: %" PRBI,
-            t.token.start, err_pos);
+            t.tok.start, err_pos);
     return;
   }
   if (!seen_failure)

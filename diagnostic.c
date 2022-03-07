@@ -12,21 +12,21 @@ typedef struct {
 } line;
 
 // To previous '\n'
-static BUF_IND_T skip_to_line_start(char *buf, BUF_IND_T pos) {
+static BUF_IND_T skip_to_line_start(const char *buf, BUF_IND_T pos) {
   while (pos > 0 && buf[pos] != '\n')
     pos--;
   return pos;
 }
 
 // To next '\n'
-static BUF_IND_T skip_to_line_end(char *buf, BUF_IND_T pos) {
+static BUF_IND_T skip_to_line_end(const char *buf, BUF_IND_T pos) {
   char c = buf[pos];
   while (c != '\n' && c != '\0')
     c = buf[++pos];
   return pos;
 }
 
-static void get_error_ctx_up(char *data, line *out, BUF_IND_T pos) {
+static void get_error_ctx_up(const char *data, line *out, BUF_IND_T pos) {
   pos = skip_to_line_start(data, pos);
   for (size_t i = 0; i < ERROR_LINES_CTX; i++) {
     if (pos == 0) {
@@ -39,7 +39,7 @@ static void get_error_ctx_up(char *data, line *out, BUF_IND_T pos) {
   }
 }
 
-static void get_error_ctx_down(char *data, line *out, BUF_IND_T pos) {
+static void get_error_ctx_down(const char *data, line *out, BUF_IND_T pos) {
   pos = skip_to_line_end(data, pos);
   for (size_t i = 0; i < ERROR_LINES_CTX; i++) {
     if (data[pos] == '\0') {
@@ -52,7 +52,8 @@ static void get_error_ctx_down(char *data, line *out, BUF_IND_T pos) {
   }
 }
 
-void format_error_ctx(FILE *f, char *data, BUF_IND_T start, BUF_IND_T end) {
+void format_error_ctx(FILE *f, const char *data, BUF_IND_T start,
+                      BUF_IND_T end) {
   line *lines = alloca(sizeof(line) * ERROR_LINES_CTX);
   memset(lines, 0, sizeof(line) * ERROR_LINES_CTX);
   BUF_IND_T line_start = skip_to_line_start(data, start);

@@ -2,5 +2,5 @@
 
 typedef struct {
   char *path;
-  char *data;
+  const char *data;
 } source_file;
