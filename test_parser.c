@@ -100,12 +100,12 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
   }
 
   if (!expected_tokens_match) {
-    char **a = alloca(sizeof(char *) * expected_amt);
+    const char **a = alloca(sizeof(char *) * expected_amt);
     for (size_t i = 0; i < expected_amt; i++) {
       a[i] = yyTokenName[expected[i]];
     }
     char *as = join(expected_amt, a, ", ");
-    char **b = alloca(sizeof(char *) * pres.expected_amt);
+    const char **b = alloca(sizeof(char *) * pres.expected_amt);
     for (size_t i = 0; i < pres.expected_amt; i++) {
       b[i] = yyTokenName[pres.expected[i]];
     }

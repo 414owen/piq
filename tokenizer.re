@@ -24,7 +24,7 @@
 #define  YYSHIFTSTAG(tag, shift)  tag += shift
 
 static token_res mk_token(token_type type, BUF_IND_T start, BUF_IND_T end) {
-  return (token_res) {.succeeded = true, .token = {.type = type, .start = start, .end = end}};
+  return (token_res) {.succeeded = true, .tok = {.type = type, .start = start, .end = end}};
 }
 
 token_res scan(source_file file, BUF_IND_T start) {
@@ -66,7 +66,7 @@ token_res scan(source_file file, BUF_IND_T start) {
   [,]     { return mk_token(TK_COMMA, start, pos - 1);          }
   int     { return mk_token(TK_INT, start, pos - 1);            }
   [\x00]  { return mk_token(TK_EOF, start, pos - 1);            }
-  *       { return (token_res) {.succeeded = false, .token.start = pos - 1}; }
+  *       { return (token_res) {.succeeded = false, .tok.start = pos - 1}; }
 */
 }
 
@@ -78,14 +78,14 @@ tokens_res scan_all(source_file file) {
     tres = scan(file, ind);
     if (!tres.succeeded) {
       res.succeeded = false;
-      res.error_pos = tres.token.start;
+      res.error_pos = tres.tok.start;
       return res;
     }
-    VEC_PUSH(&res.tokens, tres.token);
-    if (tres.token.type == TK_EOF) {
+    VEC_PUSH(&res.tokens, tres.tok);
+    if (tres.tok.type == TK_EOF) {
       VEC_FINALIZE(&res.tokens);
       return res;
     }
-    ind = tres.token.end + 1;
+    ind = tres.tok.end + 1;
   }
 }

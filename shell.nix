@@ -17,5 +17,6 @@ pkgs.mkShell {
   ];
   buildInputs = with pkgs; [
     llvmPackages_13.libllvm
+    readline
   ];
 }

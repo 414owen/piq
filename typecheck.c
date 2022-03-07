@@ -74,6 +74,15 @@ static void push_tc_err(typecheck_state *state, tc_error err) {
   VEC_PUSH(&state->res.errors, err);
 }
 
+static NODE_IND_T find_primitive_type(typecheck_state *state, type_tag tag) {
+  for (NODE_IND_T i = 0; i < state->res.types.len; i++) {
+    type t = state->res.types.data[i];
+    if (t.tag == tag)
+      return i;
+  }
+  return state->res.types.len;
+}
+
 static NODE_IND_T find_type(typecheck_state *state, type_tag tag,
                             NODE_IND_T *subs, NODE_IND_T sub_amt) {
   for (NODE_IND_T i = 0; i < state->res.types.len; i++) {
@@ -87,8 +96,24 @@ static NODE_IND_T find_type(typecheck_state *state, type_tag tag,
   return state->res.types.len;
 }
 
+static NODE_IND_T mk_primitive_type(typecheck_state *state, type_tag tag) {
+  NODE_IND_T ind = find_primitive_type(state, tag);
+  if (ind < state->res.types.len)
+    return ind;
+  type t = {
+    .tag = tag,
+    .sub_amt = 0,
+    .sub_start = 0,
+  };
+  VEC_PUSH(&state->res.types, t);
+  return state->res.types.len - 1;
+}
+
 static NODE_IND_T mk_type(typecheck_state *state, type_tag tag,
                           NODE_IND_T *subs, NODE_IND_T sub_amt) {
+  if (subs == NULL) {
+    return mk_primitive_type(state, tag);
+  }
   NODE_IND_T ind = find_type(state, tag, subs, sub_amt);
   if (ind < state->res.types.len)
     return ind;
@@ -200,6 +225,8 @@ typedef struct {
 
 VEC_DECL(node_ind_tup);
 
+// Not needed since we search previous types and type ind ranges
+/*
 static bool types_equal(typecheck_state *state, NODE_IND_T a, NODE_IND_T b) {
   if (a == b)
     return true;
@@ -226,6 +253,7 @@ static bool types_equal(typecheck_state *state, NODE_IND_T a, NODE_IND_T b) {
   VEC_FREE(&stack);
   return true;
 }
+*/
 
 static size_t prim_ind(typecheck_state *state, type_tag tag) {
   for (size_t i = 0; i < state->type_env.len; i++) {
@@ -416,10 +444,11 @@ static void tc_node(typecheck_state *state) {
         parse_node val = state->res.tree.nodes.data[val_ind];
         switch (val.type) {
           case PT_FN: {
-#define action_amt 2
+#define action_amt 3
             tc_action actions[action_amt] = {
               {.tag = TC_NODE, .node_ind = val_ind},
               {.tag = TC_CLONE, .from = val_ind, .to = name_ind},
+              {.tag = TC_CLONE, .from = val_ind, .to = node.subs_start + i},
             };
             VEC_APPEND(&state->stack, action_amt, actions);
 #undef action_amt
@@ -556,15 +585,14 @@ static void tc_combine(typecheck_state *state) {
   NODE_IND_T wanted_ind = state->wanted.data[node_ind];
   bool is_wanted = wanted_ind != state->unknown_ind;
 
-  NODE_IND_T *sub_type_inds;
   NODE_IND_T type_ind;
 
   switch (node.type) {
 
     case PT_FN: {
-      NODE_IND_T param_amt = (node.sub_amt - 2) / 2;
-      size_t param_bytes = sizeof(NODE_IND_T) * param_amt + 1;
-      sub_type_inds = stalloc(param_bytes);
+      const NODE_IND_T param_amt = (node.sub_amt - 2) / 2;
+      const size_t param_bytes = sizeof(NODE_IND_T) * param_amt + 1;
+      NODE_IND_T *sub_type_inds = stalloc(param_bytes);
       for (NODE_IND_T i = 0; i < param_amt; i++) {
         NODE_IND_T sub_ind =
           state->res.tree.inds.data[node.subs_start + i * 2 + 1];
@@ -581,7 +609,7 @@ static void tc_combine(typecheck_state *state) {
 
     case PT_TUP: {
       size_t sub_bytes = sizeof(NODE_IND_T) * node.sub_amt + 1;
-      sub_type_inds = stalloc(sub_bytes);
+      NODE_IND_T *sub_type_inds = stalloc(sub_bytes);
       for (NODE_IND_T i = 0; i < node.sub_amt; i++) {
         NODE_IND_T sub_ind =
           state->res.tree.inds.data[node.subs_start + i * 2 + 1];
@@ -601,7 +629,7 @@ static void tc_combine(typecheck_state *state) {
 
     default:
       give_up("Can't combine type");
-      break;
+      return;
   }
 
   if (is_wanted && type_ind != wanted_ind) {
@@ -652,6 +680,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
           break;
         }
         default: {
+          fprintf(debug_out, "\nNode ind: '%d'\n", action.node_ind);
           parse_node node = tree.nodes.data[action.node_ind];
           fprintf(debug_out, "Node: '%s'\n", parse_node_strings[node.type]);
           format_error_ctx(debug_out, source.data, node.start, node.end);

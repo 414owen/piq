@@ -1,30 +1,55 @@
 CFLAGS ?= -O2 -Wall -Wextra
+ALLCFLAGS ?= $(CFLAGS) -I./hedley
+CXXFLAGS ?= $(ALLCFLAGS) -fno-exceptions
 
 SRCS := $(wildcard *.c)
 DEPDIR := .deps
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 
 COMPILE.c = $(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+COMPILE.cpp = $(CXX) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
 
 $(DEPDIR): ; @mkdir -p $@
+
+parser.o : parser.c
+	$(COMPILE.c) $(OUTPUT_OPTION) $<
 
 %.o : %.c
 %.o : %.c $(DEPDIR)/%.d | $(DEPDIR)
 	$(COMPILE.c) $(OUTPUT_OPTION) $<
 
-parser.o : parser.c
-	$(COMPILE.c) $(OUTPUT_OPTION) $<
+llvm.o : llvm.cpp
+	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
 
 DEPFILES := $(SRCS:%.c=$(DEPDIR)/%.d)
 $(DEPFILES):
 
 LDFLAGS=`llvm-config --cflags --ldflags --libs core executionengine mcjit interpreter analysis native bitwriter --system-libs`
 
-TEST_OBJS := \
+REPL_OBJS := \
+    consts.o \
     bitset.o \
 	parser.o \
 	parse_tree.o \
-    diagnostic.c \
+    diagnostic.o \
+    scope.o \
+    type.o \
+	typecheck.o \
+	tokenizer.o \
+    llvm.o \
+	util.o \
+	vec.o \
+    repl.o
+
+repl : $(DEPDIR) repl.c $(REPL_OBJS)
+	$(CXX) $(CXXFLAGS) -DDEBUG -ledit $(LDFLAGS) -o repl $(REPL_OBJS)
+
+TEST_OBJS := \
+    consts.o \
+    bitset.o \
+	parser.o \
+	parse_tree.o \
+    diagnostic.o \
     run_tests.o \
     scope.o \
     type.o \
@@ -38,7 +63,7 @@ TEST_OBJS := \
 	test_typecheck.o \
 	tokenizer.o \
 	util.o \
-	vec.o \
+	vec.o
 
 test: $(DEPDIR) run_tests.c $(TEST_OBJS)
 	$(CC) $(CFLAGS) -DDEBUG $(LDFLAGS) -o test $(TEST_OBJS)
