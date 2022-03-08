@@ -54,3 +54,6 @@ HEDLEY_NO_RETURN void give_up(const char *err);
 char *join_paths(const char *const *paths, size_t path_num);
 char *join_two_paths(const char *front, const char *back);
 char *get_cache_dir(void);
+int mkdirp(char *path, mode_t mode);
+int directory_exists(const char *path);
+int rm_r(char *dir);

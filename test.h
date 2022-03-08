@@ -12,8 +12,8 @@
 #define test_assert_eq(state, a, b) \
   if ((a) != (b)) test_fail_eq(state, #a, #b);
 
-#define failf(state, fmt, ...) \
-  failf_(state, __FILE__, __LINE__, fmt, __VA_ARGS__)
+#define failf(state, ...) \
+  failf_(state, __FILE__, __LINE__, __VA_ARGS__)
 
 typedef struct {
   vec_string path;

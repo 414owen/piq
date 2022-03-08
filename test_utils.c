@@ -1,9 +1,12 @@
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include "test.h"
 #include "util.h"
 
 static char *sep = " . ";
 
-void test_memclone(test_state *state) {
+static void test_memclone(test_state *state) {
   test_start(state, "memclone");
   static int arr[] = {1, 2, 3, 4, 5};
   int *res = memclone(arr, STATIC_LEN(arr) * sizeof(arr[0]));
@@ -15,15 +18,15 @@ void test_memclone(test_state *state) {
   test_end(state);
 }
 
-void test_join(test_state *state, const char *const *strs, size_t amt,
-               char *exp) {
+static void test_join(test_state *state, const char *const *strs, size_t amt,
+                      char *exp) {
   char *join_res = join(amt, strs, sep);
   if (strcmp(join_res, exp) != 0)
     test_fail_eq(state, join_res, exp);
   free(join_res);
 }
 
-void run_join_tests(test_state *state) {
+static void run_join_tests(test_state *state) {
   test_group_start(state, "Join");
   {
     test_start(state, "Empty");
@@ -52,7 +55,7 @@ void run_join_tests(test_state *state) {
   test_group_end(state);
 }
 
-void test_timespec_subtract(test_state *state) {
+static void test_timespec_subtract(test_state *state) {
   test_group_start(state, "Timespec");
 
   struct timespec res;
@@ -106,7 +109,7 @@ void test_timespec_subtract(test_state *state) {
   test_group_end(state);
 }
 
-void test_asprintf(test_state *state) {
+static void test_asprintf(test_state *state) {
   test_start(state, "asprintf");
   char *res;
   static const char *fmt = "Hello World! %d";
@@ -118,11 +121,30 @@ void test_asprintf(test_state *state) {
   test_end(state);
 }
 
+static void test_mkdirp(test_state *state) {
+  test_group_start(state, "mkdir -p");
+
+#ifndef _WIN32
+  {
+    char *path = strdup("/tmp/lang-c/test/folder/pls/create");
+    mkdirp(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    if (!directory_exists(path)) {
+      failf(state, "Directory didn't exist");
+    }
+    rm_r("/tmp/lang-c");
+    free(path);
+  }
+#endif
+
+  test_group_end(state);
+}
+
 void test_utils(test_state *state) {
   test_group_start(state, "Utils");
   run_join_tests(state);
   test_memclone(state);
   test_asprintf(state);
   test_timespec_subtract(state);
+  test_mkdirp(state);
   test_group_end(state);
 }

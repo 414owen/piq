@@ -65,15 +65,20 @@ typedef struct {
 } tc_err_test;
 
 typedef struct {
+  test_type exp;
+  BUF_IND_T start;
+  BUF_IND_T end;
+} exp_type_span;
+
+typedef struct {
   enum {
     TYPE_MATCHES,
     PRODUCES_ERRORS,
   } type;
   union {
     struct {
-      test_type exp;
-      BUF_IND_T start;
-      BUF_IND_T end;
+      size_t span_amt;
+      exp_type_span *spans;
     };
     struct {
       size_t error_amt;
@@ -138,7 +143,35 @@ static bool all_errors_match(tc_res res, size_t exp_error_amt,
   return true;
 }
 
-static void run_tc_test(test_state *state, const char *input, tc_test test) {
+static void test_types_match(test_state *state, tc_res res, tc_test test) {
+  for (size_t i = 0; i < test.span_amt; i++) {
+    exp_type_span span = test.spans[i];
+    bool seen = false;
+    for (size_t j = 0; j < res.tree.nodes.len; j++) {
+      parse_node node = res.tree.nodes.data[j];
+      if (node.type == PT_ROOT)
+        continue;
+      if (node.start == span.start && node.end == span.end) {
+        seen = true;
+        if (!test_type_eq(res.types, res.type_inds, res.node_types.data[j],
+                          span.exp)) {
+          stringstream *ss = ss_init();
+          print_type(ss->stream, res.types.data, res.type_inds.data,
+                     res.node_types.data[j]);
+          char *str = ss_finalize(ss);
+          failf(state, "Type mismatch in test. Got: %s", str);
+          free(str);
+        }
+      }
+    }
+    if (!seen) {
+      failf(state, "No node matching position %d-%d", span.start, span.end);
+    }
+  }
+}
+
+static void run_typecheck_test(test_state *state, const char *input,
+                               tc_test test) {
   source_file test_file = {.path = "parser-test", .data = input};
   tokens_res tres = scan_all(test_file);
   if (!tres.succeeded) {
@@ -156,24 +189,12 @@ static void run_tc_test(test_state *state, const char *input, tc_test test) {
   tc_res res = typecheck(test_file, pres.tree);
   switch (test.type) {
     case TYPE_MATCHES: {
-      bool seen = false;
-      for (size_t i = 0; i < res.tree.nodes.len; i++) {
-        if (res.tree.nodes.data[i].start == test.start &&
-            res.tree.nodes.data[i].end == test.end) {
-          seen = true;
-          if (!test_type_eq(res.types, res.type_inds, res.node_types.data[i],
-                            test.exp)) {
-            stringstream *ss = ss_init();
-            print_type(ss->stream, res.types.data, res.type_inds.data,
-                       res.node_types.data[i]);
-            char *str = ss_finalize(ss);
-            failf(state, "Type mismatch in test. Got: %s", str);
-          }
-        }
+      if (res.errors.len > 0) {
+        failf(state, "Didn't expect typecheck errors");
+      } else {
+        test_types_match(state, res, test);
       }
-      if (!seen) {
-        failf(state, "No node matching position %d-%d", test.start, test.end);
-      }
+      break;
     }
     case PRODUCES_ERRORS:
       if (!all_errors_match(res, test.error_amt, test.errors)) {
@@ -214,19 +235,71 @@ static void run_typecheck_error_test(test_state *state, const char *input,
     .error_amt = error_amt,
     .errors = errors,
   };
-  run_tc_test(state, input, test);
+  run_typecheck_test(state, input, test);
 }
 
-void run_test_typechecks_fills(test_state *state) {}
+static void test_typecheck_succeeds(test_state *state) {
+  test_group_start(state, "Succeeds");
 
-void test_typecheck_fills(test_state *state) {
-  test_group_start(state, "Fills in");
+  {
+    const char *input = "(fn a () I16 2)";
+    test_start(state, "Return type");
+    {
+#define type_amt 1
+      const test_type i16 = {
+        .tag = T_I16,
+        .sub_amt = 0,
+        .subs = NULL,
+      };
+      exp_type_span spans[] = {{
+        .start = 9,
+        .end = 11,
+        .exp = i16,
+      }};
+      tc_test test = {
+        .type = TYPE_MATCHES,
+        .span_amt = type_amt,
+        .spans = spans,
+      };
+
+#undef type_amt
+      run_typecheck_test(state, input, test);
+    }
+    test_end(state);
+  }
+
+  {
+    const char *input = "(fn a () I16 2)";
+    test_start(state, "Return value");
+    {
+#define type_amt 1
+      const test_type i16 = {
+        .tag = T_I16,
+        .sub_amt = 0,
+        .subs = NULL,
+      };
+      exp_type_span spans[] = {{
+        .start = 13,
+        .end = 13,
+        .exp = i16,
+      }};
+      tc_test test = {
+        .type = TYPE_MATCHES,
+        .span_amt = type_amt,
+        .spans = spans,
+      };
+
+#undef type_amt
+      run_typecheck_test(state, input, test);
+    }
+    test_end(state);
+  }
 
   test_group_end(state);
 }
 
-void test_typecheck(test_state *state) {
-  test_group_start(state, "Typecheck");
+void test_typecheck_errors(test_state *state) {
+  test_group_start(state, "Produces errors");
 
   test_start(state, "I32 vs (Int, Int)");
   {
@@ -320,6 +393,15 @@ void test_typecheck(test_state *state) {
   //   run_typecheck_error_test(state, "(fn a () [U8] \"hi\")", 0, NULL);
   // }
   // test_end(state);
+
+  test_group_end(state);
+}
+
+void test_typecheck(test_state *state) {
+  test_group_start(state, "Typecheck");
+
+  test_typecheck_errors(state);
+  test_typecheck_succeeds(state);
 
   test_group_end(state);
 }
