@@ -213,7 +213,7 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
           case T_TUP: {
             for (size_t i = 0; i < t.sub_amt; i++) {
               subs[i] =
-                state->llvm_types[state->in.type_inds.data[t.sub_start + 1]];
+                state->llvm_types[state->in.type_inds.data[t.sub_start]];
             }
             llvm::ArrayRef<llvm::Type*> subs_arr = llvm::ArrayRef<llvm::Type*>(subs, t.sub_amt);
             state->llvm_types[type_ind] = llvm::StructType::create(state->context, subs_arr, "tuple", false);
@@ -223,7 +223,7 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
             NODE_IND_T param_amt = t.sub_amt - 1;
             for (NODE_IND_T i = 0; i < t.sub_amt; i++) {
               subs[i] =
-                state->llvm_types[state->in.type_inds.data[t.sub_start + 1]];
+                state->llvm_types[state->in.type_inds.data[t.sub_start]];
             }
             llvm::ArrayRef<llvm::Type*> subs_arr = llvm::ArrayRef<llvm::Type*>(subs, param_amt);
             state->llvm_types[type_ind] = llvm::FunctionType::get(subs[param_amt], subs_arr, false);
@@ -321,7 +321,7 @@ static void cg_node(cg_state *state, node_ind ind) {
       case PT_INT: {
         NODE_IND_T type_ind = state->in.node_types.data[ind];
         llvm::IntegerType *type = (llvm::IntegerType*) construct_type(state, type_ind);
-        char *str = &state->in.source.data[node.start];
+        const char *str = &state->in.source.data[node.start];
         size_t len = node.end - node.start + 1;
         VEC_PUSH(&state->val_stack, llvm::ConstantInt::get(type, llvm::StringRef(str, len), 10));
         break;
