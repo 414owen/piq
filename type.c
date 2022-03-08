@@ -105,4 +105,5 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
       }
     }
   }
+  VEC_FREE(&stack);
 }

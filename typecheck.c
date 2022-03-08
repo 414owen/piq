@@ -191,31 +191,27 @@ static void setup_type_env(typecheck_state *state) {
   }
 }
 
-static void check_int_fits(typecheck_state *state, parse_node node,
+static bool check_int_fits(typecheck_state *state, parse_node node,
                            uint64_t max) {
-  char *buf = state->source.data;
+  bool res = true;
+  const char *buf = state->source.data;
   uint64_t last, n = 0;
   for (size_t i = node.start; i <= node.end; i++) {
     last = n;
     char digit = buf[i];
     n *= 10;
     n += digit - '0';
-    if (n < last) {
+    if (n < last || n > max) {
       tc_error err = {
         .type = INT_LARGER_THAN_MAX,
         .pos = state->current_node_ind,
       };
       push_tc_err(state, err);
-      break;
-    } else if (n > max) {
-      tc_error err = {
-        .type = INT_LARGER_THAN_MAX,
-        .pos = state->current_node_ind,
-      };
-      push_tc_err(state, err);
+      res = false;
       break;
     }
   }
+  return res;
 }
 
 typedef struct {
@@ -382,30 +378,31 @@ static void tc_node(typecheck_state *state) {
 
     case PT_INT: {
       if (is_wanted) {
+        bool fits = true;
         switch (wanted.tag) {
           case T_U8:
-            check_int_fits(state, node, UINT8_MAX);
+            fits = check_int_fits(state, node, UINT8_MAX);
             break;
           case T_U16:
-            check_int_fits(state, node, UINT16_MAX);
+            fits = check_int_fits(state, node, UINT16_MAX);
             break;
           case T_U32:
-            check_int_fits(state, node, UINT32_MAX);
+            fits = check_int_fits(state, node, UINT32_MAX);
             break;
           case T_U64:
-            check_int_fits(state, node, UINT64_MAX);
+            fits = check_int_fits(state, node, UINT64_MAX);
             break;
           case T_I8:
-            check_int_fits(state, node, INT8_MAX);
+            fits = check_int_fits(state, node, INT8_MAX);
             break;
           case T_I16:
-            check_int_fits(state, node, INT16_MAX);
+            fits = check_int_fits(state, node, INT16_MAX);
             break;
           case T_I32:
-            check_int_fits(state, node, INT32_MAX);
+            fits = check_int_fits(state, node, INT32_MAX);
             break;
           case T_I64:
-            check_int_fits(state, node, INT64_MAX);
+            fits = check_int_fits(state, node, INT64_MAX);
             break;
           default: {
             tc_error err = {
@@ -416,6 +413,9 @@ static void tc_node(typecheck_state *state) {
             push_tc_err(state, err);
             break;
           }
+        }
+        if (fits) {
+          state->res.node_types.data[node_ind] = wanted_ind;
         }
       } else {
         tc_error err = {
@@ -643,6 +643,7 @@ static void tc_combine(typecheck_state *state) {
   }
 }
 
+#ifdef DEBUG_TC
 static const char *const action_str[] = {
   [TC_NODE] = "TC Node",
   [TC_COMBINE] = "Combine",
@@ -651,6 +652,7 @@ static const char *const action_str[] = {
   [TC_CLONE_WANTED] = "Clone wanted",
   [TC_POP_VARS] = "Pop vars",
 };
+#endif
 
 tc_res typecheck(source_file source, parse_tree tree) {
   typecheck_state state = tc_new_state(source, tree);
