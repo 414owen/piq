@@ -227,6 +227,12 @@ end_a:
   VEC_FREE(&tres.tokens);
 }
 
+static const test_type i16 = {
+  .tag = T_I16,
+  .sub_amt = 0,
+  .subs = NULL,
+};
+
 static void run_typecheck_error_test(test_state *state, const char *input,
                                      size_t error_amt,
                                      const tc_err_test *errors) {
@@ -246,11 +252,6 @@ static void test_typecheck_succeeds(test_state *state) {
     test_start(state, "Return type");
     {
 #define type_amt 1
-      const test_type i16 = {
-        .tag = T_I16,
-        .sub_amt = 0,
-        .subs = NULL,
-      };
       exp_type_span spans[] = {{
         .start = 9,
         .end = 11,
@@ -261,23 +262,14 @@ static void test_typecheck_succeeds(test_state *state) {
         .span_amt = type_amt,
         .spans = spans,
       };
-
 #undef type_amt
       run_typecheck_test(state, input, test);
     }
     test_end(state);
-  }
 
-  {
-    const char *input = "(fn a () I16 2)";
     test_start(state, "Return value");
     {
 #define type_amt 1
-      const test_type i16 = {
-        .tag = T_I16,
-        .sub_amt = 0,
-        .subs = NULL,
-      };
       exp_type_span spans[] = {{
         .start = 13,
         .end = 13,
@@ -288,7 +280,30 @@ static void test_typecheck_succeeds(test_state *state) {
         .span_amt = type_amt,
         .spans = spans,
       };
+#undef type_amt
+      run_typecheck_test(state, input, test);
+    }
+    test_end(state);
 
+    test_start(state, "Fn bnd");
+    static const test_type fn_type = {
+      .tag = T_FN,
+      .sub_amt = 1,
+      .subs = &i16,
+    };
+
+    {
+#define type_amt 1
+      exp_type_span spans[] = {{
+        .start = 4,
+        .end = 4,
+        .exp = fn_type,
+      }};
+      tc_test test = {
+        .type = TYPE_MATCHES,
+        .span_amt = type_amt,
+        .spans = spans,
+      };
 #undef type_amt
       run_typecheck_test(state, input, test);
     }

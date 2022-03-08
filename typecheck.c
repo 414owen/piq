@@ -603,6 +603,7 @@ static void tc_combine(typecheck_state *state) {
       sub_type_inds[param_amt] = state->res.node_types.data[sub_ind];
 
       type_ind = mk_type(state, T_FN, sub_type_inds, param_amt + 1);
+      state->res.node_types.data[node_ind] = type_ind;
       stfree(sub_type_inds, param_bytes);
       break;
     }
@@ -616,6 +617,7 @@ static void tc_combine(typecheck_state *state) {
         sub_type_inds[i] = state->res.node_types.data[sub_ind];
       }
       type_ind = mk_type(state, T_FN, sub_type_inds, node.sub_amt);
+      state->res.node_types.data[node_ind] = type_ind;
       stfree(sub_type_inds, sub_bytes);
       break;
     }
@@ -624,6 +626,7 @@ static void tc_combine(typecheck_state *state) {
       NODE_IND_T sub_type_ind =
         state->res.node_types.data[state->res.tree.inds.data[node.subs_start]];
       type_ind = mk_type(state, T_LIST, &sub_type_ind, 1);
+      state->res.node_types.data[node_ind] = type_ind;
       break;
     }
 
