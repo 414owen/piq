@@ -58,6 +58,8 @@ void bs_push(bitset *bs, bool bit) {
   bs_data_set(bs->data, bs->len++, bit);
 }
 
+void bs_pop(bitset *bs) { bs->len--; }
+
 void bs_free(bitset *bs) {
   free(bs->data);
   bs->data = NULL;
