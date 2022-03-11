@@ -26,7 +26,7 @@ size_t lookup_bnd(const char *source_file, vec_str_ref bnds, bitset is_builtin,
   const char *bndp = source_file + bnd.start;
   for (size_t i = 0; i < bnds.len; i++) {
     size_t ind = bnds.len - 1 - i;
-    str_ref a = bnds.data[ind];
+    str_ref a = VEC_GET(bnds, ind);
     if (bs_get(is_builtin, ind)) {
       if (strn1eq(bndp, a.builtin, len)) {
         return ind;

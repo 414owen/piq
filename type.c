@@ -103,7 +103,7 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
             push_str(&stack, "]");
             break;
         }
-        reverse_arbitrary(&stack.data[stack_top], stack.len - stack_top,
+        reverse_arbitrary(&VEC_DATA_PTR(&stack)[stack_top], stack.len - stack_top,
                           sizeof(print_action));
       }
     }

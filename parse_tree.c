@@ -60,13 +60,13 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
   for (uint16_t i = 0; i < node.sub_amt; i++) {
     if (i > 0)
       push_str(s, sep);
-    push_node(s, s->tree.inds.data[node.subs_start + i]);
+    push_node(s, VEC_GET(s->tree.inds, node.subs_start + i));
   }
   push_str(s, terminator);
 }
 
 static void print_node(printer_state *s, NODE_IND_T node_ind) {
-  parse_node node = s->tree.nodes.data[node_ind];
+  parse_node node = VEC_GET(s->tree.nodes, node_ind);
   switch (node.type) {
     case PT_UNIT: {
       fputs("()", s->out);
@@ -76,15 +76,15 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
       for (size_t i = 0; i < node.sub_amt; i++) {
         if (i > 0)
           push_str(s, "\n");
-        push_node(s, s->tree.inds.data[node.subs_start + i]);
+        push_node(s, VEC_GET(s->tree.inds, node.subs_start + i));
       }
       break;
     case PT_TOP_LEVEL:
       fputs("(Let ", s->out);
       VEC_PUSH(&s->actions, PRINT_SOURCE);
-      VEC_PUSH(&s->node_stack, s->tree.inds.data[node.subs_start]);
+      VEC_PUSH(&s->node_stack, VEC_GET(s->tree.inds, node.subs_start));
       push_str(s, " ");
-      push_node(s, s->tree.inds.data[node.subs_start + 1]);
+      push_node(s, VEC_GET(s->tree.inds, node.subs_start + 1));
       push_str(s, ")");
       break;
     case PT_FUN:
@@ -150,7 +150,7 @@ void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
     print_action action = VEC_POP(&s.actions);
     switch (action) {
       case PRINT_SOURCE: {
-        parse_node node = tree.nodes.data[VEC_POP(&s.node_stack)];
+        parse_node node = VEC_GET(tree.nodes, VEC_POP(&s.node_stack));
         fprintf(f, "%.*s", 1 + node.end - node.start, file.data + node.start);
         break;
       }
@@ -165,13 +165,13 @@ void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
 
         print_node(&s, node);
 
-        reverse_arbitrary(&s.node_stack.data[first_node],
+        reverse_arbitrary(&VEC_GET(s.node_stack, first_node),
                           MAX(first_node, s.node_stack.len) - first_node,
                           sizeof(NODE_IND_T));
-        reverse_arbitrary(&s.string_stack.data[first_string],
+        reverse_arbitrary(&VEC_GET(s.string_stack, first_string),
                           MAX(first_string, s.string_stack.len) - first_string,
                           sizeof(string));
-        reverse_arbitrary(&s.actions.data[first_action],
+        reverse_arbitrary(&VEC_GET(s.actions, first_action),
                           MAX(first_action, s.actions.len) - first_action,
                           sizeof(print_action));
         break;

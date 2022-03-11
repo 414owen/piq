@@ -98,3 +98,35 @@ void __vec_replicate(vec_void *vec, void *el, size_t amt, size_t elemsize) {
   }
   vec->len += amt;
 }
+
+vec_void *__vec_pop(vec_void *vec, size_t elemsize) {
+  debug_assert(vec->len > 0);
+  const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
+  // predicated this way for the branch predictor
+  if (vec->len - 1 != inline_amt) {
+  } else {
+    __vec_resize_external_to_internal(vec, vec->len - 1, elemsize);
+  }
+  vec->len--;
+  return vec;
+}
+
+// returns minimum heap-allocated buffer
+char *__vec_finalize(vec_void *vec, size_t elemsize) {
+  const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
+  if (vec->len <= inline_amt) {
+    __vec_resize_internal_to_external(vec, vec->len, elemsize);
+  }
+  return vec->data;
+}
+
+void __vec_clone(vec_void *dest, vec_void *src, size_t elemsize) {
+  const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
+  dest->len = src->len;
+  if (src->len <= inline_amt) {
+    memcpy(dest->inline_data, src->inline_data, elemsize * src->len);
+  } else {
+    dest->data = memclone(src->data, elemsize * src->len);
+    dest->cap = src->len;
+  }
+}

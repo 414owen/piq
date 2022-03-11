@@ -8,12 +8,15 @@
 
 #define VEC_FIRST_SIZE 10
 
-#define INLINE_VEC_BYTES 12
+#ifndef INLINE_VEC_BYTES
+#define INLINE_VEC_BYTES 204
+#endif
 
 #define SIZE_TO_INLINE_AMT(size) (INLINE_VEC_BYTES / size)
 #define TYPE_TO_INLINE_AMT(type) (SIZE_TO_INLINE_AMT(sizeof(type)))
 #define VEC_IS_INLINE(vec) ((vec)->len <= TYPE_TO_INLINE_AMT((vec)->data[0]))
 #define VEC_IS_EXTERNAL(vec) ((vec)->len > TYPE_TO_INLINE_AMT((vec)->data[0]))
+#define VEC_DATA_PTR(vec) (VEC_IS_EXTERNAL(vec) ? (vec)->data : (vec)->inline_data)
 #define VEC_DATA_PTR(vec) (VEC_IS_EXTERNAL(vec) ? (vec)->data : (vec)->inline_data)
 
 #define VEC_DECL(type) \
@@ -46,9 +49,9 @@ typedef struct {
   };
 } vec_void;
 
-#define VEC_NEW { .len = 0, .cap = 0, .data = NULL }
+#define VEC_NEW { .len = 0, .data = NULL }
 
-#define VEC_GET(vec, i) VEC_DATA_PTR(vec)[i]
+#define VEC_GET(vec, i) VEC_DATA_PTR(&vec)[i]
 
 void __vec_push(vec_void *vec, void *el, size_t elemsize);
 
@@ -58,29 +61,34 @@ void __vec_push(vec_void *vec, void *el, size_t elemsize);
   __vec_push((vec_void*) vec, (void*) &__el, sizeof(el)); \
 }
 
-#define VEC_POP_(vec) (--(vec)->len)
+vec_void *__vec_pop(vec_void *vec, size_t elemsize);
+
+#define VEC_POP_(vec) \
+    ((typeof(vec)) __vec_pop((vec_void*) vec, sizeof((vec)->inline_data[0])))
 
 #define VEC_POP(vec) \
-  ((vec)->cap <= TYPE_TO_INLINE_AMT((vec)->data[0]) \
-    ? (vec)->inline_data \
-    : (vec)->data)[--(vec)->len]
+  ({ \
+    typeof((vec)->inline_data[0]) __el = VEC_PEEK(*vec); \
+    VEC_POP_(vec); \
+    __el; \
+  })
 
-#define VEC_PEEK(vec) ((vec).data[(vec).len - 1])
+#define VEC_PEEK(vec) VEC_GET(vec, (vec).len - 1)
+
+#define VEC_PEEK_REF(vec) VEC_GET(*(vec), (vec)->len - 1)
   
-#define VEC_BACK(vec) ((vec)->data[(vec)->len - 1])
+#define VEC_BACK(vec) VEC_PEEK(vec)
 
 #define VEC_FREE(vec) if (VEC_IS_EXTERNAL(vec) && (vec)->data != NULL) { free((vec)->data); (vec)->data = NULL; }
 
-#define VEC_CLONE(vec) ((typeof(*vec)) { \
-    .len = (vec)->len, \
-    .cap = (vec)->cap, \
-    .data = (vec)->cap == 0 ? NULL : memclone((vec)->data, sizeof((vec)->data[0]) * (vec)->cap) \
-  })
-
-#define VEC_FINALIZE(vec) { \
-    (vec)->cap = (vec)->len; \
-    (vec)->data = realloc((vec)->data, (vec)->len * sizeof((vec)->data[0])); \
+void __vec_clone(vec_void *dest, vec_void *src, size_t elemsize);
+#define VEC_CLONE(dest, src) { \
+    debug_assert(sizeof((dest)->data[0]) == sizeof((src)->data[0])); \
+    __vec_clone((vec_void*) (dest), (vec_void*) (src), sizeof((src)->data[0])); \
   }
+
+// returns minimum heap-allocated buffer
+#define VEC_FINALIZE(vec) __vec_finalize((vec_void*) vec, sizeof((vec)->data[0]))
 
 void __vec_append(vec_void *vec, void *els, size_t amt, size_t elemsize);
 

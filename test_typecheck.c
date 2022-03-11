@@ -8,7 +8,7 @@
 #include "util.h"
 
 static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
-  tc_error error = res.errors.data[err_ind];
+  tc_error error = VEC_GET(res.errors, err_ind);
   switch (error.type) {
     case INT_LARGER_THAN_MAX:
       fputs("Int doesn't fit into type", f);
@@ -26,12 +26,12 @@ static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
       fputs("Type mismatch. Expected '", f);
       print_type(f, res.types.data, res.type_inds.data, error.expected);
       fputs("', got '", f);
-      print_type(f, res.types.data, res.type_inds.data, error.got);
+      print_type(f, VEC_DATA_PTR(&res.types), VEC_DATA_PTR(&res.type_inds), error.got);
       fputs("'", f);
       break;
     case LITERAL_MISMATCH:
       fputs("Literal mismatch. Expected '", f);
-      print_type(f, res.types.data, res.type_inds.data, error.expected);
+      print_type(f, VEC_DATA_PTR(&res.types), VEC_DATA_PTR(&res.type_inds), error.expected);
       fputs("'", f);
       break;
     case WRONG_ARITY:
@@ -39,7 +39,7 @@ static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
       break;
   }
   // fputs(":\n", f);
-  parse_node node = res.tree.nodes.data[error.pos];
+  parse_node node = VEC_GET(res.tree.nodes, error.pos);
   fprintf(f, " at %d-%d:\n", node.start, node.end);
   format_error_ctx(f, res.source.data, node.start, node.end);
 }
@@ -95,14 +95,14 @@ static bool test_type_eq(vec_type types, vec_node_ind inds, NODE_IND_T root,
   VEC_PUSH(&stackB, t);
   bool res = true;
   while (stackA.len > 0) {
-    type tA = types.data[VEC_POP(&stackA)];
+    type tA = VEC_GET(types, VEC_POP(&stackA));
     test_type tB = VEC_POP(&stackB);
     if (tA.tag != tB.tag || tA.sub_amt != tB.sub_amt) {
       res = false;
       break;
     }
     for (node_ind i = 0; i < tA.sub_amt; i++) {
-      VEC_PUSH(&stackA, inds.data[tA.sub_start + i]);
+      VEC_PUSH(&stackA, VEC_GET(inds, tA.sub_start + i));
       VEC_PUSH(&stackB, tB.subs[i]);
     }
   }
@@ -112,10 +112,10 @@ static bool test_type_eq(vec_type types, vec_node_ind inds, NODE_IND_T root,
 }
 
 static bool test_err_eq(tc_res res, size_t err_ind, tc_err_test test_err) {
-  tc_error eA = res.errors.data[err_ind];
+  tc_error eA = VEC_GET(res.errors, err_ind);
   if (eA.type != test_err.type)
     return false;
-  parse_node node = res.tree.nodes.data[eA.pos];
+  parse_node node = VEC_GET(res.tree.nodes, eA.pos);
   if (node.start != test_err.start)
     return false;
   if (node.end != test_err.end)
@@ -148,16 +148,16 @@ static void test_types_match(test_state *state, tc_res res, tc_test test) {
     exp_type_span span = test.spans[i];
     bool seen = false;
     for (size_t j = 0; j < res.tree.nodes.len; j++) {
-      parse_node node = res.tree.nodes.data[j];
+      parse_node node = VEC_GET(res.tree.nodes, j);
       if (node.type == PT_ROOT)
         continue;
       if (node.start == span.start && node.end == span.end) {
         seen = true;
-        if (!test_type_eq(res.types, res.type_inds, res.node_types.data[j],
+        if (!test_type_eq(res.types, res.type_inds, VEC_GET(res.node_types, j),
                           span.exp)) {
           stringstream *ss = ss_init();
           print_type(ss->stream, res.types.data, res.type_inds.data,
-                     res.node_types.data[j]);
+                     VEC_GET(res.node_types, j));
           char *str = ss_finalize(ss);
           failf(state, "Type mismatch in test. Got: %s", str);
           free(str);
