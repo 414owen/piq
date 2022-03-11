@@ -41,13 +41,13 @@ int main(int argc, char **argv) {
   }
 
   for (uint32_t i = 0; i < state.failures.len; i++) {
-    failure f = state.failures.data[i];
+    failure f = VEC_GET(state.failures, i);
     free(f.reason);
     VEC_FREE(&f.path);
   }
 
   VEC_FREE(&state.failures);
   VEC_FREE(&state.path);
-  if (state.failures.len > 0)
-    exit(1);
+  // if (state.failures.len > 0)
+  //   exit(1);
 }

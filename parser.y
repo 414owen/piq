@@ -71,8 +71,8 @@ root(RES) ::= toplevels(A) EOF . {
     .end = 0,
   };
   if (A.len > 0) {
-    n.start = s.res->tree.nodes.data[A.data[0]].start;
-    n.end = s.res->tree.nodes.data[A.data[A.len - 1]].end;
+    n.start = VEC_GET(s.res->tree.nodes, VEC_GET(A, 0)).start;
+    n.end = VEC_GET(s.res->tree.nodes, VEC_GET(A, A.len - 1)).end;
   }
   VEC_PUSH(&s.res->tree.nodes, n);
   s.res->tree.root_ind = s.res->tree.nodes.len - 1;
@@ -91,17 +91,17 @@ toplevels(RES) ::= toplevels(A) toplevel(B) . {
 }
 
 toplevel(RES) ::= OPEN_PAREN(O) toplevel_under(A) CLOSE_PAREN(C). {
-  token t = s.tokens.data[O];
-  s.res->tree.nodes.data[A].start = t.start;
-  t = s.tokens.data[C];
-  s.res->tree.nodes.data[A].end = t.end;
+  token t = VEC_GET(s.tokens, O);
+  VEC_GET(s.res->tree.nodes, A).start = t.start;
+  t = VEC_GET(s.tokens, C);
+  VEC_GET(s.res->tree.nodes, A).end = t.end;
   RES = A;
 }
 
 toplevel_under ::= fun.
 
 int(RES) ::= INT(A).  { 
-  token t = s.tokens.data[A];
+  token t = VEC_GET(s.tokens, A);
   parse_node n = {.type = PT_INT, .start = t.start, .end = t.end, .sub_amt = 0};
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
@@ -127,31 +127,31 @@ expr ::= string.
 expr ::= int.
 
 string(RES) ::= STRING(A). {
-  token t = s.tokens.data[A];
+  token t = VEC_GET(s.tokens, A);
   parse_node n = {.type = PT_STRING, .start = t.start, .end = t.end, .sub_amt = 0};
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
 }
 
 upper_name(RES) ::= UPPER_NAME(A). {
-  token t = s.tokens.data[A];
+  token t = VEC_GET(s.tokens, A);
   parse_node n = {.type = PT_UPPER_NAME, .start = t.start, .end = t.end, .sub_amt = 0};
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
 }
 
 lower_name(RES) ::= LOWER_NAME(A). {
-  token t = s.tokens.data[A];
+  token t = VEC_GET(s.tokens, A);
   parse_node n = {.type = PT_LOWER_NAME, .start = t.start, .end = t.end, .sub_amt = 0};
   VEC_PUSH(&s.res->tree.nodes, n);
   RES = s.res->tree.nodes.len - 1;
 }
 
 expr(RES) ::= OPEN_BRACKET(A) list_contents(B) CLOSE_BRACKET(C). {
-  token a = s.tokens.data[A];
-  s.res->tree.nodes.data[B].start = a.start;
-  a = s.tokens.data[C];
-  s.res->tree.nodes.data[B].end = a.end;
+  token a = VEC_GET(s.tokens, A);
+  VEC_GET(s.res->tree.nodes, B).start = a.start;
+  a = VEC_GET(s.tokens, C);
+  VEC_GET(s.res->tree.nodes, B).end = a.end;
   RES = B;
 }
 
@@ -179,10 +179,10 @@ list_contents(RES) ::= . {
 }
 
 expr(RES) ::= OPEN_PAREN(A) compound_expr(B) CLOSE_PAREN(C). {
-  token a = s.tokens.data[A];
-  s.res->tree.nodes.data[B].start = a.start;
-  a = s.tokens.data[C];
-  s.res->tree.nodes.data[B].end = a.end;
+  token a = VEC_GET(s.tokens, A);
+  VEC_GET(s.res->tree.nodes, B).start = a.start;
+  a = VEC_GET(s.tokens, C);
+  VEC_GET(s.res->tree.nodes, B).end = a.end;
   RES = B;
 }
 
@@ -256,7 +256,7 @@ pattern ::= unit.
 pattern ::= int.
 
 unit(RES) ::= UNIT(A). {
-  token t = s.tokens.data[A];
+  token t = VEC_GET(s.tokens, A);
   parse_node n = {
     .type = PT_UNIT,
     .start = t.start,
@@ -273,8 +273,8 @@ pattern(RES) ::= OPEN_PAREN(O) pattern_tuple(A) CLOSE_PAREN(C). {
   VEC_CAT(&s.res->tree.inds, &A);
   parse_node n = {
     .type = PT_TUP,
-    .start = s.tokens.data[O].start,
-    .end = s.tokens.data[C].end,
+    .start = VEC_GET(s.tokens, O).start,
+    .end = VEC_GET(s.tokens, C).end,
     .subs_start = start,
     .sub_amt = A.len
   };
@@ -289,8 +289,8 @@ pattern(RES) ::= OPEN_PAREN(O) upper_name(A) patterns(B) CLOSE_PAREN(C). {
   VEC_CAT(&s.res->tree.inds, &B);
   parse_node n = {
     .type = PT_CONSTRUCTION,
-    .start = s.tokens.data[O].start,
-    .end = s.tokens.data[C].end,
+    .start = VEC_GET(s.tokens, O).start,
+    .end = VEC_GET(s.tokens, C).end,
     .subs_start = start,
     .sub_amt = B.len + 1
   };
@@ -370,17 +370,17 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
     s.res->succeeded = false;
     s.res->error_pos = s.pos;
     if (s.get_expected) {
-      token_type backup = s.tokens.data[s.pos].type;
+      token_type backup = VEC_GET(s.tokens, s.pos).type;
       for (token_type i = 0; i < YYNTOKEN; i++) {
-        s.tokens.data[s.pos].type = i;
+        VEC_GET(s.tokens, s.pos).type = i;
         parse_tree_res sub = parse_internal(s.tokens, false);
         if (sub.error_pos > s.pos) {
           VEC_PUSH(&expected, i);
         }
       }
-      s.tokens.data[s.pos].type = backup;
+      VEC_GET(s.tokens, s.pos).type = backup;
       s.res->expected_amt = expected.len;
-      s.res->expected = expected.data;
+      s.res->expected = VEC_FINALIZE(&expected);
     }
   }
 }
@@ -408,7 +408,7 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
       .get_expected = get_expected,
     };
     for (; state.pos < tokens.len; state.pos++) {
-      Parse(&xp, tokens.data[state.pos].type, state.pos, state);
+      Parse(&xp, VEC_GET(tokens, state.pos).type, state.pos, state);
     }
     Parse(&xp, 0, 0, state);
     ParseFinalize(&xp);
