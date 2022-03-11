@@ -10,19 +10,55 @@
 #define NODE_IND_T BUF_IND_T
 
 typedef enum {
-  PT_TOP_LEVEL,
   PT_CALL,
-  PT_UPPER_NAME,
-  PT_LOWER_NAME,
-  PT_INT,
-  PT_IF,
-  PT_TUP,
-  PT_ROOT,
+  // TODO this shouldn't exist, make it a call
+  PT_CONSTRUCTION,
   PT_FN,
-  PT_TYPED,
+  PT_FUN,
+  PT_FUN_BODY,
+  PT_IF,
+  PT_INT,
   PT_LIST,
+  PT_LOWER_NAME,
+  PT_ROOT,
   PT_STRING,
+  PT_TOP_LEVEL,
+  PT_TUP,
+  PT_AS,
+  PT_UNIT,
+  PT_UPPER_NAME,
 } parse_node_type;
+
+#define PT_FUN_PARAM_AMT(node) node.sub_amt - 2
+#define PT_FUN_PARAM_IND(inds, node, i) inds[node.subs_start + i + 1]
+#define PT_FUN_BODY_IND(inds, node) inds[node.subs_start + 1 + PT_FUN_PARAM_AMT(node)]
+
+#define PT_FN_PARAM_AMT(node) node.sub_amt - 1
+#define PT_FN_PARAM_IND(inds, node, i) node.sub_a
+#define PT_FN_BODY_IND(inds, node, i) node.sub_b
+
+#define PT_CALL_CALLEE_IND(inds, node) inds[node.subs_start]
+#define PT_CALL_PARAM_AMT(node, i) node.sub_amt - 1
+#define PT_CALL_PARAM_IND(inds, node, i) inds[node.subs_start + 1 + i]
+
+#define PT_FUN_BODY_STMT_AMT(inds, node) node.sub_amt
+#define PT_FUN_BODY_STMT_ind(inds, node, i) inds[node.subs_start + i]
+
+#define PT_IF_GET_COND(inds, node) inds[node.subs_start]
+#define PT_IF_GET_A(inds, node) inds[node.subs_start + 1]
+#define PT_IF_GET_B(inds, node) inds[node.subs_start + 2]
+
+// PT_INT
+
+#define PT_LIST_SUB_AMT(node) node.sub_amt
+#define PT_LIST_SUB_IND(inds, node, i) inds[node.subs_start + i]
+
+// PT_LOWER_NAME
+
+#define PT_ROOT_SUB_AMT(node) node.sub_amt
+#define PT_ROOT_SUB_IND(inds, node, i) inds[node.subs_start + i]
+
+// PT_STRING
 
 extern const char *const parse_node_strings[];
 
@@ -32,8 +68,16 @@ typedef struct {
   BUF_IND_T start;
   BUF_IND_T end;
 
-  NODE_IND_T subs_start;
-  uint16_t sub_amt;
+  union {
+    struct {
+      NODE_IND_T subs_start;
+      NODE_IND_T sub_amt;
+    };
+    struct {
+      NODE_IND_T sub_a;
+      NODE_IND_T sub_b;
+    };
+  };
 } parse_node;
 
 typedef NODE_IND_T node_ind;

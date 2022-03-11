@@ -8,19 +8,47 @@
 
 #define VEC_FIRST_SIZE 10
 
-#define VEC_DECL(type) typedef struct { uint32_t len; uint32_t cap; type *data; } vec_ ## type
+#define INLINE_VEC_BYTES 12
 
-VEC_DECL(void);
+#define SIZE_TO_INLINE_AMT(size) (INLINE_VEC_BYTES / size)
+#define TYPE_TO_INLINE_AMT(type) (SIZE_TO_INLINE_AMT(sizeof(type)))
+#define VEC_IS_INLINE(vec) ((vec)->len <= TYPE_TO_INLINE_AMT((vec)->data[0]))
+#define VEC_IS_EXTERNAL(vec) ((vec)->len > TYPE_TO_INLINE_AMT((vec)->data[0]))
+#define VEC_DATA_PTR(vec) (VEC_IS_EXTERNAL(vec) ? (vec)->data : (vec)->inline_data)
+
+#define VEC_DECL(type) \
+  typedef struct { \
+    uint32_t len; \
+    union { \
+      type inline_data[TYPE_TO_INLINE_AMT(type)]; \
+      struct { \
+        uint32_t cap; \
+        type *data; \
+      }; \
+    }; \
+  } vec_ ## type
+
+/*
+ * len > inline_amt -> external
+ * len <= inline_amt -> external
+ * 
+ */
+
+// Don't use this directly. It's for internal use.
+typedef struct {
+  uint32_t len;
+  union {
+    char inline_data[INLINE_VEC_BYTES];
+    struct {
+      uint32_t cap;
+      void *data;
+    };
+  };
+} vec_void;
 
 #define VEC_NEW { .len = 0, .cap = 0, .data = NULL }
 
-void __vec_resize(vec_void *vec, size_t cap, size_t elemsize);
-
-#define VEC_RESIZE(vec, _cap) __vec_resize((vec_void*) vec, _cap, sizeof((vec)->data[0]))
-
-void __vec_grow(vec_void *vec, size_t cap, size_t elemsize);
-
-#define VEC_GROW(vec, _cap) __vec_grow((vec_void*) vec, _cap, sizeof((vec)->data[0]))
+#define VEC_GET(vec, i) VEC_DATA_PTR(vec)[i]
 
 void __vec_push(vec_void *vec, void *el, size_t elemsize);
 
@@ -30,15 +58,18 @@ void __vec_push(vec_void *vec, void *el, size_t elemsize);
   __vec_push((vec_void*) vec, (void*) &__el, sizeof(el)); \
 }
 
-#define VEC_POP_(vec) --(vec)->len
+#define VEC_POP_(vec) (--(vec)->len)
 
-#define VEC_POP(vec) ((vec)->data[--(vec)->len])
+#define VEC_POP(vec) \
+  ((vec)->cap <= TYPE_TO_INLINE_AMT((vec)->data[0]) \
+    ? (vec)->inline_data \
+    : (vec)->data)[--(vec)->len]
 
 #define VEC_PEEK(vec) ((vec).data[(vec).len - 1])
   
 #define VEC_BACK(vec) ((vec)->data[(vec)->len - 1])
 
-#define VEC_FREE(vec) { if ((vec)->data != NULL) { free((vec)->data); (vec)->data = NULL; } }
+#define VEC_FREE(vec) if (VEC_IS_EXTERNAL(vec) && (vec)->data != NULL) { free((vec)->data); (vec)->data = NULL; }
 
 #define VEC_CLONE(vec) ((typeof(*vec)) { \
     .len = (vec)->len, \
@@ -55,6 +86,7 @@ void __vec_append(vec_void *vec, void *els, size_t amt, size_t elemsize);
 
 #define VEC_APPEND(vec, amt, els) { \
     debug_assert(sizeof((vec)->data[0]) == sizeof((els)[0])); \
+    debug_assert(amt == 0 || els != NULL); \
     __vec_append((vec_void*) vec, (void*) (els), amt, sizeof((els)[0])); \
   }
 
@@ -68,7 +100,8 @@ void __vec_replicate(vec_void *vec, void *el, size_t amt, size_t elemsize);
     __vec_replicate((vec_void*) vec, (void*) &__el, amt, sizeof(el)); \
   }
 
-#define VEC_CAT(v1, v2) VEC_APPEND((v1), (v2)->len, (v2)->data)
+#define VEC_CAT(v1, v2) \
+  VEC_APPEND((v1), (v2)->len, VEC_DATA_PTR(v2))
 
 typedef char* string;
 

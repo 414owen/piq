@@ -13,17 +13,21 @@ typedef enum {
 VEC_DECL(print_action);
 
 const char *const parse_node_strings[] = {
-  [PT_TOP_LEVEL] = "Top level",
   [PT_CALL] = "Call",
-  [PT_UPPER_NAME] = "Upper name",
-  [PT_LOWER_NAME] = "Lower name",
-  [PT_INT] = "Int",
+  [PT_CONSTRUCTION] = "Constructor",
+  [PT_FUN] = "Fun",
+  [PT_FUN_BODY] = "Fun body",
   [PT_IF] = "If",
-  [PT_TUP] = "Tuple",
-  [PT_ROOT] = "Root",
-  [PT_FN] = "Fn",
-  [PT_TYPED] = "Typed",
+  [PT_INT] = "Int",
   [PT_LIST] = "List",
+  [PT_LOWER_NAME] = "Lower name",
+  [PT_ROOT] = "Root",
+  [PT_STRING] = "String",
+  [PT_TOP_LEVEL] = "Top level",
+  [PT_TUP] = "Tuple",
+  [PT_AS] = "Typed",
+  [PT_UNIT] = "Unit",
+  [PT_UPPER_NAME] = "Upper name",
 };
 
 typedef struct {
@@ -61,21 +65,13 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
   push_str(s, terminator);
 }
 
-static void push_params(printer_state *s, NODE_IND_T start, NODE_IND_T amt) {
-  for (size_t i = 0; i < amt; i++) {
-    if (i > 0)
-      push_str(s, ", ");
-    NODE_IND_T param = s->tree.inds.data[start + i * 2];
-    NODE_IND_T type = s->tree.inds.data[start + i * 2 + 1];
-    push_node(s, param);
-    push_str(s, ": ");
-    push_node(s, type);
-  }
-}
-
 static void print_node(printer_state *s, NODE_IND_T node_ind) {
   parse_node node = s->tree.nodes.data[node_ind];
   switch (node.type) {
+    case PT_UNIT: {
+      fputs("()", s->out);
+      break;
+    }
     case PT_ROOT:
       for (size_t i = 0; i < node.sub_amt; i++) {
         if (i > 0)
@@ -84,22 +80,27 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
       }
       break;
     case PT_TOP_LEVEL:
-      fprintf(s->out, "(Let ");
+      fputs("(Let ", s->out);
       VEC_PUSH(&s->actions, PRINT_SOURCE);
       VEC_PUSH(&s->node_stack, s->tree.inds.data[node.subs_start]);
       push_str(s, " ");
       push_node(s, s->tree.inds.data[node.subs_start + 1]);
       push_str(s, ")");
       break;
-    case PT_FN:
-      fputs("(Fn (", s->out);
-      push_params(s, node.subs_start, (node.sub_amt - 2) / 2);
-      push_str(s, ") ");
-      push_source(s, s->tree.inds.data[node.subs_start + node.sub_amt - 2]);
-      push_str(s, " ");
-      push_node(s, s->tree.inds.data[node.subs_start + node.sub_amt - 1]);
-      push_str(s, ")");
+    case PT_FUN:
+      print_compound(s, "(Fun ", " ", ")", node);
       break;
+    case PT_FN:
+      print_compound(s, "(Fn ", " ", ")", node);
+      break;
+    case PT_CONSTRUCTION: {
+      print_compound(s, "(Construct ", " ", ")", node);
+      break;
+    }
+    case PT_FUN_BODY: {
+      print_compound(s, "(Body ", " ", ")", node);
+      break;
+    }
     case PT_CALL:
       print_compound(s, "(Call ", " ", ")", node);
       break;
@@ -119,10 +120,10 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
       print_compound(s, "(If ", " ", ")", node);
       break;
     case PT_TUP:
-      print_compound(s, "(Tup ", " ", ")", node);
+      print_compound(s, "(", ", ", ")", node);
       break;
-    case PT_TYPED:
-      print_compound(s, "(", ": ", ")", node);
+    case PT_AS:
+      print_compound(s, "(As ", " ", ")", node);
       break;
     case PT_LIST:
       print_compound(s, "[", ", ", "]", node);

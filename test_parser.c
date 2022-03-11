@@ -26,6 +26,7 @@ static void test_parser_succeeds_on(test_state *state, char *input,
   parse_tree_res pres = parse(tres.tokens);
   if (!pres.succeeded) {
     failf(state, "Parsing \"%s\" failed.", input);
+    free(pres.expected);
     goto end_b;
   }
 
@@ -58,9 +59,9 @@ static void test_parser_succeeds_on_form(test_state *state, char *input,
   char *new_input;
   char *old_str = output.str;
   if (output.tag == STRING) {
-    asprintf(&output.str, "(Let a (Fn () I32 %s))", old_str);
+    asprintf(&output.str, "(Fun (Lname a) () (Body %s))", old_str);
   }
-  asprintf(&new_input, "(fn a () I32 %s)", input);
+  asprintf(&new_input, "(fun a () %s)", input);
   test_parser_succeeds_on(state, new_input, output);
   free(new_input);
   if (output.tag == STRING) {
@@ -127,8 +128,8 @@ static void test_parser_fails_on_form(test_state *state, char *input,
                                       BUF_IND_T pos, NODE_IND_T expected_amt,
                                       const token_type *expected) {
   char *new_input;
-  asprintf(&new_input, "(fn a () I32 %s)", input);
-  test_parser_fails_on(state, new_input, pos + 6, expected_amt, expected);
+  asprintf(&new_input, "(fun a () %s)", input);
+  test_parser_fails_on(state, new_input, pos + 4, expected_amt, expected);
   free(new_input);
 }
 
@@ -197,38 +198,39 @@ static void test_parser_succeeds_kitchen_sink(test_state *state) {
     test_start(state, "Lots of indentation");
     test_parser_succeeds_on_form(
       state, " ( ( hi 1   ) , 2 ) ",
-      expect_string("(Tup (Call (Lname hi) (Int 1)) (Int 2))"));
+      expect_string("((Call (Lname hi) (Int 1)), (Int 2))"));
     test_end(state);
   }
 
   test_group_end(state);
 }
 
-static const token_type form_start[] = {TK_INT,        TK_UPPER_NAME,
-                                        TK_LOWER_NAME, TK_OPEN_PAREN,
-                                        TK_STRING,     TK_OPEN_BRACKET};
+static const token_type expr_start[] = {
+  TK_INT,        TK_LOWER_NAME, TK_OPEN_BRACKET,
+  TK_OPEN_PAREN, TK_UPPER_NAME, TK_STRING,
+};
 
 static void test_if_failures(test_state *state) {
   test_group_start(state, "If");
 
   {
     test_start(state, "Empty");
-    test_parser_fails_on_form(state, "(if)", 2, STATIC_LEN(form_start),
-                              form_start);
+    test_parser_fails_on_form(state, "(if)", 2, STATIC_LEN(expr_start),
+                              expr_start);
     test_end(state);
   }
 
   {
     test_start(state, "One form");
-    test_parser_fails_on_form(state, "(if 1)", 3, STATIC_LEN(form_start),
-                              form_start);
+    test_parser_fails_on_form(state, "(if 1)", 3, STATIC_LEN(expr_start),
+                              expr_start);
     test_end(state);
   }
 
   {
     test_start(state, "Two form");
-    test_parser_fails_on_form(state, "(if 1 2)", 4, STATIC_LEN(form_start),
-                              form_start);
+    test_parser_fails_on_form(state, "(if 1 2)", 4, STATIC_LEN(expr_start),
+                              expr_start);
     test_end(state);
   }
 
@@ -242,49 +244,32 @@ static void test_if_failures(test_state *state) {
 
   {
     test_start(state, "Adjacent");
-    test_parser_fails_on_form(state, "(if if 1 2 3)", 2, STATIC_LEN(form_start),
-                              form_start);
+    test_parser_fails_on_form(state, "(if if 1 2 3)", 2, STATIC_LEN(expr_start),
+                              expr_start);
     test_end(state);
   }
 
   test_group_end(state);
 }
 
+static token_type start_pattern[] = {TK_INT, TK_LOWER_NAME, TK_OPEN_BRACKET,
+                                TK_OPEN_PAREN, TK_UNIT};
 static void test_fn_failures(test_state *state) {
   test_group_start(state, "Fn");
 
   {
     test_start(state, "Empty");
-    static token_type expected[] = {TK_OPEN_PAREN};
-    test_parser_fails_on_form(state, "(fn)", 2, STATIC_LEN(expected), expected);
+    test_parser_fails_on_form(state, "(fn)", 2, STATIC_LEN(start_pattern), start_pattern);
     test_end(state);
   }
 
   {
     test_start(state, "Without body");
     static token_type expected[] = {TK_UPPER_NAME};
-    test_parser_fails_on_form(state, "(fn ())", 4, STATIC_LEN(expected),
-                              expected);
+    test_parser_fails_on_form(state, "(fn ())", 3, STATIC_LEN(expr_start),
+                              expr_start);
     test_end(state);
   }
-
-  test_group_start(state, "Params");
-  {
-    test_start(state, "Numeric param");
-    static token_type expected[] = {TK_LOWER_NAME, TK_CLOSE_PAREN};
-    test_parser_fails_on_form(state, "(fn (123: I32) 1)", 3,
-                              STATIC_LEN(expected), expected);
-    test_end(state);
-  }
-
-  {
-    test_start(state, "Nest");
-    static token_type expected[] = {TK_LOWER_NAME, TK_CLOSE_PAREN};
-    test_parser_fails_on_form(state, "(fn (()))", 3, STATIC_LEN(expected),
-                              expected);
-    test_end(state);
-  }
-  test_group_end(state);
 
   test_group_end(state);
 }
@@ -294,25 +279,36 @@ static void test_fn_succeeds(test_state *state) {
 
   {
     test_start(state, "Minimal");
-    test_parser_succeeds_on_form(state, "(fn () I32 1)",
-                                 expect_string("(Fn () I32 (Int 1))"));
+    test_parser_succeeds_on_form(state, "(fn () 1)",
+                                 expect_string("(Fn () (Body (Int 1)))"));
     test_end(state);
   }
 
   {
     test_start(state, "One arg");
     test_parser_succeeds_on_form(
-      state, "(fn (a: I32) I16 1)",
-      expect_string("(Fn ((Lname a): (Uname I32)) I16 (Int 1))"));
+      state, "(fn a 1)", expect_string("(Fn (Lname a) (Body (Int 1)))"));
     test_end(state);
   }
 
   {
     test_start(state, "Two args");
     test_parser_succeeds_on_form(
-      state, "(fn (ab: I16, cd: U64) I32 1)",
-      expect_string(
-        "(Fn ((Lname ab): (Uname I16), (Lname cd): (Uname U64)) I32 (Int 1))"));
+      state, "(fn (ab, cd) 1)",
+      expect_string("(Fn ((Lname ab), (Lname cd)) (Body (Int 1)))"));
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Numeric param");
+    test_parser_succeeds_on_form(state, "(fn 123 1)", expect_string("(Fn (Int 123) (Body (Int 1)))"));
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Nested unit param");
+    static token_type expected[] = {TK_LOWER_NAME, TK_CLOSE_PAREN};
+    test_parser_succeeds_on_form(state, "(fn (()) 1)", expect_string("(Fn (()) (Body (Int 1)))"));
     test_end(state);
   }
 
@@ -353,14 +349,14 @@ static void test_parser_succeeds_compound(test_state *state) {
   {
     test_start(state, "Tuple");
     test_parser_succeeds_on_form(state, "(1, 2)",
-                                 expect_string("(Tup (Int 1) (Int 2))"));
+                                 expect_string("((Int 1), (Int 2))"));
     test_end(state);
   }
 
   {
     test_start(state, "Typed");
-    test_parser_succeeds_on_form(state, "(1 : I32)",
-                                 expect_string("((Int 1): (Uname I32))"));
+    test_parser_succeeds_on_form(state, "(as I32 1)",
+                                 expect_string("(As (Uname I32) (Int 1))"));
     test_end(state);
   }
 
@@ -368,7 +364,7 @@ static void test_parser_succeeds_compound(test_state *state) {
     test_start(state, "Big tuple");
     test_parser_succeeds_on_form(
       state, "(1, 2, 3, hi, 4)",
-      expect_string("(Tup (Int 1) (Int 2) (Int 3) (Lname hi) (Int 4))"));
+      expect_string("((Int 1), (Int 2), (Int 3), (Lname hi), (Int 4))"));
     test_end(state);
   }
 
@@ -377,43 +373,41 @@ static void test_parser_succeeds_compound(test_state *state) {
   test_group_end(state);
 }
 
+static token_type inside_expr[] = {
+  TK_AS,         TK_FN,           TK_FUN,        TK_IF,         TK_INT,
+  TK_LOWER_NAME, TK_OPEN_BRACKET, TK_OPEN_PAREN, TK_UPPER_NAME, TK_STRING};
+
+static const size_t inside_expr_amt = STATIC_LEN(inside_expr);
+
 static void test_mismatched_parens(test_state *state) {
   test_group_start(state, "Parens");
 
   {
     test_start(state, "Single open");
-    static token_type expected[] = {
-      TK_INT, TK_UPPER_NAME, TK_LOWER_NAME, TK_OPEN_PAREN,
-      TK_FN,  TK_IF,         TK_STRING,     TK_OPEN_BRACKET};
-    test_parser_fails_on_form(state, "(", 1, STATIC_LEN(expected), expected);
+    test_parser_fails_on_form(state, "( ", 1, inside_expr_amt, inside_expr);
     test_end(state);
   }
 
   {
     test_start(state, "Three open");
-    static token_type expected[] = {
-      TK_INT, TK_UPPER_NAME, TK_LOWER_NAME, TK_OPEN_PAREN,
-      TK_FN,  TK_IF,         TK_STRING,     TK_OPEN_BRACKET};
-    test_parser_fails_on_form(state, "(((", 3, STATIC_LEN(expected), expected);
+    test_parser_fails_on_form(state, "((( ", 3, inside_expr_amt, inside_expr);
     test_end(state);
   }
 
   {
-    test_start(state, "Single close");
-    static token_type expected[] = {TK_INT,        TK_UPPER_NAME,
-                                    TK_LOWER_NAME, TK_OPEN_PAREN,
-                                    TK_STRING,     TK_OPEN_BRACKET};
-    test_parser_fails_on_form(state, ")", 0, STATIC_LEN(expected), expected);
-    test_end(state);
-  }
+    {
+      test_start(state, "Single close");
+      test_parser_fails_on_form(state, ")", 0, STATIC_LEN(expr_start),
+                                expr_start);
+      test_end(state);
+    }
 
-  {
-    test_start(state, "Three close");
-    static token_type expected[] = {TK_INT,        TK_UPPER_NAME,
-                                    TK_LOWER_NAME, TK_OPEN_PAREN,
-                                    TK_STRING,     TK_OPEN_BRACKET};
-    test_parser_fails_on_form(state, ")))", 0, STATIC_LEN(expected), expected);
-    test_end(state);
+    {
+      test_start(state, "Three close");
+      test_parser_fails_on_form(state, ")))", 0, STATIC_LEN(expr_start),
+                                expr_start);
+      test_end(state);
+    }
   }
 
   test_group_end(state);
@@ -422,10 +416,10 @@ static void test_mismatched_parens(test_state *state) {
 static void test_parser_succeeds_root(test_state *state) {
   test_start(state, "Multiple top levels");
 
-  expected_output out = {
-    .tag = STRING,
-    .str = "(Let a (Fn () I16 (Lname a)))\n(Let b (Fn () I32 (Lname b)))"};
-  test_parser_succeeds_on(state, "(fn a () I16 a)(fn b () I32 b)", out);
+  expected_output out = {.tag = STRING,
+                         .str = "(Fun (Lname a) () (Body (Lname a)))\n(Fun "
+                                "(Lname b) () (Body (Lname b)))"};
+  test_parser_succeeds_on(state, "(fun a () a)(fun b () b)", out);
 
   test_end(state);
 }
