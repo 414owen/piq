@@ -56,11 +56,16 @@ token_res scan(source_file file, BUF_IND_T start) {
   str     { return mk_token(TK_STRING, start, pos - 1);         }
   "if"    { return mk_token(TK_IF, start, pos - 1);             }
   "fn"    { return mk_token(TK_FN, start, pos - 1);             }
-  ":"     { return mk_token(TK_COLON, start, pos - 1);          }
+  "fun"   { return mk_token(TK_FUN, start, pos - 1);            }
+  "as"    { return mk_token(TK_AS, start, pos - 1);             }
   lower_ident { return mk_token(TK_LOWER_NAME, start, pos - 1); }
   upper_ident { return mk_token(TK_UPPER_NAME, start, pos - 1); }
   "["     { return mk_token(TK_OPEN_BRACKET, start, pos - 1);   }
   "]"     { return mk_token(TK_CLOSE_BRACKET, start, pos - 1);  }
+
+  // parsed here, because allowing spaces between parens
+  // can be used to obfuscate
+  "()"    { return mk_token(TK_UNIT, start, pos - 1);  }
   [(]     { return mk_token(TK_OPEN_PAREN, start, pos - 1);     }
   [)]     { return mk_token(TK_CLOSE_PAREN, start, pos - 1);    }
   [,]     { return mk_token(TK_COMMA, start, pos - 1);          }

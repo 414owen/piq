@@ -145,12 +145,8 @@ static void setup_type_env(typecheck_state *state) {
   }
 
   // Nodes have initial type UNKNOWN and not is_wanted
-  VEC_REPLICATE(&state->res.node_types, state->res.tree.nodes.len,
-                state->unknown_ind);
-  VEC_RESIZE(&state->wanted, state->res.tree.nodes.len);
-  state->wanted.len = state->res.tree.nodes.len;
-  memset_arbitrary(state->wanted.data, &state->unknown_ind, state->wanted.cap,
-                   sizeof(state->unknown_ind));
+  VEC_REPLICATE(&state->res.node_types, state->res.tree.nodes.len, state->unknown_ind);
+  VEC_REPLICATE(&state->wanted, state->res.tree.nodes.len, state->unknown_ind);
 
   // Prelude
   {
@@ -277,6 +273,27 @@ static void tc_node(typecheck_state *state) {
   type wanted = state->res.types.data[wanted_ind];
 
   switch (node.type) {
+    case PT_UNIT: {
+      if (is_wanted) {
+        if (wanted.tag != T_UNIT) {
+          tc_error err = {
+            .type = LITERAL_MISMATCH,
+            .pos = node_ind,
+            .expected = wanted_ind,
+          };
+          push_tc_err(state, err);
+        }
+      }
+      break;
+    }
+    case PT_CONSTRUCTION: {
+      UNIMPLEMENTED("Typechecking constructors");
+      break;
+    }
+    case PT_FUN_BODY: {
+      UNIMPLEMENTED("Typechecking constructors");
+      break;
+    }
     case PT_STRING: {
       if (is_wanted) {
         if (wanted_ind != state->string_type_ind) {
@@ -314,7 +331,7 @@ static void tc_node(typecheck_state *state) {
       break;
     }
 
-    case PT_TYPED: {
+    case PT_AS: {
       NODE_IND_T val_node_ind = state->res.tree.inds.data[node.subs_start];
       NODE_IND_T type_node_ind = state->res.tree.inds.data[node.subs_start + 1];
 
@@ -443,7 +460,7 @@ static void tc_node(typecheck_state *state) {
         state->current_node_ind = val_ind;
         parse_node val = state->res.tree.nodes.data[val_ind];
         switch (val.type) {
-          case PT_FN: {
+          case PT_FUN: {
 #define action_amt 3
             tc_action actions[action_amt] = {
               {.tag = TC_NODE, .node_ind = val_ind},
@@ -495,7 +512,7 @@ static void tc_node(typecheck_state *state) {
       break;
     }
 
-    case PT_FN: {
+    case PT_FUN: {
       NODE_IND_T param_amt = (node.sub_amt - 2) / 2;
       for (uint16_t i = 0; i < param_amt; i++) {
         NODE_IND_T type_ind =
@@ -589,7 +606,7 @@ static void tc_combine(typecheck_state *state) {
 
   switch (node.type) {
 
-    case PT_FN: {
+    case PT_FUN: {
       const NODE_IND_T param_amt = (node.sub_amt - 2) / 2;
       const size_t param_bytes = sizeof(NODE_IND_T) * param_amt + 1;
       NODE_IND_T *sub_type_inds = stalloc(param_bytes);
@@ -731,9 +748,9 @@ tc_res typecheck(source_file source, parse_tree tree) {
                       sizeof(tc_action));
   }
 
-#ifdef DEBUG
+#ifdef DEBUG_TC
   for (size_t i = 0; i < tree.nodes.len; i++) {
-    debug_assert(state.res.node_types.data[i] != T_UNDEFINED);
+    debug_assert(state.res.node_types.data[i] != T_UNKNOWN);
   }
 #endif
 

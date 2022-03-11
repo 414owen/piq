@@ -73,16 +73,15 @@ static void test_scanner_accepts(test_state *restrict state) {
   }
 
   {
-    test_start(state, "Parens");
-    static const token_type tokens[] = {TK_OPEN_PAREN, TK_CLOSE_PAREN};
+    test_start(state, "Unit");
+    static const token_type tokens[] = {TK_UNIT};
     test_scanner_tokens(state, "()", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Nested Parens");
-    static const token_type tokens[] = {TK_OPEN_PAREN, TK_OPEN_PAREN,
-                                        TK_CLOSE_PAREN, TK_CLOSE_PAREN};
+    static const token_type tokens[] = {TK_OPEN_PAREN, TK_UNIT, TK_CLOSE_PAREN};
     test_scanner_tokens(state, "(())", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
@@ -102,8 +101,9 @@ static void test_scanner_accepts(test_state *restrict state) {
 
     // These exercise some branches for code coverage, as well as testing close
     // shaves
-    test_scanner_tokens(state, "fa", STATIC_LEN(tokens), tokens);
-    test_scanner_tokens(state, "fna", STATIC_LEN(tokens), tokens);
+    test_scanner_tokens(state, "fan", STATIC_LEN(tokens), tokens);
+    test_scanner_tokens(state, "fud", STATIC_LEN(tokens), tokens);
+    test_scanner_tokens(state, "funa", STATIC_LEN(tokens), tokens);
     test_scanner_tokens(state, "il", STATIC_LEN(tokens), tokens);
     test_scanner_tokens(state, "ifl", STATIC_LEN(tokens), tokens);
     test_end(state);
@@ -113,6 +113,13 @@ static void test_scanner_accepts(test_state *restrict state) {
     test_start(state, "Names");
     static const token_type tokens[] = {TK_LOWER_NAME, TK_LOWER_NAME};
     test_scanner_tokens(state, "abc def", STATIC_LEN(tokens), tokens);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Fun");
+    static const token_type tokens[] = {TK_FUN};
+    test_scanner_tokens(state, "fun", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
@@ -150,7 +157,7 @@ static void test_scan_all(test_state *restrict state) {
     char *input = "(a)()";
     tokens_res res = scan_all(test_file(input));
     test_assert_eq(state, res.succeeded, true);
-    test_assert_eq(state, res.tokens.len, 6);
+    test_assert_eq(state, res.tokens.len, 5);
     VEC_FREE(&res.tokens);
     test_end(state);
   }
