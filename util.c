@@ -12,6 +12,15 @@
 #include "consts.h"
 #include "util.h"
 
+void unimplemented(char *str, char *file, size_t line) {
+  fprintf(stderr,
+          "%s hasn't been implemented yet.\n"
+          "file: %s\n"
+          "line: %zu\n"
+          "Giving up.\n",
+          str, file, line);
+}
+
 void *memclone(void *src, size_t bytes) {
   void *dest = malloc(bytes);
   if (dest != NULL) {
@@ -223,7 +232,6 @@ static bool forgiving_mkdir(const char *dirname) {
 
 // TODO change to use openat() and relative paths
 bool recurse_mkdir(char *dirname) {
-  size_t bufsize = strlen(dirname) + 1;
   bool ret = true;
   const char *p = dirname;
 
@@ -267,4 +275,11 @@ char *get_cache_dir(void) {
   }
   cache_dir_cache = dir;
   return dir;
+}
+
+void debug_assert_internal(bool b, char *file, size_t line) {
+  if (!b) {
+    fprintf(stderr, "Assertion failed at %s:%zu\n", file, line);
+    exit(1);
+  }
 }

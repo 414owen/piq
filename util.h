@@ -2,6 +2,7 @@
 
 #include <hedley.h>
 #include <alloca.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -14,14 +15,12 @@
 #define STRINGIZE(x) STRINGIZE_DETAIL(x)
 
 #ifdef DEBUG
-#define debug_assert(b) \
-  if (!b) \
-    fputs("Assertion failed at " ## __FILE__ ## ":" ## STRINGIZE(__LINE__); \
-    abort(); \
-  }
+#define debug_assert(b) debug_assert_internal(b, __FILE__, __LINE__)
 #else
 #define debug_assert(b) do {} while (0);
 #endif
+
+#define UNIMPLEMENTED(str) unimplemented(str, __FILE__, __LINE__)
 
 #define MAX_STACK_ALLOC 1024
 #define stalloc(bytes) \
@@ -42,6 +41,7 @@ size_t find_range(const void *haystack, size_t el_size, size_t el_amt, const voi
 stringstream *ss_init(void);
 char *ss_finalize(stringstream *ss);
 
+void unimplemented(char *str, char *file, size_t line);
 int timespec_subtract(struct timespec *result, struct timespec *x, struct timespec *y);
 void *memclone(void *src, size_t bytes);
 void memset_arbitrary(void *dest, void* el, size_t amt, size_t elsize);
@@ -50,6 +50,7 @@ int vasprintf(char **, const char * restrict, va_list);
 int asprintf(char **, const char *restrict, ...);
 void reverse_arbitrary(void *dest, size_t amt, size_t elsize);
 HEDLEY_NO_RETURN void give_up(const char *err);
+void debug_assert_internal(bool b, char *file, size_t line);
 
 char *join_paths(const char *const *paths, size_t path_num);
 char *join_two_paths(const char *front, const char *back);

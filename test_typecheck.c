@@ -183,6 +183,7 @@ static void run_typecheck_test(test_state *state, const char *input,
   parse_tree_res pres = parse(tres.tokens);
   if (!pres.succeeded) {
     failf(state, "Parsing \"%s\" failed.", input);
+    free(pres.expected);
     goto end_b;
   }
 

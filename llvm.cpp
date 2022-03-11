@@ -406,7 +406,7 @@ static void cg_node(cg_state *state, node_ind ind) {
         }
         break;
       }
-      case PT_FN: {
+      case PT_FUN: {
         llvm::FunctionType *fn_type =
           (llvm::FunctionType *) construct_type(state, state->in.node_types.data[ind]);
         llvm::Twine name("fn");
@@ -417,7 +417,7 @@ static void cg_node(cg_state *state, node_ind ind) {
         VEC_PUSH(&state->act_nodes, ind);
         break;
       }
-      case PT_TYPED: {
+      case PT_AS: {
         VEC_PUSH(&state->actions, CG_NODE);
         VEC_PUSH(&state->act_nodes,
                  state->in.tree.inds.data[node.subs_start + 1]);

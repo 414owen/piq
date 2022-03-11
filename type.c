@@ -50,6 +50,9 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
           case T_UNKNOWN:
             fputs("<unknown>", f);
             break;
+          case T_UNIT:
+            fputs("()", f);
+            break;
           case T_I8:
             fputs("I8", f);
             break;

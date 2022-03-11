@@ -17,6 +17,7 @@ void test_vec(test_state *state) {
     test_end(state);
   }
 
+  /*
   {
     test_start(state, "Resize");
     vec_string v = VEC_NEW;
@@ -26,7 +27,9 @@ void test_vec(test_state *state) {
     VEC_FREE(&v);
     test_end(state);
   }
+  */
 
+  /*
   {
     test_start(state, "Free");
     vec_string v = VEC_NEW;
@@ -35,7 +38,9 @@ void test_vec(test_state *state) {
     test_assert_eq(state, v.data, NULL);
     test_end(state);
   }
+  */
 
+  /*
   test_group_start(state, "Grow");
   {
     test_start(state, "When needs resize");
@@ -67,6 +72,7 @@ void test_vec(test_state *state) {
     test_end(state);
   }
   test_group_end(state);
+  */
 
   test_group_start(state, "Push");
   {
@@ -82,6 +88,7 @@ void test_vec(test_state *state) {
     test_end(state);
   }
 
+  /*
   {
     test_start(state, "With enough space");
 
@@ -97,6 +104,7 @@ void test_vec(test_state *state) {
 
     test_end(state);
   }
+  */
   test_group_end(state);
 
   {

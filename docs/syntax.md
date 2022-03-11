@@ -1,36 +1,5 @@
 # Syntax
 
-
-## Terms
-
-```
-// ints
-1
-
-// strings
-"hello"
-
-// chars (U8)
-'a'
-'\0'
-
-// bindings
-a
-aBc
-
-// tuples
-(1, 2, 3)
-(a, b, c)
-
-// lists
-[1, 2, 3]
-[a, b, c]
-
-
-(if a c d)
-```
-
-
 ## Types
 
 ```
@@ -38,59 +7,104 @@ aBc
 I8, I16, I32, I64
 U8, U16, U32, U64
 
+
 // tuples
 (I32, U8)
 
-// arrays
+
+// variable length arrays
 [U8]
 
+
+// static sized arrays
+[U8 12]
+
+
 // functions
-(U8 -> U8)
+(fn U8 U8)
 ```
 
 
-## Statements
-
-### Declarations
+## Terms
 
 ```
-// function
-(a : I32 -> I32)
-(fn a b b)
-
-(a : (I32, I32) -> I32)
-(fn a (b, c) (+ b c))
-
-// constant
-(b : I64)
-(let b 1)
-
-// variable
-(c : I64)
-(var c 12)
+// ints
+1
 
 
-(do 
+// strings
+"hello"
+
+
+// chars (U8)
+'a'
+'\0'
+
+
+// bindings
+a
+aBc
+
+
+// tuple literals
+(1, 2, 3)
+(a, 2, c)
+
+
+// list literals
+[1, 2, 3]
+[a, 2, c]
+
+
+// ternary expressions
+(if a c d)
+
+
+// blocks
+(do
   (print "hi")
   (other statement))
 
 
-// probably doesn't typecheck
+// pattern matching
 (case a
   ("this" "hi")
   ((Pat b) b)
   ("test" "yes"))
 
-
-(sig fib (U16 -> U64))
-(fn fib n
-  (if (lt n 2)
-    n
-    (+ (fib (- n 1))
-       (fib (- n 2)))))
+// lambdas
+(fn a a)
+(fn (a, b) (+ a b))
+```
 
 
+## Declarations
+
+```
+// signatures and functions, pattern matching and fall-through
+(sig a (fn (I32, I32) I32))
+(fun a (1, b)
+  (a (2, b)))
+(fun a (b, c)
+  (+ b c))
+
+// which is the same as
+(fun pa
+  (case ps
+    ((b, c) (+ b c))))
+
+// constants
+(sig b I64)
+(let b 1)
+
+
+// variables
+(sig c I64)
+(var c 12)
+
+
+// sum types
 (type Animal
-  (Dog String)
-  (Cat String))
+  (Dog (breed String))
+  (Cat (type String)))
 ```
