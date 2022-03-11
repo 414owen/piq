@@ -37,7 +37,8 @@ void test_group_end(test_state *state) {
 }
 
 static vec_string make_test_path(test_state *state) {
-  vec_string path = VEC_CLONE(&state->path);
+  vec_string path;
+  VEC_CLONE(&path, &state->path);
   VEC_PUSH(&path, state->current_name);
   return path;
 }
@@ -125,7 +126,7 @@ static void print_failure(failure f) {
   for (size_t i = 0; i < f.path.len; i++) {
     if (i != 0)
       putc('/', stdout);
-    fputs(f.path.data[i], stdout);
+    fputs(VEC_GET(f.path, i), stdout);
   }
   putc('\n', stdout);
   puts(f.reason);
@@ -133,7 +134,7 @@ static void print_failure(failure f) {
 
 void print_failures(test_state *state) {
   for (size_t i = 0; i < state->failures.len; i++) {
-    print_failure(state->failures.data[i]);
+    print_failure(VEC_GET(state->failures, i));
   }
 }
 
@@ -153,7 +154,7 @@ void write_test_results(test_state *state) {
   test_aggregate current = {.tests = 0, .failures = 0};
 
   for (size_t i = 0; i < state->actions.len; i++) {
-    test_action action = state->actions.data[state->actions.len - 1 - i];
+    test_action action = VEC_GET(state->actions, state->actions.len - 1 - i);
     switch (action) {
       case GROUP_LEAVE:
         VEC_PUSH(&agg_stack, current)
@@ -200,7 +201,7 @@ void write_test_results(test_state *state) {
   size_t depth = 1;
 
   for (size_t i = 0; i < state->actions.len; i++) {
-    test_action action = state->actions.data[i];
+    test_action action = VEC_GET(state->actions, i);
     switch (action) {
       case GROUP_LEAVE:
         depth--;
@@ -213,8 +214,8 @@ void write_test_results(test_state *state) {
       fputs("  ", f);
     switch (action) {
       case GROUP_ENTER: {
-        test_aggregate agg = aggs.data[agg_ind--];
-        char *str = state->strs.data[str_ind++];
+        test_aggregate agg = VEC_GET(aggs, agg_ind--);
+        char *str = VEC_GET(state->strs, str_ind++);
         fprintf(f, "<testsuite name=\"%s\" tests=\"%u\" failures=\"%u\">\n",
                 str, agg.tests, agg.failures);
         VEC_PUSH(&class_path, str);
@@ -223,11 +224,11 @@ void write_test_results(test_state *state) {
       }
       case TEST_ENTER:
         fprintf(f, "<testcase name=\"%s\" classname=\"",
-                state->strs.data[str_ind++]);
+                VEC_GET(state->strs, str_ind++));
         for (size_t i = 0; i < class_path.len; i++) {
           if (i > 0)
             putc('/', f);
-          fputs(class_path.data[i], f);
+          fputs(VEC_GET(class_path, i), f);
         }
         fputs("\">\n", f);
         break;
@@ -239,7 +240,7 @@ void write_test_results(test_state *state) {
         break;
       case TEST_FAIL:
         fprintf(f, "<failure message=\"Assertion failure\">%s</failure>\n",
-                state->failures.data[fail_ind++].reason);
+                VEC_GET(state->failures, fail_ind++).reason);
         break;
     }
   }

@@ -98,8 +98,8 @@ void test_vec(test_state *state) {
     test_assert_eq(state, v.len, 1);
     VEC_PUSH(&v, str);
     test_assert_eq(state, v.len, 2);
-    test_assert_eq(state, strcmp(v.data[0], str), 0);
-    test_assert_eq(state, strcmp(v.data[1], str), 0);
+    test_assert_eq(state, strcmp(VEC_GET(v, 0), str), 0);
+    test_assert_eq(state, strcmp(VEC_GET(v, 1), str), 0);
     VEC_FREE(&v);
 
     test_end(state);
@@ -120,7 +120,7 @@ void test_vec(test_state *state) {
     test_assert_eq(state, v.len, STATIC_LEN(strs) + 2);
     test_assert(state, v.cap >= v.len);
     for (size_t i = 0; i < STATIC_LEN(strs) + 2; i++)
-      test_assert_eq(state, strcmp(v.data[i], str), 0);
+      test_assert_eq(state, strcmp(VEC_GET(v, i), str), 0);
     VEC_FREE(&v);
 
     test_end(state);
@@ -136,7 +136,7 @@ void test_vec(test_state *state) {
     test_assert_eq(state, v.len, 102);
     test_assert(state, v.cap >= v.len);
     for (int i = 0; i < 102; i++)
-      test_assert_eq(state, strcmp(v.data[i], str), 0);
+      test_assert_eq(state, strcmp(VEC_GET(v, i), str), 0);
     VEC_FREE(&v);
 
     test_end(state);
