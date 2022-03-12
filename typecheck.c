@@ -266,6 +266,11 @@ static binding node_to_binding(parse_node node) {
   return b;
 }
 
+static binding node_to_bnd(parse_node a) {
+  binding res = {.start = a.start, .end = a.end};
+  return res;
+}
+
 static void tc_node(typecheck_state *state) {
 
   NODE_IND_T node_ind = state->current_node_ind;
@@ -275,6 +280,94 @@ static void tc_node(typecheck_state *state) {
   type wanted = VEC_GET(state->res.types, wanted_ind);
 
   switch (node.type) {
+    case PT_ROOT: {
+      debug_assert(node.type == PT_ROOT);
+
+      // TODO for mutually recursive functions, we need the function names to be
+      // in scope, so we need to reserve type nodes and such
+      parse_node last;
+      bool can_continue = true;
+      for (NODE_IND_T i = 0; i < node.sub_amt; i++) {
+        NODE_IND_T toplevel_ind = state->res.tree.inds[node.subs_start + i];
+        parse_node toplevel = state->res.tree.nodes[toplevel_ind];
+        switch (toplevel.type) {
+          case PT_SIG: {
+            // TODO
+            // NODE_IND_T name_ind = PT_SIG_BINDING_IND(state->res.tree.inds,
+            // toplevel); parse_node name = state->res.tree.nodes[name_ind];
+          }
+          case PT_FUN: {
+            NODE_IND_T name_ind =
+              PT_FUN_BINDING_IND(state->res.tree.inds, toplevel);
+            parse_node name = state->res.tree.nodes[name_ind];
+            bool missing_sig = i == 0;
+
+            if (i > 0) {
+              NODE_IND_T prev_toplevel_ind =
+                state->res.tree.inds[node.subs_start + i - 1];
+              parse_node prev_toplevel = state->res.tree.nodes[toplevel_ind];
+              switch (prev_toplevel.type) {
+                case PT_SIG:
+                case PT_FUN: {
+                  NODE_IND_T prev_name_ind =
+                    PT_FUN_BINDING_IND(state->res.tree.inds, toplevel);
+                  parse_node prev_name = state->res.tree.nodes[prev_name_ind];
+                  missing_sig |=
+                    compare_bnds(state->source.data, node_to_bnd(prev_name),
+                                 node_to_bnd(name)) != 0;
+                }
+                default: {
+                  tc_error err = {
+                    .type = MISSING_SIG,
+                    .pos = node_ind,
+                  };
+                  push_tc_err(state, err);
+                }
+              }
+            }
+
+            if (missing_sig) {
+              tc_error err = {
+                .type = MISSING_SIG,
+                .pos = node_ind,
+              };
+              push_tc_err(state, err);
+            }
+
+            tc_action action = {.tag = TC_NODE, .node_ind = toplevel_ind};
+            VEC_PUSH(&state->stack, action);
+            break;
+          }
+          default: {
+            give_up("Invalid top level");
+            break;
+          }
+        }
+        last = toplevel;
+      }
+
+      if (can_continue) {
+        for (NODE_IND_T i = 0; i < node.sub_amt; i++) {
+          NODE_IND_T toplevel_ind = state->res.tree.inds[node.subs_start + i];
+          parse_node toplevel = state->res.tree.nodes[toplevel_ind];
+          switch (toplevel.type) {
+            // fun after fun
+            case PT_FUN: {
+              NODE_IND_T name_ind =
+                PT_FUN_BINDING_IND(state->res.tree.inds, toplevel);
+              parse_node name = state->res.tree.nodes[name_ind];
+              // TODO
+              tc_action action = {.tag = TC_NODE, .node_ind = toplevel_ind};
+              VEC_PUSH(&state->stack, action);
+            }
+            // impossible, already checked above
+            default:
+              break;
+          }
+          last = toplevel;
+        }
+      }
+    }
     case PT_UNIT: {
       if (is_wanted) {
         if (wanted.tag != T_UNIT) {
@@ -641,39 +734,6 @@ static const char *const action_str[] = {
   [TC_POP_VARS] = "Pop vars",
 };
 #endif
-
-void tc_root(typecheck_state *state, NODE_IND_T root_ind) {
-
-  parse_node root = state->res.tree.nodes[root_ind];
-  debug_assert(root.type == PT_ROOT);
-
-  // TODO for mutually recursive functions, we need the function names to be
-  // in scope, so we need to reserve type nodes and such
-  parse_node last;
-  for (NODE_IND_T i = 0; i < root.sub_amt; i++) {
-    parse_node toplevel = state->res.tree.nodes[root.subs_start + i];
-    switch (toplevel.type) {
-      case PT_FUN: {
-        NODE_IND_T name_ind =
-          PT_FUN_BINDING_IND(state->res.tree.inds, toplevel);
-        // TODO
-#define action_amt 3
-        // tc_action actions[action_amt] = {
-        //   {.tag = TC_NODE, .node_ind = val_ind},
-        //   {.tag = TC_CLONE, .from = val_ind, .to = name_ind},
-        //   {.tag = TC_CLONE, .from = val_ind, .to = root.subs_start + i},
-        // };
-        // VEC_APPEND(&state->stack, action_amt, actions);
-#undef action_amt
-      }
-      default: {
-        give_up("Invalid top level");
-        break;
-      }
-    }
-    last = toplevel;
-  }
-}
 
 tc_res typecheck(source_file source, parse_tree tree) {
   typecheck_state state = tc_new_state(source, tree);

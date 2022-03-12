@@ -12,6 +12,7 @@ typedef enum {
   TYPE_MISMATCH,
   LITERAL_MISMATCH,
   WRONG_ARITY,
+  MISSING_SIG,
 } tc_error_type;
 
 typedef struct {

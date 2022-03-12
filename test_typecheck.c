@@ -39,6 +39,9 @@ static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
     case WRONG_ARITY:
       fputs("Wrong arity", f);
       break;
+    case MISSING_SIG:
+      fputs("Missing type signature", f);
+      break;
   }
   // fputs(":\n", f);
   parse_node node = res.tree.nodes[error.pos];
