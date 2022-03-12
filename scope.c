@@ -18,6 +18,11 @@ static bool strn1eq(const char *a, const char *b, size_t alen) {
   return true;
 }
 
+int compare_bnds(const char *restrict source_file, binding a, binding b) {
+  return strncmp(source_file + a.start, source_file + b.start,
+                 MIN(a.end - a.start, b.end - b.start));
+}
+
 // TODO consider separating builtins into separate array somehow
 // Find index of binding, return bindings.len if not found
 size_t lookup_bnd(const char *source_file, vec_str_ref bnds, bitset is_builtin,
