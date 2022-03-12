@@ -77,7 +77,8 @@ token_res scan(source_file file, BUF_IND_T start) {
 
 tokens_res scan_all(source_file file) {
   BUF_IND_T ind = 0;
-  tokens_res res = { .succeeded = true, .tokens = VEC_NEW };
+  vec_token tokens = VEC_NEW;
+  tokens_res res = { .succeeded = true };
   token_res tres;
   for (;;) {
     tres = scan(file, ind);
@@ -86,9 +87,10 @@ tokens_res scan_all(source_file file) {
       res.error_pos = tres.tok.start;
       return res;
     }
-    VEC_PUSH(&res.tokens, tres.tok);
+    VEC_PUSH(&tokens, tres.tok);
     if (tres.tok.type == TK_EOF) {
-      VEC_FINALIZE(&res.tokens);
+      res.token_amt = tokens.len;
+      res.tokens = VEC_FINALIZE(&tokens);
       return res;
     }
     ind = tres.tok.end + 1;

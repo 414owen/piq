@@ -283,3 +283,7 @@ void debug_assert_internal(bool b, char *file, size_t line) {
     exit(1);
   }
 }
+
+bool prefix(const char *restrict pre, const char *restrict str) {
+  return strncmp(pre, str, strlen(pre)) == 0;
+}

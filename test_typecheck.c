@@ -26,12 +26,14 @@ static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
       fputs("Type mismatch. Expected '", f);
       print_type(f, res.types.data, res.type_inds.data, error.expected);
       fputs("', got '", f);
-      print_type(f, VEC_DATA_PTR(&res.types), VEC_DATA_PTR(&res.type_inds), error.got);
+      print_type(f, VEC_DATA_PTR(&res.types), VEC_DATA_PTR(&res.type_inds),
+                 error.got);
       fputs("'", f);
       break;
     case LITERAL_MISMATCH:
       fputs("Literal mismatch. Expected '", f);
-      print_type(f, VEC_DATA_PTR(&res.types), VEC_DATA_PTR(&res.type_inds), error.expected);
+      print_type(f, VEC_DATA_PTR(&res.types), VEC_DATA_PTR(&res.type_inds),
+                 error.expected);
       fputs("'", f);
       break;
     case WRONG_ARITY:
@@ -39,7 +41,7 @@ static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
       break;
   }
   // fputs(":\n", f);
-  parse_node node = VEC_GET(res.tree.nodes, error.pos);
+  parse_node node = res.tree.nodes[error.pos];
   fprintf(f, " at %d-%d:\n", node.start, node.end);
   format_error_ctx(f, res.source.data, node.start, node.end);
 }
@@ -115,7 +117,7 @@ static bool test_err_eq(tc_res res, size_t err_ind, tc_err_test test_err) {
   tc_error eA = VEC_GET(res.errors, err_ind);
   if (eA.type != test_err.type)
     return false;
-  parse_node node = VEC_GET(res.tree.nodes, eA.pos);
+  parse_node node = res.tree.nodes[eA.pos];
   if (node.start != test_err.start)
     return false;
   if (node.end != test_err.end)
@@ -147,8 +149,8 @@ static void test_types_match(test_state *state, tc_res res, tc_test test) {
   for (size_t i = 0; i < test.span_amt; i++) {
     exp_type_span span = test.spans[i];
     bool seen = false;
-    for (size_t j = 0; j < res.tree.nodes.len; j++) {
-      parse_node node = VEC_GET(res.tree.nodes, j);
+    for (size_t j = 0; j < res.tree.node_amt; j++) {
+      parse_node node = res.tree.nodes[j];
       if (node.type == PT_ROOT)
         continue;
       if (node.start == span.start && node.end == span.end) {
@@ -180,7 +182,7 @@ static void run_typecheck_test(test_state *state, const char *input,
     goto end_a;
   }
 
-  parse_tree_res pres = parse(tres.tokens);
+  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (!pres.succeeded) {
     failf(state, "Parsing \"%s\" failed.", input);
     free(pres.expected);
@@ -221,11 +223,11 @@ static void run_typecheck_test(test_state *state, const char *input,
   VEC_FREE(&res.node_types);
 
 end_b:
-  VEC_FREE(&pres.tree.inds);
-  VEC_FREE(&pres.tree.nodes);
+  free(pres.tree.inds);
+  free(pres.tree.nodes);
 
 end_a:
-  VEC_FREE(&tres.tokens);
+  free(tres.tokens);
 }
 
 static const test_type i16 = {
@@ -326,7 +328,7 @@ void test_typecheck_errors(test_state *state) {
         .end = 18,
       },
     };
-    run_typecheck_error_test(state, "(fn a () I32 (1, 2))", STATIC_LEN(errors),
+    run_typecheck_error_test(state, "(fun a () I32 (1, 2))", STATIC_LEN(errors),
                              errors);
   }
   test_end(state);
