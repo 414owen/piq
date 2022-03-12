@@ -84,6 +84,7 @@ reports/coverage/index.html: reports/coverage.info
 parser.c parser.h &: parser.y
 	lemon -c parser.y
 	sed -i 's/^static \(const char \*.*yyTokenName\[\].*\)$$/\1/g' parser.c
+	sed -i 's/assert(/debug_assert(/g' parser.c
 	./scripts/add-pragmas.sh
 
 tokenizer.o : tokenizer.c parser.h

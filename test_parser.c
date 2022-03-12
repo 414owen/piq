@@ -23,7 +23,7 @@ static void test_parser_succeeds_on(test_state *state, char *input,
     goto end_a;
   }
 
-  parse_tree_res pres = parse(tres.tokens);
+  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (!pres.succeeded) {
     failf(state, "Parsing \"%s\" failed.", input);
     free(pres.expected);
@@ -47,11 +47,11 @@ static void test_parser_succeeds_on(test_state *state, char *input,
   }
 
 end_b:
-  VEC_FREE(&pres.tree.inds);
-  VEC_FREE(&pres.tree.nodes);
+  free(pres.tree.inds);
+  free(pres.tree.nodes);
 
 end_a:
-  VEC_FREE(&tres.tokens);
+  free(tres.tokens);
 }
 
 static void test_parser_succeeds_on_form(test_state *state, char *input,
@@ -83,7 +83,7 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
     goto end_a;
   }
 
-  parse_tree_res pres = parse(tres.tokens);
+  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (pres.succeeded) {
     failf(state, "Parsing \"%s\" was supposed to fail.", input);
   }
@@ -117,11 +117,11 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
   }
 
   free(pres.expected);
-  VEC_FREE(&pres.tree.inds);
-  VEC_FREE(&pres.tree.nodes);
+  free(pres.tree.inds);
+  free(pres.tree.nodes);
 
 end_a:
-  VEC_FREE(&tres.tokens);
+  free(tres.tokens);
 }
 
 static void test_parser_fails_on_form(test_state *state, char *input,
@@ -253,13 +253,14 @@ static void test_if_failures(test_state *state) {
 }
 
 static token_type start_pattern[] = {TK_INT, TK_LOWER_NAME, TK_OPEN_BRACKET,
-                                TK_OPEN_PAREN, TK_UNIT};
+                                     TK_OPEN_PAREN, TK_UNIT};
 static void test_fn_failures(test_state *state) {
   test_group_start(state, "Fn");
 
   {
     test_start(state, "Empty");
-    test_parser_fails_on_form(state, "(fn)", 2, STATIC_LEN(start_pattern), start_pattern);
+    test_parser_fails_on_form(state, "(fn)", 2, STATIC_LEN(start_pattern),
+                              start_pattern);
     test_end(state);
   }
 
@@ -301,14 +302,16 @@ static void test_fn_succeeds(test_state *state) {
 
   {
     test_start(state, "Numeric param");
-    test_parser_succeeds_on_form(state, "(fn 123 1)", expect_string("(Fn (Int 123) (Body (Int 1)))"));
+    test_parser_succeeds_on_form(
+      state, "(fn 123 1)", expect_string("(Fn (Int 123) (Body (Int 1)))"));
     test_end(state);
   }
 
   {
     test_start(state, "Nested unit param");
     static token_type expected[] = {TK_LOWER_NAME, TK_CLOSE_PAREN};
-    test_parser_succeeds_on_form(state, "(fn (()) 1)", expect_string("(Fn (()) (Body (Int 1)))"));
+    test_parser_succeeds_on_form(state, "(fn (()) 1)",
+                                 expect_string("(Fn (()) (Body (Int 1)))"));
     test_end(state);
   }
 

@@ -58,3 +58,4 @@ char *get_cache_dir(void);
 int mkdirp(char *path, mode_t mode);
 int directory_exists(const char *path);
 int rm_r(char *dir);
+bool prefix(const char *pre, const char *str);
