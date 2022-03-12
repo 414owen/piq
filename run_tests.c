@@ -6,20 +6,17 @@
 
 #include "test.h"
 
-int main(int argc, char **argv) {
+typedef struct {
+  bool junit;
+  bool lite;
+} config;
+
+static void run_tests(config conf) {
 
   test_state state = test_state_new();
 
-  for (int i = 0; i < argc; i++) {
-    char *arg = argv[i];
-    if (strcmp(arg, "--lite") == 0) {
-      puts("Test lite mode");
-      state.lite = true;
-    }
-    if (strcmp(arg, "--junit") == 0) {
-      state.junit = true;
-    }
-  }
+  state.lite = conf.lite;
+  state.junit = conf.junit;
 
   test_vec(&state);
   test_bitset(&state);
@@ -50,4 +47,32 @@ int main(int argc, char **argv) {
   VEC_FREE(&state.path);
   // if (state.failures.len > 0)
   //   exit(1);
+}
+
+int main(int argc, char **argv) {
+  config conf = {
+    .junit = false,
+    .lite = false,
+  };
+
+  int times = 1;
+
+  for (int i = 0; i < argc; i++) {
+    char *arg = argv[i];
+    if (strcmp(arg, "--lite") == 0) {
+      puts("Test lite mode");
+      conf.lite = true;
+    }
+    if (strcmp(arg, "--junit") == 0) {
+      conf.junit = true;
+    }
+    static const char *times_str = "--times=";
+    if (prefix(times_str, arg)) {
+      times = atoi(arg + strlen(times_str));
+    }
+  }
+
+  for (int i = 0; i < times; i++) {
+    run_tests(conf);
+  }
 }

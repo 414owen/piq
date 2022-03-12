@@ -25,7 +25,8 @@ VEC_DECL(token);
 
 typedef struct {
   bool succeeded;
-  vec_token tokens;
+  token *tokens;
+  size_t token_amt;
   BUF_IND_T error_pos;
 } tokens_res;
 
