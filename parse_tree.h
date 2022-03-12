@@ -27,6 +27,7 @@ typedef enum {
   PT_AS,
   PT_UNIT,
   PT_UPPER_NAME,
+  PT_SIG,
 } parse_node_type;
 
 #define PT_FUN_PARAM_AMT(node) node.sub_amt - 2
