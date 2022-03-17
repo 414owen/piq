@@ -124,6 +124,13 @@ static void test_scanner_accepts(test_state *restrict state) {
   }
 
   {
+    test_start(state, "Sig");
+    static const token_type tokens[] = {TK_SIG};
+    test_scanner_tokens(state, "sig", STATIC_LEN(tokens), tokens);
+    test_end(state);
+  }
+
+  {
     test_start(state, "If");
     static const token_type tokens[] = {TK_IF};
     test_scanner_tokens(state, "if", STATIC_LEN(tokens), tokens);

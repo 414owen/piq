@@ -57,6 +57,7 @@ token_res scan(source_file file, BUF_IND_T start) {
   "if"    { return mk_token(TK_IF, start, pos - 1);             }
   "fn"    { return mk_token(TK_FN, start, pos - 1);             }
   "fun"   { return mk_token(TK_FUN, start, pos - 1);            }
+  "sig"   { return mk_token(TK_SIG, start, pos - 1);            }
   "as"    { return mk_token(TK_AS, start, pos - 1);             }
   lower_ident { return mk_token(TK_LOWER_NAME, start, pos - 1); }
   upper_ident { return mk_token(TK_UPPER_NAME, start, pos - 1); }

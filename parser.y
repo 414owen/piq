@@ -16,6 +16,7 @@
   LOWER_NAME
   OPEN_BRACKET
   OPEN_PAREN
+  SIG
   UPPER_NAME
   .
 
@@ -26,6 +27,7 @@
 %type params_tuple vec_node_ind
 %type exprs vec_node_ind
 %type toplevels vec_node_ind
+%type types vec_node_ind
 
 %include {
 
@@ -106,6 +108,7 @@ toplevel(RES) ::= OPEN_PAREN(O) toplevel_under(A) CLOSE_PAREN(C). {
 }
 
 toplevel_under ::= fun.
+toplevel_under ::= sig.
 
 int(RES) ::= INT(A).  { 
   token t = s->tokens[A];
@@ -214,6 +217,15 @@ fn(RES) ::= FN pattern(B) fun_body(C). {
   RES = s->nodes.len - 1;
 }
 
+sig(RES) ::= SIG lower_name(A) type(B). {
+  NODE_IND_T start = s->inds.len;
+  VEC_PUSH(&s->inds, A);
+  VEC_PUSH(&s->inds, B);
+  parse_node n = {.type = PT_FN, .subs_start = start, .sub_amt = 2};
+  VEC_PUSH(&s->nodes, n);
+  RES = s->nodes.len - 1;
+}
+
 fun(RES) ::= FUN lower_name(A) pattern(B) fun_body(C). {
   NODE_IND_T start = s->inds.len;
   VEC_PUSH(&s->inds, A);
@@ -315,7 +327,33 @@ pattern(RES) ::= OPEN_BRACKET pattern_tuple(A) CLOSE_BRACKET. {
   VEC_FREE(&A);
 }
 
+types(RES) ::= . {
+  vec_node_ind res = VEC_NEW;
+  RES = res;
+}
+
+types(RES) ::= types(A) type(B). {
+  VEC_PUSH(&A, B);
+  RES = A;
+}
+
 type ::= upper_name.
+
+type(RES) ::= OPEN_PAREN(O) type(A) types(B) CLOSE_PAREN(C). {
+  NODE_IND_T start = s->inds.len;
+  VEC_PUSH(&s->inds, A);
+  VEC_CAT(&s->inds, &B);
+  parse_node n = {
+    .type = PT_CALL,
+    .subs_start = start,
+    .sub_amt = B.len + 1,
+    .start = s->tokens[O].start,
+    .end = s->tokens[C].end,
+  };
+  VEC_PUSH(&s->nodes, n);
+  RES = s->nodes.len - 1;
+  VEC_FREE(&B);
+}
 
 typed(RES) ::= AS type(A) expr(B). {
   NODE_IND_T start = s->inds.len;

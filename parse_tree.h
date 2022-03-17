@@ -11,8 +11,8 @@
 
 typedef enum {
   PT_CALL,
-  // TODO this shouldn't exist, make it a call
   PT_CONSTRUCTION,
+  // Overloaded for type and lambda expression
   PT_FN,
   PT_FUN,
   PT_FUN_BODY,
@@ -22,7 +22,6 @@ typedef enum {
   PT_LOWER_NAME,
   PT_ROOT,
   PT_STRING,
-  PT_TOP_LEVEL,
   PT_TUP,
   PT_AS,
   PT_UNIT,
@@ -30,14 +29,17 @@ typedef enum {
   PT_SIG,
 } parse_node_type;
 
-#define PT_FUN_PARAM_AMT(node) node.sub_amt - 2
 #define PT_FUN_BINDING_IND(inds, node) inds[node.subs_start]
 #define PT_FUN_PARAM_IND(inds, node, i) inds[node.subs_start + i + 1]
 #define PT_FUN_BODY_IND(inds, node) inds[node.subs_start + 1 + PT_FUN_PARAM_AMT(node)]
 
-#define PT_FN_PARAM_AMT(node) node.sub_amt - 1
-#define PT_FN_PARAM_IND(inds, node, i) node.sub_a
-#define PT_FN_BODY_IND(inds, node, i) node.sub_b
+// lambda expression
+#define PT_FN_PARAM_IND(node) node.sub_a
+#define PT_FN_BODY_IND(node) node.sub_b
+
+#define PT_FN_TYPE_SUB_AMT 2
+#define PT_FN_TYPE_PARAM_IND(node) node.sub_a
+#define PT_FN_TYPE_RETURN_IND(node) node.sub_b
 
 #define PT_CALL_CALLEE_IND(inds, node) inds[node.subs_start]
 #define PT_CALL_PARAM_AMT(node, i) node.sub_amt - 1
@@ -61,6 +63,9 @@ typedef enum {
 #define PT_ROOT_SUB_IND(inds, node, i) inds[node.subs_start + i]
 
 // PT_STRING
+
+#define PT_SIG_BINDING_IND(node) node.sub_a
+#define PT_SIG_TYPE_IND(node) node.sub_b
 
 extern const char *const parse_node_strings[];
 
