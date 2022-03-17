@@ -13,6 +13,7 @@ typedef enum {
 VEC_DECL(print_action);
 
 const char *const parse_node_strings[] = {
+  [PT_SIG] = "Sig",
   [PT_CALL] = "Call",
   [PT_CONSTRUCTION] = "Constructor",
   [PT_FUN] = "Fun",
@@ -23,7 +24,6 @@ const char *const parse_node_strings[] = {
   [PT_LOWER_NAME] = "Lower name",
   [PT_ROOT] = "Root",
   [PT_STRING] = "String",
-  [PT_TOP_LEVEL] = "Top level",
   [PT_TUP] = "Tuple",
   [PT_AS] = "Typed",
   [PT_UNIT] = "Unit",
@@ -78,14 +78,6 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
           push_str(s, "\n");
         push_node(s, s->tree.inds[node.subs_start + i]);
       }
-      break;
-    case PT_TOP_LEVEL:
-      fputs("(Let ", s->out);
-      VEC_PUSH(&s->actions, PRINT_SOURCE);
-      VEC_PUSH(&s->node_stack, s->tree.inds[node.subs_start]);
-      push_str(s, " ");
-      push_node(s, s->tree.inds[node.subs_start + 1]);
-      push_str(s, ")");
       break;
     case PT_FUN:
       print_compound(s, "(Fun ", " ", ")", node);

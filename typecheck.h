@@ -41,7 +41,7 @@ typedef struct {
   // type sub-indices
   vec_node_ind type_inds;
   // index into types, one per parse_node
-  vec_node_ind node_types;
+  NODE_IND_T *node_types;
 
   parse_tree tree;
   source_file source;

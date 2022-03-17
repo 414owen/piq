@@ -12,6 +12,7 @@
 #define TK_LOWER_NAME                      10
 #define TK_OPEN_BRACKET                    11
 #define TK_OPEN_PAREN                      12
-#define TK_UPPER_NAME                      13
-#define TK_STRING                          14
-#define TK_UNIT                            15
+#define TK_SIG                             13
+#define TK_UPPER_NAME                      14
+#define TK_STRING                          15
+#define TK_UNIT                            16

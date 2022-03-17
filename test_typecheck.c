@@ -158,11 +158,11 @@ static void test_types_match(test_state *state, tc_res res, tc_test test) {
         continue;
       if (node.start == span.start && node.end == span.end) {
         seen = true;
-        if (!test_type_eq(res.types, res.type_inds, VEC_GET(res.node_types, j),
+        if (!test_type_eq(res.types, res.type_inds, res.node_types[j],
                           span.exp)) {
           stringstream *ss = ss_init();
           print_type(ss->stream, res.types.data, res.type_inds.data,
-                     VEC_GET(res.node_types, j));
+                     res.node_types[j]);
           char *str = ss_finalize(ss);
           failf(state, "Type mismatch in test. Got: %s", str);
           free(str);
@@ -223,7 +223,7 @@ static void run_typecheck_test(test_state *state, const char *input,
   VEC_FREE(&res.errors);
   VEC_FREE(&res.types);
   VEC_FREE(&res.type_inds);
-  VEC_FREE(&res.node_types);
+  free(res.node_types);
 
 end_b:
   free(pres.tree.inds);
@@ -331,7 +331,7 @@ void test_typecheck_errors(test_state *state) {
         .end = 18,
       },
     };
-    run_typecheck_error_test(state, "(fun a () I32 (1, 2))", STATIC_LEN(errors),
+    run_typecheck_error_test(state, "(fun a () (1, 2))", STATIC_LEN(errors),
                              errors);
   }
   test_end(state);
