@@ -1,8 +1,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "diagnostic.h"
 #include "test.h"
 #include "util.h"
+#include "token.h"
 
 static char *sep = " . ";
 

@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <time.h>
 
+#include "diagnostic.h"
+#include "token.h"
+#include "parse_tree.h"
 #include "term.h"
 #include "test.h"
 #include "util.h"
@@ -249,4 +252,37 @@ void write_test_results(test_state *state) {
   fflush(f);
   VEC_FREE(&aggs);
   VEC_FREE(&class_path);
+}
+
+tokens_res test_upto_tokens(test_state *state, char *input) {
+  source_file test_file = {.path = "parser-test", .data = input};
+  tokens_res tres = scan_all(test_file);
+  if (!tres.succeeded) {
+    stringstream *ss = ss_init();
+    format_error_ctx(ss->stream, input, tres.error_pos, tres.error_pos);
+    failf(state, "Parsing \"%s\" failed.\n%s", input, ss_finalize(ss));
+  }
+  return tres;
+}
+
+parse_tree_res test_upto_parse_tree(test_state *state, char *input) {
+  tokens_res tres = test_upto_tokens(state, input);
+  if (!tres.succeeded) {
+    parse_tree_res res = {
+      .succeeded = false,
+      .error_pos = 0,
+      .expected_amt = 0,
+      .expected = NULL,
+    };
+    return res;
+  }
+  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
+  if (!tres.succeeded) {
+    stringstream *ss = ss_init();
+    token t = tres.tokens[pres.error_pos];
+    format_error_ctx(ss->stream, input, t.start, t.end);
+    failf(state, "Parsing \"%s\" failed.\n%s", input, ss_finalize(ss));
+    free(pres.expected);
+  }
+  return pres;
 }
