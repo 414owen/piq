@@ -10,6 +10,29 @@ typedef enum {
   PRINT_SOURCE,
 } print_action;
 
+// Maybe at some point we'll need context?
+SUBS_TYPE subs_type(parse_node_type type) {
+  SUBS_TYPE res;
+  switch (type) {
+    case PT_INT:
+    case PT_LOWER_NAME:
+    case PT_UPPER_NAME:
+    case PT_STRING:
+    case PT_UNIT:
+      res = SUBS_NONE;
+      break;
+    case PT_CALL:
+    case PT_AS:
+    case PT_FN:
+      res = SUBS_TWO;
+      break;
+    default:
+      res = SUBS_EXTERNAL;
+      break;
+  }
+  return res;
+}
+
 VEC_DECL(print_action);
 
 const char *const parse_node_strings[] = {
@@ -57,10 +80,24 @@ static void push_source(printer_state *s, NODE_IND_T node) {
 static void print_compound(printer_state *s, char *prefix, char *sep,
                            char *terminator, parse_node node) {
   fputs(prefix, s->out);
-  for (uint16_t i = 0; i < node.sub_amt; i++) {
-    if (i > 0)
+  switch (subs_type(node.type)) {
+    case SUBS_NONE:
+      break;
+    case SUBS_ONE:
+      push_node(s, node.sub_a);
+      break;
+    case SUBS_TWO:
+      push_node(s, node.sub_a);
       push_str(s, sep);
-    push_node(s, s->tree.inds[node.subs_start + i]);
+      push_node(s, node.sub_b);
+      break;
+    case SUBS_EXTERNAL:
+      for (uint16_t i = 0; i < node.sub_amt; i++) {
+        if (i > 0)
+          push_str(s, sep);
+        push_node(s, s->tree.inds[node.subs_start + i]);
+      }
+      break;
   }
   push_str(s, terminator);
 }
@@ -68,6 +105,10 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
 static void print_node(printer_state *s, NODE_IND_T node_ind) {
   parse_node node = s->tree.nodes[node_ind];
   switch (node.type) {
+    case PT_SIG: {
+      print_compound(s, "(Sig ", " ", ")", node);
+      break;
+    }
     case PT_UNIT: {
       fputs("()", s->out);
       break;

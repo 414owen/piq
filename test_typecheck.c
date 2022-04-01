@@ -319,7 +319,7 @@ static void test_typecheck_succeeds(test_state *state) {
   test_group_end(state);
 }
 
-void test_typecheck_errors(test_state *state) {
+static void test_typecheck_errors(test_state *state) {
   test_group_start(state, "Produces errors");
 
   test_start(state, "I32 vs (Int, Int)");
@@ -331,8 +331,9 @@ void test_typecheck_errors(test_state *state) {
         .end = 18,
       },
     };
-    run_typecheck_error_test(state, "(fun a () (1, 2))", STATIC_LEN(errors),
-                             errors);
+    static const char *prog = "(sig a (fn () (I32, I32)))\n"
+                              "(fun a () (1, 2))";
+    run_typecheck_error_test(state, prog, STATIC_LEN(errors), errors);
   }
   test_end(state);
 
