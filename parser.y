@@ -27,7 +27,6 @@
 %type params_tuple vec_node_ind
 %type exprs vec_node_ind
 %type toplevels vec_node_ind
-%type types vec_node_ind
 
 %include {
 
@@ -210,9 +209,7 @@ compound_expr ::= fn.
 
 fn(RES) ::= FN pattern(B) fun_body(C). {
   NODE_IND_T start = s->inds.len;
-  VEC_PUSH(&s->inds, B);
-  VEC_PUSH(&s->inds, C);
-  parse_node n = {.type = PT_FN, .subs_start = start, .sub_amt = 2};
+  parse_node n = {.type = PT_FN, .sub_a = B, .sub_b = C};
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
 }
@@ -221,7 +218,7 @@ sig(RES) ::= SIG lower_name(A) type(B). {
   NODE_IND_T start = s->inds.len;
   VEC_PUSH(&s->inds, A);
   VEC_PUSH(&s->inds, B);
-  parse_node n = {.type = PT_FN, .subs_start = start, .sub_amt = 2};
+  parse_node n = {.type = PT_SIG, .subs_start = start, .sub_amt = 2};
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
 }
@@ -327,39 +324,36 @@ pattern(RES) ::= OPEN_BRACKET pattern_tuple(A) CLOSE_BRACKET. {
   VEC_FREE(&A);
 }
 
-types(RES) ::= . {
-  vec_node_ind res = VEC_NEW;
-  RES = res;
-}
-
-types(RES) ::= types(A) type(B). {
-  VEC_PUSH(&A, B);
-  RES = A;
-}
-
 type ::= upper_name.
 
-type(RES) ::= OPEN_PAREN(O) type(A) types(B) CLOSE_PAREN(C). {
-  NODE_IND_T start = s->inds.len;
-  VEC_PUSH(&s->inds, A);
-  VEC_CAT(&s->inds, &B);
+type ::= unit.
+
+type(RES) ::= OPEN_PAREN(A) FN type(B) type(C) CLOSE_PAREN(D). {
+  parse_node n = {
+    .type = PT_FN,
+    .sub_a = B,
+    .sub_b = C,
+    .start = s->tokens[A].start,
+    .end = s->tokens[D].end,
+  };
+  VEC_PUSH(&s->nodes, n);
+  RES = s->nodes.len - 1;
+}
+
+type(RES) ::= OPEN_PAREN(O) type(A) type(B) CLOSE_PAREN(C). {
   parse_node n = {
     .type = PT_CALL,
-    .subs_start = start,
-    .sub_amt = B.len + 1,
+    .sub_a = A,
+    .sub_b = B,
     .start = s->tokens[O].start,
     .end = s->tokens[C].end,
   };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
-  VEC_FREE(&B);
 }
 
 typed(RES) ::= AS type(A) expr(B). {
-  NODE_IND_T start = s->inds.len;
-  VEC_PUSH(&s->inds, A);
-  VEC_PUSH(&s->inds, B);
-  parse_node n = {.type = PT_AS, .subs_start = start, .sub_amt = 2};
+  parse_node n = {.type = PT_AS, .sub_a = A, .sub_b = B};
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
 }
@@ -378,14 +372,11 @@ tuple(RES) ::= expr(A) COMMA commapred(B). {
   VEC_FREE(&B);
 }
 
-call(RES) ::= expr(A) exprs(B). {
+call(RES) ::= expr(A) expr(B). {
   NODE_IND_T start = s->inds.len;
-  VEC_PUSH(&s->inds, A);
-  VEC_CAT(&s->inds, &B);
-  parse_node n = {.type = PT_CALL, .subs_start = start, .sub_amt = B.len + 1};
+  parse_node n = {.type = PT_CALL, .sub_a = A, .sub_b = B};
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
-  VEC_FREE(&B);
 }
 
 commapred(RES) ::= commapred(A) COMMA expr(B). {
@@ -476,13 +467,18 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
       .tree = {
         .node_amt = state.nodes.len,
         .root_ind = state.root_ind,
-        .nodes = VEC_FINALIZE(&state.nodes),
-        .inds = VEC_FINALIZE(&state.inds),
       },
       .error_pos = state.error_pos,
       .expected_amt = state.expected_amt,
       .expected = state.expected,
     };
+    if (res.succeeded) {
+      res.tree.nodes = VEC_FINALIZE(&state.nodes);
+      res.tree.inds = VEC_FINALIZE(&state.inds);
+    } else {
+      VEC_FREE(&state.nodes);
+      VEC_FREE(&state.inds);
+    }
     return res;
   }
 

@@ -10,6 +10,13 @@
 #define NODE_IND_T BUF_IND_T
 
 typedef enum {
+  SUBS_EXTERNAL = -1,
+  SUBS_NONE = 0,
+  SUBS_ONE = 1,
+  SUBS_TWO = 2,
+} SUBS_TYPE;
+
+typedef enum {
   PT_CALL,
   PT_CONSTRUCTION,
   // Overloaded for type and lambda expression
@@ -117,3 +124,4 @@ typedef struct {
 parse_tree_res parse(token *tokens, size_t token_amt);
 
 void print_parse_tree(FILE *f, source_file file, parse_tree t);
+SUBS_TYPE subs_type(parse_node_type type);

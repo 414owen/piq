@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <time.h>
 
+#include "token.h"
+#include "parse_tree.h"
 #include "vec.h"
 
 #define test_assert(state, b) \
@@ -71,3 +73,6 @@ void test_parser(test_state *state);
 void test_typecheck(test_state *state);
 
 void write_test_results(test_state *state);
+
+tokens_res test_upto_tokens(test_state *state, char *input);
+parse_tree_res test_upto_parse_tree(test_state *state, char *input);

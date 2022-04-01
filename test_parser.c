@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include "diagnostic.h"
 #include "parse_tree.h"
 #include "test.h"
 #include "vec.h"
@@ -14,27 +15,16 @@ typedef struct {
 
 static void test_parser_succeeds_on(test_state *state, char *input,
                                     expected_output output) {
-
-  source_file test_file = {.path = "parser-test", .data = input};
-  tokens_res tres = scan_all(test_file);
-  if (!tres.succeeded) {
-    failf(state, "Parser test \"%s\" failed tokenization at position %d", input,
-          tres.error_pos);
-    goto end_a;
-  }
-
-  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
-  if (!pres.succeeded) {
-    failf(state, "Parsing \"%s\" failed.", input);
-    free(pres.expected);
-    goto end_b;
-  }
+  parse_tree_res pres = test_upto_parse_tree(state, input);
+  if (!pres.succeeded)
+    return;
 
   switch (output.tag) {
     case ANY:
       break;
     case STRING: {
       stringstream *ss = ss_init();
+      source_file test_file = {.path = "parser-test", .data = input};
       print_parse_tree(ss->stream, test_file, pres.tree);
       char *str = ss_finalize(ss);
       if (strcmp(str, output.str) != 0) {
@@ -46,12 +36,8 @@ static void test_parser_succeeds_on(test_state *state, char *input,
     }
   }
 
-end_b:
   free(pres.tree.inds);
   free(pres.tree.nodes);
-
-end_a:
-  free(tres.tokens);
 }
 
 static void test_parser_succeeds_on_form(test_state *state, char *input,
@@ -205,32 +191,32 @@ static void test_parser_succeeds_kitchen_sink(test_state *state) {
   test_group_end(state);
 }
 
-static const token_type expr_start[] = {
-  TK_INT,        TK_LOWER_NAME, TK_OPEN_BRACKET,
+static const token_type comma_or_expr_start[] = {
+  TK_COMMA,      TK_INT,        TK_LOWER_NAME, TK_OPEN_BRACKET,
   TK_OPEN_PAREN, TK_UPPER_NAME, TK_STRING,
 };
+
+#define expr_start (comma_or_expr_start + 1)
+#define expr_start_amt (STATIC_LEN(comma_or_expr_start) - 1)
 
 static void test_if_failures(test_state *state) {
   test_group_start(state, "If");
 
   {
     test_start(state, "Empty");
-    test_parser_fails_on_form(state, "(if)", 2, STATIC_LEN(expr_start),
-                              expr_start);
+    test_parser_fails_on_form(state, "(if)", 2, expr_start_amt, expr_start);
     test_end(state);
   }
 
   {
     test_start(state, "One form");
-    test_parser_fails_on_form(state, "(if 1)", 3, STATIC_LEN(expr_start),
-                              expr_start);
+    test_parser_fails_on_form(state, "(if 1)", 3, expr_start_amt, expr_start);
     test_end(state);
   }
 
   {
     test_start(state, "Two form");
-    test_parser_fails_on_form(state, "(if 1 2)", 4, STATIC_LEN(expr_start),
-                              expr_start);
+    test_parser_fails_on_form(state, "(if 1 2)", 4, expr_start_amt, expr_start);
     test_end(state);
   }
 
@@ -244,7 +230,7 @@ static void test_if_failures(test_state *state) {
 
   {
     test_start(state, "Adjacent");
-    test_parser_fails_on_form(state, "(if if 1 2 3)", 2, STATIC_LEN(expr_start),
+    test_parser_fails_on_form(state, "(if if 1 2 3)", 2, expr_start_amt,
                               expr_start);
     test_end(state);
   }
@@ -267,8 +253,20 @@ static void test_fn_failures(test_state *state) {
   {
     test_start(state, "Without body");
     static token_type expected[] = {TK_UPPER_NAME};
-    test_parser_fails_on_form(state, "(fn ())", 3, STATIC_LEN(expr_start),
-                              expr_start);
+    test_parser_fails_on_form(state, "(fn ())", 3, expr_start_amt, expr_start);
+    test_end(state);
+  }
+
+  test_group_end(state);
+}
+
+static void test_call_failures(test_state *state) {
+  test_group_start(state, "Call");
+
+  {
+    test_start(state, "No params");
+    test_parser_fails_on_form(state, "(a)", 2, STATIC_LEN(comma_or_expr_start),
+                              comma_or_expr_start);
     test_end(state);
   }
 
@@ -336,16 +334,10 @@ static void test_parser_succeeds_compound(test_state *state) {
   }
 
   {
-    test_start(state, "Call without params");
-    test_parser_succeeds_on_form(state, "(add)",
-                                 expect_string("(Call (Lname add))"));
-    test_end(state);
-  }
-
-  {
     test_start(state, "Call");
     test_parser_succeeds_on_form(
-      state, "(add 1 2)", expect_string("(Call (Lname add) (Int 1) (Int 2))"));
+      state, "(add (1, 2))",
+      expect_string("(Call (Lname add) ((Int 1), (Int 2)))"));
     test_end(state);
   }
 
@@ -400,15 +392,13 @@ static void test_mismatched_parens(test_state *state) {
   {
     {
       test_start(state, "Single close");
-      test_parser_fails_on_form(state, ")", 0, STATIC_LEN(expr_start),
-                                expr_start);
+      test_parser_fails_on_form(state, ")", 0, expr_start_amt, expr_start);
       test_end(state);
     }
 
     {
       test_start(state, "Three close");
-      test_parser_fails_on_form(state, ")))", 0, STATIC_LEN(expr_start),
-                                expr_start);
+      test_parser_fails_on_form(state, ")))", 0, expr_start_amt, expr_start);
       test_end(state);
     }
   }
@@ -417,14 +407,26 @@ static void test_mismatched_parens(test_state *state) {
 }
 
 static void test_parser_succeeds_root(test_state *state) {
-  test_start(state, "Multiple top levels");
+  {
+    test_start(state, "Sig and fun");
 
-  expected_output out = {.tag = STRING,
-                         .str = "(Fun (Lname a) () (Body (Lname a)))\n(Fun "
-                                "(Lname b) () (Body (Lname b)))"};
-  test_parser_succeeds_on(state, "(fun a () a)(fun b () b)", out);
+    expected_output out = {.tag = STRING,
+                           .str = "(Sig (Lname a) (Fn () (Uname I32)))\n"
+                                  "(Fun (Lname a) () (Body (Int 12)))"};
+    test_parser_succeeds_on(state, "(sig a (fn () I32))(fun a () 12)", out);
 
-  test_end(state);
+    test_end(state);
+  }
+  {
+    test_start(state, "Multiple funs");
+
+    expected_output out = {.tag = STRING,
+                           .str = "(Fun (Lname a) () (Body (Lname a)))\n(Fun "
+                                  "(Lname b) () (Body (Lname b)))"};
+    test_parser_succeeds_on(state, "(fun a () a)(fun b () b)", out);
+
+    test_end(state);
+  }
 }
 
 static void test_parser_succeeds(test_state *state) {
@@ -447,6 +449,7 @@ static void test_parser_fails(test_state *state) {
   test_mismatched_parens(state);
   test_if_failures(state);
   test_fn_failures(state);
+  test_call_failures(state);
 
   test_group_end(state);
 }

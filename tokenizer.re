@@ -84,6 +84,7 @@ tokens_res scan_all(source_file file) {
   for (;;) {
     tres = scan(file, ind);
     if (!tres.succeeded) {
+      VEC_FREE(&tokens);
       res.succeeded = false;
       res.error_pos = tres.tok.start;
       return res;
