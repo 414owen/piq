@@ -59,3 +59,7 @@ int mkdirp(char *path, mode_t mode);
 int directory_exists(const char *path);
 int rm_r(char *dir);
 bool prefix(const char *pre, const char *str);
+
+size_t count_char(char *data, int needle, size_t len);
+size_t split_buf_size(char *data, int needle, size_t len);
+void split(char *data, int needle, char **buf, size_t buf_size);

@@ -31,5 +31,5 @@ typedef struct {
 } tokens_res;
 
 token_res scan(source_file file, BUF_IND_T pos);
-
 tokens_res scan_all(source_file file);
+void free_tokens_res(tokens_res res);
