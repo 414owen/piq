@@ -34,8 +34,7 @@ static void test_parser_succeeds_on(test_state *state, char *input,
       }
     }
   }
-  free(pres.tree.inds);
-  free(pres.tree.nodes);
+  free_parse_tree_res(pres);
 }
 
 static void test_parser_succeeds_on_form(test_state *state, char *input,
@@ -401,6 +400,45 @@ static void test_mismatched_parens(test_state *state) {
   test_group_end(state);
 }
 
+static void test_parser_succeeds_on_type(test_state *state, char *in,
+                                         char *ast) {
+  char *full_ast;
+  asprintf(&full_ast, "(Sig (Lname a) %s)", ast);
+  char *full_in;
+  asprintf(&full_in, "(sig a %s)", in);
+  expected_output out = {.tag = STRING, .str = full_ast};
+  test_parser_succeeds_on(state, full_in, out);
+  free(full_ast);
+  free(full_in);
+}
+
+static void test_parser_succeeds_type(test_state *state) {
+  test_group_start(state, "Types");
+
+  {
+    char *in = "I32";
+    test_start(state, in);
+    test_parser_succeeds_on_type(state, in, "(Uname I32)");
+    test_end(state);
+  }
+
+  {
+    char *in = "(I32, I16)";
+    test_start(state, in);
+    test_parser_succeeds_on_type(state, in, "((Uname I32), (Uname I16))");
+    test_end(state);
+  }
+
+  {
+    char *in = "(I32, I16)";
+    test_start(state, in);
+    test_parser_succeeds_on_type(state, in, "((Uname I32), (Uname I16))");
+    test_end(state);
+  }
+
+  test_group_end(state);
+}
+
 static void test_parser_succeeds_root(test_state *state) {
   {
     test_start(state, "Sig and fun");
@@ -431,6 +469,7 @@ static void test_parser_succeeds(test_state *state) {
   test_parser_succeeds_compound(state);
   test_parser_succeeds_kitchen_sink(state);
   test_parser_succeeds_root(state);
+  test_parser_succeeds_type(state);
   if (!state->lite) {
     test_parser_robustness(state);
   }
