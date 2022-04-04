@@ -27,6 +27,7 @@
 %type params_tuple vec_node_ind
 %type exprs vec_node_ind
 %type toplevels vec_node_ind
+%type comma_types vec_node_ind
 
 %include {
 
@@ -338,6 +339,32 @@ type(RES) ::= OPEN_PAREN(A) FN type(B) type(C) CLOSE_PAREN(D). {
   };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
+}
+
+type(RES) ::= OPEN_PAREN(A) type(B) comma_types(C) CLOSE_PAREN(D). {
+  NODE_IND_T start = s->inds.len;
+  VEC_PUSH(&s->inds, B);
+  VEC_CAT(&s->inds, &C);
+  parse_node n = {
+    .type = PT_TUP,
+    .subs_start = start,
+    .sub_amt = C.len + 1,
+    .start = s->tokens[A].start,
+    .end = s->tokens[D].end,
+  };
+  VEC_FREE(&C);
+  VEC_PUSH(&s->nodes, n);
+  RES = s->nodes.len - 1;
+}
+
+comma_types(RES) ::= comma_types(A) COMMA type(B). {
+  VEC_PUSH(&A, B);
+  RES = A;
+}
+
+comma_types(RES) ::= . {
+  vec_node_ind res = VEC_NEW;
+  RES = res;
 }
 
 type(RES) ::= OPEN_PAREN(O) type(A) type(B) CLOSE_PAREN(C). {
