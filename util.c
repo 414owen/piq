@@ -287,3 +287,28 @@ void debug_assert_internal(bool b, char *file, size_t line) {
 bool prefix(const char *restrict pre, const char *restrict str) {
   return strncmp(pre, str, strlen(pre)) == 0;
 }
+
+size_t count_char(char *data, int needle, size_t len) {
+  size_t res;
+  char *cursor = data;
+  data += len;
+  while (true) {
+    cursor = strchr(cursor, needle);
+    if (cursor && cursor < data)
+      res += 1;
+    else
+      break;
+  }
+  return res;
+}
+
+size_t split_buf_size(char *data, int needle, size_t len) {
+  return count_char(data, needle, len) + 1;
+}
+
+void split(char *data, int needle, char **buf, size_t buf_size) {
+  for (size_t i = 0; i < buf_size; i++) {
+    data = strchr(data, needle);
+    buf[i] = data;
+  }
+}

@@ -12,15 +12,8 @@ static source_file test_file(const char *restrict input) {
 static void test_scanner_tokens(test_state *restrict state, char *restrict buf,
                                 size_t token_amt,
                                 const token_type *restrict tokens) {
-  BUF_IND_T ind = 0;
-  for (size_t i = 0; i < token_amt; i++) {
-    token_res t = scan(test_file(buf), ind);
-    test_assert_eq(state, t.succeeded, true);
-    if (state->current_failed)
-      break;
-    test_assert_eq(state, t.tok.type, tokens[i]);
-    ind = t.tok.end + 1;
-  }
+  tokens_res tres = test_upto_tokens(state, buf);
+  free_tokens_res(tres);
 }
 
 static void test_scanner_fails(test_state *restrict state, char *restrict buf,

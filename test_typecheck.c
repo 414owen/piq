@@ -177,19 +177,11 @@ static void test_types_match(test_state *state, tc_res res, tc_test test) {
 
 static void run_typecheck_test(test_state *state, const char *input,
                                tc_test test) {
-  source_file test_file = {.path = "parser-test", .data = input};
-  tokens_res tres = scan_all(test_file);
-  if (!tres.succeeded) {
-    failf(state, "Parser test \"%s\" failed tokenization at position %d", input,
-          tres.error_pos);
-    goto end_a;
-  }
-
-  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
+  source_file test_file = {.path = "typecheck-test", .data = input};
+  parse_tree_res pres = test_upto_parse_tree(state, input);
   if (!pres.succeeded) {
-    failf(state, "Parsing \"%s\" failed.", input);
-    free(pres.expected);
-    goto end_b;
+    free_parse_tree_res(pres);
+    return;
   }
 
   tc_res res = typecheck(test_file, pres.tree);
@@ -225,12 +217,7 @@ static void run_typecheck_test(test_state *state, const char *input,
   VEC_FREE(&res.type_inds);
   free(res.node_types);
 
-end_b:
-  free(pres.tree.inds);
-  free(pres.tree.nodes);
-
-end_a:
-  free(tres.tokens);
+  free_parse_tree_res(pres);
 }
 
 static const test_type i16 = {

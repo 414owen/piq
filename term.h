@@ -1,12 +1,5 @@
 #pragma once
 
-/*
- * This is free and unencumbered software released into the public domain.
- *
- * For more information, please refer to <https://unlicense.org>
- * From: https://gist.github.com/RabaDabaDoba/145049536f815903c79944599c6f952a
- */
-
 // Regular text
 #define BLK "\e[0;30m"
 #define RED "\e[0;31m"

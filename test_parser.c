@@ -16,26 +16,24 @@ typedef struct {
 static void test_parser_succeeds_on(test_state *state, char *input,
                                     expected_output output) {
   parse_tree_res pres = test_upto_parse_tree(state, input);
-  if (!pres.succeeded)
-    return;
-
-  switch (output.tag) {
-    case ANY:
-      break;
-    case STRING: {
-      stringstream *ss = ss_init();
-      source_file test_file = {.path = "parser-test", .data = input};
-      print_parse_tree(ss->stream, test_file, pres.tree);
-      char *str = ss_finalize(ss);
-      if (strcmp(str, output.str) != 0) {
-        failf(state, "Different parse trees.\nExpected: '%s'\nGot: '%s'",
-              output.str, str);
+  if (pres.succeeded) {
+    switch (output.tag) {
+      case ANY:
+        break;
+      case STRING: {
+        stringstream *ss = ss_init();
+        source_file test_file = {.path = "parser-test", .data = input};
+        print_parse_tree(ss->stream, test_file, pres.tree);
+        char *str = ss_finalize(ss);
+        if (strcmp(str, output.str) != 0) {
+          failf(state, "Different parse trees.\nExpected: '%s'\nGot: '%s'",
+                output.str, str);
+        }
+        free(str);
+        break;
       }
-      free(str);
-      break;
     }
   }
-
   free(pres.tree.inds);
   free(pres.tree.nodes);
 }
@@ -62,16 +60,16 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
                                  const token_type *expected) {
 
   source_file test_file = {.path = "parser-test", .data = input};
-  tokens_res tres = scan_all(test_file);
-  if (!tres.succeeded) {
-    failf(state, "Parser test \"%s\" failed tokenization at position %d", input,
-          tres.error_pos);
-    goto end_a;
-  }
+  tokens_res tres = test_upto_tokens(state, input);
+  if (!tres.succeeded)
+    return;
 
   parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (pres.succeeded) {
     failf(state, "Parsing \"%s\" was supposed to fail.", input);
+    free(pres.tree.inds);
+    free(pres.tree.nodes);
+    goto end_a;
   }
 
   if (pos != pres.error_pos) {
@@ -103,9 +101,6 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
   }
 
   free(pres.expected);
-  free(pres.tree.inds);
-  free(pres.tree.nodes);
-
 end_a:
   free(tres.tokens);
 }

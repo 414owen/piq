@@ -254,18 +254,19 @@ void write_test_results(test_state *state) {
   VEC_FREE(&class_path);
 }
 
-tokens_res test_upto_tokens(test_state *state, char *input) {
+tokens_res test_upto_tokens(test_state *state, const char *volatile input) {
   source_file test_file = {.path = "parser-test", .data = input};
   tokens_res tres = scan_all(test_file);
   if (!tres.succeeded) {
     stringstream *ss = ss_init();
     format_error_ctx(ss->stream, input, tres.error_pos, tres.error_pos);
-    failf(state, "Parsing \"%s\" failed.\n%s", input, ss_finalize(ss));
+    failf(state, "Scanning failed:\n%s", input, ss_finalize(ss));
   }
   return tres;
 }
 
-parse_tree_res test_upto_parse_tree(test_state *state, char *input) {
+parse_tree_res test_upto_parse_tree(test_state *state,
+                                    const char *volatile input) {
   tokens_res tres = test_upto_tokens(state, input);
   if (!tres.succeeded) {
     parse_tree_res res = {
@@ -274,15 +275,18 @@ parse_tree_res test_upto_parse_tree(test_state *state, char *input) {
       .expected_amt = 0,
       .expected = NULL,
     };
+    free_tokens_res(tres);
     return res;
   }
   parse_tree_res pres = parse(tres.tokens, tres.token_amt);
-  if (!tres.succeeded) {
+  if (!pres.succeeded) {
     stringstream *ss = ss_init();
     token t = tres.tokens[pres.error_pos];
     format_error_ctx(ss->stream, input, t.start, t.end);
-    failf(state, "Parsing \"%s\" failed.\n%s", input, ss_finalize(ss));
-    free(pres.expected);
+    char *error = ss_finalize(ss);
+    failf(state, "Parsing failed:\n%s", error);
+    free(error);
   }
+  free_tokens_res(tres);
   return pres;
 }
