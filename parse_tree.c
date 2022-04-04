@@ -216,3 +216,12 @@ void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
   VEC_FREE(&s.string_stack);
   VEC_FREE(&s.node_stack);
 }
+
+void free_parse_tree_res(parse_tree_res res) {
+  if (res.succeeded) {
+    free(res.tree.inds);
+    free(res.tree.nodes);
+  } else {
+    free(res.expected);
+  }
+}

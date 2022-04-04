@@ -98,3 +98,7 @@ tokens_res scan_all(source_file file) {
     ind = tres.tok.end + 1;
   }
 }
+
+void free_tokens_res(tokens_res res) {
+  free(res.tokens);
+}
