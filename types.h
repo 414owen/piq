@@ -12,8 +12,16 @@ typedef enum {
 
 typedef struct {
   type_tag tag;
-  NODE_IND_T sub_start;
-  NODE_IND_T sub_amt;
+  union {
+    struct {
+      NODE_IND_T sub_start;
+      NODE_IND_T sub_amt;
+    };
+    struct {
+      NODE_IND_T sub_a;
+      NODE_IND_T sub_b;
+    };
+  };
 } type;
 
 void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root);

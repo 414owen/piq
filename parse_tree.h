@@ -36,9 +36,9 @@ typedef enum {
   PT_SIG,
 } parse_node_type;
 
-#define PT_FUN_BINDING_IND(inds, node) inds[node.subs_start]
-#define PT_FUN_PARAM_IND(inds, node, i) inds[node.subs_start + i + 1]
-#define PT_FUN_BODY_IND(inds, node) inds[node.subs_start + 1 + PT_FUN_PARAM_AMT(node)]
+#define PT_FUN_BINDING_IND(inds, node) inds[node.subs_start + 0]
+#define PT_FUN_PARAM_IND(inds, node) inds[node.subs_start + 1]
+#define PT_FUN_BODY_IND(inds, node) inds[node.subs_start + 2]
 
 // lambda expression
 #define PT_FN_PARAM_IND(node) node.sub_a
@@ -63,6 +63,8 @@ typedef enum {
 
 #define PT_LIST_SUB_AMT(node) node.sub_amt
 #define PT_LIST_SUB_IND(inds, node, i) inds[node.subs_start + i]
+
+#define PT_LIST_TYPE_SUB(node) node.sub_a
 
 // PT_LOWER_NAME
 

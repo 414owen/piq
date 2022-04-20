@@ -13,7 +13,6 @@ typedef struct {
 
 void format_error_ctx(FILE *f, const char *restrict data, BUF_IND_T start,
                       BUF_IND_T end) {
-  fprintf(f, "%d-%d\n", start, end);
   fputs(RED "/---\n| " RESET, f);
   size_t cursor = start;
   {

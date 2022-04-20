@@ -9,7 +9,11 @@ typedef enum {
   TYPE_NOT_FOUND,
   AMBIGUOUS_TYPE,
   BINDING_NOT_FOUND,
+
+  // TODO Do we need this?
   TYPE_MISMATCH,
+
+  TYPE_HEAD_MISMATCH,
   LITERAL_MISMATCH,
   WRONG_ARITY,
   MISSING_SIG,
@@ -22,7 +26,10 @@ typedef struct {
   union {
     struct {
       NODE_IND_T expected;
-      NODE_IND_T got;
+      union {
+        NODE_IND_T got;
+        type_tag type_head;
+      };
     };
     struct {
       NODE_IND_T exp_param_amt;
@@ -48,3 +55,4 @@ typedef struct {
 } tc_res;
 
 tc_res typecheck(source_file source, parse_tree tree);
+void free_tc_res(tc_res res);
