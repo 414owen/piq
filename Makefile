@@ -1,4 +1,4 @@
-CFLAGS ?= -O2 -Wall -Wextra
+CFLAGS ?= -O2 -Wall -Wextra -pipe
 ALLCFLAGS ?= $(CFLAGS) -I./hedley
 CXXFLAGS ?= $(ALLCFLAGS) -fno-exceptions
 

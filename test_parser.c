@@ -155,11 +155,11 @@ static void test_parser_robustness(test_state *state) {
     stringstream *in = ss_init();
     static const size_t depth = 1000000;
     for (size_t i = 0; i < depth; i++) {
-      fputs("(add 1 ", in->stream);
+      fputs("(add (1, ", in->stream);
     }
     fputs("1", in->stream);
     for (size_t i = 0; i < depth; i++) {
-      putc(')', in->stream);
+      fputs("))", in->stream);
     }
     char *str = ss_finalize(in);
     expected_output out = {.tag = ANY};
@@ -443,10 +443,14 @@ static void test_parser_succeeds_root(test_state *state) {
   {
     test_start(state, "Sig and fun");
 
-    expected_output out = {.tag = STRING,
-                           .str = "(Sig (Lname a) (Fn () (Uname I32)))\n"
-                                  "(Fun (Lname a) () (Body (Int 12)))"};
-    test_parser_succeeds_on(state, "(sig a (fn () I32))(fun a () 12)", out);
+    expected_output out = {
+      .tag = STRING,
+      .str = "(Sig (Lname a) (Call (Uname Fn) ((), (Uname I32))))\n"
+             "(Fun (Lname a) () (Body (Int 12)))"};
+    test_parser_succeeds_on(state,
+                            "(sig a (Fn ((), I32)))\n"
+                            "(fun a () 12)",
+                            out);
 
     test_end(state);
   }

@@ -34,6 +34,56 @@ static void push_str(vec_print_action *stack, char *str) {
   VEC_PUSH(stack, act);
 }
 
+void print_type_head(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
+  type node = types[root];
+  static const char *str;
+  switch (node.tag) {
+    case T_UNIT:
+      str = "()";
+      break;
+    case T_I8:
+      str = "I8";
+      break;
+    case T_U8:
+      str = "U8";
+      break;
+    case T_I16:
+      str = "I16";
+      break;
+    case T_U16:
+      str = "U16";
+      break;
+    case T_I32:
+      str = "I32";
+      break;
+    case T_U32:
+      str = "U32";
+      break;
+    case T_I64:
+      str = "I64";
+      break;
+    case T_U64:
+      str = "U64";
+      break;
+    case T_UNKNOWN:
+      str = "<unknown>";
+      break;
+    case T_BOOL:
+      str = "Bool";
+      break;
+    case T_FN:
+      str = "Fn";
+      break;
+    case T_TUP:
+      str = "Tuple";
+      break;
+    case T_LIST:
+      str = "List";
+      break;
+  }
+  fputs(str, f);
+}
+
 void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
   vec_print_action stack = VEC_NEW;
   push_node(&stack, root);
@@ -47,47 +97,14 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
         type node = types[action.type_ind];
         size_t stack_top = stack.len;
         switch (node.tag) {
-          case T_UNKNOWN:
-            fputs("<unknown>", f);
-            break;
-          case T_UNIT:
-            fputs("()", f);
-            break;
-          case T_I8:
-            fputs("I8", f);
-            break;
-          case T_U8:
-            fputs("U8", f);
-            break;
-          case T_I16:
-            fputs("I16", f);
-            break;
-          case T_U16:
-            fputs("U16", f);
-            break;
-          case T_I32:
-            fputs("I32", f);
-            break;
-          case T_U32:
-            fputs("U32", f);
-            break;
-          case T_I64:
-            fputs("I64", f);
-            break;
-          case T_U64:
-            fputs("U64", f);
-            break;
           case T_FN:
-            fputs("(fn (", f);
+            fputs("(Fn (", f);
             for (size_t i = 0; i < node.sub_amt - 1; i++) {
               push_node(&stack, inds[node.sub_start + node.sub_amt]);
             }
             push_str(&stack, ") -> ");
             push_node(&stack, inds[node.sub_start + node.sub_amt - 1]);
             push_str(&stack, ")");
-            break;
-          case T_BOOL:
-            fputs("Bool", f);
             break;
           case T_TUP:
             putc('(', f);
@@ -101,6 +118,9 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
             fputs("[", f);
             push_node(&stack, node.sub_start);
             push_str(&stack, "]");
+            break;
+          default:
+            print_type_head(f, types, inds, root);
             break;
         }
         reverse_arbitrary(&VEC_DATA_PTR(&stack)[stack_top],

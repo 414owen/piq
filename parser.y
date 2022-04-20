@@ -10,6 +10,7 @@
   CLOSE_PAREN
   COMMA
   FN
+  FN_TYPE
   FUN
   IF
   INT
@@ -328,18 +329,6 @@ pattern(RES) ::= OPEN_BRACKET pattern_tuple(A) CLOSE_BRACKET. {
 type ::= upper_name.
 
 type ::= unit.
-
-type(RES) ::= OPEN_PAREN(A) FN type(B) type(C) CLOSE_PAREN(D). {
-  parse_node n = {
-    .type = PT_FN,
-    .sub_a = B,
-    .sub_b = C,
-    .start = s->tokens[A].start,
-    .end = s->tokens[D].end,
-  };
-  VEC_PUSH(&s->nodes, n);
-  RES = s->nodes.len - 1;
-}
 
 type(RES) ::= OPEN_PAREN(A) type(B) comma_types(C) CLOSE_PAREN(D). {
   NODE_IND_T start = s->inds.len;
