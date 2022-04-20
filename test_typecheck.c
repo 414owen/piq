@@ -30,6 +30,14 @@ static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
                  error.got);
       fputs("'", f);
       break;
+    case TYPE_HEAD_MISMATCH:
+      fputs("Type mismatch. Expected '", f);
+      print_type(f, res.types.data, res.type_inds.data, error.expected);
+      fputs("', got '", f);
+      print_type(f, VEC_DATA_PTR(&res.types), VEC_DATA_PTR(&res.type_inds),
+                 error.got);
+      fputs("'", f);
+      break;
     case LITERAL_MISMATCH:
       fputs("Literal mismatch. Expected '", f);
       print_type(f, VEC_DATA_PTR(&res.types), VEC_DATA_PTR(&res.type_inds),
@@ -210,13 +218,10 @@ static void run_typecheck_test(test_state *state, const char *input,
         failf(state, str, input);
         free(str);
       }
+      break;
   }
 
-  VEC_FREE(&res.errors);
-  VEC_FREE(&res.types);
-  VEC_FREE(&res.type_inds);
-  free(res.node_types);
-
+  free_tc_res(res);
   free_parse_tree_res(pres);
 }
 
@@ -241,10 +246,10 @@ static void test_typecheck_succeeds(test_state *state) {
   test_group_start(state, "Succeeds");
 
   {
-    const char *input = "(fn a () I16 2)";
+    const char *input = "(sig a (Fn () I16))\n"
+                        "(fun a () 2)";
     test_start(state, "Return type");
     {
-#define type_amt 1
       exp_type_span spans[] = {{
         .start = 9,
         .end = 11,
@@ -252,17 +257,15 @@ static void test_typecheck_succeeds(test_state *state) {
       }};
       tc_test test = {
         .type = TYPE_MATCHES,
-        .span_amt = type_amt,
+        .span_amt = STATIC_LEN(spans),
         .spans = spans,
       };
-#undef type_amt
       run_typecheck_test(state, input, test);
     }
     test_end(state);
 
     test_start(state, "Return value");
     {
-#define type_amt 1
       exp_type_span spans[] = {{
         .start = 13,
         .end = 13,
@@ -270,10 +273,9 @@ static void test_typecheck_succeeds(test_state *state) {
       }};
       tc_test test = {
         .type = TYPE_MATCHES,
-        .span_amt = type_amt,
+        .span_amt = STATIC_LEN(spans),
         .spans = spans,
       };
-#undef type_amt
       run_typecheck_test(state, input, test);
     }
     test_end(state);
@@ -286,7 +288,6 @@ static void test_typecheck_succeeds(test_state *state) {
     };
 
     {
-#define type_amt 1
       exp_type_span spans[] = {{
         .start = 4,
         .end = 4,
@@ -294,10 +295,9 @@ static void test_typecheck_succeeds(test_state *state) {
       }};
       tc_test test = {
         .type = TYPE_MATCHES,
-        .span_amt = type_amt,
+        .span_amt = STATIC_LEN(spans),
         .spans = spans,
       };
-#undef type_amt
       run_typecheck_test(state, input, test);
     }
     test_end(state);
@@ -318,7 +318,7 @@ static void test_typecheck_errors(test_state *state) {
         .end = 18,
       },
     };
-    static const char *prog = "(sig a (fn () (I32, I32)))\n"
+    static const char *prog = "(sig a (Fn ((), (I32, I32))))\n"
                               "(fun a () (1, 2))";
     run_typecheck_error_test(state, prog, STATIC_LEN(errors), errors);
   }
@@ -345,7 +345,7 @@ static void test_typecheck_errors(test_state *state) {
         .type_got = got,
       },
     };
-    run_typecheck_error_test(state, "(fn a () I32 (fn () I32 1))",
+    run_typecheck_error_test(state, "(fun a () I32 (fn () I32 1))",
                              STATIC_LEN(errors), errors);
   }
   test_end(state);
@@ -359,7 +359,7 @@ static void test_typecheck_errors(test_state *state) {
         .end = 15,
       },
     };
-    run_typecheck_error_test(state, "(fn a () I32 [3])", STATIC_LEN(errors),
+    run_typecheck_error_test(state, "(fun a () I32 [3])", STATIC_LEN(errors),
                              errors);
   }
   test_end(state);
@@ -373,7 +373,7 @@ static void test_typecheck_errors(test_state *state) {
         .end = 16,
       },
     };
-    run_typecheck_error_test(state, "(fn a () I32 \"hi\")", STATIC_LEN(errors),
+    run_typecheck_error_test(state, "(fun a () I32 \"hi\")", STATIC_LEN(errors),
                              errors);
   }
   test_end(state);
@@ -387,13 +387,13 @@ static void test_typecheck_errors(test_state *state) {
         .end = 18,
       },
     };
-    run_typecheck_error_test(state, "(fn a () String 321)", STATIC_LEN(errors),
+    run_typecheck_error_test(state, "(fun a () String 321)", STATIC_LEN(errors),
                              errors);
   }
   test_end(state);
 
   test_start(state, "String vs String");
-  { run_typecheck_error_test(state, "(fn a () String \"hi\")", 0, NULL); }
+  { run_typecheck_error_test(state, "(fun a () String \"hi\")", 0, NULL); }
   test_end(state);
 
   // TODO enable when I add list type parsing
