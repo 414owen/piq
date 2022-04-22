@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include "parse_tree.h"
@@ -32,6 +33,8 @@ typedef struct {
   };
 } type;
 
+// tree_node_repr type_repr(type_tag tag);
+bool inline_types_eq(type a, type b);
 void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root);
 
 VEC_DECL(type);

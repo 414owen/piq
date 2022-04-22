@@ -127,7 +127,7 @@ static NODE_IND_T mk_type_inline(typecheck_state *state, type_tag tag,
   };
   for (size_t i = 0; i < state->res.types.len; i++) {
     type t2 = VEC_GET(state->res.types, i);
-    if (memcmp(&t2, &t, sizeof(type)) == 0) {
+    if (inline_types_eq(t, t2)) {
       return i;
     }
   }
@@ -187,7 +187,7 @@ static void setup_type_env(typecheck_state *state) {
     NODE_IND_T start_type_ind = state->res.types.len;
     for (NODE_IND_T i = 0; i < STATIC_LEN(primitive_types); i++) {
       VEC_PUSH(&state->type_type_inds, start_type_ind + i);
-      type t = {.tag = primitive_types[i], .sub_start = 0, .sub_amt = 0};
+      type t = {.tag = primitive_types[i], .arity = 0, .sub_start = 0, .sub_amt = 0};
       VEC_PUSH(&state->res.types, t);
       bs_push(&state->type_is_builtin, true);
     }
