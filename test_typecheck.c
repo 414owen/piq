@@ -44,9 +44,6 @@ static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
                  error.expected);
       fputs("'", f);
       break;
-    case WRONG_ARITY:
-      fputs("Wrong arity", f);
-      break;
     case MISSING_SIG:
       fputs("Missing type signature", f);
       break;
@@ -313,7 +310,7 @@ static void test_typecheck_errors(test_state *state) {
   {
     static const tc_err_test errors[] = {
       {
-        .type = LITERAL_MISMATCH,
+        .type = TYPE_HEAD_MISMATCH,
         .start = 13,
         .end = 18,
       },

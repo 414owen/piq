@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include <assert.h>
@@ -149,3 +150,6 @@ void __vec_replicate(vec_void *vec, void *el, size_t amt, size_t elemsize);
 typedef char* string;
 
 VEC_DECL(string);
+
+typedef uint32_t u8;
+VEC_DECL(u8);

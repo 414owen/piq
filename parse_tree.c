@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "ast_meta.h"
 #include "parse_tree.h"
 #include "util.h"
 #include "vec.h"
@@ -11,8 +12,8 @@ typedef enum {
 } print_action;
 
 // Maybe at some point we'll need context?
-SUBS_TYPE subs_type(parse_node_type type) {
-  SUBS_TYPE res;
+tree_node_repr subs_type(parse_node_type type) {
+  tree_node_repr res;
   switch (type) {
     case PT_INT:
     case PT_LOWER_NAME:
@@ -24,6 +25,7 @@ SUBS_TYPE subs_type(parse_node_type type) {
     case PT_CALL:
     case PT_AS:
     case PT_FN:
+    case PT_SIG:
       res = SUBS_TWO;
       break;
     default:

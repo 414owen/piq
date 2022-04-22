@@ -2,19 +2,13 @@
 
 #include <stdio.h>
 
+#include "ast_meta.h"
 #include "consts.h"
 #include "parser.h"
 #include "token.h"
 #include "vec.h"
 
 #define NODE_IND_T BUF_IND_T
-
-typedef enum {
-  SUBS_EXTERNAL = -1,
-  SUBS_NONE = 0,
-  SUBS_ONE = 1,
-  SUBS_TWO = 2,
-} SUBS_TYPE;
 
 typedef enum {
   PT_CALL,
@@ -48,9 +42,8 @@ typedef enum {
 #define PT_FN_TYPE_PARAM_IND(node) node.sub_a
 #define PT_FN_TYPE_RETURN_IND(node) node.sub_b
 
-#define PT_CALL_CALLEE_IND(inds, node) inds[node.subs_start]
-#define PT_CALL_PARAM_AMT(node, i) node.sub_amt - 1
-#define PT_CALL_PARAM_IND(inds, node, i) inds[node.subs_start + 1 + i]
+#define PT_CALL_CALLEE_IND(node) node.sub_a
+#define PT_CALL_PARAM_IND(node) node.sub_b
 
 #define PT_FUN_BODY_STMT_AMT(inds, node) node.sub_amt
 #define PT_FUN_BODY_STMT_ind(inds, node, i) inds[node.subs_start + i]
@@ -75,6 +68,9 @@ typedef enum {
 
 #define PT_SIG_BINDING_IND(node) node.sub_a
 #define PT_SIG_TYPE_IND(node) node.sub_b
+
+#define PT_TUP_SUB_AMT(node) node.sub_amt
+#define PT_TUP_SUB_IND(inds, node, i) inds[node.subs_start + i]
 
 extern const char *const parse_node_strings[];
 
@@ -126,5 +122,5 @@ typedef struct {
 parse_tree_res parse(token *tokens, size_t token_amt);
 
 void print_parse_tree(FILE *f, source_file file, parse_tree t);
-SUBS_TYPE subs_type(parse_node_type type);
+tree_node_repr subs_type(parse_node_type type);
 void free_parse_tree_res(parse_tree_res res);
