@@ -451,6 +451,9 @@ static void tc_mk_type(typecheck_state *state) {
     case PT_CALL: {
       NODE_IND_T callee_ind = state->res.node_types[node.sub_a];
       type callee = VEC_GET(state->res.types, callee_ind);
+      if (callee.tag == T_UNKNOWN) {
+        break;
+      }
       uint8_t arity = callee.arity;
       if (arity == 0) {
         tc_error err = {
@@ -515,7 +518,7 @@ static void tc_node(typecheck_state *state) {
               parse_node prev_toplevel =
                 state->res.tree.nodes[prev_toplevel_ind];
               switch (prev_toplevel.type) {
-                case PT_SIG:
+               case PT_SIG:
                 case PT_FUN: {
                   NODE_IND_T prev_name_ind =
                     PT_FUN_BINDING_IND(state->res.tree.inds, toplevel);
