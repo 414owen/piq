@@ -65,6 +65,15 @@ static tree_node_repr type_repr(type_tag tag) {
   return res;
 }
 
+bool inline_types_eq(type a, type b) {
+  bool res = true;
+  res &= a.tag == b.tag;
+  res &= a.arity == b.arity;
+  res &= a.sub_a == b.sub_a;
+  res &= a.sub_b == b.sub_b;
+  return res;
+}
+
 void print_type_head(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
   type node = types[root];
   static const char *str;
