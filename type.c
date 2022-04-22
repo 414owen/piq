@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "ast_meta.h"
 #include "consts.h"
 #include "types.h"
 #include "vec.h"
@@ -32,6 +33,36 @@ static void push_str(vec_print_action *stack, char *str) {
     .str = str,
   };
   VEC_PUSH(stack, act);
+}
+
+static tree_node_repr type_repr(type_tag tag) {
+  tree_node_repr res;
+  switch (tag) {
+    case T_UNKNOWN:
+    case T_UNIT:
+    case T_I8:
+    case T_U8:
+    case T_I16:
+    case T_U16:
+    case T_I32:
+    case T_U32:
+    case T_I64:
+    case T_U64:
+    case T_BOOL:
+      res = SUBS_NONE;
+      break;
+    case T_LIST:
+      res = SUBS_ONE;
+      break;
+    case T_FN:
+    case T_CALL:
+      res = SUBS_TWO;
+      break;
+    case T_TUP:
+      res = SUBS_EXTERNAL;
+      break;
+  }
+  return res;
 }
 
 void print_type_head(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
@@ -116,7 +147,7 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
             break;
           case T_LIST:
             fputs("[", f);
-            push_node(&stack, node.sub_start);
+            push_node(&stack, node.sub_a);
             push_str(&stack, "]");
             break;
           default:

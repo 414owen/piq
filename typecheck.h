@@ -9,13 +9,13 @@ typedef enum {
   TYPE_NOT_FOUND,
   AMBIGUOUS_TYPE,
   BINDING_NOT_FOUND,
+  WRONG_ARITY,
 
   // TODO Do we need this?
   TYPE_MISMATCH,
 
   TYPE_HEAD_MISMATCH,
   LITERAL_MISMATCH,
-  WRONG_ARITY,
   MISSING_SIG,
 } tc_error_type;
 
@@ -36,7 +36,6 @@ typedef struct {
       NODE_IND_T got_param_amt;
     };
   };
-
 } tc_error;
 
 VEC_DECL(tc_error);
