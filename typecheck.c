@@ -187,7 +187,8 @@ static void setup_type_env(typecheck_state *state) {
     NODE_IND_T start_type_ind = state->res.types.len;
     for (NODE_IND_T i = 0; i < STATIC_LEN(primitive_types); i++) {
       VEC_PUSH(&state->type_type_inds, start_type_ind + i);
-      type t = {.tag = primitive_types[i], .arity = 0, .sub_start = 0, .sub_amt = 0};
+      type t = {
+        .tag = primitive_types[i], .arity = 0, .sub_start = 0, .sub_amt = 0};
       VEC_PUSH(&state->res.types, t);
       bs_push(&state->type_is_builtin, true);
     }
@@ -478,8 +479,8 @@ static void tc_mk_type(typecheck_state *state) {
 }
 
 static void tc_node(typecheck_state *state) {
-
   NODE_IND_T node_ind = state->current_node_ind;
+  uint8_t stage = state->current_stage;
   parse_node node = state->res.tree.nodes[node_ind];
   NODE_IND_T wanted_ind = state->wanted[node_ind];
   bool is_wanted = wanted_ind != state->unknown_ind;
@@ -520,7 +521,7 @@ static void tc_node(typecheck_state *state) {
               parse_node prev_toplevel =
                 state->res.tree.nodes[prev_toplevel_ind];
               switch (prev_toplevel.type) {
-               case PT_SIG:
+                case PT_SIG:
                 case PT_FUN: {
                   NODE_IND_T prev_name_ind =
                     PT_FUN_BINDING_IND(state->res.tree.inds, toplevel);
