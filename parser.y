@@ -112,7 +112,6 @@ toplevels(RES) ::= toplevels(A) toplevel(B) . {
 toplevel(RES) ::= OPEN_PAREN(O) toplevel_under(A) CLOSE_PAREN(C). {
   BREAK_PARSER;
   token t = s->tokens[O];
-  NODE_IND_T A_visible = A;
   VEC_DATA_PTR(&s->nodes)[A].start = t.start;
   t = s->tokens[C];
   VEC_DATA_PTR(&s->nodes)[A].end = t.end;
@@ -232,7 +231,6 @@ compound_expr ::= fn.
 
 fn(RES) ::= FN pattern(B) fun_body(C). {
   BREAK_PARSER;
-  NODE_IND_T start = s->inds.len;
   parse_node n = {.type = PT_FN, .sub_a = B, .sub_b = C};
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
@@ -240,7 +238,6 @@ fn(RES) ::= FN pattern(B) fun_body(C). {
 
 sig(RES) ::= SIG lower_name(A) type(B). {
   BREAK_PARSER;
-  NODE_IND_T start = s->inds.len;
   parse_node n = {.type = PT_SIG, .sub_a = A, .sub_b = B};
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
@@ -392,7 +389,7 @@ type_inside_parens(RES) ::= type(B) comma_types(C). {
 type_inside_parens(RES) ::= FN_TYPE type(A) type(B). {
   BREAK_PARSER;
   parse_node n = {
-    .type = PT_FN,
+    .type = PT_FN_TYPE,
     .sub_a = A,
     .sub_b = B,
   };
@@ -449,7 +446,6 @@ tuple(RES) ::= expr(A) COMMA commapred(B). {
 
 call(RES) ::= expr(A) expr(B). {
   BREAK_PARSER;
-  NODE_IND_T start = s->inds.len;
   parse_node n = {.type = PT_CALL, .sub_a = A, .sub_b = B};
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;

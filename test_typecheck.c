@@ -318,7 +318,7 @@ static void test_typecheck_errors(test_state *state) {
         .end = 18,
       },
     };
-    static const char *prog = "(sig a (Fn ((), (I32, I32))))\n"
+    static const char *prog = "(sig a (Fn () (I32, I32)))\n"
                               "(fun a () (1, 2))";
     run_typecheck_error_test(state, prog, STATIC_LEN(errors), errors);
   }
