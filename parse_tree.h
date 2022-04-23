@@ -15,6 +15,7 @@ typedef enum {
   PT_CONSTRUCTION,
   // Overloaded for type and lambda expression
   PT_FN,
+  PT_FN_TYPE,
   PT_FUN,
   PT_FUN_BODY,
   PT_IF,
@@ -72,7 +73,7 @@ typedef enum {
 #define PT_TUP_SUB_AMT(node) node.sub_amt
 #define PT_TUP_SUB_IND(inds, node, i) inds[node.subs_start + i]
 
-extern const char *const parse_node_strings[];
+const char *parse_node_string(parse_node_type type);
 
 typedef struct {
   parse_node_type type;

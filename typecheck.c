@@ -404,7 +404,7 @@ static void tc_mk_type(typecheck_state *state) {
       }
       break;
     }
-    case PT_FN: {
+    case PT_FN_TYPE: {
       NODE_IND_T param_ind = PT_FN_TYPE_PARAM_IND(node);
       NODE_IND_T return_ind = PT_FN_TYPE_RETURN_IND(node);
       switch (stage) {
@@ -416,6 +416,7 @@ static void tc_mk_type(typecheck_state *state) {
             {.tag = TC_TYPE, .node_ind = node_ind, .stage = 1},
           };
           VEC_APPEND(&state->stack, STATIC_LEN(actions), actions);
+          break;
         }
         // Combine
         case 1: {
@@ -803,12 +804,6 @@ static void tc_node(typecheck_state *state) {
           push_tc_err(state, err);
         }
       }
-
-      {
-        tc_action actions[] = {{
-          .tag = TC_WANT,
-        }};
-      }
       break;
     }
 
@@ -984,7 +979,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
         default: {
           fprintf(debug_out, "\nNode ind: '%d'\n", action.node_ind);
           parse_node node = tree.nodes[action.node_ind];
-          fprintf(debug_out, "Node: '%s'\n", parse_node_strings[node.type]);
+          fprintf(debug_out, "Node: '%s'\n", parse_node_string(node.type));
           format_error_ctx(debug_out, source.data, node.start, node.end);
           break;
         }

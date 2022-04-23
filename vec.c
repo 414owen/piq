@@ -188,7 +188,6 @@ vec_void *__vec_pop(vec_void *vec) {
 
 // returns minimum heap-allocated buffer
 char *__vec_finalize(vec_void *vec, size_t elemsize) {
-  const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
 #if INLINE_VEC_BYTES > 0
   if (vec->len <= inline_amt) {
     __vec_resize_internal_to_external(vec, vec->len, elemsize);

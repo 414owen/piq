@@ -48,7 +48,6 @@ void format_error_ctx(FILE *f, const char *restrict data, BUF_IND_T start,
   fputs(RESET, f);
   {
     size_t nls_wanted = ERROR_LINES_CTX + 1;
-    char c = data[cursor];
     while (nls_wanted > 0) {
       char c = data[cursor];
       switch (c) {

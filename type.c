@@ -120,6 +120,9 @@ void print_type_head(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
     case T_LIST:
       str = "List";
       break;
+    case T_CALL:
+      str = "Call";
+      break;
   }
   fputs(str, f);
 }

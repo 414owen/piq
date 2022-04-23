@@ -58,7 +58,6 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
                                  NODE_IND_T expected_amt,
                                  const token_type *expected) {
 
-  source_file test_file = {.path = "parser-test", .data = input};
   tokens_res tres = test_upto_tokens(state, input);
   if (!tres.succeeded)
     return;
