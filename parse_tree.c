@@ -25,6 +25,7 @@ tree_node_repr subs_type(parse_node_type type) {
     case PT_CALL:
     case PT_AS:
     case PT_FN:
+    case PT_FN_TYPE:
     case PT_SIG:
       res = SUBS_TWO;
       break;
@@ -37,22 +38,28 @@ tree_node_repr subs_type(parse_node_type type) {
 
 VEC_DECL(print_action);
 
-const char *const parse_node_strings[] = {
-  [PT_SIG] = "Sig",
-  [PT_CALL] = "Call",
-  [PT_CONSTRUCTION] = "Constructor",
-  [PT_FUN] = "Fun",
-  [PT_FUN_BODY] = "Fun body",
-  [PT_IF] = "If",
-  [PT_INT] = "Int",
-  [PT_LIST] = "List",
-  [PT_LOWER_NAME] = "Lower name",
-  [PT_ROOT] = "Root",
-  [PT_STRING] = "String",
-  [PT_TUP] = "Tuple",
-  [PT_AS] = "Typed",
-  [PT_UNIT] = "Unit",
-  [PT_UPPER_NAME] = "Upper name",
+const char *parse_node_string(parse_node_type type) {
+  const char *res;
+  switch (type) {
+    case PT_AS: res = "Typed"; break;
+    case PT_CALL: res = "Call"; break;
+    case PT_CONSTRUCTION: res = "Constructor"; break;
+    case PT_FN: res = "Fn"; break;
+    case PT_FN_TYPE: res = "Fn type"; break;
+    case PT_FUN_BODY: res = "Fun body"; break;
+    case PT_FUN: res = "Fun"; break;
+    case PT_IF: res = "If"; break;
+    case PT_INT: res = "Int"; break;
+    case PT_LIST: res = "List"; break;
+    case PT_LOWER_NAME: res = "Lower name"; break;
+    case PT_ROOT: res = "Root"; break;
+    case PT_SIG: res = "Sig"; break;
+    case PT_STRING: res = "String"; break;
+    case PT_TUP: res = "Tuple"; break;
+    case PT_UNIT: res = "Unit"; break;
+    case PT_UPPER_NAME: res = "Upper name"; break;
+  }
+  return res;
 };
 
 typedef struct {
