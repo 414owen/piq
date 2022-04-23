@@ -402,6 +402,7 @@ static void tc_mk_type(typecheck_state *state) {
           break;
         }
       }
+      break;
     }
     case PT_FN: {
       NODE_IND_T param_ind = PT_FN_TYPE_PARAM_IND(node);
@@ -1007,10 +1008,12 @@ tc_res typecheck(source_file source, parse_tree tree) {
         break;
       case TC_NODE:
         state.current_node_ind = action.node_ind;
+        state.current_stage = action.stage;
         tc_node(&state);
         break;
       case TC_TYPE:
         state.current_node_ind = action.node_ind;
+        state.current_stage = action.stage;
         tc_mk_type(&state);
         break;
     }
