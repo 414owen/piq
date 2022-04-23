@@ -55,6 +55,7 @@ token_res scan(source_file file, BUF_IND_T start) {
   str = ["]([^"\\\n] | "\\" [^\n])*["];
   str     { return mk_token(TK_STRING, start, pos - 1);         }
   "if"    { return mk_token(TK_IF, start, pos - 1);             }
+  "Fn"    { return mk_token(TK_FN_TYPE, start, pos - 1);             }
   "fn"    { return mk_token(TK_FN, start, pos - 1);             }
   "fun"   { return mk_token(TK_FUN, start, pos - 1);            }
   "sig"   { return mk_token(TK_SIG, start, pos - 1);            }

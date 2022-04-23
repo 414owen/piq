@@ -367,7 +367,14 @@ type ::= upper_name.
 
 type ::= unit.
 
-type(RES) ::= OPEN_PAREN(A) type(B) comma_types(C) CLOSE_PAREN(D). {
+type(RES) ::= OPEN_PAREN(A) type_inside_parens(B) CLOSE_PAREN(D). {
+  BREAK_PARSER;
+  VEC_GET(s->nodes, B).start = s->tokens[A].start;
+  VEC_GET(s->nodes, B).end = s->tokens[D].end;
+  RES = B;
+}
+
+type_inside_parens(RES) ::= type(B) comma_types(C). {
   BREAK_PARSER;
   NODE_IND_T start = s->inds.len;
   VEC_PUSH(&s->inds, B);
@@ -376,10 +383,19 @@ type(RES) ::= OPEN_PAREN(A) type(B) comma_types(C) CLOSE_PAREN(D). {
     .type = PT_TUP,
     .subs_start = start,
     .sub_amt = C.len + 1,
-    .start = s->tokens[A].start,
-    .end = s->tokens[D].end,
   };
   VEC_FREE(&C);
+  VEC_PUSH(&s->nodes, n);
+  RES = s->nodes.len - 1;
+}
+
+type_inside_parens(RES) ::= FN_TYPE type(A) type(B). {
+  BREAK_PARSER;
+  parse_node n = {
+    .type = PT_FN,
+    .sub_a = A,
+    .sub_b = B,
+  };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
 }
