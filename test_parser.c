@@ -445,10 +445,10 @@ static void test_parser_succeeds_root(test_state *state) {
 
     expected_output out = {
       .tag = STRING,
-      .str = "(Sig (Lname a) (Call (Uname Fn) ((), (Uname I32))))\n"
+      .str = "(Sig (Lname a) (Fn () (Uname I32)))\n"
              "(Fun (Lname a) () (Body (Int 12)))"};
     test_parser_succeeds_on(state,
-                            "(sig a (Fn ((), I32)))\n"
+                            "(sig a (Fn () I32))\n"
                             "(fun a () 12)",
                             out);
 
