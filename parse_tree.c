@@ -41,23 +41,57 @@ VEC_DECL(print_action);
 const char *parse_node_string(parse_node_type type) {
   const char *res;
   switch (type) {
-    case PT_AS: res = "Typed"; break;
-    case PT_CALL: res = "Call"; break;
-    case PT_CONSTRUCTION: res = "Constructor"; break;
-    case PT_FN: res = "Fn"; break;
-    case PT_FN_TYPE: res = "Fn type"; break;
-    case PT_FUN_BODY: res = "Fun body"; break;
-    case PT_FUN: res = "Fun"; break;
-    case PT_IF: res = "If"; break;
-    case PT_INT: res = "Int"; break;
-    case PT_LIST: res = "List"; break;
-    case PT_LOWER_NAME: res = "Lower name"; break;
-    case PT_ROOT: res = "Root"; break;
-    case PT_SIG: res = "Sig"; break;
-    case PT_STRING: res = "String"; break;
-    case PT_TUP: res = "Tuple"; break;
-    case PT_UNIT: res = "Unit"; break;
-    case PT_UPPER_NAME: res = "Upper name"; break;
+    case PT_AS:
+      res = "Typed";
+      break;
+    case PT_CALL:
+      res = "Call";
+      break;
+    case PT_CONSTRUCTION:
+      res = "Constructor";
+      break;
+    case PT_FN:
+      res = "Fn";
+      break;
+    case PT_FN_TYPE:
+      res = "Fn type";
+      break;
+    case PT_FUN_BODY:
+      res = "Fun body";
+      break;
+    case PT_FUN:
+      res = "Fun";
+      break;
+    case PT_IF:
+      res = "If";
+      break;
+    case PT_INT:
+      res = "Int";
+      break;
+    case PT_LIST:
+      res = "List";
+      break;
+    case PT_LOWER_NAME:
+      res = "Lower name";
+      break;
+    case PT_ROOT:
+      res = "Root";
+      break;
+    case PT_SIG:
+      res = "Sig";
+      break;
+    case PT_STRING:
+      res = "String";
+      break;
+    case PT_TUP:
+      res = "Tuple";
+      break;
+    case PT_UNIT:
+      res = "Unit";
+      break;
+    case PT_UPPER_NAME:
+      res = "Upper name";
+      break;
   }
   return res;
 };
@@ -132,6 +166,7 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
     case PT_FUN:
       print_compound(s, "(Fun ", " ", ")", node);
       break;
+    case PT_FN_TYPE:
     case PT_FN:
       print_compound(s, "(Fn ", " ", ")", node);
       break;
