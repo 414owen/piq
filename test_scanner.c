@@ -1,5 +1,6 @@
 #include <stdbool.h>
 
+#include "diagnostic.h"
 #include "consts.h"
 #include "test.h"
 #include "token.h"
@@ -9,11 +10,46 @@ static source_file test_file(const char *restrict input) {
   return file;
 }
 
-static void test_scanner_tokens(test_state *restrict state, char *restrict buf,
-                                size_t token_amt,
+extern char *yyTokenName[];
+
+static char *print_tokens(size_t token_amt, const token_type *restrict tokens) {
+  stringstream *ss = ss_init();
+  fputc('[', ss->stream);
+  for (size_t i = 0; i < token_amt; i++) {
+    fputs(yyTokenName[tokens[i]], ss->stream);
+  }
+  fputc(']', ss->stream);
+  return ss_finalize(ss);
+}
+
+static void test_scanner_tokens(test_state *restrict state,
+                                char *restrict input, size_t token_amt,
                                 const token_type *restrict tokens) {
-  tokens_res tres = test_upto_tokens(state, buf);
-  free_tokens_res(tres);
+  source_file test_file = {.path = "parser-test", .data = input};
+  tokens_res tres = test_upto_tokens(state, input);
+
+  if (tres.succeeded) {
+    bool tokens_match = tres.token_amt == token_amt + 1;
+    if (tokens_match) {
+      for (size_t i = 0; i < token_amt; i++) {
+        tokens_match &= tokens[i] == tres.tokens[i].type;
+      }
+    }
+    if (!tokens_match) {
+      char *exp = print_tokens(token_amt, tokens);
+      size_t token_type_bytes = sizeof(token_type) * tres.token_amt;
+      token_type *got_tokens = stalloc(token_type_bytes);
+      for (size_t i = 0; i < tres.token_amt; i++) {
+        got_tokens[i] = tres.tokens[i].type;
+      }
+      char *got = print_tokens(tres.token_amt, got_tokens);
+      failf(state, "Token mismatch: Expected %s, got %s", exp, got);
+      stfree(got_tokens, token_type_bytes);
+      free(exp);
+      free(got);
+    }
+    free(tres.tokens);
+  }
 }
 
 static void test_scanner_fails(test_state *restrict state, char *restrict buf,

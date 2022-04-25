@@ -245,7 +245,6 @@ static void test_fn_failures(test_state *state) {
 
   {
     test_start(state, "Without body");
-    static token_type expected[] = {TK_UPPER_NAME};
     test_parser_fails_on_form(state, "(fn ())", 3, expr_start_amt, expr_start);
     test_end(state);
   }
@@ -300,7 +299,6 @@ static void test_fn_succeeds(test_state *state) {
 
   {
     test_start(state, "Nested unit param");
-    static token_type expected[] = {TK_LOWER_NAME, TK_CLOSE_PAREN};
     test_parser_succeeds_on_form(state, "(fn (()) 1)",
                                  expect_string("(Fn (()) (Body (Int 1)))"));
     test_end(state);

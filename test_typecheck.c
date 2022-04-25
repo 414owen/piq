@@ -10,6 +10,9 @@
 static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
   tc_error error = VEC_GET(res.errors, err_ind);
   switch (error.type) {
+    case NEED_SIGNATURE:
+      fputs("Top level needs signature", f);
+      break;
     case INT_LARGER_THAN_MAX:
       fputs("Int doesn't fit into type", f);
       break;

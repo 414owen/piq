@@ -33,7 +33,11 @@ typedef struct {
   };
 } type;
 
-// tree_node_repr type_repr(type_tag tag);
+#define T_FN_PARAM_IND(node) node.sub_a
+#define T_FN_RET_IND(node) node.sub_b
+#define T_LIST_SUB_IND(node) node.sub_a
+
+tree_node_repr type_repr(type_tag tag);
 bool inline_types_eq(type a, type b);
 void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root);
 

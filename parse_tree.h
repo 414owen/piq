@@ -29,6 +29,7 @@ typedef enum {
   PT_UNIT,
   PT_UPPER_NAME,
   PT_SIG,
+  PT_LET,
 } parse_node_type;
 
 #define PT_FUN_BINDING_IND(inds, node) inds[node.subs_start + 0]
@@ -46,32 +47,29 @@ typedef enum {
 #define PT_CALL_CALLEE_IND(node) node.sub_a
 #define PT_CALL_PARAM_IND(node) node.sub_b
 
-#define PT_FUN_BODY_STMT_AMT(inds, node) node.sub_amt
-#define PT_FUN_BODY_STMT_ind(inds, node, i) inds[node.subs_start + i]
+#define PT_FUN_BODY_STMT_AMT(node) node.sub_amt
+#define PT_FUN_BODY_STMT_IND(inds, node, i) inds[node.subs_start + i]
 
 #define PT_IF_GET_COND(inds, node) inds[node.subs_start]
 #define PT_IF_GET_A(inds, node) inds[node.subs_start + 1]
 #define PT_IF_GET_B(inds, node) inds[node.subs_start + 2]
-
-// PT_INT
 
 #define PT_LIST_SUB_AMT(node) node.sub_amt
 #define PT_LIST_SUB_IND(inds, node, i) inds[node.subs_start + i]
 
 #define PT_LIST_TYPE_SUB(node) node.sub_a
 
-// PT_LOWER_NAME
-
 #define PT_ROOT_SUB_AMT(node) node.sub_amt
 #define PT_ROOT_SUB_IND(inds, node, i) inds[node.subs_start + i]
-
-// PT_STRING
 
 #define PT_SIG_BINDING_IND(node) node.sub_a
 #define PT_SIG_TYPE_IND(node) node.sub_b
 
 #define PT_TUP_SUB_AMT(node) node.sub_amt
 #define PT_TUP_SUB_IND(inds, node, i) inds[node.subs_start + i]
+
+#define PT_LET_BND_IND(node) node.sub_a
+#define PT_LET_VAL_IND(node) node.sub_b
 
 const char *parse_node_string(parse_node_type type);
 
