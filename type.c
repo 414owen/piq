@@ -35,8 +35,8 @@ static void push_str(vec_print_action *stack, char *str) {
   VEC_PUSH(stack, act);
 }
 
-static tree_node_repr type_repr(type_tag tag) {
-  tree_node_repr res;
+tree_node_repr type_repr(type_tag tag) {
+  tree_node_repr res = SUBS_EXTERNAL;
   switch (tag) {
     case T_UNKNOWN:
     case T_UNIT:
@@ -74,8 +74,7 @@ bool inline_types_eq(type a, type b) {
   return res;
 }
 
-void print_type_head(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
-  type node = types[root];
+static void print_type_head(FILE *f, type node) {
   static const char *str;
   switch (node.tag) {
     case T_UNIT:
@@ -141,19 +140,20 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
         size_t stack_top = stack.len;
         switch (node.tag) {
           case T_FN:
-            fputs("(Fn (", f);
-            for (size_t i = 0; i < node.sub_amt - 1; i++) {
-              push_node(&stack, inds[node.sub_start + node.sub_amt]);
-            }
-            push_str(&stack, ") -> ");
-            push_node(&stack, inds[node.sub_start + node.sub_amt - 1]);
+            fputs("(Fn ", f);
+            push_node(&stack, node.sub_a);
+            push_str(&stack, " -> ");
+            push_node(&stack, node.sub_b);
             push_str(&stack, ")");
             break;
           case T_TUP:
             putc('(', f);
-            for (size_t i = 0; i < node.sub_amt; i++) {
-              push_node(&stack, node.sub_start + node.sub_amt);
-              push_str(&stack, ", ");
+            if (node.sub_amt > 0) {
+              for (size_t i = 0; i < node.sub_amt - 1; i++) {
+                push_node(&stack, inds[node.sub_start + i]);
+                push_str(&stack, ", ");
+              }
+              push_node(&stack, inds[node.sub_start + node.sub_amt - 1]);
             }
             push_str(&stack, ")");
             break;
@@ -163,7 +163,7 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
             push_str(&stack, "]");
             break;
           default:
-            print_type_head(f, types, inds, root);
+            print_type_head(f, node);
             break;
         }
         reverse_arbitrary(&VEC_DATA_PTR(&stack)[stack_top],

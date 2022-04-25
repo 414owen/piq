@@ -39,8 +39,11 @@ tree_node_repr subs_type(parse_node_type type) {
 VEC_DECL(print_action);
 
 const char *parse_node_string(parse_node_type type) {
-  const char *res;
+  const char *res = NULL;
   switch (type) {
+    case PT_LET:
+      res = "Let";
+      break;
     case PT_AS:
       res = "Typed";
       break;
@@ -150,6 +153,10 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
   switch (node.type) {
     case PT_SIG: {
       print_compound(s, "(Sig ", " ", ")", node);
+      break;
+    }
+    case PT_LET: {
+      print_compound(s, "(Let ", " ", ")", node);
       break;
     }
     case PT_UNIT: {

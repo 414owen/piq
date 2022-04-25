@@ -19,6 +19,7 @@ void unimplemented(char *str, char *file, size_t line) {
           "line: %zu\n"
           "Giving up.\n",
           str, file, line);
+  exit(1);
 }
 
 void *memclone(void *src, size_t bytes) {
@@ -289,7 +290,7 @@ bool prefix(const char *restrict pre, const char *restrict str) {
 }
 
 size_t count_char(char *data, int needle, size_t len) {
-  size_t res;
+  size_t res = 0;
   char *cursor = data;
   data += len;
   while (true) {

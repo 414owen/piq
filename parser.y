@@ -19,6 +19,7 @@
   OPEN_PAREN
   SIG
   UPPER_NAME
+  LET
   .
 
 %type commapred vec_node_ind
@@ -26,8 +27,9 @@
 %type pattern_tuple vec_node_ind
 %type patterns vec_node_ind
 %type params_tuple vec_node_ind
-%type exprs vec_node_ind
+// %type exprs vec_node_ind
 %type toplevels vec_node_ind
+%type block vec_node_ind
 %type comma_types vec_node_ind
 
 %include {
@@ -109,6 +111,30 @@ toplevels(RES) ::= toplevels(A) toplevel(B) . {
   RES = A;
 }
 
+block(RES) ::= block_el(A). {
+  BREAK_PARSER;
+  vec_node_ind res = VEC_NEW;
+  VEC_PUSH(&res, A);
+  RES = res;
+}
+
+block(RES) ::= block(A) block_el(B). {
+  BREAK_PARSER;
+  VEC_PUSH(&A, B);
+  RES = A;
+}
+
+block_el ::= expr.
+
+block_el ::= let.
+
+let(RES) ::= OPEN_PAREN(O) LET lower_name(A) expr(B) CLOSE_PAREN(C). {
+  BREAK_PARSER;
+  parse_node n = {.type = PT_LET, .sub_a = A, .sub_b = B, .start = s->tokens[O].start, .end = s->tokens[C].end};
+  VEC_PUSH(&s->nodes, n);
+  RES = s->nodes.len - 1;
+}
+
 toplevel(RES) ::= OPEN_PAREN(O) toplevel_under(A) CLOSE_PAREN(C). {
   BREAK_PARSER;
   token t = s->tokens[O];
@@ -129,6 +155,7 @@ int(RES) ::= INT(A).  {
   RES = s->nodes.len - 1;
 }
 
+/*
 exprs(RES) ::= exprs(A) expr(B). {
   BREAK_PARSER;
   VEC_PUSH(&A, B);
@@ -140,6 +167,7 @@ exprs(RES) ::= . {
   vec_node_ind res = VEC_NEW;
   RES = res;
 }
+*/
 
 expr ::= name.
 
@@ -254,12 +282,11 @@ fun(RES) ::= FUN lower_name(A) pattern(B) fun_body(C). {
   RES = s->nodes.len - 1;
 }
 
-fun_body(RES) ::= expr(A) exprs(B). {
+fun_body(RES) ::= block(B). {
   BREAK_PARSER;
   NODE_IND_T start = s->inds.len;
-  VEC_PUSH(&s->inds, A);
   VEC_CAT(&s->inds, &B);
-  parse_node n = {.type = PT_FUN_BODY, .subs_start = start, .sub_amt = B.len + 1};
+  parse_node n = {.type = PT_FUN_BODY, .subs_start = start, .sub_amt = B.len};
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
   VEC_FREE(&B);

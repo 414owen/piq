@@ -15,5 +15,6 @@
 #define TK_OPEN_PAREN                      13
 #define TK_SIG                             14
 #define TK_UPPER_NAME                      15
-#define TK_STRING                          16
-#define TK_UNIT                            17
+#define TK_LET                             16
+#define TK_STRING                          17
+#define TK_UNIT                            18
