@@ -10,6 +10,7 @@ typedef enum {
   AMBIGUOUS_TYPE,
   BINDING_NOT_FOUND,
   WRONG_ARITY,
+  NEED_SIGNATURE,
 
   // TODO Do we need this?
   TYPE_MISMATCH,
