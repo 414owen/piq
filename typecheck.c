@@ -96,7 +96,8 @@ static NODE_IND_T find_type(typecheck_state *state, type_tag tag,
     type t = VEC_GET(state->res.types, i);
     if (t.tag != tag || t.sub_amt != sub_amt)
       continue;
-    if (memcmp(&VEC_DATA_PTR(&state->res.type_inds)[t.sub_start], subs,
+    NODE_IND_T *p1 = &VEC_DATA_PTR(&state->res.type_inds)[t.sub_start];
+    if (memcmp(p1, subs,
                sub_amt) != 0)
       continue;
     return i;
@@ -139,7 +140,7 @@ static NODE_IND_T mk_type_inline(typecheck_state *state, type_tag tag,
 }
 
 static NODE_IND_T mk_type(typecheck_state *state, type_tag tag,
-                          NODE_IND_T *subs, NODE_IND_T sub_amt) {
+                          uint8_t arity, NODE_IND_T *subs, NODE_IND_T sub_amt) {
   debug_assert(type_repr(tag) == SUBS_EXTERNAL);
   if (subs == NULL) {
     return mk_primitive_type(state, tag);
@@ -157,6 +158,7 @@ static NODE_IND_T mk_type(typecheck_state *state, type_tag tag,
   }
   type t = {
     .tag = tag,
+    .arity = arity,
     .sub_amt = sub_amt,
     .sub_start = ind,
   };
@@ -180,10 +182,10 @@ static void setup_type_env(typecheck_state *state) {
 
   // Prelude
   {
-    static const char *builtin_names[] = {"U8",  "U16", "U32", "U64",   "I8",
+    static const char *builtin_names[] = {"Bool", "U8",  "U16", "U32", "U64",   "I8",
                                           "I16", "I32", "I64", "String"};
 
-    static const type_tag primitive_types[] = {T_U8, T_U16, T_U32, T_U64,
+    static const type_tag primitive_types[] = {T_BOOL, T_U8, T_U16, T_U32, T_U64,
                                                T_I8, T_I16, T_I32, T_I64};
 
     VEC_APPEND(&state->type_env, STATIC_LEN(builtin_names), builtin_names);
@@ -339,7 +341,7 @@ static void tc_mk_type(typecheck_state *state) {
                   state->res.node_types[PT_TUP_SUB_IND(inds, node, i)];
               }
               state->res.node_types[node_ind] =
-                mk_type(state, T_TUP, sub_type_inds, PT_TUP_SUB_AMT(node));
+                mk_type(state, T_TUP, 0, sub_type_inds, PT_TUP_SUB_AMT(node));
               stfree(sub_type_inds, sub_bytes);
               break;
             }
@@ -476,7 +478,11 @@ static bool can_propagate_type(typecheck_state *state, parse_node from, parse_no
     default:
       return false;
   }
-  return compare_bnds(state->source.data, node_to_bnd(state->res.tree.nodes[a_bnd_ind]), node_to_bnd(state->res.tree.nodes[b_bnd_ind]));
+  return compare_bnds(
+    state->source.data,
+    node_to_bnd(state->res.tree.nodes[a_bnd_ind]),
+    node_to_bnd(state->res.tree.nodes[b_bnd_ind])
+  ) == EQ;
 }
 
 // enforce sigs => we're root level
@@ -661,26 +667,37 @@ static void tc_node(typecheck_state *state) {
     }
 
     case PT_TUP: {
-      for (NODE_IND_T i = 0; i < PT_TUP_SUB_AMT(node); i++) {
-        NODE_IND_T sub_ind = PT_TUP_SUB_IND(state->res.tree.inds, node, i);
-        tc_action action = {
-          .tag = TC_NODE,
-          .node_ind = sub_ind,
-          .stage = 0,
-        };
-        VEC_PUSH(&state->stack, action);
-      }
-      tc_action action = {.tag = TC_NODE, .node_ind = node_ind, .stage = 0};
-      VEC_PUSH(&state->stack, action);
-      if (is_wanted) {
-        if (wanted.tag != T_TUP || wanted.sub_amt != node.sub_amt) {
-          tc_error err = {
-            .type = LITERAL_MISMATCH,
-            .pos = node_ind,
-            .expected = wanted_ind,
-          };
-          push_tc_err(state, err);
-          state->stack.len -= node.sub_amt + 1;
+      switch (stage) {
+        case 0:
+          if (is_wanted) {
+            if (wanted.tag != T_TUP || wanted.sub_amt != node.sub_amt) {
+              tc_error err = {
+                .type = TYPE_HEAD_MISMATCH,
+                .pos = node_ind,
+                .expected = wanted_ind,
+              };
+              push_tc_err(state, err);
+              state->stack.len -= node.sub_amt + 1;
+            }
+          } else {
+            for (NODE_IND_T i = 0; i < PT_TUP_SUB_AMT(node); i++) {
+              NODE_IND_T sub_ind = PT_TUP_SUB_IND(state->res.tree.inds, node, i);
+              tc_action action = {
+                .tag = TC_NODE,
+                .node_ind = sub_ind,
+                .stage = 0,
+              };
+              VEC_PUSH(&state->stack, action);
+            }
+            tc_action action = {.tag = TC_NODE, .node_ind = node_ind, .stage = 1};
+            VEC_PUSH(&state->stack, action);
+          }
+        case 1: {
+          size_t subs_bytes = sizeof(NODE_IND_T) * node.sub_amt;
+          NODE_IND_T *subs = stalloc(subs_bytes);
+          state->res.node_types[node_ind] = mk_type(state, T_TUP, 0, subs, node.sub_amt);
+          stfree(subs, subs_bytes);
+          break;
         }
       }
       break;
