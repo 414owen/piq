@@ -149,11 +149,11 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
           case T_TUP:
             putc('(', f);
             if (node.sub_amt > 0) {
-              for (size_t i = 0; i < node.sub_amt - 1; i++) {
-                push_node(&stack, inds[node.sub_start + i]);
+              for (size_t i = 0; i < T_TUP_SUB_AMT(node) - 1; i++) {
+                push_node(&stack, T_TUP_SUB_IND(inds, node, i));
                 push_str(&stack, ", ");
               }
-              push_node(&stack, inds[node.sub_start + node.sub_amt - 1]);
+              push_node(&stack, T_TUP_SUB_IND(inds, node, T_TUP_SUB_AMT(node) - 1));
             }
             push_str(&stack, ")");
             break;

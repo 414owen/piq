@@ -23,7 +23,7 @@ typedef struct {
   uint8_t arity;
   union {
     struct {
-      NODE_IND_T sub_start;
+      NODE_IND_T subs_start;
       NODE_IND_T sub_amt;
     };
     struct {
@@ -36,6 +36,8 @@ typedef struct {
 #define T_FN_PARAM_IND(node) node.sub_a
 #define T_FN_RET_IND(node) node.sub_b
 #define T_LIST_SUB_IND(node) node.sub_a
+#define T_TUP_SUB_AMT(node) node.sub_amt
+#define T_TUP_SUB_IND(inds, node, i) inds[node.subs_start + i]
 
 tree_node_repr type_repr(type_tag tag);
 bool inline_types_eq(type a, type b);
