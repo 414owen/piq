@@ -96,7 +96,7 @@ static NODE_IND_T find_type(typecheck_state *state, type_tag tag,
     type t = VEC_GET(state->res.types, i);
     if (t.tag != tag || t.sub_amt != sub_amt)
       continue;
-    NODE_IND_T *p1 = &VEC_DATA_PTR(&state->res.type_inds)[t.sub_start];
+    NODE_IND_T *p1 = &VEC_DATA_PTR(&state->res.type_inds)[t.subs_start];
     if (memcmp(p1, subs,
                sub_amt) != 0)
       continue;
@@ -113,7 +113,7 @@ static NODE_IND_T mk_primitive_type(typecheck_state *state, type_tag tag) {
   type t = {
     .tag = tag,
     .sub_amt = 0,
-    .sub_start = 0,
+    .subs_start = 0,
   };
   VEC_PUSH(&state->res.types, t);
   return state->res.types.len - 1;
@@ -160,7 +160,7 @@ static NODE_IND_T mk_type(typecheck_state *state, type_tag tag,
     .tag = tag,
     .arity = arity,
     .sub_amt = sub_amt,
-    .sub_start = ind,
+    .subs_start = ind,
   };
   VEC_PUSH(&state->res.types, t);
   return state->res.types.len - 1;
@@ -170,7 +170,7 @@ static NODE_IND_T mk_type(typecheck_state *state, type_tag tag,
 static void setup_type_env(typecheck_state *state) {
 
   {
-    type t = {.tag = T_UNKNOWN, .sub_amt = 0, .sub_start = 0};
+    type t = {.tag = T_UNKNOWN, .sub_amt = 0, .subs_start = 0};
     VEC_PUSH(&state->res.types, t);
     state->unknown_ind = state->res.types.len - 1;
   }
@@ -193,7 +193,7 @@ static void setup_type_env(typecheck_state *state) {
     for (NODE_IND_T i = 0; i < STATIC_LEN(primitive_types); i++) {
       VEC_PUSH(&state->type_type_inds, start_type_ind + i);
       type t = {
-        .tag = primitive_types[i], .arity = 0, .sub_start = 0, .sub_amt = 0};
+        .tag = primitive_types[i], .arity = 0, .subs_start = 0, .sub_amt = 0};
       VEC_PUSH(&state->res.types, t);
       bs_push(&state->type_is_builtin, true);
     }
@@ -271,7 +271,7 @@ static bool types_equal(typecheck_state *state, NODE_IND_T a, NODE_IND_T b) {
       return false;
     }
     for (size_t i = 0; i < ta.sub_amt; i++) {
-      node_ind_tup new_tup = {ta.sub_start + i, tb.sub_amt + i};
+      node_ind_tup new_tup = {ta.subs_start + i, tb.sub_amt + i};
       VEC_PUSH(&stack, new_tup);
     }
   }
@@ -670,7 +670,12 @@ static void tc_node(typecheck_state *state) {
       switch (stage) {
         case 0:
           if (is_wanted) {
-            if (wanted.tag != T_TUP || wanted.sub_amt != node.sub_amt) {
+            if (wanted.tag == T_TUP && wanted.sub_amt == node.sub_amt) {
+              for (NODE_IND_T i = 0; i < PT_TUP_SUB_AMT(node); i++) {
+                NODE_IND_T sub_ind = PT_TUP_SUB_IND(state->res.tree.inds, node, i);
+                state->wanted[sub_ind] = T_TUP_SUB_IND(state->res.type_inds.data, wanted, i);
+              }
+            } else {
               tc_error err = {
                 .type = TYPE_HEAD_MISMATCH,
                 .pos = node_ind,

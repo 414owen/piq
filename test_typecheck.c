@@ -118,7 +118,7 @@ static bool test_type_eq(vec_type types, vec_node_ind inds, NODE_IND_T root,
       break;
     }
     for (node_ind i = 0; i < tA.sub_amt; i++) {
-      VEC_PUSH(&stackA, VEC_GET(inds, tA.sub_start + i));
+      VEC_PUSH(&stackA, VEC_GET(inds, tA.subs_start + i));
       VEC_PUSH(&stackB, tB.subs[i]);
     }
   }
