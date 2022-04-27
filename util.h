@@ -35,6 +35,12 @@ typedef struct {
   size_t size;
 } stringstream;
 
+typedef enum {
+  LT = -1,
+  EQ = 0,
+  GT = 1,
+} order;
+
 size_t find_el(const void *haystack, size_t haystacklen, const void *needle, size_t needlelen);
 size_t find_range(const void *haystack, size_t el_size, size_t el_amt, const void *needle, size_t needle_els);
 

@@ -4,6 +4,7 @@
 #include "binding.h"
 #include "bitset.h"
 #include "scope.h"
+#include "util.h"
 
 // For a known-length, and a null-terminated string
 static bool strn1eq(const char *a, const char *b, size_t alen) {
@@ -18,7 +19,7 @@ static bool strn1eq(const char *a, const char *b, size_t alen) {
   return true;
 }
 
-int compare_bnds(const char *restrict source_file, binding a, binding b) {
+order compare_bnds(const char *restrict source_file, binding a, binding b) {
   return strncmp(source_file + a.start, source_file + b.start,
                  MIN(a.end - a.start, b.end - b.start));
 }
