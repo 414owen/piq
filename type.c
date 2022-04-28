@@ -153,7 +153,8 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
                 push_node(&stack, T_TUP_SUB_IND(inds, node, i));
                 push_str(&stack, ", ");
               }
-              push_node(&stack, T_TUP_SUB_IND(inds, node, T_TUP_SUB_AMT(node) - 1));
+              push_node(&stack,
+                        T_TUP_SUB_IND(inds, node, T_TUP_SUB_AMT(node) - 1));
             }
             push_str(&stack, ")");
             break;

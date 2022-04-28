@@ -364,8 +364,9 @@ static token_type inside_expr[] = {
   TK_LOWER_NAME, TK_OPEN_BRACKET, TK_OPEN_PAREN, TK_UPPER_NAME, TK_STRING};
 
 static token_type inside_block_el[] = {
-  TK_AS,         TK_FN,           TK_FUN,        TK_IF,         TK_INT,
-  TK_LOWER_NAME, TK_OPEN_BRACKET, TK_OPEN_PAREN, TK_UPPER_NAME, TK_LET, TK_STRING};
+  TK_AS,         TK_FN,         TK_FUN,          TK_IF,
+  TK_INT,        TK_LOWER_NAME, TK_OPEN_BRACKET, TK_OPEN_PAREN,
+  TK_UPPER_NAME, TK_LET,        TK_STRING};
 
 static const size_t inside_expr_amt = STATIC_LEN(inside_expr);
 
@@ -374,7 +375,8 @@ static void test_mismatched_parens(test_state *state) {
 
   {
     test_start(state, "Single open");
-    test_parser_fails_on_form(state, "( ", 1, STATIC_LEN(inside_block_el), inside_block_el);
+    test_parser_fails_on_form(state, "( ", 1, STATIC_LEN(inside_block_el),
+                              inside_block_el);
     test_end(state);
   }
 
