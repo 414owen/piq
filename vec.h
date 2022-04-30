@@ -113,6 +113,10 @@ void __vec_push(vec_void *vec, void *el, size_t elemsize);
   
 #define VEC_BACK(vec) VEC_PEEK(vec)
 
+#define VEC_FIRST(vec) VEC_GET((vec), 0)
+
+#define VEC_LAST(vec) VEC_GET((vec), (vec).len - 1)
+
 #define VEC_FREE(vec) if (VEC_IS_EXTERNAL(vec) && (vec)->data != NULL) { free((vec)->data); (vec)->data = NULL; }
 
 void __vec_clone(vec_void *dest, vec_void *src, size_t elemsize);

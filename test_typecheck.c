@@ -10,6 +10,9 @@
 static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
   tc_error error = VEC_GET(res.errors, err_ind);
   switch (error.type) {
+    case TUPLE_WRONG_ARITY:
+      fputs("Wrong number of tuple elements", f);
+      break;
     case NEED_SIGNATURE:
       fputs("Top level needs signature", f);
       break;
@@ -26,26 +29,23 @@ static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
       fputs("Binding not found", f);
       break;
     case TYPE_MISMATCH:
-      fputs("Type mismatch. Expected '", f);
+      fputs("Type mismatch. Expected ", f);
       print_type(f, res.types.data, res.type_inds.data, error.expected);
-      fputs("', got '", f);
+      fputs("\nGot ", f);
       print_type(f, VEC_DATA_PTR(&res.types), VEC_DATA_PTR(&res.type_inds),
                  error.got);
-      fputs("'", f);
       break;
     case TYPE_HEAD_MISMATCH:
-      fputs("Type mismatch. Expected '", f);
+      fputs("Type mismatch. Expected ", f);
       print_type(f, res.types.data, res.type_inds.data, error.expected);
-      fputs("', got '", f);
-      print_type(f, VEC_DATA_PTR(&res.types), VEC_DATA_PTR(&res.type_inds),
-                 error.got);
-      fputs("'", f);
+      fputs("\nGot: ", f);
+      print_type_head_placeholders(f, error.got_type_head, error.got_arity);
       break;
     case LITERAL_MISMATCH:
-      fputs("Literal mismatch. Expected '", f);
+      fputs("Literal mismatch. Expected ", f);
       print_type(f, VEC_DATA_PTR(&res.types), VEC_DATA_PTR(&res.type_inds),
                  error.expected);
-      fputs("'", f);
+      fputs("", f);
       break;
     case MISSING_SIG:
       fputs("Missing type signature", f);
@@ -56,7 +56,7 @@ static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
   }
   // fputs(":\n", f);
   parse_node node = res.tree.nodes[error.pos];
-  fprintf(f, " at %d-%d:\n", node.start, node.end);
+  fprintf(f, "\nAt %d-%d:\n", node.start, node.end);
   format_error_ctx(f, res.source.data, node.start, node.end);
 }
 
@@ -110,17 +110,34 @@ static bool test_type_eq(vec_type types, vec_node_ind inds, NODE_IND_T root,
   vec_test_type stackB = VEC_NEW;
   VEC_PUSH(&stackB, t);
   bool res = true;
-  while (stackA.len > 0) {
-    type tA = VEC_GET(types, VEC_POP(&stackA));
-    test_type tB = VEC_POP(&stackB);
-    if (tA.tag != tB.tag || tA.sub_amt != tB.sub_amt) {
+  while (true) {
+    if (stackA.len != stackB.len) {
       res = false;
       break;
     }
-    for (node_ind i = 0; i < tA.sub_amt; i++) {
-      VEC_PUSH(&stackA, VEC_GET(inds, tA.subs_start + i));
-      VEC_PUSH(&stackB, tB.subs[i]);
+    if (stackA.len == 0)
+      break;
+    type tA = VEC_GET(types, VEC_POP(&stackA));
+    test_type tB = VEC_POP(&stackB);
+    if (tA.tag != tB.tag) {
+      res = false;
+      break;
     }
+    switch (type_repr(tA.tag)) {
+      case SUBS_EXTERNAL:
+        VEC_APPEND(&stackA, tA.sub_amt, VEC_DATA_PTR(&inds) + tA.subs_start);
+        break;
+      case SUBS_ONE:
+        VEC_PUSH(&stackA, tA.sub_a);
+        break;
+      case SUBS_TWO:
+        VEC_PUSH(&stackA, tA.sub_a);
+        VEC_PUSH(&stackA, tA.sub_b);
+        break;
+      case SUBS_NONE:
+        break;
+    }
+    VEC_APPEND(&stackB, tB.sub_amt, tB.subs);
   }
   VEC_FREE(&stackA);
   VEC_FREE(&stackB);
@@ -234,6 +251,12 @@ static const test_type i16 = {
   .subs = NULL,
 };
 
+static const test_type unit = {
+  .tag = T_UNIT,
+  .sub_amt = 0,
+  .subs = NULL,
+};
+
 static void run_typecheck_error_test(test_state *state, const char *input,
                                      size_t error_amt,
                                      const tc_err_test *errors) {
@@ -254,8 +277,8 @@ static void test_typecheck_succeeds(test_state *state) {
     test_start(state, "Return type");
     {
       exp_type_span spans[] = {{
-        .start = 9,
-        .end = 11,
+        .start = 14,
+        .end = 16,
         .exp = i16,
       }};
       tc_test test = {
@@ -270,8 +293,8 @@ static void test_typecheck_succeeds(test_state *state) {
     test_start(state, "Return value");
     {
       exp_type_span spans[] = {{
-        .start = 13,
-        .end = 13,
+        .start = 30,
+        .end = 30,
         .exp = i16,
       }};
       tc_test test = {
@@ -284,16 +307,17 @@ static void test_typecheck_succeeds(test_state *state) {
     test_end(state);
 
     test_start(state, "Fn bnd");
-    static const test_type fn_type = {
+    const test_type fn_subs[] = {unit, i16};
+    const test_type fn_type = {
       .tag = T_FN,
-      .sub_amt = 1,
-      .subs = &i16,
+      .sub_amt = STATIC_LEN(fn_subs),
+      .subs = fn_subs,
     };
 
     {
       exp_type_span spans[] = {{
-        .start = 4,
-        .end = 4,
+        .start = 25,
+        .end = 25,
         .exp = fn_type,
       }};
       tc_test test = {
@@ -317,12 +341,12 @@ static void test_typecheck_errors(test_state *state) {
     static const tc_err_test errors[] = {
       {
         .type = TYPE_HEAD_MISMATCH,
-        .start = 13,
-        .end = 18,
+        .start = 30,
+        .end = 35,
       },
     };
-    static const char *prog = "(sig a (Fn () (I32, I32)))\n"
-                              "(fun a () (1, 2))";
+    static const char *prog = "(sig a (Fn () I32))\n"
+                              "(fun a () (2, 3))";
     run_typecheck_error_test(state, prog, STATIC_LEN(errors), errors);
   }
   test_end(state);
@@ -341,14 +365,16 @@ static void test_typecheck_errors(test_state *state) {
     };
     const tc_err_test errors[] = {
       {
-        .type = TYPE_MISMATCH,
-        .start = 13,
-        .end = 25,
+        .type = TYPE_HEAD_MISMATCH,
+        .start = 30,
+        .end = 38,
         .type_exp = i32,
         .type_got = got,
       },
     };
-    run_typecheck_error_test(state, "(fun a () I32 (fn () I32 1))",
+    run_typecheck_error_test(state,
+                             "(sig a (Fn () I32))\n"
+                             "(fun a () (fn () 1))",
                              STATIC_LEN(errors), errors);
   }
   test_end(state);
@@ -358,12 +384,14 @@ static void test_typecheck_errors(test_state *state) {
     const tc_err_test errors[] = {
       {
         .type = LITERAL_MISMATCH,
-        .start = 13,
-        .end = 15,
+        .start = 30,
+        .end = 32,
       },
     };
-    run_typecheck_error_test(state, "(fun a () I32 [3])", STATIC_LEN(errors),
-                             errors);
+    run_typecheck_error_test(state,
+                             "(sig a (Fn () I32))\n"
+                             "(fun a () [3])",
+                             STATIC_LEN(errors), errors);
   }
   test_end(state);
 
@@ -372,12 +400,14 @@ static void test_typecheck_errors(test_state *state) {
     const tc_err_test errors[] = {
       {
         .type = LITERAL_MISMATCH,
-        .start = 13,
-        .end = 16,
+        .start = 30,
+        .end = 33,
       },
     };
-    run_typecheck_error_test(state, "(fun a () I32 \"hi\")", STATIC_LEN(errors),
-                             errors);
+    run_typecheck_error_test(state,
+                             "(sig a (Fn () I32))\n"
+                             "(fun a () \"hi\")",
+                             STATIC_LEN(errors), errors);
   }
   test_end(state);
 
@@ -386,18 +416,20 @@ static void test_typecheck_errors(test_state *state) {
     const tc_err_test errors[] = {
       {
         .type = LITERAL_MISMATCH,
-        .start = 16,
-        .end = 18,
+        .start = 33,
+        .end = 35,
       },
     };
-    run_typecheck_error_test(state, "(fun a () String 321)", STATIC_LEN(errors),
-                             errors);
+    run_typecheck_error_test(state,
+                             "(sig a (Fn () String))\n"
+                             "(fun a () 321)",
+                             STATIC_LEN(errors), errors);
   }
   test_end(state);
 
-  test_start(state, "String vs String");
-  { run_typecheck_error_test(state, "(fun a () String \"hi\")", 0, NULL); }
-  test_end(state);
+  // test_start(state, "String vs String");
+  // { run_typecheck_error_test(state, "(sig a (Fn () (fun a () \"hi\")", 0,
+  // NULL); } test_end(state);
 
   // TODO enable when I add list type parsing
   // test_start(state, "[U8] vsString");
@@ -412,8 +444,8 @@ static void test_typecheck_errors(test_state *state) {
 void test_typecheck(test_state *state) {
   test_group_start(state, "Typecheck");
 
-  test_typecheck_errors(state);
   test_typecheck_succeeds(state);
+  test_typecheck_errors(state);
 
   test_group_end(state);
 }
