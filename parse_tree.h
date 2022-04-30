@@ -50,9 +50,9 @@ typedef enum {
 #define PT_FUN_BODY_STMT_AMT(node) node.sub_amt
 #define PT_FUN_BODY_STMT_IND(inds, node, i) inds[node.subs_start + i]
 
-#define PT_IF_GET_COND(inds, node) inds[node.subs_start]
-#define PT_IF_GET_A(inds, node) inds[node.subs_start + 1]
-#define PT_IF_GET_B(inds, node) inds[node.subs_start + 2]
+#define PT_IF_COND_IND(inds, node) inds[node.subs_start]
+#define PT_IF_A_IND(inds, node) inds[node.subs_start + 1]
+#define PT_IF_B_IND(inds, node) inds[node.subs_start + 2]
 
 #define PT_LIST_SUB_AMT(node) node.sub_amt
 #define PT_LIST_SUB_IND(inds, node, i) inds[node.subs_start + i]
@@ -70,6 +70,9 @@ typedef enum {
 
 #define PT_LET_BND_IND(node) node.sub_a
 #define PT_LET_VAL_IND(node) node.sub_b
+
+#define PT_AS_TYPE_IND(node) node.sub_a
+#define PT_AS_VAL_IND(node) node.sub_b
 
 const char *parse_node_string(parse_node_type type);
 
