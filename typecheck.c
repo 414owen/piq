@@ -14,22 +14,25 @@
 #include "util.h"
 #include "vec.h"
 
+typedef enum {
+  TC_POP_VARS,
+  // terms
+  TC_NODE,
+  // types
+  TC_TYPE,
+  // node index -> node type
+  TC_CLONE,
+  // node index -> node wanted
+  TC_WANT,
+  // node wanted -> node wanted
+  TC_CLONE_WANTED,
+  // type index -> node wanted
+  TC_WANT_TYPE,
+} action_tag;
+
 // TODO: replace TC_CLONE_LAST with TC_NODE_2
 typedef struct {
-  enum {
-    TC_POP_VARS,
-    // terms
-    TC_NODE,
-    // types
-    TC_TYPE,
-    // node type -> node type
-    TC_CLONE,
-    // node type -> node wanted
-    TC_WANT,
-    // node wanted -> node wanted
-    TC_CLONE_WANTED,
-  } tag;
-
+  action_tag tag;
   union {
     NODE_IND_T amt;
     struct {
@@ -483,6 +486,18 @@ static bool can_propagate_type(typecheck_state *state, parse_node from,
                       node_to_bnd(state->res.tree.nodes[b_bnd_ind])) == EQ;
 }
 
+static void push_tc_sig(typecheck_state *state, NODE_IND_T node_ind,
+                        parse_node node) {
+  NODE_IND_T name_ind = PT_SIG_BINDING_IND(node);
+  NODE_IND_T type_ind = PT_SIG_TYPE_IND(node);
+  tc_action actions[] = {
+    {.tag = TC_TYPE, .node_ind = type_ind, .stage = 0},
+    {.tag = TC_CLONE, .from = type_ind, .to = name_ind},
+    {.tag = TC_CLONE, .from = type_ind, .to = node_ind},
+  };
+  VEC_APPEND(&state->stack, STATIC_LEN(actions), actions);
+}
+
 // enforce sigs => we're root level
 static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
   NODE_IND_T node_ind = state->current_node_ind;
@@ -494,7 +509,8 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
   NODE_IND_T last_el_ind =
     state->res.tree.inds[node.subs_start + node.sub_amt - 1];
   if (is_wanted) {
-    tc_action action = {.tag = TC_WANT, .from = node_ind, .to = last_el_ind};
+    tc_action action = {
+      .tag = TC_CLONE_WANTED, .from = node_ind, .to = last_el_ind};
     VEC_PUSH(&state->stack, action);
   }
 
@@ -504,10 +520,12 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
   {
     NODE_IND_T sub_ind = state->res.tree.inds[node.subs_start];
     parse_node sub = state->res.tree.nodes[sub_ind];
-    if (enforce_sigs && sub.type != PT_SIG) {
+    if (sub.type == PT_SIG) {
+      push_tc_sig(state, sub_ind, sub);
+    } else if (enforce_sigs) {
       tc_error err = {
         .type = NEED_SIGNATURE,
-        .pos = 0,
+        .pos = sub_ind,
       };
       push_tc_err(state, err);
     }
@@ -518,14 +536,7 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
     parse_node sub = state->res.tree.nodes[sub_ind];
     switch (sub.type) {
       case PT_SIG: {
-        NODE_IND_T name_ind = PT_SIG_BINDING_IND(sub);
-        NODE_IND_T type_ind = PT_SIG_TYPE_IND(sub);
-        tc_action actions[] = {
-          {.tag = TC_TYPE, .node_ind = type_ind, .stage = 0},
-          {.tag = TC_CLONE, .from = type_ind, .to = name_ind},
-          {.tag = TC_CLONE, .from = type_ind, .to = sub_ind},
-        };
-        VEC_APPEND(&state->stack, STATIC_LEN(actions), actions);
+        push_tc_sig(state, sub_ind, sub);
         break;
       }
       case PT_LET:
@@ -674,37 +685,42 @@ static void tc_node(typecheck_state *state) {
       switch (stage) {
         case 0:
           if (is_wanted) {
-            if (wanted.tag == T_TUP && wanted.sub_amt == node.sub_amt) {
-              for (NODE_IND_T i = 0; i < PT_TUP_SUB_AMT(node); i++) {
-                NODE_IND_T sub_ind =
-                  PT_TUP_SUB_IND(state->res.tree.inds, node, i);
-                state->wanted[sub_ind] =
-                  T_TUP_SUB_IND(state->res.type_inds.data, wanted, i);
-              }
-            } else {
+            if (wanted.tag != T_TUP ||
+                T_TUP_SUB_AMT(wanted) != PT_TUP_SUB_AMT(node)) {
               tc_error err = {
                 .type = TYPE_HEAD_MISMATCH,
                 .pos = node_ind,
                 .expected = wanted_ind,
+                .got_type_head = T_TUP,
+                .got_arity = PT_TUP_SUB_AMT(node),
               };
               push_tc_err(state, err);
               state->stack.len -= node.sub_amt + 1;
+              break;
             }
-          } else {
-            for (NODE_IND_T i = 0; i < PT_TUP_SUB_AMT(node); i++) {
-              NODE_IND_T sub_ind =
-                PT_TUP_SUB_IND(state->res.tree.inds, node, i);
-              tc_action action = {
+          }
+          for (NODE_IND_T i = 0; i < PT_TUP_SUB_AMT(node); i++) {
+            NODE_IND_T sub_ind = PT_TUP_SUB_IND(state->res.tree.inds, node, i);
+            tc_action actions[] = {
+              {
+                .tag = TC_WANT_TYPE,
+                .from = T_TUP_SUB_IND(state->res.type_inds.data, wanted, i),
+                .to = sub_ind,
+              },
+              {
                 .tag = TC_NODE,
                 .node_ind = sub_ind,
                 .stage = 0,
-              };
-              VEC_PUSH(&state->stack, action);
-            }
-            tc_action action = {
-              .tag = TC_NODE, .node_ind = node_ind, .stage = 1};
-            VEC_PUSH(&state->stack, action);
+              }};
+            VEC_APPEND(&state->stack, STATIC_LEN(actions), actions);
           }
+          tc_action action = {
+            .tag = TC_NODE,
+            .node_ind = node_ind,
+            .stage = 1,
+          };
+          VEC_PUSH(&state->stack, action);
+          break;
         case 1: {
           size_t subs_bytes = sizeof(NODE_IND_T) * node.sub_amt;
           NODE_IND_T *subs = stalloc(subs_bytes);
@@ -841,9 +857,11 @@ static void tc_node(typecheck_state *state) {
               tc_error err = {
                 .type = TYPE_HEAD_MISMATCH,
                 .expected = wanted_ind,
-                .type_head = T_FN,
+                .got_type_head = T_FN,
+                .pos = node_ind,
               };
               push_tc_err(state, err);
+              break;
             }
           }
           tc_action actions[] = {
@@ -874,14 +892,18 @@ static void tc_node(typecheck_state *state) {
         case 0: {
           if (is_wanted) {
             if (wanted.tag == T_FN) {
-              state->wanted[param_ind] = T_FN_PARAM_IND(wanted);
-              state->wanted[body_ind] = T_FN_RET_IND(wanted);
+              tc_action actions[] = {{.tag = TC_WANT_TYPE,
+                                      .from = T_FN_PARAM_IND(wanted),
+                                      .to = param_ind},
+                                     {.tag = TC_WANT_TYPE,
+                                      .from = T_FN_RET_IND(wanted),
+                                      .to = body_ind}};
+              VEC_APPEND(&state->stack, STATIC_LEN(actions), actions);
             } else {
-              tc_error err = {
-                .type = TYPE_HEAD_MISMATCH,
-                .expected = wanted_ind,
-                .type_head = T_FN,
-              };
+              tc_error err = {.type = TYPE_HEAD_MISMATCH,
+                              .expected = wanted_ind,
+                              .got_type_head = T_FN,
+                              .pos = node_ind};
               push_tc_err(state, err);
             }
           }
@@ -932,13 +954,32 @@ static void tc_node(typecheck_state *state) {
 }
 
 #ifdef DEBUG_TC
-static const char *const action_str[] = {
-  [TC_NODE] = "TC Node",
-  [TC_TYPE] = "TC Type",
-  [TC_CLONE] = "Clone",
-  [TC_WANT] = "Want",
-  [TC_CLONE_WANTED] = "Clone wanted",
-  [TC_POP_VARS] = "Pop vars",
+static const char *const action_str(action_tag tag) {
+  static const char *res;
+  switch (tag) {
+    case TC_NODE:
+      res = "TC Node";
+      break;
+    case TC_TYPE:
+      res = "TC Type";
+      break;
+    case TC_CLONE:
+      res = "Clone";
+      break;
+    case TC_WANT:
+      res = "Want";
+      break;
+    case TC_CLONE_WANTED:
+      res = "Clone wanted";
+      break;
+    case TC_POP_VARS:
+      res = "Pop vars";
+      break;
+    case TC_WANT_TYPE:
+      res = "Want type";
+      break;
+  }
+  return res;
 };
 #endif
 
@@ -987,10 +1028,16 @@ tc_res typecheck(source_file source, parse_tree tree) {
         fputs("\n-----\n\n", debug_out);
       }
       first_debug = false;
-      fprintf(debug_out, "Action: '%s'\n", action_str[action.tag]);
+      fprintf(debug_out, "Action: '%s'\n", action_str(action.tag));
       switch (action.tag) {
         case TC_POP_VARS:
           break;
+        case TC_WANT_TYPE: {
+          parse_node node = tree.nodes[action.to];
+          format_error_ctx(debug_out, source.data, node.start, node.end);
+          putc('\n', debug_out);
+          break;
+        }
         case TC_CLONE:
         case TC_WANT:
         case TC_CLONE_WANTED: {
@@ -1039,13 +1086,24 @@ tc_res typecheck(source_file source, parse_tree tree) {
         state.current_stage = action.stage;
         tc_mk_type(&state);
         break;
+      case TC_WANT_TYPE:
+        state.wanted[action.to] = action.from;
+        break;
     }
 
 #ifdef DEBUG_TC
     if (state.res.errors.len > starting_err_amt) {
-      fprintf(debug_out, "Caused an error.\n", action_str[action.tag]);
+      fprintf(debug_out, "Caused an error.\n");
     }
     switch (action.tag) {
+      case TC_WANT:
+      case TC_WANT_TYPE:
+      case TC_CLONE_WANTED:
+        fputs("New wanted: ", debug_out);
+        print_type(debug_out, state.res.types.data, state.res.type_inds.data,
+                   state.wanted[action.to]);
+        putc('\n', debug_out);
+        break;
       case TC_TYPE:
       case TC_NODE:
         fputs("Result: ", debug_out);
@@ -1054,6 +1112,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
         putc('\n', debug_out);
         parse_node node = state.res.tree.nodes[action.node_ind];
         // Either this node was given a type, or we'll revisit it later
+        /*
         bool typed = state.res.node_types[action.node_ind] != T_UNKNOWN;
         if (node.type != PT_ROOT && !typed) {
           bool in_queue = false;
@@ -1061,9 +1120,11 @@ tc_res typecheck(source_file source, parse_tree tree) {
             tc_action act2 = VEC_GET(state.stack, i);
             in_queue |= act2.tag == TC_NODE && act2.node_ind == action.node_ind;
             in_queue |= act2.tag == TC_CLONE && act2.to == action.node_ind;
+            in_queue |= act2.tag == TC_TYPE && act2.node_ind == action.node_ind;
           }
           debug_assert(in_queue);
         }
+        */
         break;
       default:
         break;
