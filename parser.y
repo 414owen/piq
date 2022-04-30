@@ -286,7 +286,13 @@ fun_body(RES) ::= block(B). {
   BREAK_PARSER;
   NODE_IND_T start = s->inds.len;
   VEC_CAT(&s->inds, &B);
-  parse_node n = {.type = PT_FUN_BODY, .subs_start = start, .sub_amt = B.len};
+  parse_node n = {
+    .type = PT_FUN_BODY,
+    .subs_start = start,
+    .sub_amt = B.len,
+    .start = VEC_GET(s->nodes, VEC_FIRST(B)).start,
+    .end = VEC_GET(s->nodes, VEC_LAST(B)).end,
+  };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
   VEC_FREE(&B);

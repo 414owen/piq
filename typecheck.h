@@ -16,6 +16,7 @@ typedef enum {
   TYPE_MISMATCH,
 
   TYPE_HEAD_MISMATCH,
+  TUPLE_WRONG_ARITY,
   LITERAL_MISMATCH,
   MISSING_SIG,
 } tc_error_type;
@@ -29,7 +30,10 @@ typedef struct {
       NODE_IND_T expected;
       union {
         NODE_IND_T got;
-        type_tag type_head;
+        struct {
+          type_tag got_type_head;
+          uint8_t got_arity;
+        };
       };
     };
     struct {

@@ -74,9 +74,9 @@ bool inline_types_eq(type a, type b) {
   return res;
 }
 
-static void print_type_head(FILE *f, type node) {
+static void print_type_head(FILE *f, type_tag head) {
   static const char *str;
-  switch (node.tag) {
+  switch (head) {
     case T_UNIT:
       str = "()";
       break;
@@ -126,6 +126,22 @@ static void print_type_head(FILE *f, type node) {
   fputs(str, f);
 }
 
+void print_type_head_placeholders(FILE *f, type_tag head, uint32_t arity) {
+  static const char *str;
+  switch (head) {
+    case T_TUP:
+      fputs("(a1", f);
+      for (size_t i = 2; i <= arity; i++) {
+        fprintf(f, ", a%zu", i);
+      }
+      fputc(')', f);
+      break;
+    default:
+      print_type_head(f, head);
+      break;
+  }
+}
+
 void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
   vec_print_action stack = VEC_NEW;
   push_node(&stack, root);
@@ -164,7 +180,7 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
             push_str(&stack, "]");
             break;
           default:
-            print_type_head(f, node);
+            print_type_head(f, node.tag);
             break;
         }
         reverse_arbitrary(&VEC_DATA_PTR(&stack)[stack_top],
