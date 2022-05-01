@@ -3,8 +3,8 @@
 
 #include "diagnostic.h"
 #include "test.h"
-#include "util.h"
 #include "token.h"
+#include "util.h"
 
 static char *sep = " . ";
 

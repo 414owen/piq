@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - name: check formatting
       run: ./scripts/checks/formatting.sh
     - name: Install dependencies

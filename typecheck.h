@@ -11,6 +11,7 @@ typedef enum {
   BINDING_NOT_FOUND,
   WRONG_ARITY,
   NEED_SIGNATURE,
+  CALLED_NON_FUNCTION,
 
   // TODO Do we need this?
   TYPE_MISMATCH,

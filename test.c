@@ -5,10 +5,10 @@
 #include <time.h>
 
 #include "diagnostic.h"
-#include "token.h"
 #include "parse_tree.h"
 #include "term.h"
 #include "test.h"
+#include "token.h"
 #include "util.h"
 #include "vec.h"
 
