@@ -167,23 +167,30 @@ void __vec_replicate(vec_void *vec, void *el, size_t amt, size_t elemsize) {
 }
 
 #if INLINE_VEC_BYTES > 0
-vec_void *__vec_pop(vec_void *vec, size_t elemsize) {
-  debug_assert(vec->len > 0);
+vec_void *__vec_pop_n(vec_void *vec, size_t elemsize, size_t n) {
+  debug_assert(vec->len >= n);
   const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
   // predicated this way for the branch predictor
-  if (vec->len - 1 != inline_amt) {
-  } else {
-    __vec_resize_external_to_internal(vec, vec->len - 1, elemsize);
+  if (vec->len > inline_amt vec->len - n <= inline_amt) {
+    __vec_resize_external_to_internal(vec, vec->len - n, elemsize);
   }
-  vec->len--;
+  vec->len -= n;
   return vec;
 }
 #else
-vec_void *__vec_pop(vec_void *vec) {
-  debug_assert(vec->len > 0);
-  vec->len--;
+vec_void *__vec_pop_n(vec_void *vec, size_t n) {
+  debug_assert(vec->len - n >= 0);
+  vec->len -= n;
   return vec;
 }
+#endif
+
+#if INLINE_VEC_BYTES > 0
+vec_void *__vec_pop(vec_void *vec, size_t elemsize) {
+  return __vec_pop_n(vec, elemsize, 1);
+}
+#else
+vec_void *__vec_pop(vec_void *vec) { return __vec_pop_n(vec, 1); }
 #endif
 
 // returns minimum heap-allocated buffer

@@ -100,6 +100,16 @@ void __vec_push(vec_void *vec, void *el, size_t elemsize);
       ((typeof(vec)) __vec_pop((vec_void*) vec))
 #endif
 
+#if INLINE_VEC_BYTES > 0
+  vec_void *__vec_pop_n(vec_void *vec, size_t elemsize, size_t n);
+  #define VEC_POP_N(vec, n) \
+      ((typeof(vec)) __vec_pop_n((vec_void*) vec, sizeof((vec)->data[0]), n))
+#else
+  vec_void *__vec_pop_n(vec_void *vec, size_t n);
+  #define VEC_POP_N(vec, n) \
+      ((typeof(vec)) __vec_pop_n((vec_void*) vec, n))
+#endif
+
 #define VEC_POP(vec) \
   ({ \
     typeof((vec)->data[0]) __el = VEC_PEEK(*vec); \

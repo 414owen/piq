@@ -10,6 +10,9 @@
 static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
   tc_error error = VEC_GET(res.errors, err_ind);
   switch (error.type) {
+    case CALLED_NON_FUNCTION:
+      fputs("Tried to call a non-function", f);
+      break;
     case TUPLE_WRONG_ARITY:
       fputs("Wrong number of tuple elements", f);
       break;
