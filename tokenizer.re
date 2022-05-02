@@ -40,7 +40,6 @@ token_res scan(source_file file, BUF_IND_T start) {
   re2c:indent:string = "  ";
   re2c:eof = -1;
   re2c:yyfill:enable = 0;
-  re2c:flags:case-ranges = 1;
 
   alpha = [a-zA-Z];
   lowerAlpha = [a-z];
