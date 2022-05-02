@@ -6,8 +6,8 @@ SRCS := $(wildcard *.c)
 DEPDIR := .deps
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 
-COMPILE.c = $(CC) $(DEPFLAGS) $(ALLCFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
-COMPILE.cpp = $(CXX) $(DEPFLAGS) $(ALLCFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+COMPILE.c = $(CC) $(DEPFLAGS) $(ALLCFLAGS) $(TARGET_ARCH) -c
+COMPILE.cpp = $(CXX) $(DEPFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
 
 $(DEPDIR): ; @mkdir -p $@
 
@@ -54,7 +54,7 @@ TEST_OBJS := \
     $(COMMON_OBJS) \
     run_tests.o \
 	test.o \
-    test_bitset.c \
+    test_bitset.o \
 	test_parser.o \
 	test_scanner.o \
 	test_utils.o \
