@@ -90,7 +90,11 @@ parser.c parser.h &: parser.y
 tokenizer.o : tokenizer.c parser.h
 	$(COMPILE.c) $(OUTPUT_OPTION) $<
 
+ifeq ($(GITHUB_ACTIONS),)
+RE2C_OPTIONS := --case-ranges
+endif
+
 tokenizer.c: tokenizer.re
-	re2c -o tokenizer.c tokenizer.re
+	re2c $(RE2C_OPTIONS) -o tokenizer.c tokenizer.re
 
 include $(wildcard $(DEPFILES))
