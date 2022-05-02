@@ -91,6 +91,6 @@ tokenizer.o : tokenizer.c parser.h
 	$(COMPILE.c) $(OUTPUT_OPTION) $<
 
 tokenizer.c: tokenizer.re
-	re2c --case-ranges -o tokenizer.c tokenizer.re
+	re2c -o tokenizer.c tokenizer.re
 
 include $(wildcard $(DEPFILES))
