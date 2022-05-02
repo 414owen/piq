@@ -17,10 +17,12 @@ jobs:
         submodules: recursive
     - name: check formatting
       run: ./scripts/checks/formatting.sh
-    - name: Install dependencies
-      run: sudo apt-get install -y lemon re2c valgrind lcov
+    - name: Install build dependencies
+      run: sudo apt-get install -y lemon re2c
     - name: make test
       run: CFLAGS="-O1 -DJUNIT --coverage" make check
+    - name: Install analysis dependencies
+      run: sudo apt-get install -y valgrind lcov
     - name: check pragmas
       run: ./scripts/checks/headers-have-pragmas.sh
     - name: run tests
