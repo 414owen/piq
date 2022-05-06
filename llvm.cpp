@@ -61,8 +61,14 @@ VEC_DECL(llvm_block);
 typedef llvm::Function* llvm_function;
 VEC_DECL(llvm_function);
 
+typedef enum {
+  STAGE_ONE,
+  STAGE_TWO,
+} stage;
+
 typedef struct {
   cg_action_type type;
+  stage stage;
   union {
     llvm::Value * llvm_value;
     llvm::Type * llvm_type;
@@ -138,6 +144,13 @@ typedef enum {
 VEC_DECL(gen_type_action);
 
 static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
+
+  llvm::Type **llvm_types = state->llvm_types;
+  {
+    llvm::Type *prev = llvm_types[root_type_ind];
+    if (prev != NULL) return prev;
+  }
+
   vec_gen_type_action actions = VEC_NEW;
   VEC_PUSH(&actions, GEN_TYPE);
   vec_node_ind inds = VEC_NEW;
@@ -148,10 +161,10 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
     type t = VEC_GET(state->in.types, type_ind);
     switch (action) {
       case GEN_TYPE: {
-        if (state->llvm_types[type_ind] != NULL) break;
+        if (llvm_types[type_ind] != NULL) break;
         switch (t.tag) {
           case T_BOOL: {
-            state->llvm_types[type_ind] =
+            llvm_types[type_ind] =
               llvm::Type::getInt1Ty(state->context);
             break;
           }
@@ -164,22 +177,22 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
           }
           case T_I8:
           case T_U8: {
-            state->llvm_types[type_ind] = llvm::Type::getInt8Ty(state->context);
+            llvm_types[type_ind] = llvm::Type::getInt8Ty(state->context);
             break;
           }
           case T_I16:
           case T_U16: {
-            state->llvm_types[type_ind] = llvm::Type::getInt16Ty(state->context);
+            llvm_types[type_ind] = llvm::Type::getInt16Ty(state->context);
             break;
           }
           case T_I32:
           case T_U32: {
-            state->llvm_types[type_ind] = llvm::Type::getInt32Ty(state->context);
+            llvm_types[type_ind] = llvm::Type::getInt32Ty(state->context);
             break;
           }
           case T_I64:
           case T_U64: {
-            state->llvm_types[type_ind] = llvm::Type::getInt64Ty(state->context);
+            llvm_types[type_ind] = llvm::Type::getInt64Ty(state->context);
             break;
           }
           case T_TUP: {
@@ -212,7 +225,7 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
         switch (t.tag) {
           case T_LIST: {
             NODE_IND_T sub_ind = t.sub_a;
-            state->llvm_types[type_ind] = (llvm::Type*) llvm::ArrayType::get(state->llvm_types[sub_ind], 0);
+            llvm_types[type_ind] = (llvm::Type*) llvm::ArrayType::get(llvm_types[sub_ind], 0);
             break;
           }
           case T_TUP: {
@@ -220,20 +233,20 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
             llvm::Type **subs = (llvm::Type**) stalloc(sub_bytes);
             for (size_t i = 0; i < T_TUP_SUB_AMT(t); i++) {
               NODE_IND_T sub_ind = T_TUP_SUB_IND(state->in.type_inds.data, t, i);
-              subs[i] = state->llvm_types[sub_ind];
+              subs[i] = llvm_types[sub_ind];
             }
             llvm::ArrayRef<llvm::Type*> subs_arr = llvm::ArrayRef<llvm::Type*>(subs, t.sub_amt);
-            state->llvm_types[type_ind] = llvm::StructType::create(state->context, subs_arr, "tuple", false);
+            llvm_types[type_ind] = llvm::StructType::create(state->context, subs_arr, "tuple", false);
             stfree(subs, sub_bytes);
             break;
           }
           case T_FN: {
             NODE_IND_T param_ind = T_FN_PARAM_IND(t);
             NODE_IND_T ret_ind = T_FN_RET_IND(t);
-            llvm::Type *param_type = state->llvm_types[param_ind];
-            llvm::Type *ret_type = state->llvm_types[ret_ind];
+            llvm::Type *param_type = llvm_types[param_ind];
+            llvm::Type *ret_type = llvm_types[ret_ind];
             llvm::ArrayRef<llvm::Type*> subs_arr = llvm::ArrayRef<llvm::Type*>(param_type);
-            state->llvm_types[type_ind] = llvm::FunctionType::get(param_type, subs_arr, false);
+            llvm_types[type_ind] = llvm::FunctionType::get(param_type, subs_arr, false);
             break;
           }
           default:
@@ -244,17 +257,17 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
       }
     }
   }
-  return state->llvm_types[root_type_ind];
+  return llvm_types[root_type_ind];
 }
 
 static void cg_combine_node(cg_state *state, node_ind ind) {
   parse_node node = state->in.tree.nodes[ind];
   switch (node.type) {
     case PT_CALL: {
-      llvm::Value **params = (llvm::Value**) stalloc(sizeof(LLVMValueRef) * param_amt);
-      llvm::Value *fn = VEC_POP(&state->val_stack);
-      // WIP
-      llvm::FunctionType *fn_type = (llvm::FunctionType *) construct_type(state, state->in.node_types[ind]);
+      NODE_IND_T param_ind = PT_CALL_PARAM_IND(node);
+      NODE_IND_T callee_ind = PT_CALL_CALLEE_IND(node);
+      // TODO
+      llvm::FunctionType *fn_type = (llvm::FunctionType *) construct_type(state, state->in.node_types[callee_ind]);
       llvm::ArrayRef<llvm::Value*> param_arr = llvm::ArrayRef<llvm::Value*>(params, param_amt);
       llvm::Twine name("call_name");
       state->builder.CreateCall(fn_type, fn, param_arr, name);
