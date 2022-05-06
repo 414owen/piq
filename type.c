@@ -127,7 +127,6 @@ static void print_type_head(FILE *f, type_tag head) {
 }
 
 void print_type_head_placeholders(FILE *f, type_tag head, uint32_t arity) {
-  static const char *str;
   switch (head) {
     case T_TUP:
       fputs("(a1", f);
