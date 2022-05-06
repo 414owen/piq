@@ -1,7 +1,7 @@
 #include <stdbool.h>
 
-#include "diagnostic.h"
 #include "consts.h"
+#include "diagnostic.h"
 #include "test.h"
 #include "token.h"
 
@@ -25,7 +25,6 @@ static char *print_tokens(size_t token_amt, const token_type *restrict tokens) {
 static void test_scanner_tokens(test_state *restrict state,
                                 char *restrict input, size_t token_amt,
                                 const token_type *restrict tokens) {
-  source_file test_file = {.path = "parser-test", .data = input};
   tokens_res tres = test_upto_tokens(state, input);
 
   if (tres.succeeded) {

@@ -5,5 +5,4 @@ IndentCaseLabels:                  true
 ConstructorInitializerIndentWidth: 2
 ContinuationIndentWidth:           2
 IndentWidth:                       2
-SortIncludes:                      Never
 ...
