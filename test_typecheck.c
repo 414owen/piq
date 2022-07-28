@@ -57,7 +57,6 @@ static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
       fputs("Wrong arity", f);
       break;
   }
-  // fputs(":\n", f);
   parse_node node = res.tree.nodes[error.pos];
   fprintf(f, "\nAt %d-%d:\n", node.start, node.end);
   format_error_ctx(f, res.source.data, node.start, node.end);
@@ -435,9 +434,12 @@ static void test_typecheck_errors(test_state *state) {
   // NULL); } test_end(state);
 
   // TODO enable when I add list type parsing
-  // test_start(state, "[U8] vsString");
+  // test_start(state, "[U8] vs String");
   // {
-  //   run_typecheck_error_test(state, "(fn a () [U8] \"hi\")", 0, NULL);
+  //   run_typecheck_error_test(state,
+  //                            "(sig a (Fn () [U8]))\n"
+  //                            "(fun a () \"hi\")",
+  //                            0, NULL);
   // }
   // test_end(state);
 

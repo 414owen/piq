@@ -81,7 +81,20 @@ typedef struct {
 
 #define VEC_NEW { 0 }
 
-#define VEC_GET(vec, i) (VEC_DATA_PTR(&(vec))[i])
+#define VEC_GET_DIRECT(vec, i) (VEC_DATA_PTR(&(vec))[i])
+
+#ifdef DEBUG
+void debug_vec_get(vec_void *vec, size_t elemsize, size_t ind);
+
+// Avoid duplicate side-effects in i (we were using VEC_POP()
+#define VEC_GET(vec, i) ({ \
+  size_t __ind = (i); \
+  debug_vec_get((vec_void*)(&vec), sizeof(vec.data[0]), __ind); \
+  VEC_GET_DIRECT(vec, __ind); \
+})
+#else
+#define VEC_GET(vec, i) VEC_GET_DIRECT(vec, i)
+#endif
 
 void __vec_push(vec_void *vec, void *el, size_t elemsize);
 #define VEC_PUSH(vec, el) { \

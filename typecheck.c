@@ -515,7 +515,6 @@ static void tc_type(typecheck_state *state) {
       binding b = {.start = node.start, .end = node.end};
       size_t ind = lookup_bnd(state->source.data, state->type_env,
                               state->type_is_builtin, b);
-      NODE_IND_T type_ind = VEC_GET(state->type_type_inds, ind);
       if (ind == state->type_env.len) {
         tc_error err = {
           .type = TYPE_NOT_FOUND,
@@ -524,6 +523,7 @@ static void tc_type(typecheck_state *state) {
         push_tc_err(state, err);
         break;
       }
+      NODE_IND_T type_ind = VEC_GET(state->type_type_inds, ind);
       state->res.node_types[node_ind] = type_ind;
       break;
     }
@@ -1583,7 +1583,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
 
 #endif
 
-    reverse_arbitrary(&VEC_GET(state.stack, actions_start),
+    reverse_arbitrary(&VEC_GET_DIRECT(state.stack, actions_start),
                       MAX(actions_start, state.stack.len) - actions_start,
                       sizeof(state.stack.data[0]));
   }
