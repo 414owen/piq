@@ -5,6 +5,7 @@
 
 A language that does everything right
 
+* Fast compiler compile times
 * Fast compile times
 * Low memory footprint
   * Have you every compiled a large template-heavy C++/D project?
