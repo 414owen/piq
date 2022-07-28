@@ -249,13 +249,13 @@ void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
 
         print_node(&s, node);
 
-        reverse_arbitrary(&VEC_GET(s.node_stack, first_node),
+        reverse_arbitrary(&VEC_GET_DIRECT(s.node_stack, first_node),
                           MAX(first_node, s.node_stack.len) - first_node,
                           sizeof(NODE_IND_T));
-        reverse_arbitrary(&VEC_GET(s.string_stack, first_string),
+        reverse_arbitrary(&VEC_GET_DIRECT(s.string_stack, first_string),
                           MAX(first_string, s.string_stack.len) - first_string,
                           sizeof(string));
-        reverse_arbitrary(&VEC_GET(s.actions, first_action),
+        reverse_arbitrary(&VEC_GET_DIRECT(s.actions, first_action),
                           MAX(first_action, s.actions.len) - first_action,
                           sizeof(print_action));
         break;

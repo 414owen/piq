@@ -48,6 +48,14 @@ static void __vec_resize_external_to_internal(vec_void *vec, size_t cap,
 }
 #endif
 
+#ifdef DEBUG
+void debug_vec_get(vec_void *vec, size_t elemsize, size_t ind) {
+  if (ind >= vec->len) {
+    give_up("Tried to access invalid vector element");
+  }
+}
+#endif
+
 void __vec_push(vec_void *vec, void *el, size_t elemsize) {
 #if INLINE_VEC_BYTES > 0
   const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
