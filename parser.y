@@ -399,27 +399,19 @@ type ::= unit.
 
 type(RES) ::= OPEN_PAREN(A) type_inside_parens(B) CLOSE_PAREN(D). {
   BREAK_PARSER;
-  VEC_GET(s->nodes, B).start = s->tokens[A].start;
-  VEC_GET(s->nodes, B).end = s->tokens[D].end;
+  VEC_GET_DIRECT(s->nodes, B).start = s->tokens[A].start;
+  VEC_GET_DIRECT(s->nodes, B).end = s->tokens[D].end;
   RES = B;
 }
 
-type_inside_parens(RES) ::= type(B) comma_types(C). {
+type(RES) ::= OPEN_BRACKET(O) enclosed_type(A) CLOSE_BRACKET(C). {
   BREAK_PARSER;
-  NODE_IND_T start = s->inds.len;
-  VEC_PUSH(&s->inds, B);
-  VEC_CAT(&s->inds, &C);
-  parse_node n = {
-    .type = PT_TUP,
-    .subs_start = start,
-    .sub_amt = C.len + 1,
-  };
-  VEC_FREE(&C);
-  VEC_PUSH(&s->nodes, n);
-  RES = s->nodes.len - 1;
+  VEC_GET_DIRECT(s->nodes, A).start = s->tokens[O].start;
+  VEC_GET_DIRECT(s->nodes, A).end = s->tokens[C].end;
+  RES = A;
 }
 
-type_inside_parens(RES) ::= FN_TYPE type(A) type(B). {
+enclosed_type(RES) ::= FN_TYPE type(A) type(B). {
   BREAK_PARSER;
   parse_node n = {
     .type = PT_FN_TYPE,
@@ -430,14 +422,34 @@ type_inside_parens(RES) ::= FN_TYPE type(A) type(B). {
   RES = s->nodes.len - 1;
 }
 
-comma_types(RES) ::= comma_types(A) COMMA type(B). {
+enclosed_type ::= type.
+
+type_inside_parens(RES) ::= enclosed_type(B) comma_types(C). {
+  BREAK_PARSER;
+  NODE_IND_T start = s->inds.len;
+  if (C.len == 0) {
+    RES = B;
+  } else {
+    VEC_PUSH(&s->inds, B);
+    VEC_CAT(&s->inds, &C);
+    parse_node n = {
+      .type = PT_TUP,
+      .subs_start = start,
+      .sub_amt = C.len + 1,
+    };
+    VEC_FREE(&C);
+    VEC_PUSH(&s->nodes, n);
+    RES = s->nodes.len - 1;
+  }
+}
+
+comma_types(RES) ::= comma_types(A) COMMA enclosed_type(B). {
   BREAK_PARSER;
   VEC_PUSH(&A, B);
   RES = A;
 }
 
 comma_types(RES) ::= . {
-  BREAK_PARSER;
   vec_node_ind res = VEC_NEW;
   RES = res;
 }
