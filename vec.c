@@ -54,6 +54,11 @@ void debug_vec_get(vec_void *vec, size_t elemsize, size_t ind) {
     give_up("Tried to access invalid vector element");
   }
 }
+void debug_vec_get_ptr(vec_void *vec, size_t elemsize, size_t ind) {
+  if (ind > 0 && ind >= vec->len) {
+    give_up("Tried to access invalid vector element");
+  }
+}
 #endif
 
 void __vec_push(vec_void *vec, void *el, size_t elemsize) {
