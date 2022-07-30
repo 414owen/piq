@@ -32,7 +32,14 @@ tree_node_repr subs_type(parse_node_type type) {
     case PT_SIG:
       res = SUBS_TWO;
       break;
-    default:
+    case PT_CONSTRUCTION:
+    case PT_FUN:
+    case PT_FUN_BODY:
+    case PT_IF:
+    case PT_LIST:
+    case PT_ROOT:
+    case PT_TUP:
+    case PT_LET:
       res = SUBS_EXTERNAL;
       break;
   }
