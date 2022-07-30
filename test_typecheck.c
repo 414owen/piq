@@ -332,6 +332,17 @@ static void test_typecheck_succeeds(test_state *state) {
     test_end(state);
   }
 
+
+  // TODO enable when I add list type parsing
+  test_start(state, "[U8] vs String");
+  {
+    run_typecheck_error_test(state,
+                             "(sig a (Fn () [U8]))\n"
+                             "(fun a () \"hi\")",
+                             0, NULL);
+  }
+  test_end(state);
+
   test_group_end(state);
 }
 
@@ -428,20 +439,6 @@ static void test_typecheck_errors(test_state *state) {
                              STATIC_LEN(errors), errors);
   }
   test_end(state);
-
-  // test_start(state, "String vs String");
-  // { run_typecheck_error_test(state, "(sig a (Fn () (fun a () \"hi\")", 0,
-  // NULL); } test_end(state);
-
-  // TODO enable when I add list type parsing
-  // test_start(state, "[U8] vs String");
-  // {
-  //   run_typecheck_error_test(state,
-  //                            "(sig a (Fn () [U8]))\n"
-  //                            "(fun a () \"hi\")",
-  //                            0, NULL);
-  // }
-  // test_end(state);
 
   test_group_end(state);
 }
