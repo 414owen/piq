@@ -1583,7 +1583,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
 
 #endif
 
-    reverse_arbitrary(&VEC_GET_DIRECT(state.stack, actions_start),
+    reverse_arbitrary(VEC_GET_PTR(state.stack, actions_start),
                       MAX(actions_start, state.stack.len) - actions_start,
                       sizeof(state.stack.data[0]));
   }
