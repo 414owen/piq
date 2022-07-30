@@ -332,7 +332,6 @@ static void test_typecheck_succeeds(test_state *state) {
     test_end(state);
   }
 
-
   // TODO enable when I add list type parsing
   test_start(state, "[U8] vs String");
   {
