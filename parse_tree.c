@@ -22,6 +22,9 @@ tree_node_repr subs_type(parse_node_type type) {
     case PT_UNIT:
       res = SUBS_NONE;
       break;
+    case PT_LIST_TYPE:
+      res = SUBS_ONE;
+      break;
     case PT_CALL:
     case PT_AS:
     case PT_FN:
@@ -73,6 +76,9 @@ const char *parse_node_string(parse_node_type type) {
       break;
     case PT_LIST:
       res = "List";
+      break;
+    case PT_LIST_TYPE:
+      res = "List type";
       break;
     case PT_LOWER_NAME:
       res = "Lower name";
@@ -210,6 +216,9 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
       print_compound(s, "(As ", " ", ")", node);
       break;
     case PT_LIST:
+      print_compound(s, "[", ", ", "]", node);
+      break;
+    case PT_LIST_TYPE:
       print_compound(s, "[", ", ", "]", node);
       break;
     case PT_STRING:

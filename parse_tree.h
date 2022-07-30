@@ -21,6 +21,7 @@ typedef enum {
   PT_IF,
   PT_INT,
   PT_LIST,
+  PT_LIST_TYPE,
   PT_LOWER_NAME,
   PT_ROOT,
   PT_STRING,

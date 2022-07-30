@@ -406,9 +406,14 @@ type(RES) ::= OPEN_PAREN(A) type_inside_parens(B) CLOSE_PAREN(D). {
 
 type(RES) ::= OPEN_BRACKET(O) enclosed_type(A) CLOSE_BRACKET(C). {
   BREAK_PARSER;
-  VEC_GET_PTR(s->nodes, A)->start = s->tokens[O].start;
-  VEC_GET_PTR(s->nodes, A)->end = s->tokens[C].end;
-  RES = A;
+  parse_node n = {
+    .type = PT_LIST_TYPE,
+    .sub_a = A,
+    .start = s->tokens[O].start,
+    .end = s->tokens[C].start,
+  };
+  VEC_PUSH(&s->nodes, n);
+  RES = s->nodes.len - 1;
 }
 
 enclosed_type(RES) ::= FN_TYPE type(A) type(B). {
