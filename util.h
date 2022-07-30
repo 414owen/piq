@@ -26,6 +26,9 @@
 #define stalloc(bytes) \
   (((bytes) > MAX_STACK_ALLOC) ? malloc(bytes) : alloca(bytes))
 
+#define stcalloc(n, size) \
+  (((n) * (size) > MAX_STACK_ALLOC) ? calloc((n), (size)) : memset(alloca(n * size), 0, (n) * (size)))
+
 #define stfree(ptr, bytes) \
   if ((bytes) > MAX_STACK_ALLOC) { free(ptr); }
 
