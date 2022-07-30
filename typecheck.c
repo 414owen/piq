@@ -694,7 +694,7 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
     tc_action action = {
       .tag = TC_CLONE_WANTED_WANTED, .from = node_ind, .to = last_el_ind};
     push_action(state, action);
-    bs_data_set(sub_has_wanted, last_el_ind, true);
+    bs_data_set(sub_has_wanted, node.sub_amt - 1, true);
   }
 
   if (node.sub_amt == 0)
