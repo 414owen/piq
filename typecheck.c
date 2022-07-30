@@ -49,18 +49,22 @@ typedef enum {
   // terms
   TC_NODE_MATCHES,
   TC_NODE_UNAMBIGUOUS,
+
   // types
   TC_TYPE,
-  // node index -> node type
-  TC_CLONE,
-  // node index -> node wanted
-  TC_WANT,
-  // node wanted -> node wanted
-  TC_CLONE_WANTED,
-  // type index -> node wanted
+
+  // {.from = node index, .to = node index}
+  TC_CLONE_ACTUAL_ACTUAL,
+  // {.from = node index, .to = node index}
+  TC_CLONE_ACTUAL_WANTED,
+  // {.from = node index, .to = node index}
+  TC_CLONE_WANTED_WANTED,
+
+  // {.from = type index, .to = node index}
   TC_WANT_TYPE,
-  // type index -> ndoe type
+  // {.from = type index, .to = node index}
   TC_ASSIGN_TYPE,
+
   // If there were errors on top of this node, pop them
   // and execute the action two below
   // Otherwise, execute the action one below
@@ -235,9 +239,9 @@ static bool is_suspicious_action(typecheck_state *state, tc_action action) {
     case TC_NODE_UNAMBIGUOUS:
     case TC_TYPE:
       return action.node_ind >= state->res.tree.node_amt;
-    case TC_CLONE:
-    case TC_WANT:
-    case TC_CLONE_WANTED:
+    case TC_CLONE_ACTUAL_ACTUAL:
+    case TC_CLONE_ACTUAL_WANTED:
+    case TC_CLONE_WANTED_WANTED:
       return action.from >= state->res.tree.node_amt ||
              action.to >= state->res.tree.node_amt;
     case TC_ASSIGN_TYPE:
@@ -662,8 +666,8 @@ static void push_tc_sig(typecheck_state *state, NODE_IND_T node_ind,
     {.tag = TC_TYPE,
      .node_ind = type_ind,
      .stage = {.two_stage = TWO_STAGE_ONE}},
-    {.tag = TC_CLONE, .from = type_ind, .to = name_ind},
-    {.tag = TC_CLONE, .from = type_ind, .to = node_ind},
+    {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = type_ind, .to = name_ind},
+    {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = type_ind, .to = node_ind},
   };
   push_actions(state, STATIC_LEN(actions), actions);
 }
@@ -683,7 +687,7 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
 
   if (is_wanted) {
     tc_action action = {
-      .tag = TC_CLONE_WANTED, .from = node_ind, .to = last_el_ind};
+      .tag = TC_CLONE_WANTED_WANTED, .from = node_ind, .to = last_el_ind};
     push_action(state, action);
     bs_data_set(sub_has_wanted, last_el_ind, true);
   }
@@ -706,6 +710,7 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
     }
   }
 
+  // TODO: Should we 
   for (NODE_IND_T sub_i = 1; sub_i < node.sub_amt; sub_i++) {
     NODE_IND_T sub_ind = state->res.tree.inds[node.subs_start + sub_i];
     parse_node sub = state->res.tree.nodes[sub_ind];
@@ -719,7 +724,7 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
         NODE_IND_T prev_ind = state->res.tree.inds[node.subs_start + sub_i - 1];
         parse_node prev = state->res.tree.nodes[prev_ind];
         if (can_propagate_type(state, prev, sub)) {
-          tc_action action = {.tag = TC_WANT, .from = prev_ind, .to = sub_ind};
+          tc_action action = {.tag = TC_CLONE_ACTUAL_WANTED, .from = prev_ind, .to = sub_ind};
           push_action(state, action);
           bs_data_set(sub_has_wanted, sub_i, true);
         } else if (enforce_sigs) {
@@ -762,7 +767,7 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
   }
   tc_action actions[] = {
     {.tag = TC_POP_N_VARS, .amt = bnd_amt},
-    {.tag = TC_CLONE, .from = last_el_ind, .to = node_ind}};
+    {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = last_el_ind, .to = node_ind}};
   push_actions(state, STATIC_LEN(actions), actions);
 }
 
@@ -781,8 +786,8 @@ static void tc_as(typecheck_state *state, tc_node_params params) {
     {.tag = TC_TYPE,
      .node_ind = type_node_ind,
      .stage = {.two_stage = TWO_STAGE_ONE}},
-    {.tag = TC_CLONE, .from = type_node_ind, .to = val_node_ind},
-    {.tag = TC_CLONE, .from = type_node_ind, .to = params.node_ind},
+    {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = type_node_ind, .to = val_node_ind},
+    {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = type_node_ind, .to = params.node_ind},
     {.tag = TC_NODE_MATCHES,
      .node_ind = val_node_ind,
      .stage = {.two_stage = TWO_STAGE_ONE}},
@@ -1051,12 +1056,12 @@ static void tc_node_matches(typecheck_state *state, tc_node_params params) {
         {.tag = TC_NODE_MATCHES,
          .node_ind = cond,
          .stage = {.two_stage = TWO_STAGE_ONE}},
-        {.tag = TC_CLONE_WANTED, .from = params.node_ind, .to = b1},
+        {.tag = TC_CLONE_WANTED_WANTED, .from = params.node_ind, .to = b1},
         {.tag = TC_NODE_MATCHES,
          .node_ind = b1,
          .stage = {.two_stage = TWO_STAGE_ONE}},
         // second branch wanted == first branch
-        {.tag = TC_WANT, .from = b1, .to = b2},
+        {.tag = TC_CLONE_ACTUAL_WANTED, .from = b1, .to = b2},
         {.tag = TC_NODE_MATCHES,
          .node_ind = b2,
          .stage = {.two_stage = TWO_STAGE_ONE}},
@@ -1138,7 +1143,7 @@ static void tc_node_matches(typecheck_state *state, tc_node_params params) {
 
       if (params.wanted.tag == T_FN) {
         tc_action actions[] = {
-          {.tag = TC_CLONE, .from = params.node_ind, .to = bnd_ind},
+          {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = params.node_ind, .to = bnd_ind},
           {.tag = TC_WANT_TYPE,
            .from = T_FN_PARAM_IND(params.wanted),
            .to = param_ind},
@@ -1231,7 +1236,7 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
             NODE_IND_T prev_sub_ind = PT_LIST_SUB_IND(inds, params.node, i);
             NODE_IND_T sub_ind = PT_LIST_SUB_IND(inds, params.node, i);
             tc_action actions[] = {
-              {.tag = TC_WANT, .from = prev_sub_ind, .to = sub_ind},
+              {.tag = TC_CLONE_ACTUAL_WANTED, .from = prev_sub_ind, .to = sub_ind},
               {
                 .tag = TC_NODE_UNAMBIGUOUS,
                 .node_ind = sub_ind,
@@ -1309,11 +1314,11 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
         {.tag = TC_NODE_UNAMBIGUOUS,
          .node_ind = b1,
          .stage = {.two_stage = TWO_STAGE_ONE}},
-        {.tag = TC_WANT, .from = b1, .to = b2},
+        {.tag = TC_CLONE_ACTUAL_WANTED, .from = b1, .to = b2},
         {.tag = TC_NODE_MATCHES,
          .node_ind = b2,
          .stage = {.two_stage = TWO_STAGE_ONE}},
-        {.tag = TC_CLONE, .from = b2, .to = params.node_ind}};
+        {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = b2, .to = params.node_ind}};
 
       push_actions(state, STATIC_LEN(actions), actions);
       break;
@@ -1449,9 +1454,9 @@ static const char *const action_str(action_tag tag) {
     MK_CASE(TC_NODE_MATCHES)
     MK_CASE(TC_NODE_UNAMBIGUOUS)
     MK_CASE(TC_TYPE)
-    MK_CASE(TC_CLONE)
-    MK_CASE(TC_WANT)
-    MK_CASE(TC_CLONE_WANTED)
+    MK_CASE(TC_CLONE_ACTUAL_ACTUAL)
+    MK_CASE(TC_CLONE_ACTUAL_WANTED)
+    MK_CASE(TC_CLONE_WANTED_WANTED)
     MK_CASE(TC_WANT_TYPE)
     MK_CASE(TC_ASSIGN_TYPE)
     MK_CASE(TC_RECOVER)
@@ -1522,9 +1527,9 @@ tc_res typecheck(source_file source, parse_tree tree) {
           putc('\n', debug_out);
           break;
         }
-        case TC_CLONE:
-        case TC_WANT:
-        case TC_CLONE_WANTED: {
+        case TC_CLONE_ACTUAL_ACTUAL:
+        case TC_CLONE_ACTUAL_WANTED:
+        case TC_CLONE_WANTED_WANTED: {
           parse_node node = tree.nodes[action.from];
           format_error_ctx(debug_out, source.data, node.start, node.end);
           putc('\n', debug_out);
@@ -1553,13 +1558,13 @@ tc_res typecheck(source_file source, parse_tree tree) {
 #endif
 
     switch (action.tag) {
-      case TC_CLONE:
+      case TC_CLONE_ACTUAL_ACTUAL:
         state.res.node_types[action.to] = state.res.node_types[action.from];
         break;
-      case TC_WANT:
+      case TC_CLONE_ACTUAL_WANTED:
         state.wanted[action.to] = state.res.node_types[action.from];
         break;
-      case TC_CLONE_WANTED:
+      case TC_CLONE_WANTED_WANTED:
         state.wanted[action.to] = state.wanted[action.from];
         break;
       case TC_POP_N_VARS:
@@ -1608,8 +1613,8 @@ tc_res typecheck(source_file source, parse_tree tree) {
       fprintf(debug_out, "Caused an error.\n");
     }
     switch (action.tag) {
-      case TC_WANT:
-      case TC_CLONE_WANTED:
+      case TC_CLONE_ACTUAL_WANTED:
+      case TC_CLONE_WANTED_WANTED:
       case TC_WANT_TYPE:
         fputs("New wanted: ", debug_out);
         print_type(debug_out, state.res.types.data, state.res.type_inds.data,
@@ -1619,7 +1624,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_TYPE:
       case TC_NODE_MATCHES:
       case TC_NODE_UNAMBIGUOUS:
-      case TC_CLONE:
+      case TC_CLONE_ACTUAL_ACTUAL:
       case TC_ASSIGN_TYPE:
         fputs("Result: ", debug_out);
         print_type(debug_out, state.res.types.data, state.res.type_inds.data,
