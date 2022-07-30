@@ -1557,12 +1557,15 @@ tc_res typecheck(source_file source, parse_tree tree) {
         case TC_CLONE_WANTED_ACTUAL:
         case TC_CLONE_WANTED_WANTED: {
           parse_node from_node = tree.nodes[action.from];
-          fprintf(debug_out, "From: '%d' '%s'\n", action.from, parse_node_string(from_node.type));
-          format_error_ctx(debug_out, source.data, from_node.start, from_node.end);
+          fprintf(debug_out, "From: '%d' '%s'\n", action.from,
+                  parse_node_string(from_node.type));
+          format_error_ctx(debug_out, source.data, from_node.start,
+                           from_node.end);
           putc('\n', debug_out);
 
           parse_node to_node = tree.nodes[action.to];
-          fprintf(debug_out, "To: '%d' '%s'\n", action.to, parse_node_string(to_node.type));
+          fprintf(debug_out, "To: '%d' '%s'\n", action.to,
+                  parse_node_string(to_node.type));
           format_error_ctx(debug_out, source.data, to_node.start, to_node.end);
           putc('\n', debug_out);
           break;
