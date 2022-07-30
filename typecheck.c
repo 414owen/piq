@@ -1135,6 +1135,9 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
       state->res.node_types[params.node_ind] = state->string_type_ind;
       break;
     }
+    case PT_STRING: {
+      break;
+    }
     case PT_LIST: {
       NODE_IND_T *inds = state->res.tree.inds;
       NODE_IND_T sub_amt = PT_LIST_SUB_AMT(params.node);
