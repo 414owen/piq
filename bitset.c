@@ -18,7 +18,7 @@ bitset bs_new(void) {
 }
 
 void bs_resize(bitset *bs, size_t bits) {
-  size_t bytes_needed = BITSET_REQUIRED_BYTES(bits);
+  size_t bytes_needed = BITNSLOTS(bits);
   bs->data = realloc(bs->data, bytes_needed);
   debug_assert(bs->data != NULL);
   bs->cap = bytes_needed;
