@@ -21,7 +21,6 @@ typedef struct {
 #define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
 #define BITTEST(a, b) ((a)[BITSLOT(b)] & BITMASK(b))
 #define BITNSLOTS(nb) ((nb + CHAR_BIT - 1) / CHAR_BIT)
-#define BITSET_REQUIRED_BYTES(bits) BITNSLOTS(bits)
 
 void bs_free(bitset *bs);
 bitset bs_new(void);
