@@ -14,7 +14,14 @@ typedef struct {
   size_t cap;
 } bitset;
 
-#define BITSET_REQUIRED_BYTES(bits) ((bits) / CHAR_BIT + ((bits) % 8 > 0 ? 1 : 0))
+
+#define BITMASK(b) (1 << ((b) % CHAR_BIT))
+#define BITSLOT(b) ((b) / CHAR_BIT)
+#define BITSET(a, b) ((a)[BITSLOT(b)] |= BITMASK(b))
+#define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
+#define BITTEST(a, b) ((a)[BITSLOT(b)] & BITMASK(b))
+#define BITNSLOTS(nb) ((nb + CHAR_BIT - 1) / CHAR_BIT)
+#define BITSET_REQUIRED_BYTES(bits) BITNSLOTS(bits)
 
 void bs_free(bitset *bs);
 bitset bs_new(void);

@@ -6,12 +6,7 @@
 #include "bitset.h"
 #include "vec.h"
 
-#define BITMASK(b) (1 << ((b) % CHAR_BIT))
-#define BITSLOT(b) ((b) / CHAR_BIT)
-#define BITSET(a, b) ((a)[BITSLOT(b)] |= BITMASK(b))
-#define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
-#define BITTEST(a, b) ((a)[BITSLOT(b)] & BITMASK(b))
-#define BITNSLOTS(nb) ((nb + CHAR_BIT - 1) / CHAR_BIT)
+// TODO: Small bitsets should be stored inline
 
 bitset bs_new(void) {
   bitset res = {
@@ -38,16 +33,16 @@ void bs_grow(bitset *bs, size_t bits) {
 }
 
 bool bs_data_get(bitset_data data, size_t ind) {
-  return (data[ind / 8] & (1 << (ind % 8))) > 0;
+  return (data[BITSLOT(ind)] & BITMASK(ind)) > 0;
 }
 
 bool bs_get(bitset bs, size_t ind) { return bs_data_get(bs.data, ind); }
 
 void bs_data_set(bitset_data data, size_t ind, bool b) {
   if (b) {
-    data[BITSLOT(ind)] |= BITMASK(ind);
+    BITSET(data, ind);
   } else {
-    data[BITSLOT(ind)] &= ~(BITMASK(ind));
+    BITCLEAR(data, ind);
   }
 }
 
