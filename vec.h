@@ -92,8 +92,20 @@ void debug_vec_get(vec_void *vec, size_t elemsize, size_t ind);
   debug_vec_get((vec_void*)(&vec), sizeof(vec.data[0]), __ind); \
   VEC_GET_DIRECT(vec, __ind); \
 })
+
+#define VEC_GET_PTR(vec, i) ({ \
+  size_t __ind = (i); \
+  debug_vec_get((vec_void*)(&vec), sizeof(vec.data[0]), __ind); \
+  &VEC_GET_DIRECT(vec, __ind); \
+})
+
 #else
+
 #define VEC_GET(vec, i) VEC_GET_DIRECT(vec, i)
+
+#define VEC_GET_PTR(vec, i) (&VEC_GET_DIRECT(vec, i))
+
+
 #endif
 
 void __vec_push(vec_void *vec, void *el, size_t elemsize);

@@ -399,15 +399,15 @@ type ::= unit.
 
 type(RES) ::= OPEN_PAREN(A) type_inside_parens(B) CLOSE_PAREN(D). {
   BREAK_PARSER;
-  VEC_GET_DIRECT(s->nodes, B).start = s->tokens[A].start;
-  VEC_GET_DIRECT(s->nodes, B).end = s->tokens[D].end;
+  VEC_GET_PTR(s->nodes, B)->start = s->tokens[A].start;
+  VEC_GET_PTR(s->nodes, B)->end = s->tokens[D].end;
   RES = B;
 }
 
 type(RES) ::= OPEN_BRACKET(O) enclosed_type(A) CLOSE_BRACKET(C). {
   BREAK_PARSER;
-  VEC_GET_DIRECT(s->nodes, A).start = s->tokens[O].start;
-  VEC_GET_DIRECT(s->nodes, A).end = s->tokens[C].end;
+  VEC_GET_PTR(s->nodes, A)->start = s->tokens[O].start;
+  VEC_GET_PTR(s->nodes, A)->end = s->tokens[C].end;
   RES = A;
 }
 
