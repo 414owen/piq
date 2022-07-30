@@ -690,6 +690,8 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
   NODE_IND_T last_el_ind =
     state->res.tree.inds[node.subs_start + node.sub_amt - 1];
 
+  size_t start_action_amt = state->stack.len;
+
   if (is_wanted) {
     tc_action action = {
       .tag = TC_CLONE_WANTED_WANTED, .from = node_ind, .to = last_el_ind};
@@ -747,8 +749,11 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
     }
   }
 
-  if (!can_continue)
-    return;
+  if (!can_continue) {
+    // remove actions
+    state->stack.len = start_action_amt;
+    goto cleanup_tc_block;
+  }
 
   NODE_IND_T bnd_amt = 0;
   for (NODE_IND_T i = 0; i < node.sub_amt; i++) {
@@ -777,6 +782,7 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
     {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = last_el_ind, .to = node_ind}};
   push_actions(state, STATIC_LEN(actions), actions);
 
+cleanup_tc_block:
   stfree(sub_has_wanted, BITNSLOTS(node.sub_amt));
 }
 
