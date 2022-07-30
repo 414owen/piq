@@ -685,7 +685,7 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
   bool is_wanted = wanted_ind != state->unknown_ind;
   bool can_continue = true;
 
-  char *sub_has_wanted = calloc(BITSET_REQUIRED_BYTES(node.sub_amt), 1);
+  char *sub_has_wanted = stcalloc(BITSET_REQUIRED_BYTES(node.sub_amt), 1);
 
   NODE_IND_T last_el_ind =
     state->res.tree.inds[node.subs_start + node.sub_amt - 1];
@@ -776,6 +776,8 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
     {.tag = TC_POP_N_VARS, .amt = bnd_amt},
     {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = last_el_ind, .to = node_ind}};
   push_actions(state, STATIC_LEN(actions), actions);
+
+  stfree(sub_has_wanted, BITSET_REQUIRED_BYTES(node.sub_amt));
 }
 
 typedef struct {
