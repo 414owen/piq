@@ -594,18 +594,7 @@ static void tc_type(typecheck_state *state) {
       if (callee.tag == T_UNKNOWN) {
         break;
       }
-      uint8_t arity = callee.arity;
-      if (arity == 0) {
-        tc_error err = {
-          .type = WRONG_ARITY,
-          .pos = node_ind,
-        };
-        push_tc_err(state, err);
-        break;
-      }
       NODE_IND_T param_ind = state->res.node_types[node.sub_b];
-      NODE_IND_T type_ind =
-        mk_type_inline(state, T_CALL, arity, callee_ind, param_ind);
       state->res.node_types[node_ind] = type_ind;
       break;
     }
