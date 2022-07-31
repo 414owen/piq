@@ -184,12 +184,10 @@ static NODE_IND_T mk_primitive_type(typecheck_state *state, type_tag tag) {
 }
 
 static NODE_IND_T mk_type_inline(typecheck_state *state, type_tag tag,
-                                 uint8_t arity, NODE_IND_T sub_a,
-                                 NODE_IND_T sub_b) {
+                                 NODE_IND_T sub_a, NODE_IND_T sub_b) {
   debug_assert(type_repr(tag) == SUBS_ONE || type_repr(tag) == SUBS_TWO);
   type t = {
     .tag = tag,
-    .arity = arity,
     .sub_a = sub_a,
     .sub_b = sub_b,
   };
@@ -203,7 +201,7 @@ static NODE_IND_T mk_type_inline(typecheck_state *state, type_tag tag,
   return state->res.types.len - 1;
 }
 
-static NODE_IND_T mk_type(typecheck_state *state, type_tag tag, uint8_t arity,
+static NODE_IND_T mk_type(typecheck_state *state, type_tag tag,
                           NODE_IND_T *subs, NODE_IND_T sub_amt) {
   debug_assert(type_repr(tag) == SUBS_EXTERNAL);
   if (subs == NULL) {
@@ -222,7 +220,6 @@ static NODE_IND_T mk_type(typecheck_state *state, type_tag tag, uint8_t arity,
   }
   type t = {
     .tag = tag,
-    .arity = arity,
     .sub_amt = sub_amt,
     .subs_start = ind,
   };
@@ -307,15 +304,14 @@ static void setup_type_env(typecheck_state *state) {
     NODE_IND_T start_type_ind = state->res.types.len;
     for (NODE_IND_T i = 0; i < STATIC_LEN(primitive_types); i++) {
       VEC_PUSH(&state->type_type_inds, start_type_ind + i);
-      type t = {
-        .tag = primitive_types[i], .arity = 0, .subs_start = 0, .sub_amt = 0};
+      type t = {.tag = primitive_types[i], .subs_start = 0, .sub_amt = 0};
       VEC_PUSH(&state->res.types, t);
       bs_push(&state->type_is_builtin, true);
     }
 
     {
       NODE_IND_T u8_ind = mk_primitive_type(state, T_U8);
-      NODE_IND_T list_ind = mk_type_inline(state, T_LIST, 0, u8_ind, 0);
+      NODE_IND_T list_ind = mk_type_inline(state, T_LIST, u8_ind, 0);
       state->string_type_ind = list_ind;
       VEC_PUSH(&state->type_type_inds, state->res.types.len - 1);
       bs_push(&state->type_is_builtin, true);
@@ -479,7 +475,7 @@ static void tc_type(typecheck_state *state) {
           NODE_IND_T sub_type_ind =
             state->res.node_types[PT_LIST_TYPE_SUB(node)];
           state->res.node_types[node_ind] =
-            mk_type_inline(state, T_TUP, 0, sub_type_ind, sub_type_ind);
+            mk_type_inline(state, T_TUP, sub_type_ind, sub_type_ind);
           break;
         }
         // Combine
@@ -499,7 +495,7 @@ static void tc_type(typecheck_state *state) {
                   state->res.node_types[PT_TUP_SUB_IND(inds, node, i)];
               }
               state->res.node_types[node_ind] =
-                mk_type(state, T_TUP, 0, sub_type_inds, PT_TUP_SUB_AMT(node));
+                mk_type(state, T_TUP, sub_type_inds, PT_TUP_SUB_AMT(node));
               stfree(sub_type_inds, sub_bytes);
               break;
             }
@@ -530,7 +526,7 @@ static void tc_type(typecheck_state *state) {
         case TWO_STAGE_TWO: {
           NODE_IND_T *subs = stalloc(node.sub_amt);
           state->res.node_types[node_ind] = mk_type_inline(
-            state, T_LIST, 0, state->res.node_types[PT_LIST_TYPE_SUB(node)], 0);
+            state, T_LIST, state->res.node_types[PT_LIST_TYPE_SUB(node)], 0);
           stfree(subs, node.sub_amt);
           break;
         }
@@ -560,7 +556,7 @@ static void tc_type(typecheck_state *state) {
         // Combine
         case TWO_STAGE_TWO: {
           state->res.node_types[node_ind] =
-            mk_type_inline(state, T_FN, 0, state->res.node_types[param_ind],
+            mk_type_inline(state, T_FN, state->res.node_types[param_ind],
                            state->res.node_types[return_ind]);
           break;
         }
@@ -589,13 +585,51 @@ static void tc_type(typecheck_state *state) {
       break;
     }
     case PT_CALL: {
-      NODE_IND_T callee_ind = state->res.node_types[node.sub_a];
-      type callee = VEC_GET(state->res.types, callee_ind);
-      if (callee.tag == T_UNKNOWN) {
-        break;
+      NODE_IND_T callee_ind = PT_CALL_CALLEE_IND(node);
+      NODE_IND_T param_ind = PT_CALL_PARAM_IND(node);
+      switch (stage.two_stage) {
+        case TWO_STAGE_ONE: {
+          tc_action actions[] = {
+            {.tag = TC_TYPE,
+             .node_ind = callee_ind,
+             .stage = {.two_stage = TWO_STAGE_ONE}},
+            {.tag = TC_TYPE,
+             .node_ind = param_ind,
+             .stage = {.two_stage = TWO_STAGE_ONE}},
+            {.tag = TC_TYPE,
+             .node_ind = node_ind,
+             .stage = {.two_stage = TWO_STAGE_ONE}},
+          };
+          push_actions(state, STATIC_LEN(actions), actions);
+          break;
+        }
+        case TWO_STAGE_TWO: {
+          NODE_IND_T callee_type_ind = state->res.node_types[callee_ind];
+          NODE_IND_T param_type_ind = state->res.node_types[param_ind];
+          type callee = VEC_GET(state->res.types, callee_type_ind);
+          switch (callee.tag) {
+            case T_UNKNOWN:
+              break;
+            case T_FN: {
+              NODE_IND_T callee_return_type_ind = T_FN_RET_IND(callee);
+              state->res.node_types[node_ind] = callee_return_type_ind;
+              break;
+            }
+            default: {
+              NODE_IND_T from_to[2] = {state->unknown_ind, state->unknown_ind};
+              NODE_IND_T exp =
+                mk_type(state, T_FN, from_to, STATIC_LEN(from_to));
+              tc_error err = {.type = CALLED_NON_FUNCTION,
+                              .pos = node_ind,
+                              .expected = exp,
+                              .got = callee_ind};
+              push_tc_err(state, err);
+              break;
+            }
+          }
+          break;
+        }
       }
-      NODE_IND_T param_ind = state->res.node_types[node.sub_b];
-      state->res.node_types[node_ind] = type_ind;
       break;
     }
     case PT_CONSTRUCTION:
@@ -610,7 +644,6 @@ static void tc_type(typecheck_state *state) {
     case PT_AS:
     case PT_SIG:
     case PT_LET:
-    default:
       give_up("Tried creating type from unsupported node");
       break;
   }
@@ -884,7 +917,7 @@ push_tc_callee : {
 }
 post_tc_param : {
   NODE_IND_T wanted_fn_type = mk_type_inline(
-    state, T_FN, 0, state->res.node_types[param_ind], params.wanted_ind);
+    state, T_FN, state->res.node_types[param_ind], params.wanted_ind);
   tc_action actions[] = {
     {.tag = TC_WANT_TYPE, .from = wanted_fn_type, .to = callee_ind},
     // Can't be more specific, as the current node might be wanted=unknown
@@ -1265,7 +1298,7 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
           if (sub_amt == 0 || sub_type_ind == state->unknown_ind)
             break;
           state->res.node_types[params.node_ind] =
-            mk_type_inline(state, T_LIST, 0, sub_type_ind, 0);
+            mk_type_inline(state, T_LIST, sub_type_ind, 0);
         } break;
       }
       break;
@@ -1306,7 +1339,7 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
             subs[i] = state->res.node_types[sub_ind];
           }
           state->res.node_types[params.node_ind] =
-            mk_type(state, T_TUP, 0, subs, sub_amt);
+            mk_type(state, T_TUP, subs, sub_amt);
           stfree(subs, subs_bytes);
           break;
         }
@@ -1389,7 +1422,7 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
         }
         case TWO_STAGE_TWO: {
           state->res.node_types[params.node_ind] =
-            mk_type_inline(state, T_FN, 0, state->res.node_types[param_ind],
+            mk_type_inline(state, T_FN, state->res.node_types[param_ind],
                            state->res.node_types[body_ind]);
           break;
         }
@@ -1423,7 +1456,7 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
         case TWO_STAGE_TWO: {
           // TODO consider using wanted value?
           NODE_IND_T type =
-            mk_type_inline(state, T_FN, 0, state->res.node_types[param_ind],
+            mk_type_inline(state, T_FN, state->res.node_types[param_ind],
                            state->res.node_types[body_ind]);
           state->res.node_types[params.node_ind] = type;
           state->res.node_types[bnd_ind] = type;
