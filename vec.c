@@ -183,7 +183,6 @@ void __vec_replicate(vec_void *vec, void *el, size_t amt, size_t elemsize) {
 vec_void *__vec_pop_n(vec_void *vec, size_t elemsize, size_t n) {
   debug_assert(vec->len >= n);
   const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
-  // predicated this way for the branch predictor
   if (vec->len > inline_amt vec->len - n <= inline_amt) {
     __vec_resize_external_to_internal(vec, vec->len - n, elemsize);
   }
