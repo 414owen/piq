@@ -95,6 +95,7 @@ struct cg_state {
   llvm::IRBuilder<> builder;
 
   vec_cg_action actions;
+  vec_node_ind act_nodes;
 
   vec_string strs;
 
@@ -231,8 +232,13 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
             llvm_types[type_ind] = llvm::StructType::get(state->context, llvm::ArrayRef<llvm::Type*>());
             break;
           }
+          case T_CALL: {
+            give_up("Type parameter saturation isn't supported by the llvm backend yet");
+            break;
+          }
           case T_UNKNOWN: {
             give_up("Type not filled in by typechecker!");
+            break;
           }
         }
         break;
@@ -268,6 +274,7 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
           }
           // TODO: There should really be a separate module-local tag for combinable tags
           // to avoid this non-totality.
+          case T_CALL:
           case T_UNKNOWN:
           case T_UNIT:
           case T_I8:
@@ -294,12 +301,13 @@ static void cg_combine_node(cg_state *state, node_ind ind) {
   parse_node node = state->in.tree.nodes[ind];
   switch (node.type) {
     case PT_CALL: {
+      llvm::Value *callee = VEC_POP(&state->val_stack);
+      llvm::Value *param = VEC_POP(&state->val_stack);
       NODE_IND_T param_ind = PT_CALL_PARAM_IND(node);
       NODE_IND_T callee_ind = PT_CALL_CALLEE_IND(node);
       llvm::FunctionType *fn_type = (llvm::FunctionType *) construct_type(state, state->in.node_types[callee_ind]);
       llvm::ArrayRef<llvm::Value*> param_arr = llvm::ArrayRef<llvm::Value*>(param);
-      llvm::Twine name("call_name");
-      state->builder.CreateCall(fn_type, fn, param_arr, name);
+      state->builder.CreateCall(fn_type, callee, param_arr);
       break;
     }
     case PT_IF: {
@@ -333,21 +341,20 @@ static void cg_combine_node(cg_state *state, node_ind ind) {
 }
 
 static void cg_node(cg_state *state, node_ind ind) {
-  parse_node node = VEC_GET(state->in.tree.nodes, ind);
+  parse_node node = state->in.tree.nodes[ind];
   switch (node.type) {
-    case PT_TOP_LEVEL: {
-      fputs("Unhandled case: TopLevel\n", stderr);
-      abort();
+    case PT_ROOT: {
+      give_up("non-root root?");
       break;
     }
     case PT_CALL: {
       VEC_PUSH(&state->actions, CG_COMBINE);
       VEC_PUSH(&state->act_nodes, ind);
-      for (size_t i = 0; i < node.sub_amt; i++) {
-        VEC_PUSH(&state->actions, CG_NODE);
-        VEC_PUSH(&state->act_nodes,
-                 VEC_GET(state->in.tree.nodes, node.subs_start + i));
-      }
+      // These will be in the same order on the value (out) stack
+      VEC_PUSH(&state->actions, CG_NODE);
+      VEC_PUSH(&state->act_nodes, state->in.tree.nodes[PT_CALL_CALLEE_IND(node)]);
+      VEC_PUSH(&state->actions, CG_NODE);
+      VEC_PUSH(&state->act_nodes, state->in.tree.nodes[PT_CALL_PARAM_IND(node)]);
       break;
     }
     case PT_LOWER_NAME: {
