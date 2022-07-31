@@ -20,6 +20,19 @@
 // #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/TargetSelect.h"
 
+/*
+
+This module doesn't use the reverse actions trick used in other modules,
+so please make sure to push actions onto the stack in the reverse of
+the order you want them executed.
+
+TODO: benchmark:
+1. Stack of actions, where an action is a tagged union (saves lookups?)
+2. Stack of action tags, separate stacks or parameters (saves space?)
+3. Stack of action tags, and a stack of combined parameters for each variant (packed?)
+
+*/
+
 #ifdef DEBUG_CG
 #define debug_print(...) fprintf(stderr, __VA_ARGS__)
 #else
@@ -213,9 +226,13 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
             VEC_PUSH(&inds, T_FN_RET_IND(t));
             break;
           }
-          default: {
-            give_up("Type unsupported by LLVM backend");
+          case T_UNIT: {
+            // TODO: Not entirely sure the zero-sized anonymouse struct method works
+            llvm_types[type_ind] = llvm::StructType::get(state->context, llvm::ArrayRef<llvm::Type*>());
             break;
+          }
+          case T_UNKNOWN: {
+            give_up("Type not filled in by typechecker!");
           }
         }
         break;
@@ -249,9 +266,22 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
             llvm_types[type_ind] = llvm::FunctionType::get(param_type, subs_arr, false);
             break;
           }
-          default:
+          // TODO: There should really be a separate module-local tag for combinable tags
+          // to avoid this non-totality.
+          case T_UNKNOWN:
+          case T_UNIT:
+          case T_I8:
+          case T_U8:
+          case T_I16:
+          case T_U16:
+          case T_I32:
+          case T_U32:
+          case T_I64:
+          case T_U64:
+          case T_BOOL: {
             give_up("Can't combine non-compound llvm type");
             break;
+          }
         }
         break;
       }
@@ -266,9 +296,8 @@ static void cg_combine_node(cg_state *state, node_ind ind) {
     case PT_CALL: {
       NODE_IND_T param_ind = PT_CALL_PARAM_IND(node);
       NODE_IND_T callee_ind = PT_CALL_CALLEE_IND(node);
-      // TODO
       llvm::FunctionType *fn_type = (llvm::FunctionType *) construct_type(state, state->in.node_types[callee_ind]);
-      llvm::ArrayRef<llvm::Value*> param_arr = llvm::ArrayRef<llvm::Value*>(params, param_amt);
+      llvm::ArrayRef<llvm::Value*> param_arr = llvm::ArrayRef<llvm::Value*>(param);
       llvm::Twine name("call_name");
       state->builder.CreateCall(fn_type, fn, param_arr, name);
       break;

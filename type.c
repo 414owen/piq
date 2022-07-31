@@ -55,7 +55,6 @@ tree_node_repr type_repr(type_tag tag) {
       res = SUBS_ONE;
       break;
     case T_FN:
-    case T_CALL:
       res = SUBS_TWO;
       break;
     case T_TUP:
@@ -118,9 +117,6 @@ static void print_type_head(FILE *f, type_tag head) {
       break;
     case T_LIST:
       str = "List";
-      break;
-    case T_CALL:
-      str = "Call";
       break;
   }
   fputs(str, f);
