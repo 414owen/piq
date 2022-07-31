@@ -405,6 +405,7 @@ typedef struct {
 
 VEC_DECL(node_ind_tup);
 
+/*
 static size_t prim_ind(typecheck_state *state, type_tag tag) {
   for (size_t i = 0; i < state->type_env.len; i++) {
     NODE_IND_T type_ind =
@@ -416,6 +417,7 @@ static size_t prim_ind(typecheck_state *state, type_tag tag) {
   give_up("Can't find primitive type!");
   return 0;
 }
+*/
 
 static binding node_to_binding(parse_node node) {
   binding b = {.start = node.start, .end = node.end};
@@ -605,7 +607,6 @@ static void tc_type(typecheck_state *state) {
         }
         case TWO_STAGE_TWO: {
           NODE_IND_T callee_type_ind = state->res.node_types[callee_ind];
-          NODE_IND_T param_type_ind = state->res.node_types[param_ind];
           type callee = VEC_GET(state->res.types, callee_type_ind);
           switch (callee.tag) {
             case T_UNKNOWN:
