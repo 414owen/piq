@@ -13,14 +13,8 @@ typedef enum __attribute__((packed)) {
   T_FN, T_BOOL, T_TUP, T_LIST
 } type_tag;
 
-// FN with arity 0 means sub_a and sub_b are present, and
-// is equivalent to a CALL(CALL(FN, PARAM), RET)
-//
-// FN with arity 1 means sub_a is present, and
-// is equivalent to a CALL(FN, PARAM)
 typedef struct {
   type_tag tag;
-  uint8_t arity;
   union {
     struct {
       NODE_IND_T subs_start;
