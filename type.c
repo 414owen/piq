@@ -54,6 +54,7 @@ tree_node_repr type_repr(type_tag tag) {
     case T_LIST:
       res = SUBS_ONE;
       break;
+    case T_CALL:
     case T_FN:
       res = SUBS_TWO;
       break;
@@ -67,7 +68,6 @@ tree_node_repr type_repr(type_tag tag) {
 bool inline_types_eq(type a, type b) {
   bool res = true;
   res &= a.tag == b.tag;
-  res &= a.arity == b.arity;
   res &= a.sub_a == b.sub_a;
   res &= a.sub_b == b.sub_b;
   return res;
@@ -117,6 +117,9 @@ static void print_type_head(FILE *f, type_tag head) {
       break;
     case T_LIST:
       str = "List";
+      break;
+    case T_CALL:
+      str = "Call";
       break;
   }
   fputs(str, f);
