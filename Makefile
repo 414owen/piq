@@ -7,7 +7,7 @@ DEPDIR := .deps
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 
 COMPILE.c = $(CC) $(DEPFLAGS) $(ALLCFLAGS) $(TARGET_ARCH) -c
-COMPILE.cpp = $(CXX) $(DEPFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+COMPILE.cpp = $(CXX) $(DEPFLAGS) $(CXXFLAGS) $(TARGET_ARCH) -c
 
 $(DEPDIR): ; @mkdir -p $@
 
@@ -29,32 +29,32 @@ LDFLAGS=`llvm-config --cflags --ldflags --libs core executionengine mcjit interp
 COMMON_OBJS := \
 	dir_exists.o \
 	mkdir_p.o \
-    consts.o \
-    bitset.o \
+	consts.o \
+	bitset.o \
 	parser.o \
 	parse_tree.o \
-    diagnostic.o \
+	diagnostic.o \
 	rm_r.o \
-    scope.o \
-    type.o \
+	scope.o \
+	type.o \
 	typecheck.o \
 	tokenizer.o \
 	util.o \
 	vec.o
 
 REPL_OBJS := \
-    $(COMMON_OBJS) \
-    llvm.o \
-    repl.o
+	$(COMMON_OBJS) \
+	llvm.o \
+	repl.o
 
 repl : $(DEPDIR) repl.c $(REPL_OBJS)
 	$(CXX) $(CXXFLAGS) -DDEBUG -lreadline $(LDFLAGS) -o repl $(REPL_OBJS)
 
 TEST_OBJS := \
-    $(COMMON_OBJS) \
-    run_tests.o \
+	$(COMMON_OBJS) \
+	run_tests.o \
 	test.o \
-    test_bitset.o \
+	test_bitset.o \
 	test_parser.o \
 	test_scanner.o \
 	test_utils.o \
