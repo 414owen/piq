@@ -16,3 +16,4 @@ debug*
 *.ll
 *.bc
 repl
+build-aux
