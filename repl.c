@@ -18,7 +18,7 @@ static void reply(char *input, FILE *out) {
     goto end_a;
   }
 
-  parse_tree_res pres = parse(tres.tokens);
+  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (!pres.succeeded) {
     printf("Parsing \"%s\" failed.\n", input);
     goto end_b;
@@ -37,17 +37,18 @@ end_c:
   VEC_FREE(&tc_res.errors);
   VEC_FREE(&tc_res.types);
   VEC_FREE(&tc_res.type_inds);
-  VEC_FREE(&tc_res.node_types);
+  free(tc_res.node_types);
 
 end_b:
-  VEC_FREE(&pres.tree.inds);
-  VEC_FREE(&pres.tree.nodes);
+  free(pres.tree.inds);
+  free(pres.tree.nodes);
 
 end_a:
-  VEC_FREE(&tres.tokens);
+  free(tres.tokens);
 }
 
 int main(void) {
+  puts("Entering multiline REPL. Press <enter> twice to evaluate.");
   const char *hist_file_path = join_two_paths(get_cache_dir(), "repl_history");
   fclose(fopen(hist_file_path, "a"));
   read_history(hist_file_path);

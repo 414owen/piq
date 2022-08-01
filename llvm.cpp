@@ -51,16 +51,22 @@ extern "C" {
   #include "vec.h"
 }
 
-typedef enum {
+typedef enum : uint8_t {
+  // INPUTS: none
+  // OUTPUTS: val_stack
   CG_NODE,
   CG_COMBINE,
+  // INPUTS: none
+  // OUTPUTS: val_stack, block_stack
   CG_GEN_FUNCTION_BODY,
   CG_GEN_BLOCK,
   CG_POP_VAL,
   CG_POP_ENV,
   CG_POP_BLOCK,
   CG_RET,
-} cg_action_type;
+} cg_action;
+
+VEC_DECL(cg_action);
 
 typedef llvm::Value* llvm_value;
 VEC_DECL(llvm_value);
@@ -74,33 +80,19 @@ VEC_DECL(llvm_block);
 typedef llvm::Function* llvm_function;
 VEC_DECL(llvm_function);
 
-typedef enum {
-  STAGE_ONE,
-  STAGE_TWO,
-} stage;
-
-typedef struct {
-  cg_action_type type;
-  stage stage;
-  union {
-    llvm::Value * llvm_value;
-    llvm::Type * llvm_type;
-  };
-} cg_action;
-VEC_DECL(cg_action);
-
 struct cg_state {
   llvm::LLVMContext &context;
   llvm::Module &module;
   llvm::IRBuilder<> builder;
 
   vec_cg_action actions;
+  bitset act_stage;
   vec_node_ind act_nodes;
-
+  vec_llvm_function act_fns;
   vec_string strs;
 
   vec_llvm_value val_stack;
-  vec_llvm_block blocks;
+  vec_llvm_block block_stack;
   vec_llvm_function functions;
 
   tc_res in;
@@ -124,7 +116,7 @@ struct cg_state {
     strs = VEC_NEW;
 
     val_stack = VEC_NEW;
-    blocks = VEC_NEW;
+    block_stack = VEC_NEW;
     functions = VEC_NEW;
 
     in = in_p;
@@ -140,7 +132,7 @@ struct cg_state {
     VEC_FREE(&actions);
     VEC_FREE(&strs);
     VEC_FREE(&val_stack);
-    VEC_FREE(&blocks);
+    VEC_FREE(&block_stack);
     VEC_FREE(&functions);
     free(llvm_types);
     VEC_FREE(&env_bnds);
@@ -269,7 +261,7 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
             llvm::Type *param_type = llvm_types[param_ind];
             llvm::Type *ret_type = llvm_types[ret_ind];
             llvm::ArrayRef<llvm::Type*> subs_arr = llvm::ArrayRef<llvm::Type*>(param_type);
-            llvm_types[type_ind] = llvm::FunctionType::get(param_type, subs_arr, false);
+            llvm_types[type_ind] = llvm::FunctionType::get(ret_type, subs_arr, false);
             break;
           }
           // TODO: There should really be a separate module-local tag for combinable tags
@@ -301,26 +293,36 @@ static void cg_combine_node(cg_state *state, node_ind ind) {
   parse_node node = state->in.tree.nodes[ind];
   switch (node.type) {
     case PT_CALL: {
-      llvm::Value *callee = VEC_POP(&state->val_stack);
-      llvm::Value *param = VEC_POP(&state->val_stack);
-      NODE_IND_T param_ind = PT_CALL_PARAM_IND(node);
-      NODE_IND_T callee_ind = PT_CALL_CALLEE_IND(node);
-      llvm::FunctionType *fn_type = (llvm::FunctionType *) construct_type(state, state->in.node_types[callee_ind]);
-      llvm::ArrayRef<llvm::Value*> param_arr = llvm::ArrayRef<llvm::Value*>(param);
-      state->builder.CreateCall(fn_type, callee, param_arr);
-      break;
     }
     case PT_IF: {
-      llvm::BasicBlock *thenBlock = VEC_POP(&state->blocks);
-      llvm::BasicBlock *elseBlock = VEC_POP(&state->blocks);
-      // TODO
-      llvm::Type *res_type = construct_type(state, VEC_GET(state->in.node_types, ind));
-      state->builder.CreatePHI(res_type, 2, "end-if");
+      llvm::Value *cond = VEC_POP(&state->val_stack);
+      llvm::Value *then_val = VEC_POP(&state->val_stack);
+      llvm::Value *else_val = VEC_POP(&state->val_stack);
+      llvm::Type *res_type = construct_type(state, state->in.node_types[ind]);
+      llvm::BasicBlock *then_block = VEC_POP(&state->block_stack);
+      llvm::BasicBlock *else_block = VEC_POP(&state->block_stack);
+
+      // TODO do we need to pass the current block in?
+      llvm::BranchInst::Create(then_block, else_block, cond, VEC_PEEK(state->block_stack));
+      
+      llvm::Twine name("if-end");
+      llvm::BasicBlock *end_block = llvm::BasicBlock::Create(
+        state->context, name, VEC_PEEK(state->functions));
+      state->builder.SetInsertPoint(end_block);
+      llvm::PHINode *phi = state->builder.CreatePHI(res_type, 2, "end-if");
+      phi->addIncoming(then_val, then_block);
+      phi->addIncoming(else_val, else_block);
+
+      state->builder.SetInsertPoint(then_block);
+      state->builder.CreateBr(end_block);
+
+      state->builder.SetInsertPoint(else_block);
+      state->builder.CreateBr(end_block);
       break;
     }
     case PT_TUP: {
       llvm::Type *tup_type =
-        construct_type(state, VEC_GET(state->in.node_types, ind));
+        construct_type(state, state->in.node_types[ind]);
       llvm::Twine name("tuple");
       llvm::Value *allocated = state->builder.CreateAlloca(tup_type, 0, nullptr, name);
       for (size_t i = 0; i < node.sub_amt; i++) {
@@ -342,136 +344,144 @@ static void cg_combine_node(cg_state *state, node_ind ind) {
 
 static void cg_node(cg_state *state, node_ind ind) {
   parse_node node = state->in.tree.nodes[ind];
+  bool stage_one = !bs_get(state->act_stage, ind);
   switch (node.type) {
-    case PT_ROOT: {
-      give_up("non-root root?");
-      break;
-    }
     case PT_CALL: {
-      VEC_PUSH(&state->actions, CG_COMBINE);
-      VEC_PUSH(&state->act_nodes, ind);
-      // These will be in the same order on the value (out) stack
-      VEC_PUSH(&state->actions, CG_NODE);
-      VEC_PUSH(&state->act_nodes, state->in.tree.nodes[PT_CALL_CALLEE_IND(node)]);
-      VEC_PUSH(&state->actions, CG_NODE);
-      VEC_PUSH(&state->act_nodes, state->in.tree.nodes[PT_CALL_PARAM_IND(node)]);
-      break;
-    }
-    case PT_LOWER_NAME: {
-      case PT_UPPER_NAME: {
-        binding b = {
-          .start = node.start,
-          .end = node.end,
-        };
-        NODE_IND_T ind = lookup_bnd(state->in.source.data, state->env_bnds,
-                                    state->env_is_builtin, b);
-        // missing refs are caught in typecheck phase
-        debug_assert(ind != state->env_bnds.len);
-        VEC_PUSH(&state->val_stack, VEC_GET(state->env_vals, ind));
-        break;
-      }
-      case PT_INT: {
-        NODE_IND_T type_ind = VEC_GET(state->in.node_types, ind);
-        llvm::IntegerType *type = (llvm::IntegerType*) construct_type(state, type_ind);
-        const char *str = &VEC_GET(state->in.source, node.start);
-        size_t len = node.end - node.start + 1;
-        VEC_PUSH(&state->val_stack, llvm::ConstantInt::get(type, llvm::StringRef(str, len), 10));
-        break;
-      }
-      case PT_IF: {
+      NODE_IND_T callee_ind = PT_CALL_CALLEE_IND(node);
+      if (stage_one) {
+        NODE_IND_T param_ind = PT_CALL_PARAM_IND(node);
         VEC_PUSH(&state->actions, CG_COMBINE);
         VEC_PUSH(&state->act_nodes, ind);
-        VEC_PUSH(&state->strs, "endif");
-        VEC_PUSH(&state->actions, CG_GEN_BLOCK);
-
-        // else
+        // These will be in the same order on the value (out) stack
         VEC_PUSH(&state->actions, CG_NODE);
-        VEC_PUSH(&state->act_nodes,
-                 VEC_GET(state->in.tree.inds, node.subs_start + 2));
-        VEC_PUSH(&state->strs, "else");
-        VEC_PUSH(&state->actions, CG_GEN_BLOCK);
-
-        // then
+        VEC_PUSH(&state->act_nodes, state->in.tree.nodes[callee_ind]);
         VEC_PUSH(&state->actions, CG_NODE);
-        VEC_PUSH(&state->act_nodes,
-                 VEC_GET(state->in.tree.inds, node.subs_start + 1));
-        VEC_PUSH(&state->strs, "then");
-        VEC_PUSH(&state->actions, CG_GEN_BLOCK);
+        VEC_PUSH(&state->act_nodes, state->in.tree.nodes[param_ind]);
+      } else {
+        llvm::Value *callee = VEC_POP(&state->val_stack);
+        llvm::Value *param = VEC_POP(&state->val_stack);
+        llvm::FunctionType *fn_type = (llvm::FunctionType *) construct_type(state, state->in.node_types[callee_ind]);
+        llvm::ArrayRef<llvm::Value*> param_arr = llvm::ArrayRef<llvm::Value*>(param);
+        state->builder.CreateCall(fn_type, callee, param_arr);
+      }
+      break;
+    }
+    case PT_LOWER_NAME:
+    case PT_UPPER_NAME: {
+      binding b = {
+        .start = node.start,
+        .end = node.end,
+      };
+      NODE_IND_T ind = lookup_bnd(state->in.source.data, state->env_bnds,
+                                  state->env_is_builtin, b);
+      // missing refs are caught in typecheck phase
+      debug_assert(ind != state->env_bnds.len);
+      VEC_PUSH(&state->val_stack, VEC_GET(state->env_vals, ind));
+      break;
+    }
+    case PT_INT: {
+      NODE_IND_T type_ind = state->in.node_types[ind];
+      llvm::IntegerType *type = (llvm::IntegerType*) construct_type(state, type_ind);
+      const char *str = VEC_GET_PTR(state->in.source, node.start);
+      size_t len = node.end - node.start + 1;
+      VEC_PUSH(&state->val_stack, llvm::ConstantInt::get(type, llvm::StringRef(str, len), 10));
+      break;
+    }
+    case PT_IF: {
+      VEC_PUSH(&state->actions, CG_COMBINE);
+      bs_push(&state->act_stage, false);
+      VEC_PUSH(&state->act_nodes, ind);
+      VEC_PUSH(&state->strs, "endif");
+      VEC_PUSH(&state->actions, CG_GEN_BLOCK);
 
-        // cond
+      // cond
+      VEC_PUSH(&state->actions, CG_NODE);
+      bs_push(&state->act_stage, false);
+      VEC_PUSH(&state->act_nodes, PT_IF_COND_IND(state->in.tree.inds, node));
+
+      // then
+      VEC_PUSH(&state->actions, CG_NODE);
+      bs_push(&state->act_stage, false);
+      VEC_PUSH(&state->act_nodes, PT_IF_A_IND(state->in.tree.inds, node));
+      VEC_PUSH(&state->strs, "then");
+      VEC_PUSH(&state->actions, CG_GEN_BLOCK);
+
+      // else
+      VEC_PUSH(&state->actions, CG_NODE);
+      bs_push(&state->act_stage, false);
+      VEC_PUSH(&state->act_nodes, PT_IF_B_IND(state->in.tree.inds, node));
+      VEC_PUSH(&state->strs, "else");
+      VEC_PUSH(&state->actions, CG_GEN_BLOCK);
+      break;
+    }
+    case PT_TUP: {
+      for (size_t i = 0; i < node.sub_amt / 2; i++) {
+        NODE_IND_T sub_ind = state->in.tree.inds[node.subs_start + i];
         VEC_PUSH(&state->actions, CG_NODE);
-        VEC_PUSH(&state->act_nodes, VEC_GET(state->in.tree.inds, node.subs_start));
-        break;
+        VEC_PUSH(&state->act_nodes, sub_ind);
       }
-      case PT_TUP: {
-        for (size_t i = 0; i < node.sub_amt / 2; i++) {
-          NODE_IND_T sub_ind = VEC_GET(state->in.tree.inds, node.subs_start + i);
-          VEC_PUSH(&state->actions, CG_NODE);
-          VEC_PUSH(&state->act_nodes, sub_ind);
-        }
-        break;
-      }
-      case PT_ROOT: {
-        for (size_t i = 0; i < node.sub_amt; i++) {
-          parse_node sub =
-            state->in.tree.nodes
-              .data[VEC_GET(state->in.tree.inds, node.subs_start + i)];
+      break;
+    }
+    case PT_ROOT: {
+      for (size_t i = 0; i < PT_ROOT_SUB_AMT(node); i++) {
+        NODE_IND_T sub_ind = PT_ROOT_SUB_IND(state->in.tree.inds, node, i);
+        VEC_PUSH(&state->actions, CG_NODE);
+        bs_push(&state->act_stage, false);
 
-          node_ind bnd_ind = VEC_GET(state->in.tree.inds, sub.subs_start);
-          node_ind val_ind = VEC_GET(state->in.tree.inds, sub.subs_start + 1);
+        /*
+        node_ind bnd_ind = state->in.tree.inds[sub.subs_start];
+        node_ind val_ind = state->in.tree.inds[sub.subs_start + 1];
 
-          parse_node bnd = VEC_GET(state->in.tree.nodes, bnd_ind);
-          parse_node val = VEC_GET(state->in.tree.nodes, val_ind);
+        parse_node bnd = state->in.tree.nodes[bnd_ind];
+        parse_node val = state->in.tree.nodes[val_ind];
 
-          debug_assert(sub.type == PT_TOP_LEVEL);
+        llvm::FunctionType *fn_type = (llvm::FunctionType*) construct_type(state, state->in.node_types[val_ind]);
 
-          llvm::FunctionType *fn_type = (llvm::FunctionType*) construct_type(state, VEC_GET(state->in.node_types, val_ind));
+        size_t bnd_len = bnd.end - bnd.start + 1;
+        llvm::StringRef name_ref = llvm::StringRef(VEC_GET_PTR(state->in.source, bnd.start), bnd_len);
+        llvm::Twine name(name_ref);
 
-          size_t bnd_len = bnd.end - bnd.start + 1;
-          llvm::StringRef name_ref = llvm::StringRef(&VEC_GET(state->in.source, bnd.start), bnd_len);
-          llvm::Twine name(name_ref);
+        // TODO don't globally link everything
+        llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
+        llvm::Function* fn = llvm::Function::Create(fn_type, linkage, name, state->module);
 
-          // TODO don't globally link everything
-          llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
-          llvm::Function* fn = llvm::Function::Create(fn_type, linkage, name, state->module);
+        binding b = {
+          .start = bnd.start,
+          .end = bnd.end,
+        };
+        VEC_PUSH(&state->env_bnds, b);
+        VEC_PUSH(&state->env_nodes, val_ind);
+        VEC_PUSH(&state->env_vals, fn);
 
-          binding b = {
-            .start = bnd.start,
-            .end = bnd.end,
-          };
-          VEC_PUSH(&state->env_bnds, b);
-          VEC_PUSH(&state->env_nodes, val_ind);
-          VEC_PUSH(&state->env_vals, fn);
-
-          VEC_PUSH(&state->actions, CG_GEN_FUNCTION_BODY);
-          VEC_PUSH(&state->act_nodes, val_ind);
-          VEC_PUSH(&state->act_fns, fn);
-        }
-        break;
-      }
-      case PT_FUN: {
-        llvm::FunctionType *fn_type =
-          (llvm::FunctionType *) construct_type(state, VEC_GET(state->in.node_types, ind));
-        llvm::Twine name("fn");
-        llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::InternalLinkage;
-        llvm::Function *fn = llvm::Function::Create(fn_type, linkage, 0, name);
-        VEC_PUSH(&state->val_stack, fn);
         VEC_PUSH(&state->actions, CG_GEN_FUNCTION_BODY);
-        VEC_PUSH(&state->act_nodes, ind);
-        break;
+        VEC_PUSH(&state->act_nodes, val_ind);
+        VEC_PUSH(&state->act_fns, fn);
+        */
       }
-      case PT_AS: {
-        VEC_PUSH(&state->actions, CG_NODE);
-        VEC_PUSH(&state->act_nodes,
-                 VEC_GET(state->in.tree.inds, node.subs_start + 1));
-        break;
-      }
-      case PT_LIST: {
-        break;
-      }
-      case PT_STRING: {
-        break;
-      }
+      break;
+    }
+    case PT_FUN: {
+      llvm::FunctionType *fn_type =
+        (llvm::FunctionType *) construct_type(state, state->in.node_types[ind]);
+      llvm::Twine name("fn");
+      llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::InternalLinkage;
+      llvm::Function *fn = llvm::Function::Create(fn_type, linkage, 0, name);
+      VEC_PUSH(&state->val_stack, fn);
+      VEC_PUSH(&state->actions, CG_GEN_FUNCTION_BODY);
+      VEC_PUSH(&state->act_nodes, ind);
+      break;
+    }
+    case PT_AS: {
+      VEC_PUSH(&state->actions, CG_NODE);
+      VEC_PUSH(&state->act_nodes,
+               state->in.tree.inds[node.subs_start + 1]);
+      break;
+    }
+    case PT_LIST: {
+      break;
+    }
+    case PT_STRING: {
+      break;
     }
   }
 }
@@ -507,7 +517,7 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
         llvm::BasicBlock *block = llvm::BasicBlock::Create(
           state.context, name, VEC_PEEK(state.functions));
         state.builder.SetInsertPoint(block);
-        VEC_PUSH(&state.blocks, block);
+        VEC_PUSH(&state.block_stack, block);
         break;
       }
       case CG_POP_VAL: {
@@ -524,12 +534,12 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
         llvm::Function *fn = VEC_POP(&state.act_fns);
         llvm::BasicBlock* block = llvm::BasicBlock::Create(state.context, "entry", fn); 
         state.builder.SetInsertPoint(block);
-        VEC_PUSH(&state.blocks, state.builder.GetInsertBlock());
-        parse_node node = VEC_GET(state.in.tree.nodes, ind);
+        VEC_PUSH(&state.block_stack, state.builder.GetInsertBlock());
+        parse_node node = state.in.tree.nodes[ind];
 
         for (size_t i = 0; i < node.sub_amt / 2; i++) {
-          NODE_IND_T param_name_ind = VEC_GET(state.in.tree.inds, node.subs_start + i * 2 + 1);
-          parse_node param_name_node = VEC_GET(state.in.tree.nodes, param_name_ind);
+          NODE_IND_T param_name_ind = state.in.tree.inds[node.subs_start + i * 2 + 1];
+          parse_node param_name_node = state.in.tree.nodes[param_name_ind];
           debug_assert(param_name_node.type == PT_LOWER_NAME);
           binding b = {
             .start = param_name_node.start,
@@ -548,7 +558,7 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
         VEC_PUSH(&state.actions, CG_RET);
         VEC_PUSH(&state.actions, CG_POP_BLOCK);
         VEC_PUSH(&state.actions, CG_NODE);
-        VEC_PUSH(&state.act_nodes, VEC_GET(state.in.tree.inds, node.subs_start + node.sub_amt - 1))
+        VEC_PUSH(&state.act_nodes, state.in.tree.inds[node.subs_start + node.sub_amt - 1]);
         break;
       }
       case CG_RET: {
@@ -564,7 +574,7 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
         break;
       }
       case CG_POP_BLOCK: {
-        state.builder.SetInsertPoint(VEC_POP(&state.blocks));
+        state.builder.SetInsertPoint(VEC_POP(&state.block_stack));
         break;
       }
     }
