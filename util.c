@@ -278,7 +278,7 @@ char *get_cache_dir(void) {
   return dir;
 }
 
-void debug_assert_internal(bool b, char *file, size_t line) {
+void debug_assert_internal(bool b, const char *file, size_t line) {
   if (!b) {
     fprintf(stderr, "Assertion failed at %s:%zu\n", file, line);
     exit(1);

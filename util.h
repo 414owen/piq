@@ -59,7 +59,7 @@ int vasprintf(char **, const char * restrict, va_list);
 int asprintf(char **, const char *restrict, ...);
 void reverse_arbitrary(void *dest, size_t amt, size_t elsize);
 HEDLEY_NO_RETURN void give_up(const char *err);
-void debug_assert_internal(bool b, char *file, size_t line);
+void debug_assert_internal(bool b, const char *file, size_t line);
 
 char *join_paths(const char *const *paths, size_t path_num);
 char *join_two_paths(const char *front, const char *back);

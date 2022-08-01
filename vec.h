@@ -79,7 +79,7 @@ typedef struct {
 #endif
 } vec_void;
 
-#define VEC_NEW { 0 }
+#define VEC_NEW { .len = 0, .cap = 0, .data = NULL }
 
 #define VEC_GET_DIRECT(vec, i) (VEC_DATA_PTR(&(vec))[i])
 
