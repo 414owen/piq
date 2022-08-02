@@ -194,9 +194,12 @@ void __vec_replicate(vec_void *vec, void *el, size_t amt, size_t elemsize);
 
 #define VEC_CAT(v1, v2) VEC_APPEND((v1), (v2)->len, VEC_DATA_PTR(v2))
 
+#define VEC_CLEAR(v) ((v)->len = 0)
+
 typedef char *string;
 
 VEC_DECL(string);
 
 typedef uint32_t u8;
 VEC_DECL(u8);
+VEC_DECL(char);
