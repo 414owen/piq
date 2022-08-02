@@ -4,6 +4,9 @@ export PKG_CONFIG_FOR_TARGET
 export C_INCLUDE_PATH
 export CPLUS_INCLUDE_PATH
 
+export CC
+export CXX
+
 RE2C_OPTIONS = --case-ranges
 CFLAGS = -Wall -Wextra -pipe `pkg-config --cflags "readline"`
 CXXFLAGS = $(CFLAGS) -fno-exceptions
@@ -36,8 +39,8 @@ LDFLAGS = `llvm-config --cflags --ldflags --libs core executionengine mcjit inte
 LDFLAGS += `pkg-config --libs "readline"`
 
 : src/tokenizer.re |> re2c $(RE2C_OPTIONS) -o %o %f |> src/tokenizer.c
-: src/parser.y |> /bin/sh scripts/gen-parser.sh |> src/parser.c src/parser.h
-: foreach src/*.c | src/parser.h |> gcc $(CFLAGS) -c -o %o %f |> %B.o
-: src/llvm.cpp src/parser.h |> g++ $(CXXFLAGS) $(LDFLAGS) -c -o %o src/llvm.cpp |> llvm.o
-: $(common_objs) llvm.o repl.o |> g++ $(CFLAGS) -lreadline $(LDFLAGS) -o %o %f |> repl
-: $(common_objs) $(test_objs) |> gcc -Wall -Werror $(LDFLAGS) -o %o %f |> test
+: src/parser.y |> ./scripts/gen-parser.sh |> src/parser.c src/parser.h
+: foreach src/*.c | src/parser.h |> $CC $(CFLAGS) -c -o %o %f |> %B.o
+: src/llvm.cpp src/parser.h |> $CXX $(CXXFLAGS) $(LDFLAGS) -c -o %o src/llvm.cpp |> llvm.o
+: $(common_objs) llvm.o repl.o |> $CXX $(CXXFLAGS) -lreadline $(LDFLAGS) -o %o %f |> repl
+: $(common_objs) $(test_objs) |> $CC -Wall -Werror $(LDFLAGS) -o %o %f |> test
