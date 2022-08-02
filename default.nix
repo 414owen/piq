@@ -1,7 +1,8 @@
 { pkgs ? import <nixpkgs> { overlays = [ (import ./nix/overlays.nix) ]; } }:
 
 # pkgs.mkShell.override { stdenv = pkgs.pkgsCross.musl64.stdenv; } {
-pkgs.mkShell {
+pkgs.stdenv.mkDerivation {
+  name = "lang-c";
   nativeBuildInputs = with pkgs; [
     cgdb
     re2c
@@ -11,11 +12,11 @@ pkgs.mkShell {
     lemon
     valgrind
     tup
+    pkg-config
   ];
 
   buildInputs = with pkgs; [
     llvmPackages_13.libllvm
-    readline
-    readline.dev
+    readline81
   ];
 }
