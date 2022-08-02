@@ -183,7 +183,7 @@ void __vec_replicate(vec_void *vec, void *el, size_t amt, size_t elemsize) {
 vec_void *__vec_pop_n(vec_void *vec, size_t elemsize, size_t n) {
   debug_assert(vec->len >= n);
   const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
-  if (vec->len > inline_amt vec->len - n <= inline_amt) {
+  if (vec->len > inline_amt && vec->len - n <= inline_amt) {
     __vec_resize_external_to_internal(vec, vec->len - n, elemsize);
   }
   vec->len -= n;
@@ -205,15 +205,23 @@ vec_void *__vec_pop(vec_void *vec, size_t elemsize) {
 vec_void *__vec_pop(vec_void *vec) { return __vec_pop_n(vec, 1); }
 #endif
 
-// returns minimum heap-allocated buffer
-char *__vec_finalize(vec_void *vec, size_t elemsize) {
 #if INLINE_VEC_BYTES > 0
+
+char *__vec_finalize(vec_void *vec, size_t elemsize) {
+  const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
   if (vec->len <= inline_amt) {
     __vec_resize_internal_to_external(vec, vec->len, elemsize);
   }
-#endif
   return vec->data;
 }
+
+#else
+
+char *__vec_finalize(vec_void *vec) {
+  return vec->data;
+}
+
+#endif
 
 void __vec_clone(vec_void *dest, vec_void *src, size_t elemsize) {
   dest->len = src->len;

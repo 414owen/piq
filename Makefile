@@ -75,7 +75,7 @@ reports/coverage.info: test
 	lcov --capture --directory . --output-file reports/coverage.info
 
 clean:
-	rm -rf *.so *.o test parser.c tokenizer.c *.gcda *.gcno *.gcov reports
+	rm -rf *.so *.o test parser.c tokenizer.c *.gcda *.gcno *.gcov reports repl
 
 reports/coverage/index.html: reports/coverage.info
 	mkdir -p reports/coverage
