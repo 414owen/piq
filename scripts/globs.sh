@@ -4,8 +4,8 @@ set -euo pipefail
 
 shopt -s extglob
 
-GLOBIGNORE="tokenizer.c:parser.c" 
-handwritten_c_files="$(echo *.c)"
+GLOBIGNORE="src/tokenizer.c:src/parser.c" 
+handwritten_c_files="$(echo src/*.c)"
 
-GLOBIGNORE="parser.h" 
-handwritten_h_files="$(echo *.h)"
+GLOBIGNORE="src/parser.h" 
+handwritten_h_files="$(echo src/*.h)"
