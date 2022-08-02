@@ -1,0 +1,14 @@
+{
+    "hedley": {
+        "branch": "master",
+        "description": "A C/C++ header to help move #ifdefs out of your code",
+        "homepage": "https://nemequ.github.io/hedley/",
+        "owner": "nemequ",
+        "repo": "hedley",
+        "rev": "8fb0604a8095f6c907378cc3f0391520ae843f6f",
+        "sha256": "06927cgvk3zwcixa21jnrql82v682qsq79ln5m9j69hlm8zsly3i",
+        "type": "tarball",
+        "url": "https://github.com/nemequ/hedley/archive/8fb0604a8095f6c907378cc3f0391520ae843f6f.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    }
+}
