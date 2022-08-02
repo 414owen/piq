@@ -4,6 +4,7 @@
 pkgs.stdenv.mkDerivation {
   name = "lang-c";
   nativeBuildInputs = with pkgs; [
+    editline
     cgdb
     re2c
     clang-tools
