@@ -18,7 +18,7 @@ static void test_typecheck_produces(test_state *state, char *input,
     goto end_a;
   }
 
-  parse_tree_res pres = parse(tres.tokens);
+  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (!pres.succeeded) {
     failf(state, "Parsing \"%s\" failed.", input);
     goto end_b;
@@ -30,20 +30,20 @@ static void test_typecheck_produces(test_state *state, char *input,
     goto end_c;
   }
 
-  LLVMModuleRef module = codegen(tc_res);
+  // LLVMModuleRef module = codegen(tc_res);
 
 end_c:
   VEC_FREE(&tc_res.errors);
   VEC_FREE(&tc_res.types);
   VEC_FREE(&tc_res.type_inds);
-  VEC_FREE(&tc_res.node_types);
+  free(tc_res.node_types);
 
 end_b:
-  VEC_FREE(&pres.tree.inds);
-  VEC_FREE(&pres.tree.nodes);
+  free(pres.tree.inds);
+  free(pres.tree.nodes);
 
 end_a:
-  VEC_FREE(&tres.tokens);
+  free(tres.tokens);
 }
 
 void test_typecheck(test_state *state) {
