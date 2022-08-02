@@ -6,10 +6,12 @@ export CPLUS_INCLUDE_PATH
 
 export CC
 export CXX
+export CFLAGS
+export CXXFLAGS
 
 RE2C_OPTIONS = --case-ranges
-CFLAGS = -Wall -Wextra -pipe `pkg-config --cflags "readline"`
-CXXFLAGS = $(CFLAGS) -fno-exceptions
+CFLAGS = -Wall -Wextra -pipe $CFLAGS `pkg-config --cflags "readline"`
+CXXFLAGS = $(CFLAGS) $CXXFLAGS -fno-exceptions
 
 common_objs += dir_exists.o
 common_objs += mkdir_p.o
