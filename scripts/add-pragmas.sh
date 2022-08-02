@@ -1,19 +1,19 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
-set -euxo pipefail
+source $(dirname $0)/globs.sh
 
-function fixup() {
+fixup() {
 	if ! grep 'pragma once' $1; then
 		echo -e "#pragma once\n\n$(cat $1)" > $1
 	fi
 }
 
 if [[ $# -gt 0 ]]; then
-	for ((i=1; i<=$#; i++)); do
-	  fixup "${!i}"
+	for i in $@; do
+	  fixup "${i}"
 	done
 else
-	for i in src/*.h; do
+	for i in $handwritten_h_files; do
 		fixup $i
 	done
 fi

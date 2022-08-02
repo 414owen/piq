@@ -34,7 +34,7 @@ LDFLAGS = `llvm-config --cflags --ldflags --libs core executionengine mcjit inte
 LDFLAGS += `pkg-config --libs "libeditline"`
 
 : src/tokenizer.re |> re2c $(RE2C_OPTIONS) -o %o %f |> src/tokenizer.c
-: src/parser.y |> ./scripts/gen_parser.sh |> src/parser.c src/parser.h
+: src/parser.y |> /bin/sh scripts/gen-parser.sh |> src/parser.c src/parser.h
 : foreach src/*.c | src/parser.h |> gcc $(CFLAGS) -c -o %o %f |> %B.o
 : src/llvm.cpp src/parser.h |> g++ $(CXXFLAGS) $(LDFLAGS) -c -o %o src/llvm.cpp |> llvm.o
 : $(common_objs) llvm.o repl.o |> g++ $(CFLAGS) -ledit $(LDFLAGS) -o %o %f |> repl
