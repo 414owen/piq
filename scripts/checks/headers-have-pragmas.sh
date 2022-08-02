@@ -4,7 +4,7 @@ set -euxo pipefail
 
 fail="false"
 
-for i in *.h; do
+for i in src/*.h; do
   if ! cat $i | grep 'pragma once' > /dev/null; then
     echo "Header file '$i' doesn't have a pragma once."
     fail=true

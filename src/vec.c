@@ -217,9 +217,7 @@ char *__vec_finalize(vec_void *vec, size_t elemsize) {
 
 #else
 
-char *__vec_finalize(vec_void *vec) {
-  return vec->data;
-}
+char *__vec_finalize(vec_void *vec) { return vec->data; }
 
 #endif
 
