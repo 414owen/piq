@@ -20,7 +20,6 @@ bitset bs_new(void) {
 void bs_resize(bitset *bs, size_t bits) {
   size_t bytes_needed = BITNSLOTS(bits);
   bs->data = realloc(bs->data, bytes_needed);
-  debug_assert(bs->data != NULL);
   bs->cap = bytes_needed;
 }
 
@@ -53,7 +52,7 @@ void bs_push(bitset *bs, bool bit) {
   bs_data_set(bs->data, bs->len++, bit);
 }
 
-void bs_pop(bitset *bs) { bs->len--; }
+bool bs_pop(bitset *bs) { return bs->data[bs->len--]; }
 
 void bs_free(bitset *bs) {
   free(bs->data);

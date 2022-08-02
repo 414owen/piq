@@ -20,7 +20,7 @@ static void reply(char *input, FILE *out) {
 
   parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (!pres.succeeded) {
-    printf("Parsing \"%s\" failed.\n", input);
+    printf("Parsing failed.\n");
     goto end_b;
   }
 
@@ -52,16 +52,29 @@ int main(void) {
   const char *hist_file_path = join_two_paths(get_cache_dir(), "repl_history");
   fclose(fopen(hist_file_path, "a"));
   read_history(hist_file_path);
+  vec_char multiline_input = VEC_NEW;
   while (true) {
     char *input = readline("> ");
-    add_history(input);
     if (!input) {
       putc('\n', stdout);
       break;
     }
-    printf("Got input: %s\n", input);
-    append_history(1, hist_file_path);
-    reply(input, stdout);
-    free(input);
+    // end of multiline input
+    if (strlen(input) == 0) {
+      VEC_POP(&multiline_input);
+      VEC_PUSH(&multiline_input, (char)'\0');
+      char *data = VEC_DATA_PTR(&multiline_input);
+      printf("Got input: '%s'\n", data);
+      reply(data, stdout);
+      VEC_CLEAR(&multiline_input);
+    } else {
+      add_history(input);
+      append_history(1, hist_file_path);
+      for (char *c = input; *c != '\0'; c += 1) {
+        VEC_PUSH(&multiline_input, *c);
+      }
+      VEC_PUSH(&multiline_input, (char)'\n');
+      free(input);
+    }
   }
 }

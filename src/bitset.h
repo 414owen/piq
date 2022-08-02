@@ -30,4 +30,4 @@ bool bs_get(bitset bs, size_t ind);
 void bs_data_set(bitset_data bs, size_t ind, bool b);
 void bs_set(bitset bs, size_t ind, bool b);
 void bs_push(bitset *bs, bool bit);
-void bs_pop(bitset *bs);
+bool bs_pop(bitset *bs);
