@@ -8,14 +8,15 @@
 #include "parse_tree.h"
 #include "vec.h"
 
-#define test_assert(state, b) \
-  if (!(b)) test_fail_eq(state, #b, "true");
+#define test_assert(state, b)                                                  \
+  if (!(b))                                                                    \
+    test_fail_eq(state, #b, "true");
 
-#define test_assert_eq(state, a, b) \
-  if ((a) != (b)) test_fail_eq(state, #a, #b);
+#define test_assert_eq(state, a, b)                                            \
+  if ((a) != (b))                                                              \
+    test_fail_eq(state, #a, #b);
 
-#define failf(state, ...) \
-  failf_(state, __FILE__, __LINE__, __VA_ARGS__)
+#define failf(state, ...) failf_(state, __FILE__, __LINE__, __VA_ARGS__)
 
 typedef struct {
   vec_string path;

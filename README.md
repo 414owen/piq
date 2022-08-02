@@ -66,3 +66,19 @@ A language that does everything right
 * ~Search index arrays instead of adding to them?~
 * make ss_init return struct, with a char**, rather than a struct
 * Get rid of PT_TOP_LEVEL, it's just more indirection
+
+
+# Building
+
+```
+$ nix-build
+$ ./result/bin/lang
+```
+
+# Developing
+
+```
+$ nix-shell
+$ tup
+$ ./repl
+```

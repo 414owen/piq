@@ -40,7 +40,7 @@
 #define CYNB "\e[46m"
 #define WHTB "\e[47m"
 
-// High intensty background 
+// High intensty background
 #define BLKHB "\e[0;100m"
 #define REDHB "\e[0;101m"
 #define GRNHB "\e[0;102m"

@@ -1,11 +1,17 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
-set -euo pipefail
-
-shopt -s extglob
-
-GLOBIGNORE="src/tokenizer.c:src/parser.c" 
-handwritten_c_files="$(echo src/*.c)"
+GLOBIGNORE="src/tokenizer.c\nsrc/parser.c" 
+handwritten_c_files=""
+for i in src/*.c; do
+  if ! echo "$GLOBIGNORE" | grep "$i" > /dev/null; then
+    handwritten_c_files+=" $i"
+  fi
+done
 
 GLOBIGNORE="src/parser.h" 
-handwritten_h_files="$(echo src/*.h)"
+handwritten_h_files=""
+for i in src/*.h; do
+  if ! echo "$GLOBIGNORE" | grep "$i" > /dev/null; then
+    handwritten_c_files+=" $i"
+  fi
+done

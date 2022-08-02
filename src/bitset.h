@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-typedef char* bitset_data;
+typedef char *bitset_data;
 
 typedef struct {
   bitset_data data;
@@ -13,7 +13,6 @@ typedef struct {
   // in bytes
   size_t cap;
 } bitset;
-
 
 #define BITMASK(b) (1 << ((b) % CHAR_BIT))
 #define BITSLOT(b) ((b) / CHAR_BIT)

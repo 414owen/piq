@@ -9,6 +9,7 @@ test
 reports/
 tokenizer.c
 parser.c
+parser.h
 .deps
 *.xml
 vgcore*
@@ -18,3 +19,4 @@ debug*
 repl
 build-aux
 .tup
+result
