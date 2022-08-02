@@ -2,8 +2,18 @@
 
 set -euxo pipefail
 
-for i in *.h; do
-	if ! grep 'pragma once' $i; then
-		echo -e "#pragma once\n\n$(cat $i)" > $i
+function fixup() {
+	if ! grep 'pragma once' $1; then
+		echo -e "#pragma once\n\n$(cat $1)" > $1
 	fi
-done
+}
+
+if [[ $# -gt 0 ]]; then
+	for ((i=1; i<=$#; i++)); do
+	  fixup "${!i}"
+	done
+else
+	for i in src/*.h; do
+		fixup $i
+	done
+fi

@@ -150,9 +150,19 @@ void __vec_clone(vec_void *dest, vec_void *src, size_t elemsize);
   }
 
 
+#if INLINE_VEC_BYTES > 0
+
 char *__vec_finalize(vec_void *vec, size_t elemsize);
 // returns minimum heap-allocated buffer
 #define VEC_FINALIZE(vec) (typeof(*(vec.data))) __vec_finalize((vec_void*) vec, sizeof((vec)->data[0]))
+
+#else
+
+char *__vec_finalize(vec_void *vec);
+// returns minimum heap-allocated buffer
+#define VEC_FINALIZE(vec) (typeof(*(vec.data))) __vec_finalize((vec_void*) vec)
+
+#endif
 
 void __vec_append(vec_void *vec, void *els, size_t amt, size_t elemsize);
 

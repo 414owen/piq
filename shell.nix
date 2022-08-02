@@ -10,11 +10,12 @@ pkgs.mkShell {
     lcov
     lemon
     valgrind
+    tup
   ];
 
   buildInputs = with pkgs; [
     llvmPackages_13.libllvm
     readline
-    autoconf
+    readline.dev
   ];
 }
