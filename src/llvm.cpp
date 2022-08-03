@@ -290,12 +290,12 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
   return llvm_types[root_type_ind];
 }
 
-stage pop_stage(cg_state *state) {
+static stage pop_stage(cg_state *state) {
   return bs_pop(&state->act_stage) ? STAGE_TWO : STAGE_ONE;
 }
 
-void push_stage(cg_state *state, stage s) {
-  bs_push(&state->act_stage, s == STAGE_TWO);
+static void push_stage(bitset *bs, stage s) {
+  bs_push(bs, s == STAGE_TWO);
 }
 
 static void cg_node(cg_state *state, node_ind ind) {
@@ -308,14 +308,14 @@ static void cg_node(cg_state *state, node_ind ind) {
         case STAGE_ONE: {
           NODE_IND_T param_ind = PT_CALL_PARAM_IND(node);
           VEC_PUSH(&state->actions, CG_NODE);
-          push_stage(state, STAGE_TWO);
+          push_stage(&state->act_stage, STAGE_TWO);
           VEC_PUSH(&state->act_nodes, ind);
           // These will be in the same order on the value (out) stack
           VEC_PUSH(&state->actions, CG_NODE);
-          push_stage(state, STAGE_ONE);
+          push_stage(&state->act_stage, STAGE_ONE);
           VEC_PUSH(&state->act_nodes, state->in.tree.nodes[callee_ind]);
           VEC_PUSH(&state->actions, CG_NODE);
-          push_stage(state, STAGE_ONE);
+          push_stage(&state->act_stage, STAGE_ONE);
           VEC_PUSH(&state->act_nodes, state->in.tree.nodes[param_ind]);
           break;
         }
@@ -355,24 +355,24 @@ static void cg_node(cg_state *state, node_ind ind) {
       switch (stage) {
         case STAGE_ONE:
           VEC_PUSH(&state->actions, CG_NODE);
-          push_stage(state, STAGE_TWO);
+          push_stage(&state->act_stage, STAGE_TWO);
           VEC_PUSH(&state->act_nodes, ind);
 
           // cond
           VEC_PUSH(&state->actions, CG_NODE);
-          push_stage(state, STAGE_ONE);
+          push_stage(&state->act_stage, STAGE_ONE);
           VEC_PUSH(&state->act_nodes, PT_IF_COND_IND(state->in.tree.inds, node));
 
           // then
           VEC_PUSH(&state->actions, CG_NODE);
-          push_stage(state, STAGE_ONE);
+          push_stage(&state->act_stage, STAGE_ONE);
           VEC_PUSH(&state->act_nodes, PT_IF_A_IND(state->in.tree.inds, node));
           VEC_PUSH(&state->strs, "then");
           VEC_PUSH(&state->actions, CG_GEN_BLOCK);
 
           // else
           VEC_PUSH(&state->actions, CG_NODE);
-          push_stage(state, STAGE_ONE);
+          push_stage(&state->act_stage, STAGE_ONE);
           VEC_PUSH(&state->act_nodes, PT_IF_B_IND(state->in.tree.inds, node));
           VEC_PUSH(&state->strs, "else");
           VEC_PUSH(&state->actions, CG_GEN_BLOCK);
@@ -412,12 +412,12 @@ static void cg_node(cg_state *state, node_ind ind) {
       switch (stage) {
         case STAGE_ONE:
           VEC_PUSH(&state->actions, CG_NODE);
-          push_stage(state, STAGE_TWO);
+          push_stage(&state->act_stage, STAGE_TWO);
           VEC_PUSH(&state->act_nodes, ind);
           for (size_t i = 0; i < node.sub_amt / 2; i++) {
             NODE_IND_T sub_ind = state->in.tree.inds[node.subs_start + i];
             VEC_PUSH(&state->actions, CG_NODE);
-            push_stage(state, STAGE_ONE);
+            push_stage(&state->act_stage, STAGE_ONE);
             VEC_PUSH(&state->act_nodes, sub_ind);
           }
           break;
@@ -443,7 +443,7 @@ static void cg_node(cg_state *state, node_ind ind) {
       for (size_t i = 0; i < PT_ROOT_SUB_AMT(node); i++) {
         NODE_IND_T sub_ind = PT_ROOT_SUB_IND(state->in.tree.inds, node, i);
         VEC_PUSH(&state->actions, CG_NODE);
-        push_stage(state, STAGE_ONE);
+        push_stage(&state->act_stage, STAGE_ONE);
         VEC_PUSH(&state->act_nodes, sub_ind);
 
         /*
@@ -491,7 +491,7 @@ static void cg_node(cg_state *state, node_ind ind) {
     }
     case PT_AS: {
       VEC_PUSH(&state->actions, CG_NODE);
-      push_stage(state, STAGE_ONE);
+      push_stage(&state->act_stage, STAGE_ONE);
       VEC_PUSH(&state->act_nodes,
                state->in.tree.inds[node.subs_start + 1]);
       break;
@@ -524,7 +524,7 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
   cg_state state(ctx, mod, in);
 
   VEC_PUSH(&state.actions, CG_NODE);
-  push_stage(&state, STAGE_ONE);
+  push_stage(&state.act_stage, STAGE_ONE);
   VEC_PUSH(&state.act_nodes, in.tree.root_ind);
 
   while (state.actions.len > 0) {
@@ -580,7 +580,7 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
         VEC_PUSH(&state.actions, CG_RET);
         VEC_PUSH(&state.actions, CG_POP_BLOCK);
         VEC_PUSH(&state.actions, CG_NODE);
-        push_stage(&state, STAGE_ONE);
+        push_stage(&state.act_stage, STAGE_ONE);
         VEC_PUSH(&state.act_nodes, state.in.tree.inds[node.subs_start + node.sub_amt - 1]);
         break;
       }
