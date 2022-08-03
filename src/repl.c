@@ -26,7 +26,8 @@ static void reply(char *input, FILE *out) {
 
   tc_res tc_res = typecheck(test_file, pres.tree);
   if (tc_res.errors.len > 0) {
-    printf("Typechecking \"%s\" failed.\n", input);
+    print_tc_errors(stderr, tc_res);
+    putc('\n', stderr);
     goto end_c;
   }
 
