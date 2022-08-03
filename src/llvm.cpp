@@ -126,7 +126,7 @@ struct cg_state {
 
     in = in_p;
 
-    llvm_types = (llvm::Type **) calloc(in.tree.node_amt, sizeof(llvm::Type*)),
+    llvm_types = (llvm::Type **) calloc(in.types.len, sizeof(llvm::Type*)),
     env_bnds = VEC_NEW;
     env_vals = VEC_NEW;
     env_is_builtin = bs_new();
@@ -294,6 +294,7 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
 }
 
 static stage pop_stage(bitset *bs) {
+  debug_assert(bs->len > 0);
   return bs_pop(bs) ? STAGE_TWO : STAGE_ONE;
 }
 
@@ -487,11 +488,11 @@ static void cg_node(cg_state *state, node_ind ind) {
       llvm::FunctionType *fn_type =
         (llvm::FunctionType *) construct_type(state, state->in.node_types[ind]);
       llvm::Twine name("fn");
-      llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::InternalLinkage;
+      llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::AvailableExternallyLinkage;
       llvm::Function *fn = llvm::Function::Create(fn_type, linkage, 0, name);
-      VEC_PUSH(&state->val_stack, fn);
       VEC_PUSH(&state->actions, CG_GEN_FUNCTION_BODY);
       VEC_PUSH(&state->act_nodes, ind);
+      VEC_PUSH(&state->act_fns, fn);
       break;
     }
     case PT_AS: {
@@ -504,6 +505,7 @@ static void cg_node(cg_state *state, node_ind ind) {
     case PT_UNIT: {
       llvm::Type *void_type = construct_type(state, state->in.node_types[ind]);
       llvm::Value *void_val = llvm::UndefValue::get(void_type);
+      VEC_PUSH(&state->val_stack, void_val);
       break;
     }
     // TODO: all of these
@@ -538,13 +540,12 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
   VEC_PUSH(&state.act_nodes, in.tree.root_ind);
 
   while (state.actions.len > 0) {
-    size_t prev_actions = state.actions.len;
-    size_t prev_vals = state.val_stack.len;
 
     // printf("Codegen action %d\n", action_num++);
     cg_action action = VEC_POP(&state.actions);
     switch (action) {
       case CG_NODE: {
+        debug_assert(state.actions.len + 1 == state.act_stage.len);
         cg_node(&state, VEC_POP(&state.act_nodes));
         break;
       }
