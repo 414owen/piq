@@ -169,14 +169,13 @@ exprs(RES) ::= . {
 }
 */
 
-expr ::= name.
-
 name ::= upper_name.
 name ::= lower_name.
 
+expr ::= name.
 expr ::= string.
-
 expr ::= int.
+expr ::= unit.
 
 string(RES) ::= STRING(A). {
   BREAK_PARSER;
