@@ -52,6 +52,7 @@ int main(void) {
   fclose(fopen(hist_file_path, "a"));
   read_history(hist_file_path);
   vec_char multiline_input = VEC_NEW;
+
   while (true) {
     char *input = readline("> ");
     if (!input) {
@@ -76,6 +77,7 @@ int main(void) {
       free(input);
     }
   }
+
   VEC_FREE(&multiline_input);
   free(hist_file_path);
 }
