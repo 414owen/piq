@@ -225,8 +225,7 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
             break;
           }
           case T_UNIT: {
-            // TODO: Not entirely sure the zero-sized anonymouse struct method works
-            llvm_types[type_ind] = llvm::StructType::get(state->context, llvm::ArrayRef<llvm::Type*>());
+            llvm_types[type_ind] = llvm::Type::getVoidTy(state->context);
             break;
           }
           case T_CALL: {
@@ -446,6 +445,8 @@ static void cg_node(cg_state *state, node_ind ind) {
     case PT_ROOT: {
       for (size_t i = 0; i < PT_ROOT_SUB_AMT(node); i++) {
         NODE_IND_T sub_ind = PT_ROOT_SUB_IND(state->in.tree.inds, node, i);
+        parse_node node = state->in.tree.nodes[sub_ind];
+        if (node.type == PT_SIG) continue;
         VEC_PUSH(&state->actions, CG_NODE);
         push_stage(&state->act_stage, STAGE_ONE);
         VEC_PUSH(&state->act_nodes, sub_ind);
@@ -500,16 +501,21 @@ static void cg_node(cg_state *state, node_ind ind) {
                state->in.tree.inds[node.subs_start + 1]);
       break;
     }
+    case PT_UNIT: {
+      llvm::Type *void_type = construct_type(state, state->in.node_types[ind]);
+      llvm::Value *void_val = llvm::UndefValue::get(void_type);
+      break;
+    }
     // TODO: all of these
     case PT_LIST_TYPE:
     case PT_FN_TYPE: {
       give_up("Tried to typecheck type-level node as term-level");
+      break;
     }
     case PT_FN:
     case PT_FUN_BODY:
     case PT_LET:
     case PT_SIG:
-    case PT_UNIT:
     case PT_LIST:
     case PT_STRING:
     case PT_CONSTRUCTION: {
@@ -540,7 +546,6 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
     switch (action) {
       case CG_NODE: {
         cg_node(&state, VEC_POP(&state.act_nodes));
-        debug_assert(state.actions.len > prev_actions || state.val_stack.len > prev_vals);
         break;
       }
       case CG_GEN_BLOCK: {
