@@ -7,61 +7,6 @@
 #include "typecheck.h"
 #include "util.h"
 
-static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
-  tc_error error = VEC_GET(res.errors, err_ind);
-  switch (error.type) {
-    case CALLED_NON_FUNCTION:
-      fputs("Tried to call a non-function", f);
-      break;
-    case TUPLE_WRONG_ARITY:
-      fputs("Wrong number of tuple elements", f);
-      break;
-    case NEED_SIGNATURE:
-      fputs("Top level needs signature", f);
-      break;
-    case INT_LARGER_THAN_MAX:
-      fputs("Int doesn't fit into type", f);
-      break;
-    case TYPE_NOT_FOUND:
-      fputs("Type not in scope", f);
-      break;
-    case AMBIGUOUS_TYPE:
-      fputs("Ambiguous type", f);
-      break;
-    case BINDING_NOT_FOUND:
-      fputs("Binding not found", f);
-      break;
-    case TYPE_MISMATCH:
-      fputs("Type mismatch. Expected ", f);
-      print_type(f, res.types.data, res.type_inds.data, error.expected);
-      fputs("\nGot ", f);
-      print_type(f, VEC_DATA_PTR(&res.types), VEC_DATA_PTR(&res.type_inds),
-                 error.got);
-      break;
-    case TYPE_HEAD_MISMATCH:
-      fputs("Type mismatch. Expected ", f);
-      print_type(f, res.types.data, res.type_inds.data, error.expected);
-      fputs("\nGot: ", f);
-      print_type_head_placeholders(f, error.got_type_head, error.got_arity);
-      break;
-    case LITERAL_MISMATCH:
-      fputs("Literal mismatch. Expected ", f);
-      print_type(f, VEC_DATA_PTR(&res.types), VEC_DATA_PTR(&res.type_inds),
-                 error.expected);
-      fputs("", f);
-      break;
-    case MISSING_SIG:
-      fputs("Missing type signature", f);
-      break;
-    case WRONG_ARITY:
-      fputs("Wrong arity", f);
-      break;
-  }
-  parse_node node = res.tree.nodes[error.pos];
-  fprintf(f, "\nAt %d-%d:\n", node.start, node.end);
-  format_error_ctx(f, res.source.data, node.start, node.end);
-}
-
 typedef struct test_type {
   type_tag tag;
   const struct test_type *subs;
@@ -232,10 +177,7 @@ static void run_typecheck_test(test_state *state, const char *input,
         if (res.errors.len > 0) {
           fputs("Errors:\n", ss->stream);
         }
-        for (size_t i = 0; i < res.errors.len; i++) {
-          putc('\n', ss->stream);
-          print_tc_error(ss->stream, res, i);
-        }
+        print_tc_errors(ss->stream, res);
         char *str = ss_finalize(ss);
         failf(state, str, input);
         free(str);

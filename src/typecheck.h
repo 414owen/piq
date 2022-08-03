@@ -60,5 +60,6 @@ typedef struct {
   source_file source;
 } tc_res;
 
+void print_tc_errors(FILE *f, tc_res res);
 tc_res typecheck(source_file source, parse_tree tree);
 void free_tc_res(tc_res res);
