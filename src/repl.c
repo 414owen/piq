@@ -48,7 +48,7 @@ end_a:
 
 int main(void) {
   puts("Entering multiline REPL. Press <enter> twice to evaluate.");
-  const char *hist_file_path = join_two_paths(get_cache_dir(), "repl_history");
+  char *hist_file_path = join_two_paths(get_cache_dir(), "repl_history");
   fclose(fopen(hist_file_path, "a"));
   read_history(hist_file_path);
   vec_char multiline_input = VEC_NEW;
@@ -76,4 +76,6 @@ int main(void) {
       free(input);
     }
   }
+  VEC_FREE(&multiline_input);
+  free(hist_file_path);
 }
