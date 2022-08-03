@@ -290,8 +290,8 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
   return llvm_types[root_type_ind];
 }
 
-static stage pop_stage(cg_state *state) {
-  return bs_pop(&state->act_stage) ? STAGE_TWO : STAGE_ONE;
+static stage pop_stage(bitset *bs) {
+  return bs_pop(bs) ? STAGE_TWO : STAGE_ONE;
 }
 
 static void push_stage(bitset *bs, stage s) {
@@ -300,7 +300,7 @@ static void push_stage(bitset *bs, stage s) {
 
 static void cg_node(cg_state *state, node_ind ind) {
   parse_node node = state->in.tree.nodes[ind];
-  stage stage = pop_stage(state);
+  stage stage = pop_stage(&state->act_stage);
   switch (node.type) {
     case PT_CALL: {
       NODE_IND_T callee_ind = PT_CALL_CALLEE_IND(node);
