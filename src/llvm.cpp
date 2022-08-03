@@ -89,12 +89,13 @@ struct cg_state {
   vec_cg_action actions;
   bitset act_stage;
   vec_node_ind act_nodes;
+
   vec_llvm_function act_fns;
   vec_string strs;
 
   vec_llvm_value val_stack;
   vec_llvm_block block_stack;
-  vec_llvm_function functions;
+  vec_llvm_function function_stack;
 
   tc_res in;
 
@@ -113,12 +114,15 @@ struct cg_state {
     builder(this->context)
   {
     actions = VEC_NEW;
+    act_stage = bs_new();
+    act_nodes = VEC_NEW;
 
+    act_fns = VEC_NEW;
     strs = VEC_NEW;
 
     val_stack = VEC_NEW;
     block_stack = VEC_NEW;
-    functions = VEC_NEW;
+    function_stack = VEC_NEW;
 
     in = in_p;
 
@@ -134,7 +138,7 @@ struct cg_state {
     VEC_FREE(&strs);
     VEC_FREE(&val_stack);
     VEC_FREE(&block_stack);
-    VEC_FREE(&functions);
+    VEC_FREE(&function_stack);
     free(llvm_types);
     VEC_FREE(&env_bnds);
     VEC_FREE(&env_vals);
@@ -390,7 +394,7 @@ static void cg_node(cg_state *state, node_ind ind) {
       
           llvm::Twine name("if-end");
           llvm::BasicBlock *end_block = llvm::BasicBlock::Create(
-            state->context, name, VEC_PEEK(state->functions));
+            state->context, name, VEC_PEEK(state->function_stack));
           state->builder.SetInsertPoint(end_block);
           llvm::PHINode *phi = state->builder.CreatePHI(res_type, 2, "end-if");
           phi->addIncoming(then_val, then_block);
@@ -542,7 +546,7 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
       case CG_GEN_BLOCK: {
         llvm::Twine name(VEC_POP(&state.strs));
         llvm::BasicBlock *block = llvm::BasicBlock::Create(
-          state.context, name, VEC_PEEK(state.functions));
+          state.context, name, VEC_PEEK(state.function_stack));
         state.builder.SetInsertPoint(block);
         VEC_PUSH(&state.block_stack, block);
         break;
