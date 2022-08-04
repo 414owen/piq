@@ -8,7 +8,7 @@
   __vec_grow((vec_void *)vec, _cap, sizeof((vec)->data[0]))
 
 #if INLINE_VEC_BYTES > 0
-static void __vec_resize_internal_to_external(vec_void *vec, size_t cap,
+static void __vec_resize_internal_to_external(vec_void *vec, VEC_VEC_LEN_T cap,
                                               size_t elemsize) {
   // was inline, now external
   char *data = malloc(cap * elemsize);
@@ -20,7 +20,7 @@ static void __vec_resize_internal_to_external(vec_void *vec, size_t cap,
 }
 #endif
 
-static void __vec_resize_external_to_external(vec_void *vec, size_t cap,
+static void __vec_resize_external_to_external(vec_void *vec, VEC_LEN_T cap,
                                               size_t elemsize) {
   // was external, still external
   vec->data = realloc(vec->data, elemsize * cap);
@@ -29,7 +29,7 @@ static void __vec_resize_external_to_external(vec_void *vec, size_t cap,
   vec->len = MIN(vec->len, cap);
 }
 
-static void __vec_resize_null_to_external(vec_void *vec, size_t cap,
+static void __vec_resize_null_to_external(vec_void *vec, VEC_LEN_T cap,
                                           size_t elemsize) {
   // was external, still external
   vec->data = malloc(elemsize * cap);
@@ -39,7 +39,7 @@ static void __vec_resize_null_to_external(vec_void *vec, size_t cap,
 }
 
 #if INLINE_VEC_BYTES > 0
-static void __vec_resize_external_to_internal(vec_void *vec, size_t cap,
+static void __vec_resize_external_to_internal(vec_void *vec, VEC_LEN_T cap,
                                               size_t elemsize) {
   // was external, now internal
   char *data = vec->data;
@@ -49,12 +49,12 @@ static void __vec_resize_external_to_internal(vec_void *vec, size_t cap,
 #endif
 
 #ifdef DEBUG
-void debug_vec_get(vec_void *vec, size_t elemsize, size_t ind) {
+void debug_vec_get(vec_void *vec, size_t elemsize, VEC_LEN_T ind) {
   if (ind >= vec->len) {
     give_up("Tried to access invalid vector element");
   }
 }
-void debug_vec_get_ptr(vec_void *vec, size_t elemsize, size_t ind) {
+void debug_vec_get_ptr(vec_void *vec, size_t elemsize, VEC_LEN_T ind) {
   if (ind > 0 && ind >= vec->len) {
     give_up("Tried to access invalid vector element");
   }
@@ -98,7 +98,7 @@ void __vec_push(vec_void *vec, void *el, size_t elemsize) {
   vec->len++;
 }
 
-void __vec_append(vec_void *vec, void *els, size_t amt, size_t elemsize) {
+void __vec_append(vec_void *vec, void *els, VEC_LEN_T amt, size_t elemsize) {
 
 #if INLINE_VEC_BYTES > 0
   const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
@@ -137,7 +137,7 @@ void __vec_append(vec_void *vec, void *els, size_t amt, size_t elemsize) {
   vec->len += amt;
 }
 
-void __vec_replicate(vec_void *vec, void *el, size_t amt, size_t elemsize) {
+void __vec_replicate(vec_void *vec, void *el, VEC_LEN_T amt, size_t elemsize) {
 
 #if INLINE_VEC_BYTES > 0
   const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
@@ -180,7 +180,7 @@ void __vec_replicate(vec_void *vec, void *el, size_t amt, size_t elemsize) {
 }
 
 #if INLINE_VEC_BYTES > 0
-vec_void *__vec_pop_n(vec_void *vec, size_t elemsize, size_t n) {
+vec_void *__vec_pop_n(vec_void *vec, size_t elemsize, VEC_LEN_T n) {
   debug_assert(vec->len >= n);
   const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
   if (vec->len > inline_amt && vec->len - n <= inline_amt) {
@@ -190,8 +190,8 @@ vec_void *__vec_pop_n(vec_void *vec, size_t elemsize, size_t n) {
   return vec;
 }
 #else
-vec_void *__vec_pop_n(vec_void *vec, size_t n) {
-  debug_assert(vec->len - n >= 0);
+vec_void *__vec_pop_n(vec_void *vec, VEC_LEN_T n) {
+  debug_assert(vec->len >= n);
   vec->len -= n;
   return vec;
 }

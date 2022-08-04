@@ -8,6 +8,10 @@
 
 #include "util.h"
 
+typedef uint8_t u8;
+typedef uint32_t u32;
+
+#define VEC_LEN_T u32
 #define VEC_FIRST_SIZE 10
 
 #ifndef INLINE_VEC_BYTES
@@ -32,11 +36,11 @@
 
 #define VEC_DECL(type)                                                         \
   typedef struct {                                                             \
-    uint32_t len;                                                              \
+    VEC_LEN_T len;                                                             \
     union {                                                                    \
       type inline_data[TYPE_TO_INLINE_AMT(type)];                              \
       struct {                                                                 \
-        uint32_t cap;                                                          \
+        VEC_LEN_T cap;                                                         \
         type *data;                                                            \
       };                                                                       \
     };                                                                         \
@@ -46,9 +50,9 @@
 
 #define VEC_DECL(type)                                                         \
   typedef struct {                                                             \
-    uint32_t len;                                                              \
+    VEC_LEN_T len;                                                             \
     struct {                                                                   \
-      uint32_t cap;                                                            \
+      VEC_LEN_T cap;                                                           \
       type *data;                                                              \
     };                                                                         \
   } vec_##type
@@ -63,18 +67,18 @@
 
 // Don't use this directly. It's for internal use.
 typedef struct {
-  uint32_t len;
+  VEC_LEN_T len;
 #if INLINE_VEC_BYTES > 0
   union {
     char inline_data[INLINE_VEC_BYTES];
     struct {
-      uint32_t cap;
+      VEC_LEN_T cap;
       void *data;
     };
   };
 #else
   struct {
-    uint32_t cap;
+    VEC_LEN_T cap;
     void *data;
   };
 #endif
@@ -118,11 +122,11 @@ vec_void *__vec_pop(vec_void *vec);
 #endif
 
 #if INLINE_VEC_BYTES > 0
-vec_void *__vec_pop_n(vec_void *vec, size_t elemsize, size_t n);
+vec_void *__vec_pop_n(vec_void *vec, size_t elemsize, VEC_LEN_T n);
 #define VEC_POP_N(vec, n)                                                      \
   ((typeof(vec))__vec_pop_n((vec_void *)vec, sizeof((vec)->data[0]), n))
 #else
-vec_void *__vec_pop_n(vec_void *vec, size_t n);
+vec_void *__vec_pop_n(vec_void *vec, VEC_LEN_T n);
 #define VEC_POP_N(vec, n) ((typeof(vec))__vec_pop_n((vec_void *)vec, n))
 #endif
 
@@ -172,7 +176,7 @@ char *__vec_finalize(vec_void *vec);
 
 #endif
 
-void __vec_append(vec_void *vec, void *els, size_t amt, size_t elemsize);
+void __vec_append(vec_void *vec, void *els, VEC_LEN_T amt, size_t elemsize);
 
 #define VEC_APPEND(vec, amt, els)                                              \
   {                                                                            \
@@ -181,7 +185,7 @@ void __vec_append(vec_void *vec, void *els, size_t amt, size_t elemsize);
     __vec_append((vec_void *)vec, (void *)(els), amt, sizeof((els)[0]));       \
   }
 
-void __vec_replicate(vec_void *vec, void *el, size_t amt, size_t elemsize);
+void __vec_replicate(vec_void *vec, void *el, VEC_LEN_T amt, size_t elemsize);
 
 // appends el to vec amt times
 #define VEC_REPLICATE(vec, amt, el)                                            \
@@ -200,6 +204,6 @@ typedef char *string;
 
 VEC_DECL(string);
 
-typedef uint32_t u8;
 VEC_DECL(u8);
+VEC_DECL(u32);
 VEC_DECL(char);
