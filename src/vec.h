@@ -90,7 +90,7 @@ typedef struct {
 #define VEC_GET_DIRECT(vec, i) (VEC_DATA_PTR(&(vec))[i])
 
 #ifdef DEBUG
-void debug_vec_get(vec_void *vec, size_t elemsize, size_t ind);
+void debug_vec_get(vec_void *vec, size_t elemsize, VEC_LEN_T ind);
 // Avoid duplicate side-effects in i (we were using VEC_POP()
 #define VEC_GET(vec, i)                                                        \
   ({                                                                           \
