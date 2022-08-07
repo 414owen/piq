@@ -56,11 +56,13 @@ tree_node_repr type_repr(type_tag tag) {
       break;
     case T_CALL:
     case T_FN:
+    case T_TUP:
       res = SUBS_TWO;
       break;
-    case T_TUP:
+    /*
       res = SUBS_EXTERNAL;
       break;
+    */
   }
   return res;
 }
@@ -125,14 +127,10 @@ static void print_type_head(FILE *f, type_tag head) {
   fputs(str, f);
 }
 
-void print_type_head_placeholders(FILE *f, type_tag head, uint32_t arity) {
+void print_type_head_placeholders(FILE *f, type_tag head) {
   switch (head) {
     case T_TUP:
-      fputs("(a1", f);
-      for (size_t i = 2; i <= arity; i++) {
-        fprintf(f, ", a%zu", i);
-      }
-      fputc(')', f);
+      fputs("(a1, a2)", f);
       break;
     default:
       print_type_head(f, head);
@@ -162,14 +160,9 @@ void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
             break;
           case T_TUP:
             putc('(', f);
-            if (node.sub_amt > 0) {
-              for (size_t i = 0; i < T_TUP_SUB_AMT(node) - 1; i++) {
-                push_node(&stack, T_TUP_SUB_IND(inds, node, i));
-                push_str(&stack, ", ");
-              }
-              push_node(&stack,
-                        T_TUP_SUB_IND(inds, node, T_TUP_SUB_AMT(node) - 1));
-            }
+            push_node(&stack, T_TUP_SUB_A(node));
+            push_str(&stack, ", ");
+            push_node(&stack, T_TUP_SUB_B(node));
             push_str(&stack, ")");
             break;
           case T_LIST:

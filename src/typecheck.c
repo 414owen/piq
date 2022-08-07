@@ -46,6 +46,9 @@ A wanted type is a type that needs to match, or the typechecker will error.
 typedef enum {
   TC_POP_N_VARS,
   TC_POP_VARS_TO,
+
+  TC_PUSH_ENV,
+
   // terms
   TC_NODE_MATCHES,
   TC_NODE_UNAMBIGUOUS,
@@ -90,13 +93,17 @@ typedef union {
   four_stage_tag four_stage;
 } stage;
 
+// This looks like ass.
 typedef struct {
   action_tag tag;
   union {
     NODE_IND_T amt;
     struct {
       NODE_IND_T node_ind;
-      stage stage;
+      union {
+        stage stage;
+        binding binding;
+      };
     };
     struct {
       NODE_IND_T from;
@@ -130,11 +137,9 @@ typedef struct {
   bitset term_is_builtin;
   // index into res.types
   vec_node_ind term_type_inds;
-  // backup of term env length, for popping values off the environment
-  vec_node_ind term_scopes;
+
   // res.node_types is wanted or known
   NODE_IND_T *wanted;
-
   NODE_IND_T unknown_ind;
   NODE_IND_T string_type_ind;
   NODE_IND_T bool_type_ind;
@@ -454,6 +459,7 @@ static void tc_type(typecheck_state *state) {
           break;
         }
         case TWO_STAGE_TWO: {
+          // TODO
           break;
         }
       }
@@ -463,45 +469,21 @@ static void tc_type(typecheck_state *state) {
       switch (stage.two_stage) {
         // Typecheck subs
         case TWO_STAGE_ONE: {
-          for (NODE_IND_T i = 0; i < PT_TUP_SUB_AMT(node); i++) {
-            NODE_IND_T sub_ind = PT_TUP_SUB_IND(inds, node, i);
-            tc_action action = {.tag = TC_TYPE,
-                                .node_ind = sub_ind,
-                                .stage = {.two_stage = TWO_STAGE_ONE}};
-            push_action(state, action);
-          }
-          tc_action action = {.tag = TC_TYPE,
-                              .node_ind = node_ind,
-                              .stage = {.two_stage = TWO_STAGE_TWO}};
-          push_action(state, action);
-          NODE_IND_T sub_type_ind =
-            state->res.node_types[PT_LIST_TYPE_SUB(node)];
-          state->res.node_types[node_ind] =
-            mk_type_inline(state, T_TUP, sub_type_ind, sub_type_ind);
+          tc_action actions[2] = {
+            {.tag = TC_TYPE, .node_ind = PT_TUP_SUB_A(node), .stage = {.two_stage = TWO_STAGE_ONE}},
+            {.tag = TC_TYPE, .node_ind = PT_TUP_SUB_B(node), .stage = {.two_stage = TWO_STAGE_TWO}},
+          };
+          push_actions(state, STATIC_LEN(actions), actions);
           break;
         }
         // Combine
         case TWO_STAGE_TWO: {
-          switch (PT_TUP_SUB_AMT(node)) {
-            case 0:
-              give_up("Zero-length tuple!");
-              break;
-            case 1:
-              give_up("Unary tuples are forbidden!");
-              break;
-            default: {
-              size_t sub_bytes = sizeof(NODE_IND_T) * PT_TUP_SUB_AMT(node);
-              NODE_IND_T *sub_type_inds = stalloc(sub_bytes);
-              for (NODE_IND_T i = 0; i < PT_TUP_SUB_AMT(node); i++) {
-                sub_type_inds[i] =
-                  state->res.node_types[PT_TUP_SUB_IND(inds, node, i)];
-              }
-              state->res.node_types[node_ind] =
-                mk_type(state, T_TUP, sub_type_inds, PT_TUP_SUB_AMT(node));
-              stfree(sub_type_inds, sub_bytes);
-              break;
-            }
-          }
+          NODE_IND_T sub_type_inds[2] = {
+            state->res.node_types[PT_TUP_SUB_A(node)],
+            state->res.node_types[PT_TUP_SUB_B(node)],
+          };
+          state->res.node_types[node_ind] =
+            mk_type(state, T_TUP, sub_type_inds, PT_TUP_SUB_AMT(node));
           break;
         }
       }
@@ -696,6 +678,7 @@ static void push_tc_sig(typecheck_state *state, NODE_IND_T node_ind,
      .stage = {.two_stage = TWO_STAGE_ONE}},
     {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = type_ind, .to = name_ind},
     {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = type_ind, .to = node_ind},
+    {.tag = TC_PUSH_ENV, .node_ind = type_ind, .binding = node_to_bnd(state->res.tree.nodes[name_ind])},
   };
   push_actions(state, STATIC_LEN(actions), actions);
 }
@@ -1059,37 +1042,44 @@ static void tc_node_matches(typecheck_state *state, tc_node_params params) {
       }
       break;
     }
-    case PT_TUP:
-      if (params.wanted.tag != T_TUP ||
-          T_TUP_SUB_AMT(params.wanted) != PT_TUP_SUB_AMT(params.node)) {
+    case PT_TUP: {
+      if (params.wanted.tag != T_TUP) {
         tc_error err = {
           .type = TYPE_HEAD_MISMATCH,
           .pos = params.node_ind,
           .expected = params.wanted_ind,
           .got_type_head = T_TUP,
-          .got_arity = PT_TUP_SUB_AMT(params.node),
         };
         push_tc_err(state, err);
-        state->stack.len -= params.node.sub_amt + 1;
         break;
       }
-      for (NODE_IND_T i = 0; i < PT_TUP_SUB_AMT(params.node); i++) {
-        NODE_IND_T sub_ind =
-          PT_TUP_SUB_IND(state->res.tree.inds, params.node, i);
-        tc_action actions[] = {
-          {
-            .tag = TC_WANT_TYPE,
-            .from = T_TUP_SUB_IND(state->res.type_inds.data, params.wanted, i),
-            .to = sub_ind,
-          },
-          {
-            .tag = TC_NODE_MATCHES,
-            .node_ind = sub_ind,
-            .stage = {.two_stage = TWO_STAGE_ONE},
-          }};
-        push_actions(state, STATIC_LEN(actions), actions);
-      }
+      node_ind sub_a = PT_TUP_SUB_A(params.node);
+      node_ind sub_b = PT_TUP_SUB_B(params.node);
+      tc_action actions[4] = {
+        {
+          .tag = TC_WANT_TYPE,
+          .from = T_TUP_SUB_A(params.wanted),
+          .to = sub_a,
+        },
+        {
+          .tag = TC_NODE_MATCHES,
+          .node_ind = sub_a,
+          .stage = {.two_stage = TWO_STAGE_ONE},
+        },
+        {
+          .tag = TC_WANT_TYPE,
+          .from = T_TUP_SUB_B(params.wanted),
+          .to = sub_b,
+        },
+        {
+          .tag = TC_NODE_MATCHES,
+          .node_ind = sub_b,
+          .stage = {.two_stage = TWO_STAGE_ONE},
+        }
+      };
+      push_actions(state, STATIC_LEN(actions), actions);
       break;
+    }
     case PT_IF: {
       NODE_IND_T cond = PT_IF_COND_IND(state->res.tree.inds, params.node);
       NODE_IND_T b1 = PT_IF_A_IND(state->res.tree.inds, params.node);
@@ -1311,37 +1301,34 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
     }
 
     case PT_TUP: {
-      NODE_IND_T sub_amt = PT_TUP_SUB_AMT(params.node);
+      NODE_IND_T sub_a = PT_TUP_SUB_A(params.node);
+      NODE_IND_T sub_b = PT_TUP_SUB_B(params.node);
       switch (params.stage.two_stage) {
-        case TWO_STAGE_ONE:
-          for (NODE_IND_T i = 0; i < sub_amt; i++) {
-            NODE_IND_T sub_ind =
-              PT_TUP_SUB_IND(state->res.tree.inds, params.node, i);
-            tc_action action = {
+        case TWO_STAGE_ONE: {
+          tc_action actions[3] = {
+            {
               .tag = TC_NODE_UNAMBIGUOUS,
-              .node_ind = sub_ind,
+              .node_ind = sub_a,
               .stage = {.two_stage = TWO_STAGE_ONE},
-            };
-            push_action(state, action);
-          }
-          tc_action action = {
-            .tag = TC_NODE_UNAMBIGUOUS,
-            .node_ind = params.node_ind,
-            .stage = {.two_stage = TWO_STAGE_TWO},
+            },
+            {
+              .tag = TC_NODE_UNAMBIGUOUS,
+              .node_ind = sub_b,
+              .stage = {.two_stage = TWO_STAGE_ONE},
+            },
+            {
+              .tag = TC_NODE_UNAMBIGUOUS,
+              .node_ind = params.node_ind,
+              .stage = {.two_stage = TWO_STAGE_TWO},
+            }
           };
-          push_action(state, action);
+          push_actions(state, STATIC_LEN(actions), actions);
           break;
+        }
         case TWO_STAGE_TWO: {
-          size_t subs_bytes = sizeof(NODE_IND_T) * sub_amt;
-          NODE_IND_T *subs = stalloc(subs_bytes);
-          for (NODE_IND_T i = 0; i < sub_amt; i++) {
-            NODE_IND_T sub_ind =
-              PT_TUP_SUB_IND(state->res.tree.inds, params.node, i);
-            subs[i] = state->res.node_types[sub_ind];
-          }
+          node_ind subs[2] = { sub_a, sub_b };
           state->res.node_types[params.node_ind] =
-            mk_type(state, T_TUP, subs, sub_amt);
-          stfree(subs, subs_bytes);
+            mk_type(state, T_TUP, subs, STATIC_LEN(subs));
           break;
         }
       }
@@ -1577,7 +1564,7 @@ static void print_tc_error(FILE *f, tc_res res, NODE_IND_T err_ind) {
       fputs("Type mismatch. Expected ", f);
       print_type(f, res.types.data, res.type_inds.data, error.expected);
       fputs("\nGot: ", f);
-      print_type_head_placeholders(f, error.got_type_head, error.got_arity);
+      print_type_head_placeholders(f, error.got_type_head);
       break;
     case LITERAL_MISMATCH:
       fputs("Literal mismatch. Expected ", f);
@@ -1683,6 +1670,11 @@ tc_res typecheck(source_file source, parse_tree tree) {
         break;
       case TC_CLONE_WANTED_ACTUAL:
         state.res.node_types[action.to] = state.wanted[action.from];
+        break;
+      case TC_PUSH_ENV:
+        VEC_PUSH(&state.term_env, action.binding);
+        bs_push(&state.term_is_builtin, false);
+        VEC_PUSH(&state.term_type_inds, state.res.node_types[action.node_ind]);
         break;
       case TC_CLONE_WANTED_WANTED:
         state.wanted[action.to] = state.wanted[action.from];

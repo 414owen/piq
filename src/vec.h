@@ -185,6 +185,8 @@ void __vec_append(vec_void *vec, void *els, VEC_LEN_T amt, size_t elemsize);
     __vec_append((vec_void *)vec, (void *)(els), amt, sizeof((els)[0]));       \
   }
 
+#define VEC_APPEND_STATIC(vec, els) VEC_APPEND((vec), STATIC_LEN(els), (els))
+
 void __vec_replicate(vec_void *vec, void *el, VEC_LEN_T amt, size_t elemsize);
 
 // appends el to vec amt times

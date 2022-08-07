@@ -54,11 +54,11 @@ extern "C" {
 typedef enum : uint8_t {
 
   // INPUTS: node
-  // OUTPUTS: val_stack
+  // OUTPUTS: val
   CG_NODE,
 
-  // INPUTS: node
-  // OUTPUTS: val_stack, block_stack
+  // INPUTS: node, val
+  // OUTPUTS: edits the environment
   CG_PATTERN,
 
   // INPUTS: node, str
@@ -103,6 +103,7 @@ struct cg_state {
   bitset act_stage;
   vec_node_ind act_nodes;
   vec_u32 act_sizes;
+  vec_llvm_value act_vals;
 
   vec_llvm_function act_fns;
   vec_string strs;
@@ -223,10 +224,10 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
           case T_TUP: {
             VEC_PUSH(&actions, COMBINE_TYPE);
             VEC_PUSH(&inds, type_ind);
-            for (NODE_IND_T i = 0; i < T_TUP_SUB_AMT(t); i++) {
-              VEC_PUSH(&actions, GEN_TYPE);
-              VEC_PUSH(&inds, T_TUP_SUB_IND(state->in.type_inds.data, t, i));
-            }
+            VEC_PUSH(&actions, GEN_TYPE);
+            VEC_PUSH(&inds, T_TUP_SUB_A(t));
+            VEC_PUSH(&actions, GEN_TYPE);
+            VEC_PUSH(&inds, T_TUP_SUB_B(t));
             break;
           }
           case T_FN: {
@@ -262,15 +263,11 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
             break;
           }
           case T_TUP: {
-            size_t sub_bytes = sizeof(LLVMTypeRef) * T_TUP_SUB_AMT(t);
-            llvm::Type **subs = (llvm::Type**) stalloc(sub_bytes);
-            for (size_t i = 0; i < T_TUP_SUB_AMT(t); i++) {
-              NODE_IND_T sub_ind = T_TUP_SUB_IND(state->in.type_inds.data, t, i);
-              subs[i] = llvm_types[sub_ind];
-            }
-            llvm::ArrayRef<llvm::Type*> subs_arr = llvm::ArrayRef<llvm::Type*>(subs, t.sub_amt);
+            NODE_IND_T sub_ind_a = T_TUP_SUB_A(t);
+            NODE_IND_T sub_ind_b = T_TUP_SUB_B(t);
+            llvm::Type *subs[2] = {llvm_types[sub_ind_a], llvm_types[sub_ind_b]};
+            llvm::ArrayRef<llvm::Type*> subs_arr = llvm::ArrayRef<llvm::Type*>(subs, 2);
             llvm_types[type_ind] = llvm::StructType::create(state->context, subs_arr, "tuple", false);
-            stfree(subs, sub_bytes);
             break;
           }
           case T_FN: {
@@ -512,13 +509,16 @@ static void cg_node(cg_state *state) {
           VEC_PUSH(&state->act_nodes, ind);
           VEC_PUSH(&state->act_stage, STAGE_TWO);
 
-          VEC_PUSH(&state->actions, CG_GEN_BLOCK);
-          VEC_PUSH(&state->strs, "entry");
-          VEC_PUSH(&state->act_nodes, PT_FUN_BODY_IND(state->in.tree.inds, node));
-
           NODE_IND_T param_ind = PT_FUN_PARAM_IND(state->in.tree.inds, node);
           VEC_PUSH(&state->actions, CG_PATTERN);
           VEC_PUSH(&state->act_nodes, param_ind);
+          llvm::Type *param_type = construct_type(state, state->in.node_types[param_ind]);
+          llvm::Argument *arg = fn->getArg(0);
+          VEC_PUSH(&state->act_vals, arg);
+
+          VEC_PUSH(&state->actions, CG_GEN_BLOCK);
+          VEC_PUSH(&state->strs, "entry");
+          VEC_PUSH(&state->act_nodes, PT_FUN_BODY_IND(state->in.tree.inds, node));
           break;
         }
         case STAGE_TWO: {
@@ -571,7 +571,39 @@ static void cg_pattern(cg_state *state) {
   stage stage = pop_stage(&state->act_stage);
 
   switch (node.type) {
-    case PT_TUP
+    case PT_TUP: {
+      node_ind sub_a = PT_TUP_SUB_A(node);
+      node_ind sub_b = PT_TUP_SUB_B(node);
+
+      VEC_PUSH(&state->actions, CG_PATTERN);
+      VEC_PUSH(&state->act_nodes, sub_a);
+
+      VEC_PUSH(&state->actions, CG_PATTERN);
+      VEC_PUSH(&state->act_nodes, sub_b);
+      break;
+    }
+    case PT_CONSTRUCTION:
+    case PT_UPPER_NAME:
+    case PT_UNIT:
+    case PT_LIST:
+    case PT_INT:
+    case PT_STRING:
+
+    // pattern calls will be parsed as CONSTRUCTIONs
+    case PT_CALL:
+    case PT_ROOT:
+    case PT_AS:
+    case PT_LIST_TYPE:
+    case PT_LOWER_NAME:
+    case PT_IF:
+    case PT_FUN:
+    case PT_FN:
+    case PT_FN_TYPE:
+    case PT_FUN_BODY:
+    case PT_LET:
+    case PT_SIG:
+      give_up("Unknown pattern candidate");
+      break;
   }
 }
 

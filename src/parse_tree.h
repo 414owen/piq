@@ -66,8 +66,9 @@ typedef enum {
 #define PT_SIG_BINDING_IND(node) node.sub_a
 #define PT_SIG_TYPE_IND(node) node.sub_b
 
-#define PT_TUP_SUB_AMT(node) node.sub_amt
-#define PT_TUP_SUB_IND(inds, node, i) inds[node.subs_start + i]
+#define PT_TUP_SUB_AMT(node) 2
+#define PT_TUP_SUB_A(node) node.sub_a
+#define PT_TUP_SUB_B(node) node.sub_b
 
 #define PT_LET_BND_IND(node) node.sub_a
 #define PT_LET_VAL_IND(node) node.sub_b
