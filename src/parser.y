@@ -24,6 +24,7 @@
 
 %type commapred vec_node_ind
 %type param node_ind_tup
+%type pattern_list vec_node_ind
 %type pattern_tuple vec_node_ind
 %type patterns vec_node_ind
 %type params_tuple vec_node_ind
@@ -297,14 +298,20 @@ fun_body(RES) ::= block(B). {
   VEC_FREE(&B);
 }
 
-pattern_tuple(RES) ::= pattern(A). {
+pattern_tuple(RES) ::= pattern_list(A) COMMA pattern(B) COMMA pattern(C). {
+  BREAK_PARSER;
+  node_ind inds[2] = {B, C};
+  VEC_APPEND_STATIC(&A, inds);
+  RES = A;
+}
+
+pattern_list(RES) ::= . {
   BREAK_PARSER;
   vec_node_ind res = VEC_NEW;
-  VEC_PUSH(&res, A);
   RES = res;
 }
 
-pattern_tuple(RES) ::= pattern_tuple(A) COMMA pattern(B). {
+pattern_list(RES) ::= pattern_list(A) COMMA pattern(B). {
   BREAK_PARSER;
   VEC_PUSH(&A, B);
   RES = A;
@@ -343,20 +350,52 @@ unit(RES) ::= UNIT(A). {
   RES = s->nodes.len - 1;
 }
 
+/* We push these in order, maybe that will help fit these into
+   cache lines
+*/
 pattern(RES) ::= OPEN_PAREN(O) pattern_tuple(A) CLOSE_PAREN(C). {
   BREAK_PARSER;
-  NODE_IND_T start = s->inds.len;
-  VEC_CAT(&s->inds, &A);
-  parse_node n = {
+  node_ind node_amt = s->nodes.len;
+
+  {
+    parse_node first_node = {
+      .type = PT_TUP,
+      .sub_a = VEC_GET(A, 0),
+      .sub_b = node_amt + 1,
+      .start = s->tokens[O].start,
+      .end = s->tokens[C].end,
+    };
+    VEC_PUSH(&s->nodes, first_node);
+  }
+
+  // The generated tuples will have their end set to the end
+  // of the last syntactic element. Best we can do.
+  BUF_IND_T inner_end = VEC_GET(s->nodes, A.len - 1).end;
+
+  for (node_ind i = 1; i < A.len - 2; i++) {
+    node_ind sub_a_ind = VEC_GET(A, i);
+    parse_node n = {
+      .type = PT_TUP,
+      .sub_a = sub_a_ind,
+      .sub_b = node_amt + i + 1,
+      .start = VEC_GET(s->nodes, sub_a_ind).start,
+      .end = inner_end,
+    };
+    VEC_PUSH(&s->nodes, n);
+  }
+
+  node_ind sub_a_ind = VEC_GET(A, A.len - 2);
+  parse_node last_node= {
     .type = PT_TUP,
-    .start = s->tokens[O].start,
-    .end = s->tokens[C].end,
-    .subs_start = start,
-    .sub_amt = A.len
+    .sub_a = sub_a_ind,
+    .sub_b = VEC_GET(A, A.len - 1),
+    .start = VEC_GET(s->nodes, sub_a_ind).start,
+    .end = inner_end,
   };
-  VEC_PUSH(&s->nodes, n);
-  RES = s->nodes.len - 1;
+  VEC_PUSH(&s->nodes, last_node);
+
   VEC_FREE(&A);
+  RES = node_amt;
 }
 
 pattern(RES) ::= OPEN_PAREN(O) upper_name(A) patterns(B) CLOSE_PAREN(C). {
@@ -376,7 +415,7 @@ pattern(RES) ::= OPEN_PAREN(O) upper_name(A) patterns(B) CLOSE_PAREN(C). {
   VEC_FREE(&B);
 }
 
-pattern(RES) ::= OPEN_BRACKET(O) pattern_tuple(A) CLOSE_BRACKET(C). {
+pattern(RES) ::= OPEN_BRACKET(O) pattern_list(A) CLOSE_BRACKET(C). {
   BREAK_PARSER;
   NODE_IND_T start = s->inds.len;
   VEC_CAT(&s->inds, &A);
@@ -538,27 +577,25 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
     s->succeeded = false;
   }
 
-/*
-  // re-run the parser to find valid tokens
-  if (s->succeeded) {
-    vec_token_type expected = VEC_NEW;
-    s->succeeded = false;
-    s->error_pos = s->pos;
-    if (s->get_expected) {
-      token_type backup = s->tokens[s]pos).type;
-      for (token_type i = 0; i < YYNTOKEN; i++) {
-        VEC_DATA_PTR(&s->tokens)[s->pos].type = i;
-        parse_tree_res sub = parse_internal(s->tokens, false);
-        if (sub.error_pos > s->pos) {
-          VEC_PUSH(&expected, i);
-        }
-      }
-      VEC_DATA_PTR(&s->tokens)[s->pos].type = backup;
-      s->expected_amt = expected.len;
-      s->expected = VEC_FINALIZE(&expected);
-    }
-  }
-*/
+  // // re-run the parser to find valid tokens
+  // if (s->succeeded) {
+  //   vec_token_type expected = VEC_NEW;
+  //   s->succeeded = false;
+  //   s->error_pos = s->pos;
+  //   if (s->get_expected) {
+  //     token_type backup = s->tokens[s]pos).type;
+  //     for (token_type i = 0; i < YYNTOKEN; i++) {
+  //       VEC_DATA_PTR(&s->tokens)[s->pos].type = i;
+  //       parse_tree_res sub = parse_internal(s->tokens, false);
+  //       if (sub.error_pos > s->pos) {
+  //         VEC_PUSH(&expected, i);
+  //       }
+  //     }
+  //     VEC_DATA_PTR(&s->tokens)[s->pos].type = backup;
+  //     s->expected_amt = expected.len;
+  //     s->expected = VEC_FINALIZE(&expected);
+  //   }
+  // }
 }
 
 %parse_failure {

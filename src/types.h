@@ -41,12 +41,13 @@ typedef struct {
 #define T_FN_PARAM_IND(node) node.sub_a
 #define T_FN_RET_IND(node) node.sub_b
 #define T_LIST_SUB_IND(node) node.sub_a
-#define T_TUP_SUB_AMT(node) node.sub_amt
-#define T_TUP_SUB_IND(inds, node, i) inds[node.subs_start + i]
+#define T_TUP_SUB_AMT(node) 2
+#define T_TUP_SUB_A(node) node.sub_a
+#define T_TUP_SUB_B(node) node.sub_b
 
 tree_node_repr type_repr(type_tag tag);
 bool inline_types_eq(type a, type b);
 void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root);
-void print_type_head_placeholders(FILE *f, type_tag head, uint32_t arity);
+void print_type_head_placeholders(FILE *f, type_tag head);
 
 VEC_DECL(type);
