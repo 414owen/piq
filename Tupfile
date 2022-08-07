@@ -10,7 +10,7 @@ export CFLAGS
 export CXXFLAGS
 
 RE2C_OPTIONS = --case-ranges
-CFLAGS = -Wall -Wextra -pipe $CFLAGS `pkg-config --cflags "libeditline"`
+CFLAGS = -Wall -Wextra -pipe $CFLAGS `pkg-config --cflags "libeditline"` -fdiagnostics-color=always
 CXXFLAGS = $(CFLAGS) $CXXFLAGS -fno-exceptions
 
 common_objs += dir_exists.o
