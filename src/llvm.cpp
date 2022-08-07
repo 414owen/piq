@@ -52,17 +52,30 @@ extern "C" {
 }
 
 typedef enum : uint8_t {
-  // INPUTS: none
+
+  // INPUTS: node
   // OUTPUTS: val_stack
   CG_NODE,
-  // INPUTS: none
+
+  // INPUTS: node
   // OUTPUTS: val_stack, block_stack
   CG_PATTERN,
+
+  // INPUTS: node, str
+  // OUTPUTS: block, val
   CG_GEN_BLOCK,
+
+  // INPUTS: none
+  // OUTPUTS: none
   CG_POP_VAL,
+
+  // INPUTS: size
+  // OUTPUTS: none
   CG_POP_ENV_TO,
+
+  // INPUTS: none
+  // OUTPUTS: none
   CG_POP_BLOCK,
-  CG_RET,
 } cg_action;
 
 VEC_DECL(cg_action);
@@ -303,7 +316,8 @@ static void push_stage(bitset *bs, stage s) {
   bs_push(bs, s == STAGE_TWO);
 }
 
-static void cg_node(cg_state *state, node_ind ind) {
+static void cg_node(cg_state *state) {
+  node_ind ind = VEC_POP(&state->act_nodes);
   parse_node node = state->in.tree.nodes[ind];
   stage stage = pop_stage(&state->act_stage);
   switch (node.type) {
@@ -369,18 +383,14 @@ static void cg_node(cg_state *state, node_ind ind) {
           VEC_PUSH(&state->act_nodes, PT_IF_COND_IND(state->in.tree.inds, node));
 
           // then
-          VEC_PUSH(&state->actions, CG_NODE);
-          push_stage(&state->act_stage, STAGE_ONE);
-          VEC_PUSH(&state->act_nodes, PT_IF_A_IND(state->in.tree.inds, node));
           VEC_PUSH(&state->strs, "then");
           VEC_PUSH(&state->actions, CG_GEN_BLOCK);
+          VEC_PUSH(&state->act_nodes, PT_IF_A_IND(state->in.tree.inds, node));
 
           // else
-          VEC_PUSH(&state->actions, CG_NODE);
-          push_stage(&state->act_stage, STAGE_ONE);
-          VEC_PUSH(&state->act_nodes, PT_IF_B_IND(state->in.tree.inds, node));
           VEC_PUSH(&state->strs, "else");
           VEC_PUSH(&state->actions, CG_GEN_BLOCK);
+          VEC_PUSH(&state->act_nodes, PT_IF_B_IND(state->in.tree.inds, node));
           break;
         case STAGE_TWO: {
           llvm::Value *cond = VEC_POP(&state->val_stack);
@@ -494,33 +504,27 @@ static void cg_node(cg_state *state, node_ind ind) {
           llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::AvailableExternallyLinkage;
           llvm::Function *fn = llvm::Function::Create(fn_type, linkage, 0, name);
 
-          llvm::BasicBlock* block = llvm::BasicBlock::Create(state->context, "entry", fn); 
-          state->builder.SetInsertPoint(block);
-          VEC_PUSH(&state->block_stack, state->builder.GetInsertBlock());
-
           size_t env_amt = state->env_bnds.len;
+          VEC_PUSH(&state->act_nodes, CG_POP_ENV_TO);
+          VEC_PUSH(&state->act_sizes, env_amt);
+
+          VEC_PUSH(&state->actions, CG_NODE);
+          VEC_PUSH(&state->act_nodes, ind);
+          VEC_PUSH(&state->act_stage, STAGE_TWO);
+
+          VEC_PUSH(&state->actions, CG_GEN_BLOCK);
+          VEC_PUSH(&state->strs, "entry");
+          VEC_PUSH(&state->act_nodes, PT_FUN_BODY_IND(state->in.tree.inds, node));
 
           NODE_IND_T param_ind = PT_FUN_PARAM_IND(state->in.tree.inds, node);
           VEC_PUSH(&state->actions, CG_PATTERN);
-          VEC_PUSH(&state->act_nodes, param_ind)
-
+          VEC_PUSH(&state->act_nodes, param_ind);
           break;
         }
         case STAGE_TWO: {
-          VEC_PUSH(&state->env_bnds, b);
-          VEC_PUSH(&state->env_nodes, ind);
-          VEC_PUSH(&state->env_vals, &fn->arg_begin()[i]);
-          bs_push(&state->env_is_builtin, false);
-
-          for (size_t i = 0; i < node.sub_amt / 2; i++) {
-            VEC_PUSH(&state->actions, CG_POP_ENV);
-          }
-
-          VEC_PUSH(&state->actions, CG_RET);
-          VEC_PUSH(&state->actions, CG_POP_BLOCK);
-          VEC_PUSH(&state->actions, CG_NODE);
-          push_stage(&state->act_stage, STAGE_ONE);
-          VEC_PUSH(&state->act_nodes, state->in.tree.inds[node.subs_start + node.sub_amt - 1]);
+          llvm::Value *ret = VEC_POP(&state->val_stack);
+          VEC_POP(&state->block_stack);
+          state->builder.CreateRet(ret);
           break;
         }
       }
@@ -557,6 +561,20 @@ static void cg_node(cg_state *state, node_ind ind) {
   }
 }
 
+enum pat_actions {
+  CG_PAT_NODE,
+};
+
+static void cg_pattern(cg_state *state) {
+  node_ind ind = VEC_POP(&state->act_nodes);
+  parse_node node = state->in.tree.nodes[ind];
+  stage stage = pop_stage(&state->act_stage);
+
+  switch (node.type) {
+    case PT_TUP
+  }
+}
+
 static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in) {
 
   llvm::InitializeNativeTarget();
@@ -576,7 +594,7 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
     switch (action) {
       case CG_NODE: {
         debug_assert(state.actions.len + 1 == state.act_stage.len);
-        cg_node(&state, VEC_POP(&state.act_nodes));
+        cg_node(&state);
         break;
       }
       case CG_GEN_BLOCK: {
@@ -585,15 +603,13 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
           state.context, name, VEC_PEEK(state.function_stack));
         state.builder.SetInsertPoint(block);
         VEC_PUSH(&state.block_stack, block);
+        VEC_PUSH(&state.actions, CG_NODE);
+        VEC_PUSH(&state.act_stage, STAGE_ONE);
+        /// We're not using our node input, so we don't have to push it
         break;
       }
       case CG_POP_VAL: {
         VEC_POP(&state.val_stack);
-        break;
-      }
-      case CG_RET: {
-        llvm::Value *val = VEC_POP(&state.val_stack);
-        state.builder.CreateRet(val);
         break;
       }
       case CG_POP_ENV_TO: {
@@ -603,6 +619,10 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
         VEC_POP_N(&state.env_nodes.len, pop_to);
         VEC_POP_N(&state.env_vals.len, pop_to);
         bs_pop(&state.env_is_builtin);
+        break;
+      }
+      case CG_PATTERN: {
+        cg_pattern(&state);
         break;
       }
       case CG_POP_BLOCK: {
