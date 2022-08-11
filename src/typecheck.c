@@ -470,8 +470,12 @@ static void tc_type(typecheck_state *state) {
         // Typecheck subs
         case TWO_STAGE_ONE: {
           tc_action actions[2] = {
-            {.tag = TC_TYPE, .node_ind = PT_TUP_SUB_A(node), .stage = {.two_stage = TWO_STAGE_ONE}},
-            {.tag = TC_TYPE, .node_ind = PT_TUP_SUB_B(node), .stage = {.two_stage = TWO_STAGE_TWO}},
+            {.tag = TC_TYPE,
+             .node_ind = PT_TUP_SUB_A(node),
+             .stage = {.two_stage = TWO_STAGE_ONE}},
+            {.tag = TC_TYPE,
+             .node_ind = PT_TUP_SUB_B(node),
+             .stage = {.two_stage = TWO_STAGE_TWO}},
           };
           push_actions(state, STATIC_LEN(actions), actions);
           break;
@@ -678,7 +682,9 @@ static void push_tc_sig(typecheck_state *state, NODE_IND_T node_ind,
      .stage = {.two_stage = TWO_STAGE_ONE}},
     {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = type_ind, .to = name_ind},
     {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = type_ind, .to = node_ind},
-    {.tag = TC_PUSH_ENV, .node_ind = type_ind, .binding = node_to_bnd(state->res.tree.nodes[name_ind])},
+    {.tag = TC_PUSH_ENV,
+     .node_ind = type_ind,
+     .binding = node_to_bnd(state->res.tree.nodes[name_ind])},
   };
   push_actions(state, STATIC_LEN(actions), actions);
 }
@@ -1055,28 +1061,26 @@ static void tc_node_matches(typecheck_state *state, tc_node_params params) {
       }
       node_ind sub_a = PT_TUP_SUB_A(params.node);
       node_ind sub_b = PT_TUP_SUB_B(params.node);
-      tc_action actions[4] = {
-        {
-          .tag = TC_WANT_TYPE,
-          .from = T_TUP_SUB_A(params.wanted),
-          .to = sub_a,
-        },
-        {
-          .tag = TC_NODE_MATCHES,
-          .node_ind = sub_a,
-          .stage = {.two_stage = TWO_STAGE_ONE},
-        },
-        {
-          .tag = TC_WANT_TYPE,
-          .from = T_TUP_SUB_B(params.wanted),
-          .to = sub_b,
-        },
-        {
-          .tag = TC_NODE_MATCHES,
-          .node_ind = sub_b,
-          .stage = {.two_stage = TWO_STAGE_ONE},
-        }
-      };
+      tc_action actions[4] = {{
+                                .tag = TC_WANT_TYPE,
+                                .from = T_TUP_SUB_A(params.wanted),
+                                .to = sub_a,
+                              },
+                              {
+                                .tag = TC_NODE_MATCHES,
+                                .node_ind = sub_a,
+                                .stage = {.two_stage = TWO_STAGE_ONE},
+                              },
+                              {
+                                .tag = TC_WANT_TYPE,
+                                .from = T_TUP_SUB_B(params.wanted),
+                                .to = sub_b,
+                              },
+                              {
+                                .tag = TC_NODE_MATCHES,
+                                .node_ind = sub_b,
+                                .stage = {.two_stage = TWO_STAGE_ONE},
+                              }};
       push_actions(state, STATIC_LEN(actions), actions);
       break;
     }
@@ -1305,28 +1309,26 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
       NODE_IND_T sub_b = PT_TUP_SUB_B(params.node);
       switch (params.stage.two_stage) {
         case TWO_STAGE_ONE: {
-          tc_action actions[3] = {
-            {
-              .tag = TC_NODE_UNAMBIGUOUS,
-              .node_ind = sub_a,
-              .stage = {.two_stage = TWO_STAGE_ONE},
-            },
-            {
-              .tag = TC_NODE_UNAMBIGUOUS,
-              .node_ind = sub_b,
-              .stage = {.two_stage = TWO_STAGE_ONE},
-            },
-            {
-              .tag = TC_NODE_UNAMBIGUOUS,
-              .node_ind = params.node_ind,
-              .stage = {.two_stage = TWO_STAGE_TWO},
-            }
-          };
+          tc_action actions[3] = {{
+                                    .tag = TC_NODE_UNAMBIGUOUS,
+                                    .node_ind = sub_a,
+                                    .stage = {.two_stage = TWO_STAGE_ONE},
+                                  },
+                                  {
+                                    .tag = TC_NODE_UNAMBIGUOUS,
+                                    .node_ind = sub_b,
+                                    .stage = {.two_stage = TWO_STAGE_ONE},
+                                  },
+                                  {
+                                    .tag = TC_NODE_UNAMBIGUOUS,
+                                    .node_ind = params.node_ind,
+                                    .stage = {.two_stage = TWO_STAGE_TWO},
+                                  }};
           push_actions(state, STATIC_LEN(actions), actions);
           break;
         }
         case TWO_STAGE_TWO: {
-          node_ind subs[2] = { sub_a, sub_b };
+          node_ind subs[2] = {sub_a, sub_b};
           state->res.node_types[params.node_ind] =
             mk_type(state, T_TUP, subs, STATIC_LEN(subs));
           break;
