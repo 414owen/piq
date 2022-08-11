@@ -30,6 +30,7 @@ tree_node_repr subs_type(parse_node_type type) {
     case PT_FN:
     case PT_FN_TYPE:
     case PT_SIG:
+    case PT_TUP:
       res = SUBS_TWO;
       break;
     case PT_CONSTRUCTION:
@@ -38,7 +39,6 @@ tree_node_repr subs_type(parse_node_type type) {
     case PT_IF:
     case PT_LIST:
     case PT_ROOT:
-    case PT_TUP:
     case PT_LET:
       res = SUBS_EXTERNAL;
       break;
