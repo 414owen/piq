@@ -59,10 +59,10 @@ tree_node_repr type_repr(type_tag tag) {
     case T_TUP:
       res = SUBS_TWO;
       break;
-    /*
-      res = SUBS_EXTERNAL;
-      break;
-    */
+      /*
+        res = SUBS_EXTERNAL;
+        break;
+      */
   }
   return res;
 }
