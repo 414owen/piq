@@ -186,8 +186,7 @@ static void test_parser_succeeds_kitchen_sink(test_state *state) {
 
 static const token_type comma_or_expr_start[] = {
   TK_COMMA,      TK_INT,        TK_LOWER_NAME, TK_OPEN_BRACKET,
-  TK_OPEN_PAREN, TK_UPPER_NAME, TK_STRING, TK_UNIT
-};
+  TK_OPEN_PAREN, TK_UPPER_NAME, TK_STRING,     TK_UNIT};
 
 #define expr_start (comma_or_expr_start + 1)
 #define expr_start_amt (STATIC_LEN(comma_or_expr_start) - 1)
@@ -300,7 +299,7 @@ static void test_fn_succeeds(test_state *state) {
   {
     test_start(state, "Nested unit param");
     test_parser_succeeds_on_form(state, "(fn (()) 1)",
-                                 expect_string("(Fn (()) (Body (Int 1)))"));
+                                 expect_string("(Fn () (Body (Int 1)))"));
     test_end(state);
   }
 
@@ -360,8 +359,9 @@ static void test_parser_succeeds_compound(test_state *state) {
 }
 
 static token_type inside_expr[] = {
-  TK_AS,         TK_FN,           TK_FUN,        TK_IF,         TK_INT,
-  TK_LOWER_NAME, TK_OPEN_BRACKET, TK_OPEN_PAREN, TK_UPPER_NAME, TK_STRING, TK_UNIT};
+  TK_AS,         TK_FN,         TK_FUN,          TK_IF,
+  TK_INT,        TK_LOWER_NAME, TK_OPEN_BRACKET, TK_OPEN_PAREN,
+  TK_UPPER_NAME, TK_STRING,     TK_UNIT};
 
 static token_type inside_block_el[] = {
   TK_AS,         TK_FN,         TK_FUN,          TK_IF,

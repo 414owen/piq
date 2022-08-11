@@ -22,15 +22,16 @@
   LET
   .
 
-%type commapred vec_node_ind
+%type commaexprs vec_node_ind
 %type param node_ind_tup
 %type pattern_list vec_node_ind
 %type pattern_list_rec vec_node_ind
 %type pattern_tuple vec_node_ind
 %type pattern_tuple_min vec_node_ind
 %type patterns vec_node_ind
-%type tuple vec_node_ind
 %type tuple_min vec_node_ind
+%type tuple_rec vec_node_ind
+%type type_inner_tuple vec_node_ind
 %type params_tuple vec_node_ind
 // %type exprs vec_node_ind
 %type toplevels vec_node_ind
@@ -80,7 +81,7 @@
     #define BREAK_PARSER do {} while(0)
   #endif
 
-  static desugar_tuple(state *s, vec_node_ind elems, BUF_IND_T outer_start, BUF_IND_T outer_end);
+  static node_ind desugar_tuple(state *s, vec_node_ind elems);
 }
 
 %extra_argument { state *s }
@@ -217,7 +218,7 @@ expr(RES) ::= OPEN_BRACKET(A) list_contents(B) CLOSE_BRACKET(C). {
   RES = B;
 }
 
-list_contents(RES) ::= commapred(C). {
+list_contents(RES) ::= commaexprs(C). {
   BREAK_PARSER;
   NODE_IND_T subs_start = s->inds.len;
   VEC_CAT(&s->inds, &C);
@@ -244,10 +245,9 @@ list_contents(RES) ::= . {
 
 expr(RES) ::= OPEN_PAREN(A) compound_expr(B) CLOSE_PAREN(C). {
   BREAK_PARSER;
-  token a = s->tokens[A];
-  VEC_DATA_PTR(&s->nodes)[B].start = a.start;
-  a = s->tokens[C];
-  VEC_DATA_PTR(&s->nodes)[B].end = a.end;
+  parse_node *node = VEC_GET_PTR(s->nodes, B);
+  node->start = s->tokens[A].start;
+  node->end = s->tokens[C].end;
   RES = B;
 }
 
@@ -262,6 +262,8 @@ compound_expr ::= call.
 compound_expr ::= typed.
 
 compound_expr ::= fn.
+
+compound_expr ::= expr.
 
 fn(RES) ::= FN pattern(B) fun_body(C). {
   BREAK_PARSER;
@@ -374,13 +376,19 @@ unit(RES) ::= UNIT(A). {
   RES = s->nodes.len - 1;
 }
 
-/* We push these in order, maybe that will help fit these into
-   cache lines
-*/
-pattern(RES) ::= OPEN_PAREN(O) pattern_tuple(A) CLOSE_PAREN(C). {
+pattern(RES) ::= OPEN_PAREN(O) pattern_in_parens(A) CLOSE_PAREN(C). {
   BREAK_PARSER;
-  RES = desugar_tuple(s, A, s->tokens[O].start, s->tokens[C].end);
+  parse_node *node = VEC_GET_PTR(s->nodes, A);
+  node->start = s->tokens[O].start;
+  node->end = s->tokens[C].end;
+  RES = A;
 }
+
+pattern_in_parens(RES) ::= pattern_tuple(A). {
+  RES = desugar_tuple(s, A);
+}
+
+pattern_in_parens ::= pattern.
 
 pattern(RES) ::= OPEN_PAREN(O) upper_name(A) patterns(B) CLOSE_PAREN(C). {
   BREAK_PARSER;
@@ -451,23 +459,24 @@ enclosed_type(RES) ::= FN_TYPE type(A) type(B). {
 
 enclosed_type ::= type.
 
-type_inside_parens(RES) ::= enclosed_type(B) comma_types(C). {
+type_inner_tuple(RES) ::= enclosed_type(A) COMMA enclosed_type(B). {
+  vec_node_ind res = VEC_NEW;
+  VEC_PUSH(&res, A);
+  VEC_PUSH(&res, B);
+  RES = res;
+}
+
+type_inner_tuple(RES) ::= type_inner_tuple(A) COMMA enclosed_type(B). {
+  vec_node_ind res = VEC_NEW;
+  VEC_PUSH(&A, B);
+  RES = A;
+}
+
+type_inside_parens ::= enclosed_type.
+
+type_inside_parens(RES) ::= type_inner_tuple(A). {
   BREAK_PARSER;
-  NODE_IND_T start = s->inds.len;
-  if (C.len == 0) {
-    RES = B;
-  } else {
-    VEC_PUSH(&s->inds, B);
-    VEC_CAT(&s->inds, &C);
-    parse_node n = {
-      .type = PT_TUP,
-      .subs_start = start,
-      .sub_amt = C.len + 1,
-    };
-    VEC_FREE(&C);
-    VEC_PUSH(&s->nodes, n);
-    RES = s->nodes.len - 1;
-  }
+  RES = desugar_tuple(s, A);
 }
 
 comma_types(RES) ::= comma_types(A) COMMA enclosed_type(B). {
@@ -501,13 +510,17 @@ typed(RES) ::= AS type(A) expr(B). {
   RES = s->nodes.len - 1;
 }
 
-tuple(RES) ::= tuple_min
+tuple(RES) ::= tuple_rec(A) COMMA expr(B). {
+  BREAK_PARSER;
+  // start and end get set by compound_expr
+  VEC_PUSH(&A, B);
+  RES = desugar_tuple(s, A);
+}
 
-tuple_min(RES) ::= expr(A) COMMA expr(B). {
+tuple_min(RES) ::= expr(A). {
   BREAK_PARSER;
   vec_node_ind res = VEC_NEW;
-  node_ind inds[] = {A, B};
-  VEC_APPEND_STATIC(&res, inds);
+  VEC_PUSH(&res, A);
   RES = res;
 }
 
@@ -526,11 +539,17 @@ call(RES) ::= expr(A) expr(B). {
   RES = s->nodes.len - 1;
 }
 
-commapred(RES) ::= expr(A). {
+commaexprs(RES) ::= expr(A). {
   BREAK_PARSER;
   vec_node_ind res = VEC_NEW;
   VEC_PUSH(&res, A);
   RES = res;
+}
+
+commaexprs(RES) ::= commaexprs(A) COMMA expr(B). {
+  BREAK_PARSER;
+  VEC_PUSH(&A, B);
+  RES = A;
 }
 
 if(RES) ::= IF expr(A) expr(B) expr(C). {
@@ -585,25 +604,14 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
 }
 
 %code {
-  static desugar_tuple(state *s, vec_node_ind elems, BUF_IND_T outer_start, BUF_IND_T outer_end) {
+  static node_ind desugar_tuple(state *s, vec_node_ind elems) {
     node_ind node_amt = s->nodes.len;
-
-    {
-      parse_node first_node = {
-        .type = PT_TUP,
-        .sub_a = VEC_GET(elems, 0),
-        .sub_b = node_amt + 1,
-        .start = outer_start,
-        .end = outer_end,
-      };
-      VEC_PUSH(&s->nodes, first_node);
-    }
 
     // The generated tuples will have their end set to the end
     // of the last syntactic element. Best we can do.
     BUF_IND_T inner_end = VEC_GET(s->nodes, elems.len - 1).end;
 
-    for (node_ind i = 1; i < elems.len - 2; i++) {
+    for (node_ind i = 0; i < elems.len - 2; i++) {
       node_ind sub_a_ind = VEC_GET(elems, i);
       parse_node n = {
         .type = PT_TUP,
@@ -626,6 +634,7 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
     VEC_PUSH(&s->nodes, last_node);
 
     VEC_FREE(&elems);
+    return node_amt;
   }
 
   static parse_tree_res parse_internal(token *tokens, size_t token_amt, bool get_expected) {

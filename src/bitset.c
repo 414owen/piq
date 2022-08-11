@@ -52,7 +52,15 @@ void bs_push(bitset *bs, bool bit) {
   bs_data_set(bs->data, bs->len++, bit);
 }
 
-bool bs_pop(bitset *bs) { return bs->data[bs->len--]; }
+bool bs_pop(bitset *bs) {
+  size_t len = bs->len--;
+  return BITTEST(bs->data, len);
+}
+
+bool bs_peek(bitset *bs) {
+  size_t ind = bs->len - 1;
+  return BITTEST(bs->data, ind);
+}
 
 void bs_free(bitset *bs) {
   free(bs->data);

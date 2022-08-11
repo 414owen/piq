@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "ast_meta.h"
+#include "bitset.h"
 #include "parse_tree.h"
 #include "util.h"
 #include "vec.h"
@@ -9,6 +10,7 @@ typedef enum {
   PRINT_NODE,
   PRINT_STR,
   PRINT_SOURCE,
+  POP_TUP_BS,
 } print_action;
 
 // Maybe at some point we'll need context?
@@ -116,6 +118,7 @@ typedef struct {
   vec_print_action actions;
   vec_node_ind node_stack;
   vec_string string_stack;
+  bitset in_tuple;
   parse_tree tree;
   source_file file;
   FILE *out;
@@ -139,6 +142,7 @@ static void push_source(printer_state *s, NODE_IND_T node) {
 static void print_compound(printer_state *s, char *prefix, char *sep,
                            char *terminator, parse_node node) {
   fputs(prefix, s->out);
+  bs_push(&s->in_tuple, node.type == PT_TUP);
   switch (subs_type(node.type)) {
     case SUBS_NONE:
       break;
@@ -158,6 +162,7 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
       }
       break;
   }
+  VEC_PUSH(&s->actions, POP_TUP_BS);
   push_str(s, terminator);
 }
 
@@ -217,7 +222,11 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
       print_compound(s, "(If ", " ", ")", node);
       break;
     case PT_TUP:
-      print_compound(s, "(", ", ", ")", node);
+      if (bs_peek(&s->in_tuple)) {
+        print_compound(s, "", ", ", "", node);
+      } else {
+        print_compound(s, "(", ", ", ")", node);
+      }
       break;
     case PT_AS:
       print_compound(s, "(As ", " ", ")", node);
@@ -239,10 +248,12 @@ void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
     .actions = VEC_NEW,
     .node_stack = VEC_NEW,
     .string_stack = VEC_NEW,
+    .in_tuple = bs_new(),
     .tree = tree,
     .file = file,
     .out = f,
   };
+  bs_push(&s.in_tuple, false);
   push_node(&s, tree.root_ind);
 
   while (s.actions.len > 0) {
@@ -276,12 +287,16 @@ void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
                           sizeof(print_action));
         break;
       }
+      case POP_TUP_BS:
+        bs_pop(&s.in_tuple);
+        break;
     }
   }
 
   VEC_FREE(&s.actions);
   VEC_FREE(&s.string_stack);
   VEC_FREE(&s.node_stack);
+  bs_free(&s.in_tuple);
 }
 
 void free_parse_tree_res(parse_tree_res res) {
