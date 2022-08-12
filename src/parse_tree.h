@@ -48,9 +48,6 @@ typedef enum {
 #define PT_CALL_CALLEE_IND(node) node.sub_a
 #define PT_CALL_PARAM_IND(node) node.sub_b
 
-#define PT_FUN_BODY_STMT_AMT(node) node.sub_amt
-#define PT_FUN_BODY_STMT_IND(inds, node, i) inds[node.subs_start + i]
-
 #define PT_IF_COND_IND(inds, node) inds[node.subs_start]
 #define PT_IF_A_IND(inds, node) inds[node.subs_start + 1]
 #define PT_IF_B_IND(inds, node) inds[node.subs_start + 2]
@@ -60,8 +57,14 @@ typedef enum {
 
 #define PT_LIST_TYPE_SUB(node) node.sub_a
 
-#define PT_ROOT_SUB_AMT(node) node.sub_amt
-#define PT_ROOT_SUB_IND(inds, node, i) inds[node.subs_start + i]
+#define PT_BLOCK_SUB_AMT(node) node.sub_amt
+#define PT_BLOCK_SUB_IND(inds, node, i) inds[node.subs_start + i]
+
+#define PT_ROOT_SUB_AMT(node) PT_BLOCK_SUB_AMT(node)
+#define PT_ROOT_SUB_IND(inds, node, i) PT_BLOCK_SUB_IND(inds, node, i)
+
+#define PT_FUN_BODY_SUB_AMT(node) PT_BLOCK_SUB_AMT(node)
+#define PT_FUN_BODY_SUB_IND(inds, node, i) PT_BLOCK_SUB_IND(inds, node, i)
 
 #define PT_SIG_BINDING_IND(node) node.sub_a
 #define PT_SIG_TYPE_IND(node) node.sub_b
