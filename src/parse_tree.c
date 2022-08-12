@@ -120,7 +120,7 @@ typedef struct {
   vec_string string_stack;
   bitset in_tuple;
   parse_tree tree;
-  source_file file;
+  char *input;
   FILE *out;
 } printer_state;
 
@@ -208,15 +208,15 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
       break;
     case PT_INT:
       fprintf(s->out, "(Int %.*s)", 1 + node.end - node.start,
-              s->file.data + node.start);
+              s->input + node.start);
       break;
     case PT_UPPER_NAME:
       fprintf(s->out, "(Uname %.*s)", 1 + node.end - node.start,
-              s->file.data + node.start);
+              s->input + node.start);
       break;
     case PT_LOWER_NAME:
       fprintf(s->out, "(Lname %.*s)", 1 + node.end - node.start,
-              s->file.data + node.start);
+              s->input + node.start);
       break;
     case PT_IF:
       print_compound(s, "(If ", " ", ")", node);
@@ -243,14 +243,14 @@ static void print_node(printer_state *s, NODE_IND_T node_ind) {
   }
 }
 
-void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
+void print_parse_tree(FILE *f, char *input, parse_tree tree) {
   printer_state s = {
     .actions = VEC_NEW,
     .node_stack = VEC_NEW,
     .string_stack = VEC_NEW,
     .in_tuple = bs_new(),
     .tree = tree,
-    .file = file,
+    .input = input,
     .out = f,
   };
   bs_push(&s.in_tuple, false);
@@ -262,7 +262,7 @@ void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
     switch (action) {
       case PRINT_SOURCE: {
         parse_node node = tree.nodes[VEC_POP(&s.node_stack)];
-        fprintf(f, "%.*s", 1 + node.end - node.start, file.data + node.start);
+        fprintf(f, "%.*s", 1 + node.end - node.start, input + node.start);
         break;
       }
       case PRINT_STR:
@@ -297,6 +297,12 @@ void print_parse_tree(FILE *f, source_file file, parse_tree tree) {
   VEC_FREE(&s.string_stack);
   VEC_FREE(&s.node_stack);
   bs_free(&s.in_tuple);
+}
+
+char *print_parse_tree_str(char *input, parse_tree tree) {
+  stringstream *ss = ss_init();
+  print_parse_tree(ss->stream, input, tree);
+  return ss_finalize(ss);
 }
 
 void free_parse_tree_res(parse_tree_res res) {

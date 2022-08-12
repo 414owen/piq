@@ -1,8 +1,7 @@
 export PKG_CONFIG_PATH
 export PKG_CONFIG_PATH_FOR_TARGET
 export PKG_CONFIG_FOR_TARGET
-export C_INCLUDE_PATH
-export CPLUS_INCLUDE_PATH
+export CPATH
 
 export CC
 export CXX
@@ -10,8 +9,17 @@ export CFLAGS
 export CXXFLAGS
 
 RE2C_OPTIONS = --case-ranges
-CFLAGS = -Wall -Wextra -pipe $CFLAGS `pkg-config --cflags "libeditline"` -fdiagnostics-color=always
-CXXFLAGS = $(CFLAGS) $CXXFLAGS -fno-exceptions
+CFLAGS = \
+    -Wall \
+    -Wextra \
+    -pipe \
+    -std=gnu11 \
+    -s \
+    -O2 \
+    $CFLAGS \
+    `pkg-config --cflags "libeditline"` -fdiagnostics-color=always \
+    -D_POSIX_C_SOURCE=199309L
+CXXFLAGS = $(CFLAGS) -std=gnu++17 $CXXFLAGS -fno-exceptions
 
 common_objs += dir_exists.o
 common_objs += mkdir_p.o

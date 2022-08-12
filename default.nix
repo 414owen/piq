@@ -39,8 +39,7 @@ pkgs.stdenv.mkDerivation rec {
     hedley
   ];
 
-  C_INCLUDE_PATH = pkgs.lib.makeSearchPathOutput "dev" "include" buildInputs;
-  CPLUS_INCLUDE_PATH = C_INCLUDE_PATH;
+  CPATH = pkgs.lib.makeSearchPathOutput "dev" "include" buildInputs;
 
   installPhase = ''
     mkdir -p $out/bin

@@ -21,15 +21,12 @@ static void test_parser_succeeds_on(test_state *state, char *input,
       case ANY:
         break;
       case STRING: {
-        stringstream *ss = ss_init();
-        source_file test_file = {.path = "parser-test", .data = input};
-        print_parse_tree(ss->stream, test_file, pres.tree);
-        char *str = ss_finalize(ss);
-        if (strcmp(str, output.str) != 0) {
+        char *parse_tree_str = print_parse_tree_str(input, pres.tree);
+        if (strcmp(parse_tree_str, output.str) != 0) {
           failf(state, "Different parse trees.\nExpected: '%s'\nGot: '%s'",
-                output.str, str);
+                output.str, parse_tree_str);
         }
-        free(str);
+        free(parse_tree_str);
         break;
       }
     }
@@ -64,7 +61,13 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
 
   parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (pres.succeeded) {
-    failf(state, "Parsing \"%s\" was supposed to fail.", input);
+    char *parse_tree_str = print_parse_tree_str(input, pres.tree);
+    failf(
+      state,
+      "Parsing \"%s\" was supposed to fail.\nGot parse tree:\n%s",
+      input,
+      parse_tree_str
+    );
     free(pres.tree.inds);
     free(pres.tree.nodes);
     goto end_a;
