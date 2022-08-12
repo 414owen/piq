@@ -3,6 +3,7 @@
 #include <readline/readline.h>
 #include <stdlib.h>
 
+#include "diagnostic.h"
 #include "llvm.h"
 #include "parser.h"
 #include "token.h"
@@ -13,21 +14,25 @@ static void reply(char *input, FILE *out) {
   source_file test_file = {.path = "parser-test", .data = input};
   tokens_res tres = scan_all(test_file);
   if (!tres.succeeded) {
-    printf("Parser test \"%s\" failed tokenization at position %d.\n", input,
-           tres.error_pos);
+    puts("Tokenization failed:\n");
+    format_error_ctx(stdout, input, tres.error_pos, tres.error_pos);
+    putc('\n', stdout);
     goto end_a;
   }
 
   parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (!pres.succeeded) {
     printf("Parsing failed.\n");
+    token error_token = tres.tokens[pres.error_pos];
+    format_error_ctx(stdout, input, error_token.start, error_token.end);
+    putc('\n', stdout);
     goto end_b;
   }
 
   tc_res tc_res = typecheck(test_file, pres.tree);
   if (tc_res.errors.len > 0) {
-    print_tc_errors(stderr, tc_res);
-    putc('\n', stderr);
+    print_tc_errors(stdout, tc_res);
+    putc('\n', stdout);
     goto end_c;
   }
 
@@ -66,7 +71,7 @@ int main(void) {
       VEC_POP(&multiline_input);
       VEC_PUSH(&multiline_input, (char)'\0');
       char *data = VEC_DATA_PTR(&multiline_input);
-      printf("Got input: '%s'\n", data);
+      // printf("Got input: '%s'\n", data);
       reply(data, stdout);
       VEC_CLEAR(&multiline_input);
     } else {
