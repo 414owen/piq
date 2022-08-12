@@ -32,3 +32,4 @@ void bs_set(bitset bs, size_t ind, bool b);
 void bs_push(bitset *bs, bool bit);
 bool bs_pop(bitset *bs);
 bool bs_peek(bitset *bs);
+void bs_pop_n(bitset *bs, size_t n);

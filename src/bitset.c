@@ -20,6 +20,9 @@ bitset bs_new(void) {
 void bs_resize(bitset *bs, size_t bits) {
   size_t bytes_needed = BITNSLOTS(bits);
   bs->data = realloc(bs->data, bytes_needed);
+  for (size_t i = bs->cap; i < bytes_needed; i++) {
+    bs->data[i] = 0;
+  }
   bs->cap = bytes_needed;
 }
 
@@ -32,7 +35,7 @@ void bs_grow(bitset *bs, size_t bits) {
 }
 
 bool bs_data_get(bitset_data data, size_t ind) {
-  return (data[BITSLOT(ind)] & BITMASK(ind)) > 0;
+  return BITTEST(data, ind) > 0;
 }
 
 bool bs_get(bitset bs, size_t ind) { return bs_data_get(bs.data, ind); }
@@ -54,12 +57,14 @@ void bs_push(bitset *bs, bool bit) {
 
 bool bs_pop(bitset *bs) {
   size_t len = bs->len--;
-  return BITTEST(bs->data, len);
+  return bs_data_get(bs->data, len);
 }
 
 bool bs_peek(bitset *bs) {
-  size_t ind = bs->len - 1;
-  return BITTEST(bs->data, ind);
+  return bs_data_get(bs->data, bs->len - 1);
+}
+
+void bs_pop_n(bitset *bs, size_t n) { bs->len -= n;
 }
 
 void bs_free(bitset *bs) {
