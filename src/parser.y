@@ -263,7 +263,7 @@ compound_expr ::= typed.
 
 compound_expr ::= fn.
 
-compound_expr ::= expr.
+// compound_expr ::= expr.
 
 fn(RES) ::= FN pattern(B) fun_body(C). {
   BREAK_PARSER;
@@ -477,17 +477,6 @@ type_inside_parens ::= enclosed_type.
 type_inside_parens(RES) ::= type_inner_tuple(A). {
   BREAK_PARSER;
   RES = desugar_tuple(s, A);
-}
-
-comma_types(RES) ::= comma_types(A) COMMA enclosed_type(B). {
-  BREAK_PARSER;
-  VEC_PUSH(&A, B);
-  RES = A;
-}
-
-comma_types(RES) ::= . {
-  vec_node_ind res = VEC_NEW;
-  RES = res;
 }
 
 type(RES) ::= OPEN_PAREN(O) type(A) type(B) CLOSE_PAREN(C). {
