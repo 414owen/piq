@@ -67,7 +67,10 @@ int main(void) {
     }
     // end of multiline input
     if (strlen(input) == 0) {
-      VEC_POP(&multiline_input);
+      // remove newline
+      if (multiline_input.len > 0) {
+        VEC_POP(&multiline_input);
+      }
       VEC_PUSH(&multiline_input, (char)'\0');
       char *data = VEC_DATA_PTR(&multiline_input);
       // printf("Got input: '%s'\n", data);
