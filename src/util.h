@@ -1,11 +1,14 @@
 #pragma once
 
+#define POSIX_C_SOURCE 199309L
 #include <hedley.h>
 #include <alloca.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <time.h>
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
