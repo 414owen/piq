@@ -33,6 +33,10 @@ TODO: benchmark:
 
 */
 
+static const char *EMPTY_STR = "entry";
+static const char *THEN_STR = "then";
+static const char *ELSE_STR = "else";
+
 #ifdef DEBUG_CG
 #define debug_print(...) fprintf(stderr, __VA_ARGS__)
 #else
@@ -76,6 +80,10 @@ typedef enum : uint8_t {
   // INPUTS: none
   // OUTPUTS: none
   CG_POP_BLOCK,
+
+  // INPUTS: none
+  // OUTPUTS: none
+  CG_POP_FN,
 } cg_action;
 
 VEC_DECL(cg_action);
@@ -131,6 +139,8 @@ struct cg_state {
     actions = VEC_NEW;
     act_stage = bs_new();
     act_nodes = VEC_NEW;
+    act_vals = VEC_NEW;
+    act_sizes = VEC_NEW;
 
     act_fns = VEC_NEW;
     strs = VEC_NEW;
@@ -380,12 +390,12 @@ static void cg_node(cg_state *state) {
           VEC_PUSH(&state->act_nodes, PT_IF_COND_IND(state->in.tree.inds, node));
 
           // then
-          VEC_PUSH(&state->strs, "then");
+          VEC_PUSH(&state->strs, THEN_STR);
           VEC_PUSH(&state->actions, CG_GEN_BLOCK);
           VEC_PUSH(&state->act_nodes, PT_IF_A_IND(state->in.tree.inds, node));
 
           // else
-          VEC_PUSH(&state->strs, "else");
+          VEC_PUSH(&state->strs, ELSE_STR);
           VEC_PUSH(&state->actions, CG_GEN_BLOCK);
           VEC_PUSH(&state->act_nodes, PT_IF_B_IND(state->in.tree.inds, node));
           break;
@@ -500,14 +510,17 @@ static void cg_node(cg_state *state) {
           llvm::Twine name("fn");
           llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::AvailableExternallyLinkage;
           llvm::Function *fn = llvm::Function::Create(fn_type, linkage, 0, name);
+          VEC_PUSH(&state->function_stack, fn);
+          fn->hasLazyArguments();
 
-          size_t env_amt = state->env_bnds.len;
-          VEC_PUSH(&state->act_nodes, CG_POP_ENV_TO);
+          VEC_PUSH(&state->actions, CG_POP_FN);
+          u32 env_amt = state->env_bnds.len;
+          VEC_PUSH(&state->actions, CG_POP_ENV_TO);
           VEC_PUSH(&state->act_sizes, env_amt);
 
           VEC_PUSH(&state->actions, CG_NODE);
           VEC_PUSH(&state->act_nodes, ind);
-          VEC_PUSH(&state->act_stage, STAGE_TWO);
+          push_stage(&state->act_stage, STAGE_TWO);
 
           NODE_IND_T param_ind = PT_FUN_PARAM_IND(state->in.tree.inds, node);
           VEC_PUSH(&state->actions, CG_PATTERN);
@@ -517,7 +530,7 @@ static void cg_node(cg_state *state) {
           VEC_PUSH(&state->act_vals, arg);
 
           VEC_PUSH(&state->actions, CG_GEN_BLOCK);
-          VEC_PUSH(&state->strs, "entry");
+          VEC_PUSH(&state->strs, EMPTY_STR);
           VEC_PUSH(&state->act_nodes, PT_FUN_BODY_IND(state->in.tree.inds, node));
           break;
         }
@@ -625,7 +638,7 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
     cg_action action = VEC_POP(&state.actions);
     switch (action) {
       case CG_NODE: {
-        debug_assert(state.actions.len + 1 == state.act_stage.len);
+        debug_assert(state.act_stage.len > 0);
         cg_node(&state);
         break;
       }
@@ -636,7 +649,7 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
         state.builder.SetInsertPoint(block);
         VEC_PUSH(&state.block_stack, block);
         VEC_PUSH(&state.actions, CG_NODE);
-        VEC_PUSH(&state.act_stage, STAGE_ONE);
+        push_stage(&state.act_stage, STAGE_ONE);
         /// We're not using our node input, so we don't have to push it
         break;
       }
