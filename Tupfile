@@ -14,8 +14,6 @@ CFLAGS = \
     -Wextra \
     -pipe \
     -std=gnu11 \
-    -s \
-    -O2 \
     $CFLAGS \
     `pkg-config --cflags "readline"` -fdiagnostics-color=always \
     -D_POSIX_C_SOURCE=199309L

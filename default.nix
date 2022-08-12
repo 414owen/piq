@@ -38,6 +38,7 @@ pkgs.stdenv.mkDerivation rec {
     hedley
   ];
 
+  CFLAGS = "-O2 -s";
   CPATH = pkgs.lib.makeSearchPathOutput "dev" "include" buildInputs;
 
   installPhase = ''
