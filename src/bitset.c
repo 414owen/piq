@@ -55,7 +55,7 @@ void bs_push(bitset *bs, bool bit) {
 }
 
 bool bs_pop(bitset *bs) {
-  size_t len = bs->len--;
+  size_t len = --bs->len;
   return bs_data_get(bs->data, len);
 }
 
