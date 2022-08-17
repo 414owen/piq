@@ -170,20 +170,14 @@ struct cg_state {
 
 static stage pop_stage(bitset *bs) {
   debug_assert(bs->len > 0);
-  puts("pop");
   return bs_pop(bs) ? STAGE_TWO : STAGE_ONE;
 }
 
 static void push_stage(bitset *bs, stage s) {
-  puts("push");
   bs_push(bs, s == STAGE_TWO);
 }
 
 static void push_node_act(cg_state *state, NODE_IND_T node_ind, stage stage) {
-  printf("%d\n", node_ind);
-  if (node_ind == 7 || node_ind == 9) {
-    printf("here\n");
-  }
   VEC_PUSH(&state->actions, CG_NODE);
   push_stage(&state->act_stage, stage);
   VEC_PUSH(&state->act_nodes, node_ind);
@@ -478,7 +472,7 @@ static void cg_node(cg_state *state) {
             (llvm::FunctionType *) construct_type(state, state->in.node_types[ind]);
           llvm::Twine name("fn");
           llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::AvailableExternallyLinkage;
-          llvm::Function *fn = llvm::Function::Create(fn_type, linkage, 0, name);
+          llvm::Function *fn = llvm::Function::Create(fn_type, linkage, name, state->module);
           VEC_PUSH(&state->function_stack, fn);
           fn->hasLazyArguments();
 
