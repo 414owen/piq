@@ -20,9 +20,8 @@ bitset bs_new(void) {
 void bs_resize(bitset *bs, size_t bits) {
   size_t bytes_needed = BITNSLOTS(bits);
   bs->data = realloc(bs->data, bytes_needed);
-  for (size_t i = bs->cap; i < bytes_needed; i++) {
-    bs->data[i] = 0;
-  }
+  size_t cap = bs->cap;
+  memset(&bs->data[cap], 0, bytes_needed - cap);
   bs->cap = bytes_needed;
 }
 
