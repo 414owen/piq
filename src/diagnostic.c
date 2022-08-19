@@ -7,12 +7,12 @@
 #include "util.h"
 
 typedef struct {
-  BUF_IND_T start;
-  BUF_IND_T end;
+  buf_ind_t start;
+  buf_ind_t end;
 } line;
 
-void format_error_ctx(FILE *f, const char *restrict data, BUF_IND_T start,
-                      BUF_IND_T end) {
+void format_error_ctx(FILE *f, const char *restrict data, buf_ind_t start,
+                      buf_ind_t end) {
   fputs(RED "/---\n| " RESET, f);
   size_t cursor = start;
   {

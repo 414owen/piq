@@ -28,12 +28,12 @@ typedef struct {
   type_tag tag;
   union {
     struct {
-      NODE_IND_T subs_start;
-      NODE_IND_T sub_amt;
+      node_ind_t subs_start;
+      node_ind_t sub_amt;
     };
     struct {
-      NODE_IND_T sub_a;
-      NODE_IND_T sub_b;
+      node_ind_t sub_a;
+      node_ind_t sub_b;
     };
   };
 } type;
@@ -47,7 +47,7 @@ typedef struct {
 
 tree_node_repr type_repr(type_tag tag);
 bool inline_types_eq(type a, type b);
-void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root);
+void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root);
 void print_type_head_placeholders(FILE *f, type_tag head);
 
 VEC_DECL(type);

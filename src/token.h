@@ -12,8 +12,8 @@ typedef unsigned char token_type;
 
 typedef struct {
   token_type type;
-  BUF_IND_T start;
-  BUF_IND_T end;
+  buf_ind_t start;
+  buf_ind_t end;
 } token;
 
 typedef struct {
@@ -27,9 +27,9 @@ typedef struct {
   bool succeeded;
   token *tokens;
   size_t token_amt;
-  BUF_IND_T error_pos;
+  buf_ind_t error_pos;
 } tokens_res;
 
-token_res scan(source_file file, BUF_IND_T pos);
+token_res scan(source_file file, buf_ind_t pos);
 tokens_res scan_all(source_file file);
 void free_tokens_res(tokens_res res);

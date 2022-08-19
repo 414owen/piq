@@ -24,19 +24,19 @@ typedef enum {
 
 typedef struct {
   tc_error_type type;
-  NODE_IND_T pos;
+  node_ind_t pos;
 
   union {
     struct {
-      NODE_IND_T expected;
+      node_ind_t expected;
       union {
-        NODE_IND_T got;
+        node_ind_t got;
         type_tag got_type_head;
       };
     };
     struct {
-      NODE_IND_T exp_param_amt;
-      NODE_IND_T got_param_amt;
+      node_ind_t exp_param_amt;
+      node_ind_t got_param_amt;
     };
   };
 } tc_error;
@@ -51,7 +51,7 @@ typedef struct {
   // type sub-indices
   vec_node_ind type_inds;
   // index into types, one per parse_node
-  NODE_IND_T *node_types;
+  node_ind_t *node_types;
 
   parse_tree tree;
   source_file source;
