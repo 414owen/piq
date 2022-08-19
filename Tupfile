@@ -49,6 +49,5 @@ LDFLAGS += `pkg-config --libs "libeditline"`
 : src/tokenizer.re |> re2c $(RE2C_OPTIONS) -o %o %f |> src/tokenizer.c
 : src/parser.y |> ./scripts/gen-parser.sh |> src/parser.c src/parser.h
 : foreach src/*.c | src/parser.h |> $CC $(CFLAGS) -c -o %o %f |> %B.o
-: src/llvm.cpp src/parser.h |> $CXX $(CXXFLAGS) $(LDFLAGS) -c -o %o src/llvm.cpp |> llvm.o
 : $(common_objs) llvm.o repl.o |> $CXX $(CXXFLAGS) -ledit $(LDFLAGS) -o %o %f |> repl
 : $(common_objs) $(test_objs) |> $CC -Wall -Werror $(LDFLAGS) -o %o %f |> test

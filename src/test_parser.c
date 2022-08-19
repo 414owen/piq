@@ -62,12 +62,8 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
   parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (pres.succeeded) {
     char *parse_tree_str = print_parse_tree_str(input, pres.tree);
-    failf(
-      state,
-      "Parsing \"%s\" was supposed to fail.\nGot parse tree:\n%s",
-      input,
-      parse_tree_str
-    );
+    failf(state, "Parsing \"%s\" was supposed to fail.\nGot parse tree:\n%s",
+          input, parse_tree_str);
     free(pres.tree.inds);
     free(pres.tree.nodes);
     goto end_a;

@@ -108,7 +108,7 @@ void __vec_push(vec_void *vec, void *el, size_t elemsize);
 #define VEC_PUSH(vec, el)                                                      \
   {                                                                            \
     debug_assert(sizeof((vec)->data[0]) == sizeof(el));                        \
-    __typeof__(el) __el = el;                                                      \
+    __typeof__(el) __el = el;                                                  \
     __vec_push((vec_void *)vec, (void *)&__el, sizeof(el));                    \
   }
 
@@ -132,7 +132,7 @@ vec_void *__vec_pop_n(vec_void *vec, VEC_LEN_T n);
 
 #define VEC_POP(vec)                                                           \
   ({                                                                           \
-    __typeof__((vec)->data[0]) __el = VEC_PEEK(*vec);                              \
+    __typeof__((vec)->data[0]) __el = VEC_PEEK(*vec);                          \
     VEC_POP_(vec);                                                             \
     __el;                                                                      \
   })
@@ -148,6 +148,8 @@ vec_void *__vec_pop_n(vec_void *vec, VEC_LEN_T n);
 #define VEC_LAST(vec) VEC_GET((vec), (vec).len - 1)
 
 #define VEC_FREE(vec)                                                          \
+  (vec)->len = 0;                                                              \
+  (vec)->cap = 0;                                                              \
   if (VEC_IS_EXTERNAL(vec) && (vec)->data != NULL) {                           \
     free((vec)->data);                                                         \
     (vec)->data = NULL;                                                        \
@@ -166,13 +168,15 @@ void __vec_clone(vec_void *dest, vec_void *src, size_t elemsize);
 char *__vec_finalize(vec_void *vec, size_t elemsize);
 // returns minimum heap-allocated buffer
 #define VEC_FINALIZE(vec)                                                      \
-  (__typeof__(*(vec.data)))__vec_finalize((vec_void *)vec, sizeof((vec)->data[0]))
+  (__typeof__(*(vec.data)))__vec_finalize((vec_void *)vec,                     \
+                                          sizeof((vec)->data[0]))
 
 #else
 
 char *__vec_finalize(vec_void *vec);
 // returns minimum heap-allocated buffer
-#define VEC_FINALIZE(vec) (__typeof__(*(vec.data)))__vec_finalize((vec_void *)vec)
+#define VEC_FINALIZE(vec)                                                      \
+  (__typeof__(*(vec.data)))__vec_finalize((vec_void *)vec)
 
 #endif
 
@@ -194,7 +198,7 @@ void __vec_replicate(vec_void *vec, void *el, VEC_LEN_T amt, size_t elemsize);
   {                                                                            \
     debug_assert(sizeof((vec)->len) == sizeof(amt));                           \
     debug_assert(sizeof((vec)->data[0]) == sizeof(el));                        \
-    __typeof__(el) __el = el;                                                      \
+    __typeof__(el) __el = el;                                                  \
     __vec_replicate((vec_void *)vec, (void *)&__el, amt, sizeof(el));          \
   }
 
