@@ -1,6 +1,6 @@
 %token_prefix TK_
 %token_type   int // index into token vec
-%default_type NODE_IND_T
+%default_type node_ind_t
 
 // This is so that parser.h changes less
 %token
@@ -56,9 +56,9 @@
     vec_parse_node nodes;
     vec_node_ind inds;
     token_type *expected;
-    NODE_IND_T pos;
-    NODE_IND_T root_ind;
-    NODE_IND_T error_pos;
+    node_ind_t pos;
+    node_ind_t root_ind;
+    node_ind_t error_pos;
     uint8_t expected_amt;
     bool get_expected;
     bool succeeded;
@@ -68,8 +68,8 @@
     ((parse_node) { .type = type, .leaf_node = {.start = start, .end = end}})
 
   typedef struct {
-    NODE_IND_T a;
-    NODE_IND_T b;
+    node_ind_t a;
+    node_ind_t b;
   } node_ind_tup;
 
   static parse_tree_res parse_internal(token *tokens, size_t token_amt, bool get_expected);
@@ -88,7 +88,7 @@
 
 root(RES) ::= toplevels(A) EOF . {
   BREAK_PARSER;
-  NODE_IND_T start = s->inds.len;
+  node_ind_t start = s->inds.len;
   VEC_CAT(&s->inds, &A);
   parse_node n = {
     .type = PT_ROOT,
@@ -220,7 +220,7 @@ expr(RES) ::= OPEN_BRACKET(A) list_contents(B) CLOSE_BRACKET(C). {
 
 list_contents(RES) ::= commaexprs(C). {
   BREAK_PARSER;
-  NODE_IND_T subs_start = s->inds.len;
+  node_ind_t subs_start = s->inds.len;
   VEC_CAT(&s->inds, &C);
   parse_node n = {
     .type = PT_LIST,
@@ -281,7 +281,7 @@ sig(RES) ::= SIG lower_name(A) type(B). {
 
 fun(RES) ::= FUN lower_name(A) pattern(B) fun_body(C). {
   BREAK_PARSER;
-  NODE_IND_T start = s->inds.len;
+  node_ind_t start = s->inds.len;
   VEC_PUSH(&s->inds, A);
   VEC_PUSH(&s->inds, B);
   VEC_PUSH(&s->inds, C);
@@ -292,7 +292,7 @@ fun(RES) ::= FUN lower_name(A) pattern(B) fun_body(C). {
 
 fun_body(RES) ::= block(B). {
   BREAK_PARSER;
-  NODE_IND_T start = s->inds.len;
+  node_ind_t start = s->inds.len;
   VEC_CAT(&s->inds, &B);
   parse_node n = {
     .type = PT_FUN_BODY,
@@ -392,7 +392,7 @@ pattern_in_parens ::= pattern.
 
 pattern(RES) ::= OPEN_PAREN(O) upper_name(A) patterns(B) CLOSE_PAREN(C). {
   BREAK_PARSER;
-  NODE_IND_T start = s->inds.len;
+  node_ind_t start = s->inds.len;
   VEC_PUSH(&s->inds, &A);
   VEC_CAT(&s->inds, &B);
   parse_node n = {
@@ -409,7 +409,7 @@ pattern(RES) ::= OPEN_PAREN(O) upper_name(A) patterns(B) CLOSE_PAREN(C). {
 
 pattern(RES) ::= OPEN_BRACKET(O) pattern_list(A) CLOSE_BRACKET(C). {
   BREAK_PARSER;
-  NODE_IND_T start = s->inds.len;
+  node_ind_t start = s->inds.len;
   VEC_CAT(&s->inds, &A);
   parse_node n = {
     .type = PT_LIST,
@@ -543,7 +543,7 @@ commaexprs(RES) ::= commaexprs(A) COMMA expr(B). {
 
 if(RES) ::= IF expr(A) expr(B) expr(C). {
   BREAK_PARSER;
-  NODE_IND_T start = s->inds.len;
+  node_ind_t start = s->inds.len;
   VEC_PUSH(&s->inds, A);
   VEC_PUSH(&s->inds, B);
   VEC_PUSH(&s->inds, C);
@@ -598,7 +598,7 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
 
     // The generated tuples will have their end set to the end
     // of the last syntactic element. Best we can do.
-    BUF_IND_T inner_end = VEC_GET(s->nodes, elems.len - 1).end;
+    buf_ind_t inner_end = VEC_GET(s->nodes, elems.len - 1).end;
 
     for (node_ind i = 0; i < elems.len - 2; i++) {
       node_ind sub_a_ind = VEC_GET(elems, i);

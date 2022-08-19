@@ -12,14 +12,14 @@ typedef struct {
   } tag;
 
   union {
-    NODE_IND_T type_ind;
+    node_ind_t type_ind;
     char *str;
   };
 } print_action;
 
 VEC_DECL(print_action);
 
-static void push_node(vec_print_action *stack, NODE_IND_T type_ind) {
+static void push_node(vec_print_action *stack, node_ind_t type_ind) {
   print_action act = {
     .tag = PRINT_TYPE,
     .type_ind = type_ind,
@@ -138,7 +138,7 @@ void print_type_head_placeholders(FILE *f, type_tag head) {
   }
 }
 
-void print_type(FILE *f, type *types, NODE_IND_T *inds, NODE_IND_T root) {
+void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root) {
   vec_print_action stack = VEC_NEW;
   push_node(&stack, root);
   while (stack.len > 0) {

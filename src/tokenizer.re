@@ -23,15 +23,15 @@
 #define  YYSHIFT(shift)           cursor += shift
 #define  YYSHIFTSTAG(tag, shift)  tag += shift
 
-static token_res mk_token(token_type type, BUF_IND_T start, BUF_IND_T end) {
+static token_res mk_token(token_type type, buf_ind_t start, buf_ind_t end) {
   return (token_res) {.succeeded = true, .tok = {.type = type, .start = start, .end = end}};
 }
 
-token_res scan(source_file file, BUF_IND_T start) {
+token_res scan(source_file file, buf_ind_t start) {
   while (isspace(file.data[start]))
     start++;
-  BUF_IND_T pos = start;
-  BUF_IND_T marker = start;
+  buf_ind_t pos = start;
+  buf_ind_t marker = start;
 
 /*!re2c
   re2c:define:YYCTYPE = char;
@@ -78,7 +78,7 @@ token_res scan(source_file file, BUF_IND_T start) {
 }
 
 tokens_res scan_all(source_file file) {
-  BUF_IND_T ind = 0;
+  buf_ind_t ind = 0;
   vec_token tokens = VEC_NEW;
   tokens_res res = { .succeeded = true };
   token_res tres;

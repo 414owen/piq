@@ -51,8 +51,8 @@ static void test_parser_succeeds_on_form(test_state *state, char *input,
 
 extern char *yyTokenName[];
 
-static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
-                                 NODE_IND_T expected_amt,
+static void test_parser_fails_on(test_state *state, char *input, buf_ind_t pos,
+                                 node_ind_t expected_amt,
                                  const token_type *expected) {
 
   tokens_res tres = test_upto_tokens(state, input);
@@ -76,7 +76,7 @@ static void test_parser_fails_on(test_state *state, char *input, BUF_IND_T pos,
 
   bool expected_tokens_match = pres.expected_amt == expected_amt;
 
-  for (NODE_IND_T i = 0; expected_tokens_match && i < expected_amt; i++) {
+  for (node_ind_t i = 0; expected_tokens_match && i < expected_amt; i++) {
     if (expected[i] != pres.expected[i])
       expected_tokens_match = false;
   }
@@ -103,7 +103,7 @@ end_a:
 }
 
 static void test_parser_fails_on_form(test_state *state, char *input,
-                                      BUF_IND_T pos, NODE_IND_T expected_amt,
+                                      buf_ind_t pos, node_ind_t expected_amt,
                                       const token_type *expected) {
   char *new_input;
   asprintf(&new_input, "(fun a () %s)", input);

@@ -8,7 +8,7 @@
 #include "token.h"
 #include "vec.h"
 
-#define NODE_IND_T BUF_IND_T
+#define node_ind_t buf_ind_t
 
 typedef enum {
   PT_CALL,
@@ -84,22 +84,22 @@ const char *parse_node_string(parse_node_type type);
 typedef struct {
   parse_node_type type;
 
-  BUF_IND_T start;
-  BUF_IND_T end;
+  buf_ind_t start;
+  buf_ind_t end;
 
   union {
     struct {
-      NODE_IND_T subs_start;
-      NODE_IND_T sub_amt;
+      node_ind_t subs_start;
+      node_ind_t sub_amt;
     };
     struct {
-      NODE_IND_T sub_a;
-      NODE_IND_T sub_b;
+      node_ind_t sub_a;
+      node_ind_t sub_b;
     };
   };
 } parse_node;
 
-typedef NODE_IND_T node_ind;
+typedef node_ind_t node_ind;
 
 VEC_DECL(parse_node);
 VEC_DECL(node_ind);
@@ -107,9 +107,9 @@ VEC_DECL(token_type);
 
 typedef struct {
   parse_node *nodes;
-  NODE_IND_T *inds;
-  NODE_IND_T root_ind;
-  NODE_IND_T node_amt;
+  node_ind_t *inds;
+  node_ind_t root_ind;
+  node_ind_t node_amt;
 } parse_tree;
 
 typedef struct {
@@ -119,7 +119,7 @@ typedef struct {
   // union {
   parse_tree tree;
   struct {
-    NODE_IND_T error_pos;
+    node_ind_t error_pos;
     uint8_t expected_amt;
     token_type *expected;
   };

@@ -52,8 +52,8 @@ static void test_scanner_tokens(test_state *restrict state,
 }
 
 static void test_scanner_fails(test_state *restrict state, char *restrict buf,
-                               BUF_IND_T err_pos) {
-  BUF_IND_T ind = 0;
+                               buf_ind_t err_pos) {
+  buf_ind_t ind = 0;
   bool seen_failure = true;
   for (;;) {
     token_res t = scan(test_file(buf), ind);

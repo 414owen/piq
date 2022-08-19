@@ -162,13 +162,13 @@ static stage pop_stage(bitset *bs) {
 
 static void push_stage(bitset *bs, stage s) { bs_push(bs, s == STAGE_TWO); }
 
-static void push_node_act(cg_state *state, NODE_IND_T node_ind, stage stage) {
+static void push_node_act(cg_state *state, node_ind_t node_ind, stage stage) {
   VEC_PUSH(&state->actions, CG_NODE);
   push_stage(&state->act_stage, stage);
   VEC_PUSH(&state->act_nodes, node_ind);
 }
 
-static void push_pattern_act(cg_state *state, NODE_IND_T node_ind,
+static void push_pattern_act(cg_state *state, node_ind_t node_ind,
                              stage stage) {
   VEC_PUSH(&state->actions, CG_PATTERN);
   push_stage(&state->act_stage, stage);
@@ -182,7 +182,7 @@ typedef enum {
 
 VEC_DECL(gen_type_action);
 
-static LLVMTypeRef construct_type(cg_state *state, NODE_IND_T root_type_ind) {
+static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
 
   LLVMTypeRef *llvm_types = state->llvm_types;
   {
@@ -197,7 +197,7 @@ static LLVMTypeRef construct_type(cg_state *state, NODE_IND_T root_type_ind) {
   VEC_PUSH(&inds, root_type_ind);
   while (inds.len > 0) {
     gen_type_action action = VEC_POP(&actions);
-    NODE_IND_T type_ind = VEC_POP(&inds);
+    node_ind_t type_ind = VEC_POP(&inds);
     type t = VEC_GET(state->in.types, type_ind);
     switch (action) {
       case GEN_TYPE: {
@@ -273,14 +273,14 @@ static LLVMTypeRef construct_type(cg_state *state, NODE_IND_T root_type_ind) {
       case COMBINE_TYPE: {
         switch (t.tag) {
           case T_LIST: {
-            NODE_IND_T sub_ind = t.sub_a;
+            node_ind_t sub_ind = t.sub_a;
             llvm_types[type_ind] =
               (LLVMTypeRef)LLVMArrayType(llvm_types[sub_ind], 0);
             break;
           }
           case T_TUP: {
-            NODE_IND_T sub_ind_a = T_TUP_SUB_A(t);
-            NODE_IND_T sub_ind_b = T_TUP_SUB_B(t);
+            node_ind_t sub_ind_a = T_TUP_SUB_A(t);
+            node_ind_t sub_ind_b = T_TUP_SUB_B(t);
             LLVMTypeRef subs[2] = {llvm_types[sub_ind_a],
                                    llvm_types[sub_ind_b]};
             llvm_types[type_ind] =
@@ -288,8 +288,8 @@ static LLVMTypeRef construct_type(cg_state *state, NODE_IND_T root_type_ind) {
             break;
           }
           case T_FN: {
-            NODE_IND_T param_ind = T_FN_PARAM_IND(t);
-            NODE_IND_T ret_ind = T_FN_RET_IND(t);
+            node_ind_t param_ind = T_FN_PARAM_IND(t);
+            node_ind_t ret_ind = T_FN_RET_IND(t);
             LLVMTypeRef param_type = llvm_types[param_ind];
             LLVMTypeRef ret_type = llvm_types[ret_ind];
             llvm_types[type_ind] =
@@ -327,10 +327,10 @@ static void cg_node(cg_state *state) {
   stage stage = pop_stage(&state->act_stage);
   switch (node.type) {
     case PT_CALL: {
-      NODE_IND_T callee_ind = PT_CALL_CALLEE_IND(node);
+      node_ind_t callee_ind = PT_CALL_CALLEE_IND(node);
       switch (stage) {
         case STAGE_ONE: {
-          NODE_IND_T param_ind = PT_CALL_PARAM_IND(node);
+          node_ind_t param_ind = PT_CALL_PARAM_IND(node);
           push_node_act(state, ind, STAGE_TWO);
           // These will be in the same order on the value (out) stack
           push_node_act(state, PT_CALL_CALLEE_IND(node), STAGE_ONE);
@@ -354,7 +354,7 @@ static void cg_node(cg_state *state) {
         .start = node.start,
         .end = node.end,
       };
-      NODE_IND_T ind = lookup_bnd(state->in.source.data, state->env_bnds,
+      node_ind_t ind = lookup_bnd(state->in.source.data, state->env_bnds,
                                   state->env_is_builtin, b);
       // missing refs are caught in typecheck phase
       debug_assert(ind != state->env_bnds.len);
@@ -362,7 +362,7 @@ static void cg_node(cg_state *state) {
       break;
     }
     case PT_INT: {
-      NODE_IND_T type_ind = state->in.node_types[ind];
+      node_ind_t type_ind = state->in.node_types[ind];
       LLVMTypeRef type = construct_type(state, type_ind);
       const char *str = VEC_GET_PTR(state->in.source, node.start);
       size_t len = node.end - node.start + 1;
@@ -422,7 +422,7 @@ static void cg_node(cg_state *state) {
         case STAGE_ONE:
           push_node_act(state, ind, STAGE_TWO);
           for (size_t i = 0; i < node.sub_amt / 2; i++) {
-            NODE_IND_T sub_ind = state->in.tree.inds[node.subs_start + i];
+            node_ind_t sub_ind = state->in.tree.inds[node.subs_start + i];
             push_node_act(state, sub_ind, STAGE_ONE);
           }
           break;
@@ -449,7 +449,7 @@ static void cg_node(cg_state *state) {
     case PT_FUN_BODY:
     case PT_ROOT: {
       for (size_t i = 0; i < PT_BLOCK_SUB_AMT(node); i++) {
-        NODE_IND_T sub_ind = PT_BLOCK_SUB_IND(state->in.tree.inds, node, i);
+        node_ind_t sub_ind = PT_BLOCK_SUB_IND(state->in.tree.inds, node, i);
         parse_node sub = state->in.tree.nodes[sub_ind];
         if (sub.type == PT_SIG)
           continue;
@@ -473,7 +473,7 @@ static void cg_node(cg_state *state) {
 
           push_node_act(state, ind, STAGE_TWO);
 
-          NODE_IND_T param_ind = PT_FUN_PARAM_IND(state->in.tree.inds, node);
+          node_ind_t param_ind = PT_FUN_PARAM_IND(state->in.tree.inds, node);
           push_pattern_act(state, param_ind, STAGE_ONE);
           LLVMTypeRef param_type =
             construct_type(state, state->in.node_types[param_ind]);
