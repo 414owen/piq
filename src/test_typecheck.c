@@ -17,8 +17,8 @@ VEC_DECL(test_type);
 
 typedef struct {
   tc_error_type type;
-  BUF_IND_T start;
-  BUF_IND_T end;
+  buf_ind_t start;
+  buf_ind_t end;
   union {
     struct {
       test_type type_exp;
@@ -29,8 +29,8 @@ typedef struct {
 
 typedef struct {
   test_type exp;
-  BUF_IND_T start;
-  BUF_IND_T end;
+  buf_ind_t start;
+  buf_ind_t end;
 } exp_type_span;
 
 typedef struct {
@@ -50,7 +50,7 @@ typedef struct {
   };
 } tc_test;
 
-static bool test_type_eq(vec_type types, vec_node_ind inds, NODE_IND_T root,
+static bool test_type_eq(vec_type types, vec_node_ind inds, node_ind_t root,
                          test_type t) {
   vec_node_ind stackA = VEC_NEW;
   VEC_PUSH(&stackA, root);

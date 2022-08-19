@@ -4,8 +4,8 @@
 #include "vec.h"
 
 typedef struct {
-  BUF_IND_T start;
-  BUF_IND_T end;
+  buf_ind_t start;
+  buf_ind_t end;
 } binding;
 
 VEC_DECL(binding);
@@ -13,8 +13,8 @@ VEC_DECL(binding);
 typedef union {
   char *builtin;
   struct {
-    BUF_IND_T start;
-    BUF_IND_T end;
+    buf_ind_t start;
+    buf_ind_t end;
   };
 } str_ref;
 

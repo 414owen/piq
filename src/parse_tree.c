@@ -129,12 +129,12 @@ static void push_str(printer_state *s, char *str) {
   VEC_PUSH(&s->string_stack, str);
 }
 
-static void push_node(printer_state *s, NODE_IND_T node) {
+static void push_node(printer_state *s, node_ind_t node) {
   VEC_PUSH(&s->actions, PRINT_NODE);
   VEC_PUSH(&s->node_stack, node);
 }
 
-static void push_source(printer_state *s, NODE_IND_T node) {
+static void push_source(printer_state *s, node_ind_t node) {
   VEC_PUSH(&s->actions, PRINT_SOURCE);
   VEC_PUSH(&s->node_stack, node);
 }
@@ -166,7 +166,7 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
   push_str(s, terminator);
 }
 
-static void print_node(printer_state *s, NODE_IND_T node_ind) {
+static void print_node(printer_state *s, node_ind_t node_ind) {
   parse_node node = s->tree.nodes[node_ind];
   switch (node.type) {
     case PT_SIG: {
@@ -269,7 +269,7 @@ void print_parse_tree(FILE *f, char *input, parse_tree tree) {
         fputs(VEC_POP(&s.string_stack), f);
         break;
       case PRINT_NODE: {
-        NODE_IND_T node = VEC_POP(&s.node_stack);
+        node_ind_t node = VEC_POP(&s.node_stack);
         uint32_t first_action = s.actions.len;
         uint32_t first_node = s.node_stack.len;
         uint32_t first_string = s.string_stack.len;
@@ -278,7 +278,7 @@ void print_parse_tree(FILE *f, char *input, parse_tree tree) {
 
         reverse_arbitrary(VEC_GET_PTR(s.node_stack, first_node),
                           MAX(first_node, s.node_stack.len) - first_node,
-                          sizeof(NODE_IND_T));
+                          sizeof(node_ind_t));
         reverse_arbitrary(VEC_GET_PTR(s.string_stack, first_string),
                           MAX(first_string, s.string_stack.len) - first_string,
                           sizeof(string));
