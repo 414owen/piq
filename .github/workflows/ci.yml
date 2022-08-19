@@ -16,7 +16,7 @@ jobs:
     - name: Install Nix
       uses: cachix/install-nix-action@v17
     - name: check formatting
-      run: nix-shell default.nix --run ./scripts/checks/formatting.sh
+      run: nix-shell ./nix/ci.nix --run ./scripts/checks/formatting.sh
     - name: Install build dependencies
       run: sudo apt-get install -y lemon re2c
     - name: make test
