@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: checkout hedley
-      run: git clone https://github.com/nemequ/hedley.git hedley --depth=1
+    - name: Install Nix
+      uses: cachix/install-nix-action@v17
     - name: check formatting
-      run: ./scripts/checks/formatting.sh
+      run: nix-shell default.nix --run ./scripts/checks/formatting.sh
     - name: Install build dependencies
       run: sudo apt-get install -y lemon re2c
     - name: make test
