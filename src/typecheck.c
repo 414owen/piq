@@ -697,7 +697,8 @@ static void typecheck_block(typecheck_state *state, bool enforce_sigs) {
   bool is_wanted = wanted_ind != state->unknown_ind;
   bool can_continue = true;
 
-  if (node.sub_amt == 0) return;
+  if (node.sub_amt == 0)
+    return;
 
   char *sub_has_wanted = stcalloc(BITNSLOTS(node.sub_amt), 1);
 

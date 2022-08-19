@@ -59,12 +59,9 @@ bool bs_pop(bitset *bs) {
   return bs_data_get(bs->data, len);
 }
 
-bool bs_peek(bitset *bs) {
-  return bs_data_get(bs->data, bs->len - 1);
-}
+bool bs_peek(bitset *bs) { return bs_data_get(bs->data, bs->len - 1); }
 
-void bs_pop_n(bitset *bs, size_t n) { bs->len -= n;
-}
+void bs_pop_n(bitset *bs, size_t n) { bs->len -= n; }
 
 void bs_free(bitset *bs) {
   free(bs->data);

@@ -1,24 +1,8 @@
 #include <stdio.h>
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IRPrintingPasses.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Value.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/Passes/PassBuilder.h"
-// #include "llvm/Passes/OptimizationLevel.h"
-#include "llvm/Support/TargetSelect.h"
+
+#include <llvm-c/Core.h>
+#include <llvm-c/Analysis.h>
+#include <llvm-c/Target.h>
 
 /*
 
@@ -29,7 +13,8 @@ the order you want them executed.
 TODO: benchmark:
 1. Stack of actions, where an action is a tagged union (saves lookups?)
 2. Stack of action tags, separate stacks or parameters (saves space?)
-3. Stack of action tags, and a stack of combined parameters for each variant (packed?)
+3. Stack of action tags, and a stack of combined parameters for each variant
+(packed?)
 
 */
 
@@ -40,22 +25,22 @@ static const char *ELSE_STR = "else";
 #ifdef DEBUG_CG
 #define debug_print(...) fprintf(stderr, __VA_ARGS__)
 #else
-#define debug_print(...) do {} while (false);
+#define debug_print(...)                                                       \
+  do {                                                                         \
+  } while (false);
 #endif
 
-extern "C" {
-  #include "binding.h"
-  #include "bitset.h"
-  #include "consts.h"
-  #include "llvm.h"
-  #include "parse_tree.h"
-  #include "scope.h"
-  #include "typecheck.h"
-  #include "util.h"
-  #include "vec.h"
-}
+#include "binding.h"
+#include "bitset.h"
+#include "consts.h"
+#include "llvm.h"
+#include "parse_tree.h"
+#include "scope.h"
+#include "typecheck.h"
+#include "util.h"
+#include "vec.h"
 
-typedef enum : uint8_t {
+typedef enum {
 
   // INPUTS: node
   // OUTPUTS: val
@@ -76,32 +61,29 @@ typedef enum : uint8_t {
   // INPUTS: size
   // OUTPUTS: none
   CG_POP_ENV_TO,
-
-  // INPUTS: none
-  // OUTPUTS: none
-  CG_POP_FN,
 } cg_action;
 
 VEC_DECL(cg_action);
 
-typedef llvm::Value* llvm_value;
+typedef LLVMValueRef llvm_value;
 VEC_DECL(llvm_value);
 
-typedef llvm::Type* llvm_type;
+typedef LLVMTypeRef llvm_type;
 VEC_DECL(llvm_type);
 
-typedef llvm::BasicBlock *llvm_block;
+typedef LLVMBasicBlockRef llvm_block;
 VEC_DECL(llvm_block);
 
-typedef llvm::Function* llvm_function;
+typedef LLVMValueRef LLVMFunctionRef;
+typedef LLVMFunctionRef llvm_function;
 VEC_DECL(llvm_function);
 
-enum stage { STAGE_ONE, STAGE_TWO };
+typedef enum stage { STAGE_ONE, STAGE_TWO } stage;
 
-struct cg_state {
-  llvm::LLVMContext &context;
-  llvm::Module &module;
-  llvm::IRBuilder<> builder;
+typedef struct {
+  LLVMContextRef context;
+  LLVMBuilderRef builder;
+  LLVMModuleRef module;
 
   vec_cg_action actions;
   bitset act_stage;
@@ -119,63 +101,66 @@ struct cg_state {
   tc_res in;
 
   // corresponds to in.types
-  llvm::Type **llvm_types;
+  LLVMTypeRef *llvm_types;
 
   vec_str_ref env_bnds;
   vec_llvm_value env_vals;
   bitset env_is_builtin;
   // TODO do we need this?
   vec_node_ind env_nodes;
+} cg_state;
 
-  cg_state(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in_p) :
-    context(ctx),
-    module(mod),
-    builder(this->context)
-  {
-    actions = VEC_NEW;
-    act_stage = bs_new();
-    act_nodes = VEC_NEW;
-    act_vals = VEC_NEW;
-    act_sizes = VEC_NEW;
+static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
+                             tc_res in_p) {
+  cg_state state = {
+    .context = ctx,
+    .module = mod,
+    .builder = LLVMCreateBuilderInContext(ctx),
+    .actions = VEC_NEW,
+    .act_stage = bs_new(),
+    .act_nodes = VEC_NEW,
+    .act_vals = VEC_NEW,
+    .act_sizes = VEC_NEW,
 
-    act_fns = VEC_NEW;
-    strs = VEC_NEW;
+    .act_fns = VEC_NEW,
+    .strs = VEC_NEW,
 
-    val_stack = VEC_NEW;
-    block_stack = VEC_NEW;
-    function_stack = VEC_NEW;
+    .val_stack = VEC_NEW,
+    .block_stack = VEC_NEW,
+    .function_stack = VEC_NEW,
 
-    in = in_p;
+    .in = in_p,
 
-    llvm_types = (llvm::Type **) calloc(in.types.len, sizeof(llvm::Type*)),
-    env_bnds = VEC_NEW;
-    env_vals = VEC_NEW;
-    env_is_builtin = bs_new();
-    env_nodes = VEC_NEW;
-  }
+    .llvm_types = (LLVMTypeRef *)calloc(in_p.types.len, sizeof(LLVMTypeRef)),
+    .env_bnds = VEC_NEW,
+    .env_vals = VEC_NEW,
+    .env_is_builtin = bs_new(),
+    .env_nodes = VEC_NEW,
+  };
+  // Sometimes we want to be nowhere
+  VEC_PUSH(&state.block_stack, NULL);
+  return state;
+}
 
-  ~cg_state() {
-    VEC_FREE(&actions);
-    VEC_FREE(&strs);
-    VEC_FREE(&val_stack);
-    VEC_FREE(&block_stack);
-    VEC_FREE(&function_stack);
-    free(llvm_types);
-    VEC_FREE(&env_bnds);
-    VEC_FREE(&env_vals);
-    bs_free(&env_is_builtin);
-    VEC_FREE(&env_nodes);
-  }
-};
+static void destroy_cg_state(cg_state *state) {
+  VEC_FREE(&state->actions);
+  VEC_FREE(&state->strs);
+  VEC_FREE(&state->val_stack);
+  VEC_FREE(&state->block_stack);
+  VEC_FREE(&state->function_stack);
+  free(state->llvm_types);
+  VEC_FREE(&state->env_bnds);
+  VEC_FREE(&state->env_vals);
+  bs_free(&state->env_is_builtin);
+  VEC_FREE(&state->env_nodes);
+}
 
 static stage pop_stage(bitset *bs) {
   debug_assert(bs->len > 0);
   return bs_pop(bs) ? STAGE_TWO : STAGE_ONE;
 }
 
-static void push_stage(bitset *bs, stage s) {
-  bs_push(bs, s == STAGE_TWO);
-}
+static void push_stage(bitset *bs, stage s) { bs_push(bs, s == STAGE_TWO); }
 
 static void push_node_act(cg_state *state, NODE_IND_T node_ind, stage stage) {
   VEC_PUSH(&state->actions, CG_NODE);
@@ -183,7 +168,8 @@ static void push_node_act(cg_state *state, NODE_IND_T node_ind, stage stage) {
   VEC_PUSH(&state->act_nodes, node_ind);
 }
 
-static void push_pattern_act(cg_state *state, NODE_IND_T node_ind, stage stage) {
+static void push_pattern_act(cg_state *state, NODE_IND_T node_ind,
+                             stage stage) {
   VEC_PUSH(&state->actions, CG_PATTERN);
   push_stage(&state->act_stage, stage);
   VEC_PUSH(&state->act_nodes, node_ind);
@@ -196,12 +182,13 @@ typedef enum {
 
 VEC_DECL(gen_type_action);
 
-static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
+static LLVMTypeRef construct_type(cg_state *state, NODE_IND_T root_type_ind) {
 
-  llvm::Type **llvm_types = state->llvm_types;
+  LLVMTypeRef *llvm_types = state->llvm_types;
   {
-    llvm::Type *prev = llvm_types[root_type_ind];
-    if (prev != NULL) return prev;
+    LLVMTypeRef prev = llvm_types[root_type_ind];
+    if (prev != NULL)
+      return prev;
   }
 
   vec_gen_type_action actions = VEC_NEW;
@@ -214,11 +201,11 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
     type t = VEC_GET(state->in.types, type_ind);
     switch (action) {
       case GEN_TYPE: {
-        if (llvm_types[type_ind] != NULL) break;
+        if (llvm_types[type_ind] != NULL)
+          break;
         switch (t.tag) {
           case T_BOOL: {
-            llvm_types[type_ind] =
-              llvm::Type::getInt1Ty(state->context);
+            llvm_types[type_ind] = LLVMInt1TypeInContext(state->context);
             break;
           }
           case T_LIST: {
@@ -230,22 +217,22 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
           }
           case T_I8:
           case T_U8: {
-            llvm_types[type_ind] = llvm::Type::getInt8Ty(state->context);
+            llvm_types[type_ind] = LLVMInt8TypeInContext(state->context);
             break;
           }
           case T_I16:
           case T_U16: {
-            llvm_types[type_ind] = llvm::Type::getInt16Ty(state->context);
+            llvm_types[type_ind] = LLVMInt16TypeInContext(state->context);
             break;
           }
           case T_I32:
           case T_U32: {
-            llvm_types[type_ind] = llvm::Type::getInt32Ty(state->context);
+            llvm_types[type_ind] = LLVMInt32TypeInContext(state->context);
             break;
           }
           case T_I64:
           case T_U64: {
-            llvm_types[type_ind] = llvm::Type::getInt64Ty(state->context);
+            llvm_types[type_ind] = LLVMInt64TypeInContext(state->context);
             break;
           }
           case T_TUP: {
@@ -267,11 +254,12 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
             break;
           }
           case T_UNIT: {
-            llvm_types[type_ind] = llvm::Type::getVoidTy(state->context);
+            llvm_types[type_ind] = LLVMVoidTypeInContext(state->context);
             break;
           }
           case T_CALL: {
-            give_up("Type parameter saturation isn't supported by the llvm backend yet");
+            give_up("Type parameter saturation isn't supported by the llvm "
+                    "backend yet");
             break;
           }
           case T_UNKNOWN: {
@@ -286,28 +274,30 @@ static llvm::Type *construct_type(cg_state *state, NODE_IND_T root_type_ind) {
         switch (t.tag) {
           case T_LIST: {
             NODE_IND_T sub_ind = t.sub_a;
-            llvm_types[type_ind] = (llvm::Type*) llvm::ArrayType::get(llvm_types[sub_ind], 0);
+            llvm_types[type_ind] =
+              (LLVMTypeRef)LLVMArrayType(llvm_types[sub_ind], 0);
             break;
           }
           case T_TUP: {
             NODE_IND_T sub_ind_a = T_TUP_SUB_A(t);
             NODE_IND_T sub_ind_b = T_TUP_SUB_B(t);
-            llvm::Type *subs[2] = {llvm_types[sub_ind_a], llvm_types[sub_ind_b]};
-            llvm::ArrayRef<llvm::Type*> subs_arr = llvm::ArrayRef<llvm::Type*>(subs, 2);
-            llvm_types[type_ind] = llvm::StructType::create(state->context, subs_arr, "tuple", false);
+            LLVMTypeRef subs[2] = {llvm_types[sub_ind_a],
+                                   llvm_types[sub_ind_b]};
+            llvm_types[type_ind] =
+              LLVMStructTypeInContext(state->context, subs, 2, false);
             break;
           }
           case T_FN: {
             NODE_IND_T param_ind = T_FN_PARAM_IND(t);
             NODE_IND_T ret_ind = T_FN_RET_IND(t);
-            llvm::Type *param_type = llvm_types[param_ind];
-            llvm::Type *ret_type = llvm_types[ret_ind];
-            llvm::ArrayRef<llvm::Type*> subs_arr = llvm::ArrayRef<llvm::Type*>(param_type);
-            llvm_types[type_ind] = llvm::FunctionType::get(ret_type, subs_arr, false);
+            LLVMTypeRef param_type = llvm_types[param_ind];
+            LLVMTypeRef ret_type = llvm_types[ret_ind];
+            llvm_types[type_ind] =
+              LLVMFunctionType(ret_type, &param_type, 1, false);
             break;
           }
-          // TODO: There should really be a separate module-local tag for combinable tags
-          // to avoid this non-totality.
+          // TODO: There should really be a separate module-local tag for
+          // combinable tags to avoid this non-totality.
           case T_CALL:
           case T_UNKNOWN:
           case T_UNIT:
@@ -348,11 +338,11 @@ static void cg_node(cg_state *state) {
           break;
         }
         case STAGE_TWO: {
-          llvm::Value *callee = VEC_POP(&state->val_stack);
-          llvm::Value *param = VEC_POP(&state->val_stack);
-          llvm::FunctionType *fn_type = (llvm::FunctionType *) construct_type(state, state->in.node_types[callee_ind]);
-          llvm::ArrayRef<llvm::Value*> param_arr = llvm::ArrayRef<llvm::Value*>(param);
-          state->builder.CreateCall(fn_type, callee, param_arr);
+          LLVMValueRef callee = VEC_POP(&state->val_stack);
+          LLVMValueRef param = VEC_POP(&state->val_stack);
+          LLVMTypeRef fn_type =
+            construct_type(state, state->in.node_types[callee_ind]);
+          LLVMBuildCall2(state->builder, fn_type, callee, &param, 1, "call");
           break;
         }
       }
@@ -373,10 +363,10 @@ static void cg_node(cg_state *state) {
     }
     case PT_INT: {
       NODE_IND_T type_ind = state->in.node_types[ind];
-      llvm::IntegerType *type = (llvm::IntegerType*) construct_type(state, type_ind);
+      LLVMTypeRef type = construct_type(state, type_ind);
       const char *str = VEC_GET_PTR(state->in.source, node.start);
       size_t len = node.end - node.start + 1;
-      VEC_PUSH(&state->val_stack, llvm::ConstantInt::get(type, llvm::StringRef(str, len), 10));
+      VEC_PUSH(&state->val_stack, LLVMConstIntOfString(type, str, 10));
       break;
     }
     case PT_IF: {
@@ -385,7 +375,8 @@ static void cg_node(cg_state *state) {
           push_node_act(state, ind, STAGE_TWO);
 
           // cond
-          push_node_act(state, PT_IF_COND_IND(state->in.tree.inds, node), STAGE_ONE);
+          push_node_act(state, PT_IF_COND_IND(state->in.tree.inds, node),
+                        STAGE_ONE);
 
           // then
           VEC_PUSH(&state->strs, THEN_STR);
@@ -398,34 +389,32 @@ static void cg_node(cg_state *state) {
           VEC_PUSH(&state->act_nodes, PT_IF_B_IND(state->in.tree.inds, node));
           break;
         case STAGE_TWO: {
-          llvm::Value *cond = VEC_POP(&state->val_stack);
-          llvm::Value *then_val = VEC_POP(&state->val_stack);
-          llvm::Value *else_val = VEC_POP(&state->val_stack);
-          llvm::Type *res_type = construct_type(state, state->in.node_types[ind]);
-          llvm::BasicBlock *then_block = VEC_POP(&state->block_stack);
-          llvm::BasicBlock *else_block = VEC_POP(&state->block_stack);
+          LLVMValueRef cond = VEC_POP(&state->val_stack);
+          LLVMValueRef then_val = VEC_POP(&state->val_stack);
+          LLVMValueRef else_val = VEC_POP(&state->val_stack);
+          LLVMTypeRef res_type =
+            construct_type(state, state->in.node_types[ind]);
+          LLVMBasicBlockRef then_block = VEC_POP(&state->block_stack);
+          LLVMBasicBlockRef else_block = VEC_POP(&state->block_stack);
+          LLVMBuildCondBr(state->builder, cond, then_block, else_block);
 
-          // TODO do we need to pass the current block in?
-          llvm::BranchInst::Create(then_block, else_block, cond, VEC_PEEK(state->block_stack));
-      
-          llvm::Twine name("if-end");
-          llvm::BasicBlock *end_block = llvm::BasicBlock::Create(
-            state->context, name, VEC_PEEK(state->function_stack));
-          state->builder.SetInsertPoint(end_block);
-          llvm::PHINode *phi = state->builder.CreatePHI(res_type, 2, "end-if");
-          phi->addIncoming(then_val, then_block);
-          phi->addIncoming(else_val, else_block);
+          LLVMBasicBlockRef end_block = LLVMAppendBasicBlockInContext(
+            state->context, VEC_PEEK(state->function_stack), "if-end");
+          LLVMPositionBuilderAtEnd(state->builder, end_block);
+          LLVMValueRef phi = LLVMBuildPhi(state->builder, res_type, "end-if");
+          LLVMValueRef incoming_vals[2] = {then_val, else_val};
+          LLVMBasicBlockRef incoming_blocks[2] = {then_block, else_block};
+          LLVMAddIncoming(phi, incoming_vals, incoming_blocks, 2);
 
-          state->builder.SetInsertPoint(then_block);
-          state->builder.CreateBr(end_block);
+          LLVMPositionBuilderAtEnd(state->builder, then_block);
+          LLVMBuildBr(state->builder, end_block);
 
-          state->builder.SetInsertPoint(else_block);
-          state->builder.CreateBr(end_block);
+          LLVMPositionBuilderAtEnd(state->builder, else_block);
+          LLVMBuildBr(state->builder, end_block);
           break;
         }
-        break;
       }
-      
+
       break;
     }
     case PT_TUP: {
@@ -438,16 +427,18 @@ static void cg_node(cg_state *state) {
           }
           break;
         case STAGE_TWO: {
-          llvm::Type *tup_type =
+          LLVMTypeRef tup_type =
             construct_type(state, state->in.node_types[ind]);
-          llvm::Twine name("tuple");
-          llvm::Value *allocated = state->builder.CreateAlloca(tup_type, 0, nullptr, name);
+          const char *name = "tuple";
+          LLVMValueRef allocated =
+            LLVMBuildAlloca(state->builder, tup_type, name);
           for (size_t i = 0; i < node.sub_amt; i++) {
             size_t j = node.sub_amt - 1 - i;
             // 2^32 cardinality tuples is probably enough
-            llvm::Value *ptr = state->builder.CreateConstInBoundsGEP1_32(tup_type, allocated, j, name);
-            llvm::Value *val = VEC_POP(&state->val_stack);
-            state->builder.CreateStore(val, ptr);
+            LLVMValueRef ptr =
+              LLVMBuildStructGEP2(state->builder, tup_type, allocated, j, name);
+            LLVMValueRef val = VEC_POP(&state->val_stack);
+            LLVMBuildStore(state->builder, val, ptr);
           }
           VEC_PUSH(&state->val_stack, allocated);
           break;
@@ -460,7 +451,8 @@ static void cg_node(cg_state *state) {
       for (size_t i = 0; i < PT_BLOCK_SUB_AMT(node); i++) {
         NODE_IND_T sub_ind = PT_BLOCK_SUB_IND(state->in.tree.inds, node, i);
         parse_node sub = state->in.tree.nodes[sub_ind];
-        if (sub.type == PT_SIG) continue;
+        if (sub.type == PT_SIG)
+          continue;
         push_node_act(state, sub_ind, STAGE_ONE);
       }
       break;
@@ -468,15 +460,13 @@ static void cg_node(cg_state *state) {
     case PT_FUN:
       switch (stage) {
         case STAGE_ONE: {
-          llvm::FunctionType *fn_type =
-            (llvm::FunctionType *) construct_type(state, state->in.node_types[ind]);
-          llvm::Twine name("fn");
-          llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::AvailableExternallyLinkage;
-          llvm::Function *fn = llvm::Function::Create(fn_type, linkage, name, state->module);
+          LLVMTypeRef fn_type =
+            construct_type(state, state->in.node_types[ind]);
+          const char *name = "fn";
+          LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
+          LLVMValueRef fn = LLVMAddFunction(state->module, name, fn_type);
           VEC_PUSH(&state->function_stack, fn);
-          fn->hasLazyArguments();
 
-          VEC_PUSH(&state->actions, CG_POP_FN);
           u32 env_amt = state->env_bnds.len;
           VEC_PUSH(&state->actions, CG_POP_ENV_TO);
           VEC_PUSH(&state->act_sizes, env_amt);
@@ -485,30 +475,35 @@ static void cg_node(cg_state *state) {
 
           NODE_IND_T param_ind = PT_FUN_PARAM_IND(state->in.tree.inds, node);
           push_pattern_act(state, param_ind, STAGE_ONE);
-          llvm::Type *param_type = construct_type(state, state->in.node_types[param_ind]);
-          llvm::Argument *arg = fn->getArg(0);
+          LLVMTypeRef param_type =
+            construct_type(state, state->in.node_types[param_ind]);
+          LLVMValueRef arg = LLVMGetParam(fn, 0);
           VEC_PUSH(&state->act_vals, arg);
 
           VEC_PUSH(&state->actions, CG_GEN_BLOCK);
           VEC_PUSH(&state->strs, EMPTY_STR);
-          VEC_PUSH(&state->act_nodes, PT_FUN_BODY_IND(state->in.tree.inds, node));
+          VEC_PUSH(&state->act_nodes,
+                   PT_FUN_BODY_IND(state->in.tree.inds, node));
           break;
         }
         case STAGE_TWO: {
-          llvm::Value *ret = VEC_POP(&state->val_stack);
+          LLVMValueRef ret = VEC_POP(&state->val_stack);
           VEC_POP(&state->block_stack);
-          state->builder.CreateRet(ret);
+          LLVMBuildRet(state->builder, ret);
+          VEC_POP(&state->function_stack);
+          LLVMPositionBuilderAtEnd(state->builder,
+                                   VEC_PEEK(state->block_stack));
           break;
         }
       }
-    break;
+      break;
     case PT_AS: {
       push_node_act(state, PT_AS_VAL_IND(node), STAGE_ONE);
       break;
     }
     case PT_UNIT: {
-      llvm::Type *void_type = construct_type(state, state->in.node_types[ind]);
-      llvm::Value *void_val = llvm::UndefValue::get(void_type);
+      LLVMTypeRef void_type = construct_type(state, state->in.node_types[ind]);
+      LLVMValueRef void_val = LLVMGetUndef(void_type);
       VEC_PUSH(&state->val_stack, void_val);
       break;
     }
@@ -524,7 +519,8 @@ static void cg_node(cg_state *state) {
     case PT_LIST:
     case PT_STRING:
     case PT_CONSTRUCTION: {
-      printf("Typechecking %s nodes hasn't been implemented yet.\n", parse_node_string(node.type));
+      printf("Typechecking %s nodes hasn't been implemented yet.\n",
+             parse_node_string(node.type));
       exit(1);
       break;
     }
@@ -551,7 +547,8 @@ static void cg_pattern(cg_state *state) {
       push_pattern_act(state, sub_b, STAGE_ONE);
       break;
     }
-    case PT_UNIT: break;
+    case PT_UNIT:
+      break;
     case PT_CONSTRUCTION:
     case PT_UPPER_NAME:
     case PT_LIST:
@@ -576,13 +573,13 @@ static void cg_pattern(cg_state *state) {
   }
 }
 
-static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in) {
+static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod, tc_res in) {
 
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
-  llvm::InitializeNativeTargetAsmParser();
+  LLVMInitializeNativeTarget();
+  LLVMInitializeNativeAsmPrinter();
+  LLVMInitializeNativeAsmParser();
 
-  cg_state state(ctx, mod, in);
+  cg_state state = new_cg_state(ctx, mod, in);
 
   push_node_act(&state, in.tree.root_ind, STAGE_ONE);
 
@@ -597,10 +594,10 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
         break;
       }
       case CG_GEN_BLOCK: {
-        llvm::Twine name(VEC_POP(&state.strs));
-        llvm::BasicBlock *block = llvm::BasicBlock::Create(
-          state.context, name, VEC_PEEK(state.function_stack));
-        state.builder.SetInsertPoint(block);
+        const char *name = VEC_POP(&state.strs);
+        LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(
+          state.context, VEC_PEEK(state.function_stack), name);
+        LLVMPositionBuilderAtEnd(state.builder, block);
         VEC_PUSH(&state.block_stack, block);
         VEC_PUSH(&state.actions, CG_NODE);
         push_stage(&state.act_stage, STAGE_ONE);
@@ -626,91 +623,12 @@ static void cg_llvm_module(llvm::LLVMContext &ctx, llvm::Module &mod, tc_res in)
       }
     }
   }
+  destroy_cg_state(&state);
 }
 
-static void optimize(llvm::Module &module, const llvm::PassBuilder::OptimizationLevel opt) {
-  // Create the analysis managers.
-  llvm::LoopAnalysisManager LAM;
-  llvm::FunctionAnalysisManager FAM;
-  llvm::CGSCCAnalysisManager CGAM;
-  llvm::ModuleAnalysisManager MAM;
-
-  // Create the new pass manager builder.
-  // Take a look at the PassBuilder constructor parameters for more
-  // customization, e.g. specifying a TargetMachine or various debugging
-  // options.
-  llvm::PassBuilder PB;
-
-  // Register all the basic analyses with the managers.
-  PB.registerModuleAnalyses(MAM);
-  PB.registerCGSCCAnalyses(CGAM);
-  PB.registerFunctionAnalyses(FAM);
-  PB.registerLoopAnalyses(LAM);
-  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
-
-  // Create the pass manager.
-  // This one corresponds to a typical -O2 optimization pipeline.
-  llvm::ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(opt);
-
-  MPM.run(module, MAM);
-}
-
-class file_ostream : public llvm::raw_ostream {
-  FILE *out;
-public:
-  void write_impl(const char *ptr, size_t size) override { fwrite(ptr, 1, size, out); }
-  uint64_t current_pos() const override { return ftell(out); }
-  file_ostream(FILE *o) : out(o) {}
-};
-
-static void output_pipeline(llvm::Module &module, FILE *out_f) {
-  // Create the analysis managers.
-  llvm::LoopAnalysisManager LAM;
-  llvm::FunctionAnalysisManager FAM;
-  llvm::CGSCCAnalysisManager CGAM;
-  llvm::ModuleAnalysisManager MAM;
-
-  // Create the new pass manager builder.
-  // Take a look at the PassBuilder constructor parameters for more
-  // customization, e.g. specifying a TargetMachine or various debugging
-  // options.
-  llvm::PassBuilder PB;
-
-  // Register all the basic analyses with the managers.
-  PB.registerModuleAnalyses(MAM);
-  PB.registerCGSCCAnalyses(CGAM);
-  PB.registerFunctionAnalyses(FAM);
-  PB.registerLoopAnalyses(LAM);
-  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
-
-  // Create the pass manager.
-  // This one corresponds to a typical -O2 optimization pipeline.
-  const llvm::PassBuilder::OptimizationLevel opt = llvm::PassBuilder::OptimizationLevel::O0;
-  llvm::ModulePassManager MPM = PB.buildO0DefaultPipeline(opt);
-  file_ostream out(out_f);
-  MPM.addPass(llvm::PrintModulePass(out));
-
-  MPM.run(module, MAM);
-}
-
-extern "C" {
-  void gen_and_print_module(tc_res in, FILE *out_f) {
-    llvm::LLVMContext ctx;
-    llvm::Module mod("my_module", ctx);
-    cg_llvm_module(ctx, mod, in);
-
-    /*
-    file_ostream out(out_f);
-  
-    llvm::PassBuilder PB;
-    llvm::ModuleAnalysisManager MAM;
-    // llvm::PrintModulePass print_pass(out);
-    const llvm::PassBuilder::OptimizationLevel opt = llvm::PassBuilder::OptimizationLevel::O0;
-    llvm::ModulePassManager MPM = PB.buildO0DefaultPipeline(opt);
-    */
-    // MPM.addPass(llvm::PrintModulePass(out));
-
-    output_pipeline(mod, out_f);
-    // MPM.run(mod, MAM);
-  }
+void gen_and_print_module(tc_res in, FILE *out_f) {
+  LLVMContextRef ctx = LLVMContextCreate();
+  LLVMModuleRef mod = LLVMModuleCreateWithNameInContext("my_module", ctx);
+  cg_llvm_module(ctx, mod, in);
+  fputs(LLVMPrintModuleToString(mod), out_f);
 }
