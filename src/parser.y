@@ -576,26 +576,6 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
     s->expected = VEC_FINALIZE(&expected);
     s->succeeded = false;
   }
-
-  // // re-run the parser to find valid tokens
-  // if (s->succeeded) {
-  //   vec_token_type expected = VEC_NEW;
-  //   s->succeeded = false;
-  //   s->error_pos = s->pos;
-  //   if (s->get_expected) {
-  //     token_type backup = s->tokens[s]pos).type;
-  //     for (token_type i = 0; i < YYNTOKEN; i++) {
-  //       VEC_DATA_PTR(&s->tokens)[s->pos].type = i;
-  //       parse_tree_res sub = parse_internal(s->tokens, false);
-  //       if (sub.error_pos > s->pos) {
-  //         VEC_PUSH(&expected, i);
-  //       }
-  //     }
-  //     VEC_DATA_PTR(&s->tokens)[s->pos].type = backup;
-  //     s->expected_amt = expected.len;
-  //     s->expected = VEC_FINALIZE(&expected);
-  //   }
-  // }
 }
 
 %parse_failure {
