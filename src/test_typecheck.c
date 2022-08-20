@@ -283,6 +283,18 @@ static void test_typecheck_succeeds(test_state *state) {
                              0, NULL);
   }
   test_end(state);
+  
+  test_start(state, "shadowed param");
+  {
+    run_typecheck_error_test(state,
+                             "(sig a (Fn () [U8]))\n"
+                             "(fun a () "
+                                "(sig b (Fn () ()))"
+                                "(fun b a ()))",
+                             0, NULL);
+  }
+  
+  test_end(state);
 
   test_group_end(state);
 }

@@ -134,11 +134,22 @@ block(RES) ::= block(A) block_el(B). {
 
 block_el ::= expr.
 
-block_el ::= let.
 
-let(RES) ::= OPEN_PAREN(O) LET lower_name(A) expr(B) CLOSE_PAREN(C). {
+block_el(RES) ::= OPEN_PAREN(O) block_in_parens(A) CLOSE_PAREN(C). {
   BREAK_PARSER;
-  parse_node n = {.type = PT_LET, .sub_a = A, .sub_b = B, .start = s->tokens[O].start, .end = s->tokens[C].end};
+  token t = s->tokens[O];
+  VEC_DATA_PTR(&s->nodes)[A].start = t.start;
+  t = s->tokens[C];
+  VEC_DATA_PTR(&s->nodes)[A].end = t.end;
+  RES = A;
+}
+
+block_in_parens ::= let.
+block_in_parens ::= sig.
+
+let(RES) ::= LET lower_name(A) expr(B). {
+  BREAK_PARSER;
+  parse_node n = {.type = PT_LET, .sub_a = A, .sub_b = B};
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
 }
