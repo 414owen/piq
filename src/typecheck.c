@@ -64,6 +64,9 @@ typedef enum {
   // types
   TC_TYPE,
 
+  // Construct a compound type from its children
+  TC_RECONSTRUCT,
+
   TC_PATTERN_MATCHES,
   TC_PATTERN_UNAMBIGUOUS,
 
@@ -127,7 +130,10 @@ VEC_DECL(tc_action);
 
 typedef struct {
   tc_res res;
+
+  // TODO remove? They're passed in params mostly
   node_ind_t current_node_ind;
+  // TODO remove? They're passed in params mostly
   stage current_stage;
 
   // TODO technically it's more efficient to have a stack of node_ind_t,
@@ -1005,6 +1011,9 @@ static void push_list_subs_unambiguous(typecheck_state *state,
       }};
     push_actions(state, STATIC_LEN(actions), actions);
   }
+
+  tc_action action = {.tag = TC_RECONSTRUCT,
+                      .node_ind = params.node_ind};
 }
 
 static void push_list_subs_match(typecheck_state *state, tc_node_params params,
@@ -1317,24 +1326,9 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
       state->res.node_types[params.node_ind] = state->string_type_ind;
       break;
     }
-    case PT_LIST: {
-      switch (params.stage.two_stage) {
-        case TWO_STAGE_ONE: {
-          push_list_subs_unambiguous(state, params, TC_NODE_UNAMBIGUOUS,
-                                     TC_NODE_MATCHES);
-          tc_action action = {.tag = TC_NODE_UNAMBIGUOUS,
-                              .node_ind = params.node_ind,
-                              .stage = {.two_stage = TWO_STAGE_TWO}};
-          push_action(state, action);
-          break;
-        }
-        case TWO_STAGE_TWO: {
-          reconstruct_list(state, params);
-          break;
-        }
-      }
+    case PT_LIST:
+      push_list_subs_unambiguous(state, params, TC_NODE_UNAMBIGUOUS, TC_NODE_MATCHES);
       break;
-    }
     case PT_AS: {
       tc_as(state, params);
       break;
@@ -1342,33 +1336,20 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
     case PT_TUP: {
       node_ind_t sub_a = PT_TUP_SUB_A(params.node);
       node_ind_t sub_b = PT_TUP_SUB_B(params.node);
-      switch (params.stage.two_stage) {
-        case TWO_STAGE_ONE: {
-          tc_action actions[3] = {{
-                                    .tag = TC_NODE_UNAMBIGUOUS,
-                                    .node_ind = sub_a,
-                                    .stage = {.two_stage = TWO_STAGE_ONE},
-                                  },
-                                  {
-                                    .tag = TC_NODE_UNAMBIGUOUS,
-                                    .node_ind = sub_b,
-                                    .stage = {.two_stage = TWO_STAGE_ONE},
-                                  },
-                                  {
-                                    .tag = TC_NODE_UNAMBIGUOUS,
-                                    .node_ind = params.node_ind,
-                                    .stage = {.two_stage = TWO_STAGE_TWO},
-                                  }};
-          push_actions(state, STATIC_LEN(actions), actions);
-          break;
-        }
-        case TWO_STAGE_TWO: {
-          node_ind subs[2] = {sub_a, sub_b};
-          state->res.node_types[params.node_ind] =
-            mk_type(state, T_TUP, subs, STATIC_LEN(subs));
-          break;
-        }
-      }
+      tc_action actions[3] = {{
+                                .tag = TC_NODE_UNAMBIGUOUS,
+                                .node_ind = sub_a,
+                              },
+                              {
+                                .tag = TC_NODE_UNAMBIGUOUS,
+                                .node_ind = sub_b,
+                                .stage = {.two_stage = TWO_STAGE_ONE},
+                              },
+                              {
+                                .tag = TC_RECONSTRUCT,
+                                .node_ind = params.node_ind,
+                              }};
+      push_actions(state, STATIC_LEN(actions), actions);
       break;
     }
 
@@ -1652,34 +1633,21 @@ static void tc_pattern_unambiguous(typecheck_state *state,
       // TODO extract pushing out, as with push_list_subs()
       node_ind_t sub_a = PT_TUP_SUB_A(params.node);
       node_ind_t sub_b = PT_TUP_SUB_B(params.node);
-      switch (params.stage.two_stage) {
-        case TWO_STAGE_ONE: {
-          tc_action actions[3] = {{
-                                    .tag = TC_PATTERN_UNAMBIGUOUS,
-                                    .node_ind = sub_a,
-                                    .stage = {.two_stage = TWO_STAGE_ONE},
-                                  },
-                                  {
-                                    .tag = TC_PATTERN_UNAMBIGUOUS,
-                                    .node_ind = sub_b,
-                                    .stage = {.two_stage = TWO_STAGE_ONE},
-                                  },
-                                  {
-                                    .tag = TC_PATTERN_UNAMBIGUOUS,
-                                    .node_ind = params.node_ind,
-                                    .stage = {.two_stage = TWO_STAGE_TWO},
-                                  }};
-          push_actions(state, STATIC_LEN(actions), actions);
-          break;
-        }
-        // TODO make reconstruct tag
-        case TWO_STAGE_TWO: {
-          node_ind subs[2] = {sub_a, sub_b};
-          state->res.node_types[params.node_ind] =
-            mk_type(state, T_TUP, subs, STATIC_LEN(subs));
-          break;
-        }
-      }
+      tc_action actions[3] = {{
+                                .tag = TC_PATTERN_UNAMBIGUOUS,
+                                .node_ind = sub_a,
+                                .stage = {.two_stage = TWO_STAGE_ONE},
+                              },
+                              {
+                                .tag = TC_PATTERN_UNAMBIGUOUS,
+                                .node_ind = sub_b,
+                                .stage = {.two_stage = TWO_STAGE_ONE},
+                              },
+                              {
+                                .tag = TC_RECONSTRUCT,
+                                .node_ind = params.node_ind,
+                              }};
+      push_actions(state, STATIC_LEN(actions), actions);
       break;
     }
 
@@ -1730,6 +1698,21 @@ static void tc_pattern_unambiguous(typecheck_state *state,
   }
 }
 
+static void tc_reconstruct(typecheck_state *state, tc_node_params params) {
+  switch (params.node.type) {
+    case PT_TUP: {
+      node_ind_t sub_a = PT_TUP_SUB_A(params.node);
+      node_ind_t sub_b = PT_TUP_SUB_B(params.node);
+      node_ind subs[2] = {sub_a, sub_b};
+      state->res.node_types[params.node_ind] = mk_type(state, T_TUP, subs, STATIC_LEN(subs));
+      break;
+    }
+    default:
+      give_up("Invalid node to reconstruct");
+      break;
+  }
+}
+
 static tc_node_params mk_tc_node_params(typecheck_state *state) {
   tc_node_params params;
   params.node_ind = state->current_node_ind;
@@ -1763,6 +1746,7 @@ static const char *action_str(action_tag tag) {
     MK_CASE(TC_ASSIGN_TYPE)
     MK_CASE(TC_RECOVER)
     MK_CASE(TC_PUSH_ENV)
+    MK_CASE(TC_RECONSTRUCT)
 #undef MK_CASE
   }
   return res;
@@ -1909,6 +1893,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
           break;
         }
         case TC_TYPE:
+        case TC_RECONSTRUCT:
         case TC_NODE_MATCHES:
         case TC_PATTERN_UNAMBIGUOUS:
         case TC_PATTERN_MATCHES:
@@ -1941,8 +1926,10 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_PATTERN_UNAMBIGUOUS:
       case TC_TYPE:
       case TC_NODE_UNAMBIGUOUS:
-        state.current_node_ind = action.node_ind;
         state.current_stage = action.stage;
+        HEDLEY_FALL_THROUGH;
+      case TC_RECONSTRUCT:
+        state.current_node_ind = action.node_ind;
         break;
       default:
         break;
@@ -1983,6 +1970,9 @@ tc_res typecheck(source_file source, parse_tree tree) {
         break;
       case TC_PATTERN_UNAMBIGUOUS:
         tc_pattern_unambiguous(&state, mk_tc_node_params(&state));
+        break;
+      case TC_RECONSTRUCT:
+        tc_reconstruct(&state, mk_tc_node_params(&state));
         break;
       case TC_TYPE:
         tc_type(&state);
