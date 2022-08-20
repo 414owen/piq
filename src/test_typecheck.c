@@ -7,6 +7,14 @@
 #include "typecheck.h"
 #include "util.h"
 
+/*
+
+# Ideas:
+
+* Use markers insted of indices for spans
+  
+*/
+
 typedef struct test_type {
   type_tag tag;
   const struct test_type *subs;
@@ -136,8 +144,7 @@ static void test_types_match(test_state *state, tc_res res, tc_test test) {
         if (!test_type_eq(res.types, res.type_inds, res.node_types[j],
                           span.exp)) {
           stringstream *ss = ss_init();
-          print_type(ss->stream, res.types.data, res.type_inds.data,
-                     res.node_types[j]);
+          print_type(ss->stream, res.types.data, res.node_types[j]);
           char *str = ss_finalize(ss);
           failf(state, "Type mismatch in test. Got: %s", str);
           free(str);
@@ -162,8 +169,11 @@ static void run_typecheck_test(test_state *state, const char *input,
   tc_res res = typecheck(test_file, pres.tree);
   switch (test.type) {
     case TYPE_MATCHES: {
+      stringstream *ss = ss_init();
       if (res.errors.len > 0) {
-        failf(state, "Didn't expect typecheck errors");
+        fprintf(ss->stream, "Didn't expect typecheck errors. Got %d:\n", res.errors.len);
+        print_tc_errors(ss->stream, res);
+        failf(state, ss_finalize(ss), input);
       } else {
         test_types_match(state, res, test);
       }
@@ -274,26 +284,35 @@ static void test_typecheck_succeeds(test_state *state) {
     test_end(state);
   }
 
-  // TODO enable when I add list type parsing
-  test_start(state, "[U8] vs String");
+  test_start(state, "[U8] Literals");
   {
-    run_typecheck_error_test(state,
-                             "(sig a (Fn () [U8]))\n"
-                             "(fun a () \"hi\")",
-                             0, NULL);
+    exp_type_span spans[] = {{
+      .start = 31,
+      .end = 32,
+      .exp = {
+        .tag = T_U8
+      },
+    }};
+    tc_test test = {
+      .type = TYPE_MATCHES,
+      .span_amt = STATIC_LEN(spans),
+      .spans = spans,
+    };
+    const char *input = "(sig a (Fn U8 [U8]))\n"
+                        "(fun a 1 [12])";
+    run_typecheck_test(state, input, test);
   }
   test_end(state);
-  
-  test_start(state, "shadowed param");
+
+  test_start(state, "Param shadows binding");
   {
     run_typecheck_error_test(state,
                              "(sig a (Fn () [U8]))\n"
                              "(fun a () "
-                                "(sig b (Fn () ()))"
-                                "(fun b a ()))",
-                             0, NULL);
+                             "(sig b (Fn () ()))"
+                             "(fun b a a))", 0, NULL);
   }
-  
+
   test_end(state);
 
   test_group_end(state);

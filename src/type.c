@@ -138,7 +138,7 @@ void print_type_head_placeholders(FILE *f, type_tag head) {
   }
 }
 
-void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root) {
+void print_type(FILE *f, type *types, node_ind_t root) {
   vec_print_action stack = VEC_NEW;
   push_node(&stack, root);
   while (stack.len > 0) {
