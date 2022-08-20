@@ -12,7 +12,7 @@
 # Ideas:
 
 * Use markers insted of indices for spans
-  
+
 */
 
 typedef struct test_type {
@@ -169,9 +169,10 @@ static void run_typecheck_test(test_state *state, const char *input,
   tc_res res = typecheck(test_file, pres.tree);
   switch (test.type) {
     case TYPE_MATCHES: {
-      stringstream *ss = ss_init();
       if (res.errors.len > 0) {
-        fprintf(ss->stream, "Didn't expect typecheck errors. Got %d:\n", res.errors.len);
+        stringstream *ss = ss_init();
+        fprintf(ss->stream, "Didn't expect typecheck errors. Got %d:\n",
+                res.errors.len);
         print_tc_errors(ss->stream, res);
         failf(state, ss_finalize(ss), input);
       } else {
@@ -289,9 +290,7 @@ static void test_typecheck_succeeds(test_state *state) {
     exp_type_span spans[] = {{
       .start = 31,
       .end = 32,
-      .exp = {
-        .tag = T_U8
-      },
+      .exp = {.tag = T_U8},
     }};
     tc_test test = {
       .type = TYPE_MATCHES,
@@ -310,7 +309,8 @@ static void test_typecheck_succeeds(test_state *state) {
                              "(sig a (Fn () [U8]))\n"
                              "(fun a () "
                              "(sig b (Fn () ()))"
-                             "(fun b a a))", 0, NULL);
+                             "(fun b a a))",
+                             0, NULL);
   }
 
   test_end(state);
@@ -419,7 +419,7 @@ static void test_typecheck_stress(test_state *state) {
   test_start(state, "Stress");
   {
     stringstream *ss = ss_init();
-    const unsigned int n = 100000;
+    const unsigned int n = 10;
     fputs("(sig a (Fn (", ss->stream);
     for (int i = 1; i < n; i++) {
       fputs("U8,", ss->stream);
@@ -436,7 +436,6 @@ static void test_typecheck_stress(test_state *state) {
   }
   test_end(state);
 }
-
 
 void test_typecheck(test_state *state) {
   test_group_start(state, "Typecheck");
