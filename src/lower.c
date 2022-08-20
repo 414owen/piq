@@ -3,7 +3,7 @@
 
 typedef struct {
   enum { LOWER_NODE } tag;
-  node_ind ind;
+  node_ind_t ind;
 } action;
 
 VEC_DECL(action);

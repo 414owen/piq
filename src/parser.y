@@ -81,7 +81,7 @@
     #define BREAK_PARSER do {} while(0)
   #endif
 
-  static node_ind desugar_tuple(state *s, vec_node_ind elems);
+  static node_ind_t desugar_tuple(state *s, vec_node_ind elems);
 }
 
 %extra_argument { state *s }
@@ -320,7 +320,7 @@ fun_body(RES) ::= block(B). {
 pattern_tuple_min(RES) ::= pattern(A) COMMA pattern(B). {
   BREAK_PARSER;
   vec_node_ind res = VEC_NEW;
-  node_ind inds[2] = {A, B};
+  node_ind_t inds[2] = {A, B};
   VEC_APPEND_STATIC(&res, inds);
   RES = res;
 }
@@ -584,15 +584,15 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
 }
 
 %code {
-  static node_ind desugar_tuple(state *s, vec_node_ind elems) {
-    node_ind node_amt = s->nodes.len;
+  static node_ind_t desugar_tuple(state *s, vec_node_ind elems) {
+    node_ind_t node_amt = s->nodes.len;
 
     // The generated tuples will have their end set to the end
     // of the last syntactic element. Best we can do.
     buf_ind_t inner_end = VEC_GET(s->nodes, elems.len - 1).end;
 
-    for (node_ind i = 0; i < elems.len - 2; i++) {
-      node_ind sub_a_ind = VEC_GET(elems, i);
+    for (node_ind_t i = 0; i < elems.len - 2; i++) {
+      node_ind_t sub_a_ind = VEC_GET(elems, i);
       parse_node n = {
         .type = PT_TUP,
         .sub_a = sub_a_ind,
@@ -603,7 +603,7 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
       VEC_PUSH(&s->nodes, n);
     }
 
-    node_ind sub_a_ind = VEC_GET(elems, elems.len - 2);
+    node_ind_t sub_a_ind = VEC_GET(elems, elems.len - 2);
     parse_node last_node = {
       .type = PT_TUP,
       .sub_a = sub_a_ind,
