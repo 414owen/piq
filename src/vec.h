@@ -34,7 +34,7 @@ typedef uint32_t u32;
 
 #if INLINE_VEC_BYTES > 0
 
-#define VEC_DECL(type)                                                         \
+#define VEC_DECL_CUSTOM(type, name)                                            \
   typedef struct {                                                             \
     VEC_LEN_T len;                                                             \
     union {                                                                    \
@@ -44,20 +44,21 @@ typedef uint32_t u32;
         type *data;                                                            \
       };                                                                       \
     };                                                                         \
-  } vec_##type
+  } name
 
 #else
 
-#define VEC_DECL(type)                                                         \
+#define VEC_DECL_CUSTOM(type, name)                                            \
   typedef struct {                                                             \
     VEC_LEN_T len;                                                             \
     struct {                                                                   \
       VEC_LEN_T cap;                                                           \
       type *data;                                                              \
     };                                                                         \
-  } vec_##type
-
+  } name
 #endif
+
+#define VEC_DECL(type) VEC_DECL_CUSTOM(type, vec_##type)
 
 /*
  * len > inline_amt -> external

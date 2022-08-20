@@ -322,7 +322,7 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
 }
 
 static void cg_node(cg_state *state) {
-  node_ind ind = VEC_POP(&state->act_nodes);
+  node_ind_t ind = VEC_POP(&state->act_nodes);
   parse_node node = state->in.tree.nodes[ind];
   stage stage = pop_stage(&state->act_stage);
   switch (node.type) {
@@ -534,14 +534,14 @@ enum pat_actions {
 static void cg_pattern(cg_state *state) {
   // TODO remove stage?
   // also, finish writing this
-  node_ind ind = VEC_POP(&state->act_nodes);
+  node_ind_t ind = VEC_POP(&state->act_nodes);
   parse_node node = state->in.tree.nodes[ind];
   stage stage = pop_stage(&state->act_stage);
 
   switch (node.type) {
     case PT_TUP: {
-      node_ind sub_a = PT_TUP_SUB_A(node);
-      node_ind sub_b = PT_TUP_SUB_B(node);
+      node_ind_t sub_a = PT_TUP_SUB_A(node);
+      node_ind_t sub_b = PT_TUP_SUB_B(node);
 
       push_pattern_act(state, sub_a, STAGE_ONE);
       push_pattern_act(state, sub_b, STAGE_ONE);
