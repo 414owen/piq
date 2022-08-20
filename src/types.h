@@ -47,7 +47,7 @@ typedef struct {
 
 tree_node_repr type_repr(type_tag tag);
 bool inline_types_eq(type a, type b);
-void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root);
+void print_type(FILE *f, type *types, node_ind_t root);
 void print_type_head_placeholders(FILE *f, type_tag head);
 
 VEC_DECL(type);

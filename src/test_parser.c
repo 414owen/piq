@@ -365,7 +365,7 @@ static token_type inside_expr[] = {
 static token_type inside_block_el[] = {
   TK_AS,         TK_FN,         TK_FUN,          TK_IF,
   TK_INT,        TK_LOWER_NAME, TK_OPEN_BRACKET, TK_OPEN_PAREN,
-  TK_UPPER_NAME, TK_LET,        TK_STRING,       TK_UNIT};
+  TK_SIG, TK_UPPER_NAME, TK_LET,        TK_STRING,       TK_UNIT};
 
 static const size_t inside_expr_amt = STATIC_LEN(inside_expr);
 

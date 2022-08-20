@@ -12,7 +12,4 @@ typedef struct {
   vec_action actions;
 } state;
 
-ir_module lower(parse_tree tree) {
-  ir_module res;
-  
-}
+ir_module lower(parse_tree tree) { ir_module res; }
