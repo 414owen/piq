@@ -151,7 +151,7 @@ static void test_parser_robustness(test_state *state) {
   {
     test_start(state, "Nested calls");
     stringstream *in = ss_init();
-    static const size_t depth = 1000000;
+    static const size_t depth = 100000;
     for (size_t i = 0; i < depth; i++) {
       fputs("(add (1, ", in->stream);
     }

@@ -15,6 +15,7 @@ static void run_tests(config conf) {
 
   test_state state = test_state_new();
 
+  // TODO just add the config to state -_-
   state.lite = conf.lite;
   state.junit = conf.junit;
 

@@ -415,11 +415,37 @@ static void test_typecheck_errors(test_state *state) {
   test_group_end(state);
 }
 
+static void test_typecheck_stress(test_state *state) {
+  test_start(state, "Stress");
+  {
+    stringstream *ss = ss_init();
+    const unsigned int n = 100000;
+    fputs("(sig a (Fn (", ss->stream);
+    for (int i = 1; i < n; i++) {
+      fputs("U8,", ss->stream);
+    }
+    fputs("U8", ss->stream);
+    fputs(") (", ss->stream);
+    for (int i = 1; i < n; i++) {
+      fputs("U8,", ss->stream);
+    }
+    fputs("U8", ss->stream);
+    fputs(")))\n", ss->stream);
+    fputs("(fun a b b)", ss->stream);
+    run_typecheck_error_test(state, ss_finalize(ss), 0, NULL);
+  }
+  test_end(state);
+}
+
+
 void test_typecheck(test_state *state) {
   test_group_start(state, "Typecheck");
 
   test_typecheck_succeeds(state);
   test_typecheck_errors(state);
+  if (!state->lite) {
+    test_typecheck_stress(state);
+  }
 
   test_group_end(state);
 }

@@ -430,27 +430,6 @@ static bool check_int_fits_type(typecheck_state *state, node_ind_t node_ind,
   return fits;
 }
 
-typedef struct {
-  node_ind_t a;
-  node_ind_t b;
-} node_ind_tup;
-
-VEC_DECL(node_ind_tup);
-
-/*
-static size_t prim_ind(typecheck_state *state, type_tag tag) {
-  for (size_t i = 0; i < state->type_env.len; i++) {
-    node_ind_t type_ind =
-      VEC_GET(state->type_type_inds, state->type_type_inds.len - 1 - i);
-    if (VEC_GET(state->res.types, type_ind).tag == tag) {
-      return type_ind;
-    }
-  }
-  give_up("Can't find primitive type!");
-  return 0;
-}
-*/
-
 static binding node_to_binding(parse_node node) {
   binding b = {.start = node.start, .end = node.end};
   return b;
@@ -466,6 +445,9 @@ static void tc_type(typecheck_state *state) {
   node_ind_t node_ind = state->current_node_ind;
   stage stage = state->current_stage;
   parse_node node = state->res.tree.nodes[node_ind];
+
+  // TODO SPEEDUP: just give this its own stack, no point entering the tc_action switch again
+  // because it only ever trampolines to itself
 
   switch (node.type) {
     case PT_LIST_TYPE: {
