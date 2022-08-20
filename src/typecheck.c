@@ -1015,15 +1015,15 @@ static void reconstruct_list(typecheck_state *state, tc_node_params params) {
 static void push_tuple_subs(typecheck_state *state, tc_node_params params,
                             action_tag tag) {
   tc_action actions[2] = {{
-                           .tag = tag,
-                           .node_ind = PT_TUP_SUB_A(params.node),
-                           .stage = {.two_stage = TWO_STAGE_ONE},
-                         },
-                         {
-                           .tag = tag,
-                           .node_ind = PT_TUP_SUB_B(params.node),
-                           .stage = {.two_stage = TWO_STAGE_ONE},
-                         }};
+                            .tag = tag,
+                            .node_ind = PT_TUP_SUB_A(params.node),
+                            .stage = {.two_stage = TWO_STAGE_ONE},
+                          },
+                          {
+                            .tag = tag,
+                            .node_ind = PT_TUP_SUB_B(params.node),
+                            .stage = {.two_stage = TWO_STAGE_ONE},
+                          }};
   push_actions(state, STATIC_LEN(actions), actions);
 }
 

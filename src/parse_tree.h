@@ -99,10 +99,8 @@ typedef struct {
   };
 } parse_node;
 
-typedef node_ind_t node_ind;
-
 VEC_DECL(parse_node);
-VEC_DECL(node_ind);
+VEC_DECL_CUSTOM(node_ind_t, vec_node_ind);
 VEC_DECL(token_type);
 
 typedef struct {
