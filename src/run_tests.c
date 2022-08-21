@@ -6,18 +6,11 @@
 
 #include "test.h"
 
-typedef struct {
-  bool junit;
-  bool lite;
-} config;
+static void run_tests(test_config conf) {
 
-static void run_tests(config conf) {
-
-  test_state state = test_state_new();
+  test_state state = test_state_new(conf);
 
   // TODO just add the config to state -_-
-  state.lite = conf.lite;
-  state.junit = conf.junit;
 
   test_vec(&state);
   test_bitset(&state);
@@ -32,7 +25,7 @@ static void run_tests(config conf) {
   printf("Tests passed: %" PRIu32 "/%" PRIu32 "\n", state.tests_passed,
          state.tests_run);
 
-  if (state.junit) {
+  if (conf.junit) {
     write_test_results(&state);
     VEC_FREE(&state.actions);
     VEC_FREE(&state.strs);
@@ -51,7 +44,7 @@ static void run_tests(config conf) {
 }
 
 int main(int argc, char **argv) {
-  config conf = {
+  test_config conf = {
     .junit = false,
     .lite = false,
   };

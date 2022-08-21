@@ -19,6 +19,11 @@
 #define failf(state, ...) failf_(state, __FILE__, __LINE__, __VA_ARGS__)
 
 typedef struct {
+  bool junit;
+  bool lite;
+} test_config;
+
+typedef struct {
   vec_string path;
   char *reason;
 } failure;
@@ -36,6 +41,7 @@ typedef enum {
 VEC_DECL(test_action);
 
 typedef struct {
+  test_config config;
   vec_string path;
   uint32_t tests_passed;
   uint32_t tests_run;
@@ -45,13 +51,11 @@ typedef struct {
   bool current_failed;
   bool in_test;
   vec_failure failures;
-  bool junit;
   vec_test_action actions;
   vec_string strs;
-  bool lite;
 } test_state;
 
-test_state test_state_new(void);
+test_state test_state_new(test_config config);
 void test_state_finalize(test_state *state);
 
 void test_group_end(test_state *state);

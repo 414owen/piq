@@ -444,7 +444,7 @@ void test_typecheck(test_state *state) {
 
   test_typecheck_succeeds(state);
   test_typecheck_errors(state);
-  if (!state->lite) {
+  if (!state->config.lite) {
     test_typecheck_stress(state);
   }
 
