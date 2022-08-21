@@ -99,11 +99,12 @@ static bool test_type_eq(vec_type types, vec_node_ind inds, node_ind_t root,
   return res;
 }
 
-static bool test_err_eq(tc_res res, size_t err_ind, tc_err_test test_err) {
+static bool test_err_eq(parse_tree tree, tc_res res, size_t err_ind,
+                        tc_err_test test_err) {
   tc_error eA = VEC_GET(res.errors, err_ind);
   if (eA.type != test_err.type)
     return false;
-  parse_node node = res.tree.nodes[eA.pos];
+  parse_node node = tree.nodes[eA.pos];
   if (node.start != test_err.start)
     return false;
   if (node.end != test_err.end)
@@ -120,23 +121,24 @@ static bool test_err_eq(tc_res res, size_t err_ind, tc_err_test test_err) {
   return true;
 }
 
-static bool all_errors_match(tc_res res, size_t exp_error_amt,
+static bool all_errors_match(parse_tree tree, tc_res res, size_t exp_error_amt,
                              const tc_err_test *exp_errors) {
   if (res.errors.len != exp_error_amt)
     return false;
   for (size_t i = 0; i < exp_error_amt; i++) {
-    if (!test_err_eq(res, i, exp_errors[i]))
+    if (!test_err_eq(tree, res, i, exp_errors[i]))
       return false;
   }
   return true;
 }
 
-static void test_types_match(test_state *state, tc_res res, tc_test test) {
+static void test_types_match(test_state *state, parse_tree tree, tc_res res,
+                             tc_test test) {
   for (size_t i = 0; i < test.span_amt; i++) {
     exp_type_span span = test.spans[i];
     bool seen = false;
-    for (size_t j = 0; j < res.tree.node_amt; j++) {
-      parse_node node = res.tree.nodes[j];
+    for (size_t j = 0; j < tree.node_amt; j++) {
+      parse_node node = tree.nodes[j];
       if (node.type == PT_ROOT)
         continue;
       if (node.start == span.start && node.end == span.end) {
@@ -173,22 +175,22 @@ static void run_typecheck_test(test_state *state, const char *input,
         stringstream *ss = ss_init();
         fprintf(ss->stream, "Didn't expect typecheck errors. Got %d:\n",
                 res.errors.len);
-        print_tc_errors(ss->stream, res);
+        print_tc_errors(ss->stream, test_file, pres.tree, res);
         failf(state, ss_finalize(ss), input);
       } else {
-        test_types_match(state, res, test);
+        test_types_match(state, pres.tree, res, test);
       }
       break;
     }
     case PRODUCES_ERRORS:
-      if (!all_errors_match(res, test.error_amt, test.errors)) {
+      if (!all_errors_match(pres.tree, res, test.error_amt, test.errors)) {
         stringstream *ss = ss_init();
         fprintf(ss->stream, "Expected %zu errors, got %d.\n", test.error_amt,
                 res.errors.len);
         if (res.errors.len > 0) {
           fputs("Errors:\n", ss->stream);
         }
-        print_tc_errors(ss->stream, res);
+        print_tc_errors(ss->stream, test_file, pres.tree, res);
         char *str = ss_finalize(ss);
         failf(state, str, input);
         free(str);
@@ -419,14 +421,14 @@ static void test_typecheck_stress(test_state *state) {
   test_start(state, "Stress");
   {
     stringstream *ss = ss_init();
-    const unsigned int n = 10;
+    const unsigned n = 10;
     fputs("(sig a (Fn (", ss->stream);
-    for (int i = 1; i < n; i++) {
+    for (unsigned i = 1; i < n; i++) {
       fputs("U8,", ss->stream);
     }
     fputs("U8", ss->stream);
     fputs(") (", ss->stream);
-    for (int i = 1; i < n; i++) {
+    for (unsigned i = 1; i < n; i++) {
       fputs("U8,", ss->stream);
     }
     fputs("U8", ss->stream);
