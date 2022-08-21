@@ -8,6 +8,9 @@ defaults:
   run:
     working-directory: ./
 
+env:
+  NIXPKGS_ALLOW_BROKEN: 1
+
 jobs:
   CI:
     runs-on: ubuntu-latest
@@ -15,26 +18,5 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install Nix
       uses: cachix/install-nix-action@v17
-    - name: check formatting
-      run: nix-shell ./nix/ci.nix --run ./scripts/checks/formatting.sh
-    - name: Install build dependencies
-      run: sudo apt-get install -y lemon re2c
-    - name: make everything
-      run: nix-shell ./nix/ci.nix --run 'CFLAGS="-O1 -DJUNIT --coverage" tup'
-    - name: check pragmas
-      run: ./scripts/checks/headers-have-pragmas.sh
-    - name: run tests
-      run: ./test >/dev/null
-    - name: Generate code coverage report
-      run: make reports/coverage.info
-    - name: Codecov upload
-      uses: codecov/codecov-action@v2
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./reports/coverage.info
-        flags: unittests
-        name: codecov-umbrella
-    - name: Publish Unit Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v1
-    - name: Valgrind
-      run: valgrind --leak-check=full --track-origins=yes --error-exitcode=1  ./test >/dev/null -- --lite
+    - run: nix build
+    - run: nix flake check --impure
