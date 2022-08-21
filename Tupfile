@@ -16,7 +16,7 @@ CFLAGS = \
     -std=gnu11 \
     $CFLAGS \
     `pkg-config --cflags "libeditline"` -fdiagnostics-color=always \
-    -D_POSIX_C_SOURCE=199309L
+    -D_POSIX_C_SOURCE=200809L
 CXXFLAGS = $(CFLAGS) -std=gnu++17 $CXXFLAGS -fno-exceptions
 
 common_objs += dir_exists.o

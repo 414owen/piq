@@ -15,7 +15,7 @@ typedef enum {
 
 // Maybe at some point we'll need context?
 tree_node_repr subs_type(parse_node_type type) {
-  tree_node_repr res;
+  tree_node_repr res = SUBS_NONE;
   switch (type) {
     case PT_INT:
     case PT_LOWER_NAME:
