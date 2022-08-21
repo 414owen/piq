@@ -8,6 +8,7 @@
 #include "typecheck.h"
 #include "util.h"
 
+// TODO this even has the wrong name -_-
 static void test_typecheck_produces(test_state *state, char *input,
                                     size_t error_amt, uint32_t res) {
   source_file test_file = {.path = "parser-test", .data = input};

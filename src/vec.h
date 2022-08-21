@@ -91,12 +91,12 @@ typedef struct {
 #define VEC_GET_DIRECT(vec, i) (VEC_DATA_PTR(&(vec))[i])
 
 #ifdef DEBUG
-void debug_vec_get(vec_void *vec, size_t elemsize, VEC_LEN_T ind);
+void debug_vec_get(vec_void *vec, VEC_LEN_T ind);
 // Avoid duplicate side-effects in i (we were using VEC_POP()
 #define VEC_GET(vec, i)                                                        \
   ({                                                                           \
     size_t __ind = (i);                                                        \
-    debug_vec_get((vec_void *)(&vec), sizeof(vec.data[0]), __ind);             \
+    debug_vec_get((vec_void *)(&vec), __ind);                                  \
     VEC_GET_DIRECT(vec, __ind);                                                \
   })
 #else
