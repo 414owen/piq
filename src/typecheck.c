@@ -999,19 +999,6 @@ static void push_list_subs_match(typecheck_state *state, tc_node_params params,
   }
 }
 
-static void reconstruct_list(typecheck_state *state, tc_node_params params) {
-  node_ind_t *inds = state->tree.inds;
-  node_ind_t sub_amt = PT_LIST_SUB_AMT(params.node);
-  if (sub_amt == 0)
-    return;
-  node_ind_t sub_ind = PT_LIST_SUB_IND(inds, params.node, 0);
-  node_ind_t sub_type_ind = state->res.node_types[sub_ind];
-  if (sub_type_ind == state->unknown_ind)
-    return;
-  state->res.node_types[params.node_ind] =
-    mk_type_inline(state, T_LIST, sub_type_ind, 0);
-}
-
 static void push_tuple_subs(typecheck_state *state, tc_node_params params,
                             action_tag tag) {
   tc_action actions[2] = {{
@@ -1599,6 +1586,19 @@ static void tc_reconstruct(typecheck_state *state, tc_node_params params) {
       node_ind_t type_b = state->res.node_types[sub_b];
       state->res.node_types[params.node_ind] =
         mk_type_inline(state, T_TUP, type_a, type_b);
+      break;
+    }
+    case PT_LIST: {
+      node_ind_t *inds = state->tree.inds;
+      node_ind_t sub_amt = PT_LIST_SUB_AMT(params.node);
+      if (sub_amt == 0)
+        return;
+      node_ind_t sub_ind = PT_LIST_SUB_IND(inds, params.node, 0);
+      node_ind_t sub_type_ind = state->res.node_types[sub_ind];
+      if (sub_type_ind == state->unknown_ind)
+        return;
+      state->res.node_types[params.node_ind] =
+        mk_type_inline(state, T_LIST, sub_type_ind, 0);
       break;
     }
     default:

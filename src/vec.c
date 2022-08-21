@@ -49,12 +49,12 @@ static void __vec_resize_external_to_internal(vec_void *vec, VEC_LEN_T cap,
 #endif
 
 #ifdef DEBUG
-void debug_vec_get(vec_void *vec, size_t elemsize, VEC_LEN_T ind) {
+void debug_vec_get(vec_void *vec, VEC_LEN_T ind) {
   if (ind >= vec->len) {
     give_up("Tried to access invalid vector element");
   }
 }
-void debug_vec_get_ptr(vec_void *vec, size_t elemsize, VEC_LEN_T ind) {
+void debug_vec_get_ptr(vec_void *vec, VEC_LEN_T ind) {
   if (ind > 0 && ind >= vec->len) {
     give_up("Tried to access invalid vector element");
   }
