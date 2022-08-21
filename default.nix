@@ -30,6 +30,7 @@ pkgs.stdenv.mkDerivation rec {
     valgrind
     tup
     pkg-config
+    watchexec
   ];
 
   buildInputs = with pkgs; [

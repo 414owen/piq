@@ -31,12 +31,12 @@ static void reply(char *input, FILE *out) {
 
   tc_res tc_res = typecheck(test_file, pres.tree);
   if (tc_res.errors.len > 0) {
-    print_tc_errors(stdout, tc_res);
+    print_tc_errors(stdout, test_file, pres.tree, tc_res);
     putc('\n', stdout);
     goto end_c;
   }
 
-  gen_and_print_module(tc_res, out);
+  gen_and_print_module(test_file, pres.tree, tc_res, out);
   fflush(out);
 
 end_c:
