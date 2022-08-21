@@ -2,4 +2,5 @@
 
 #include "typecheck.h"
 
-void gen_and_print_module(tc_res in, FILE *out);
+void gen_and_print_module(source_file source, parse_tree tree, tc_res in,
+                          FILE *out);

@@ -52,11 +52,8 @@ typedef struct {
   vec_node_ind type_inds;
   // index into types, one per parse_node
   node_ind_t *node_types;
-
-  parse_tree tree;
-  source_file source;
 } tc_res;
 
-void print_tc_errors(FILE *f, tc_res res);
+void print_tc_errors(FILE *, source_file, parse_tree, tc_res);
 tc_res typecheck(source_file source, parse_tree tree);
 void free_tc_res(tc_res res);
