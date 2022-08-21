@@ -475,7 +475,7 @@ static void test_parser_succeeds(test_state *state) {
   test_parser_succeeds_kitchen_sink(state);
   test_parser_succeeds_root(state);
   test_parser_succeeds_type(state);
-  if (!state->lite) {
+  if (!state->config.lite) {
     test_parser_robustness(state);
   }
 

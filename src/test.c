@@ -25,7 +25,7 @@ void test_group_start(test_state *state, char *name) {
   print_depth_indent(state);
   printf("%s\n", name);
   VEC_PUSH(&state->path, name);
-  if (state->junit) {
+  if (state->config.junit) {
     VEC_PUSH(&state->actions, GROUP_ENTER);
     VEC_PUSH(&state->strs, name);
   }
@@ -34,7 +34,7 @@ void test_group_start(test_state *state, char *name) {
 void test_group_end(test_state *state) {
   assert(!state->in_test);
   VEC_POP_(&state->path);
-  if (state->junit) {
+  if (state->config.junit) {
     VEC_PUSH(&state->actions, GROUP_LEAVE);
   }
 }
@@ -57,7 +57,7 @@ static void fail_with(test_state *state, char *reason) {
   state->current_failed = true;
   failure f = {.path = make_test_path(state), .reason = reason};
   VEC_PUSH(&state->failures, f);
-  if (state->junit) {
+  if (state->config.junit) {
     VEC_PUSH(&state->actions, TEST_FAIL);
   }
 }
@@ -73,7 +73,7 @@ void test_start(test_state *state, char *name) {
   state->current_name = name;
   state->current_failed = false;
   state->in_test = true;
-  if (state->junit) {
+  if (state->config.junit) {
     VEC_PUSH(&state->actions, TEST_ENTER);
     VEC_PUSH(&state->strs, name);
   }
@@ -85,7 +85,7 @@ void test_end(test_state *state) {
     state->tests_passed++;
   state->tests_run++;
   state->in_test = false;
-  if (state->junit) {
+  if (state->config.junit) {
     VEC_PUSH(&state->actions, TEST_LEAVE);
   }
 }
@@ -103,8 +103,9 @@ void failf_(test_state *state, char *file, size_t line, const char *fmt, ...) {
   fail_with(state, err);
 }
 
-test_state test_state_new(void) {
+test_state test_state_new(test_config config) {
   test_state res = {
+    .config = config,
     .path = VEC_NEW,
     .tests_passed = 0,
     .tests_run = 0,
@@ -113,8 +114,6 @@ test_state test_state_new(void) {
     .current_name = NULL,
     .current_failed = false,
     .failures = VEC_NEW,
-    .lite = false,
-    .junit = false,
   };
   clock_gettime(CLOCK_MONOTONIC, &res.start_time);
   return res;
