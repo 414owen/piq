@@ -657,7 +657,8 @@ static void push_tc_sig(typecheck_state *state, node_ind_t node_ind,
 }
 
 // enforce sigs => we're root level
-static void typecheck_block(typecheck_state *state, tc_node_params params, bool enforce_sigs) {
+static void typecheck_block(typecheck_state *state, tc_node_params params,
+                            bool enforce_sigs) {
   bool can_continue = true;
 
   if (params.node.sub_amt == 0)
@@ -665,13 +666,15 @@ static void typecheck_block(typecheck_state *state, tc_node_params params, bool 
 
   char *sub_has_wanted = stcalloc(BITNSLOTS(params.node.sub_amt), 1);
 
-  node_ind_t last_el_ind = state->tree.inds[params.node.subs_start + params.node.sub_amt - 1];
+  node_ind_t last_el_ind =
+    state->tree.inds[params.node.subs_start + params.node.sub_amt - 1];
 
   size_t start_action_amt = state->stack.len;
 
   if (params.wanted_ind != state->unknown_ind) {
-    tc_action action = {
-      .tag = TC_CLONE_WANTED_WANTED, .from = params.node_ind, .to = last_el_ind};
+    tc_action action = {.tag = TC_CLONE_WANTED_WANTED,
+                        .from = params.node_ind,
+                        .to = last_el_ind};
     push_action(state, action);
     bs_data_set(sub_has_wanted, params.node.sub_amt - 1, true);
   }
@@ -705,7 +708,8 @@ static void typecheck_block(typecheck_state *state, tc_node_params params, bool 
       }
       case PT_LET:
       case PT_FUN: {
-        node_ind_t prev_ind = state->tree.inds[params.node.subs_start + sub_i - 1];
+        node_ind_t prev_ind =
+          state->tree.inds[params.node.subs_start + sub_i - 1];
         parse_node prev = state->tree.nodes[prev_ind];
         if (can_propagate_type(state, prev, sub)) {
           tc_action action = {
@@ -754,9 +758,10 @@ static void typecheck_block(typecheck_state *state, tc_node_params params, bool 
       }
     }
   }
-  tc_action actions[] = {
-    {.tag = TC_POP_N_VARS, .amt = bnd_amt},
-    {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = last_el_ind, .to = params.node_ind}};
+  tc_action actions[] = {{.tag = TC_POP_N_VARS, .amt = bnd_amt},
+                         {.tag = TC_CLONE_ACTUAL_ACTUAL,
+                          .from = last_el_ind,
+                          .to = params.node_ind}};
   push_actions(state, STATIC_LEN(actions), actions);
 
 cleanup_tc_block:
@@ -1597,7 +1602,8 @@ static void tc_reconstruct(typecheck_state *state, tc_node_params params) {
   }
 }
 
-static tc_node_params mk_tc_node_params(typecheck_state *state, node_ind_t node_ind, stage stage) {
+static tc_node_params mk_tc_node_params(typecheck_state *state,
+                                        node_ind_t node_ind, stage stage) {
   tc_node_params params;
   params.node_ind = node_ind;
   params.stage = stage;
