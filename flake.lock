@@ -1,0 +1,61 @@
+{
+  "nodes": {
+    "flake-utils": {
+      "locked": {
+        "lastModified": 1659877975,
+        "narHash": "sha256-zllb8aq3YO3h8B/U0/J1WBgAL8EX5yWf5pMj3G0NAmc=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "c0e246b9b83f637f4681389ecabcb2681b4f3af0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "hedley-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1612500162,
+        "narHash": "sha256-cXiqP6oUJiNTLZamgzUWyGyBKM5WBqF6ZPyPuR87Ihk=",
+        "owner": "nemequ",
+        "repo": "hedley",
+        "rev": "8fb0604a8095f6c907378cc3f0391520ae843f6f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nemequ",
+        "ref": "v15",
+        "repo": "hedley",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1661009065,
+        "narHash": "sha256-i+Q2ttGp4uOL3j0wEYP3MXLcu/4L/WbChxGQogiNSZo=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "9a91318fffec81ad009b73fd3b640d2541d87909",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-22.05",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "hedley-src": "hedley-src",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
