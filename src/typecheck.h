@@ -43,7 +43,6 @@ typedef struct {
 
 VEC_DECL(tc_error);
 
-// TODO type_inds should be a pointer, not a vec...
 typedef struct {
   vec_tc_error errors;
   // all the types
