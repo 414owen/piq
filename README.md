@@ -80,14 +80,14 @@ A language that does everything right
 # Building
 
 ```
-$ nix-build
+$ nix build
 $ ./result/bin/lang
 ```
 
 # Developing
 
 ```
-$ nix-shell
+$ nix develop
 $ tup
 $ ./repl
 ```
