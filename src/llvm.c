@@ -353,8 +353,8 @@ static void cg_node(cg_state *state) {
     case PT_LOWER_NAME:
     case PT_UPPER_NAME: {
       binding b = {
-        .start = node.start,
-        .end = node.end,
+        .start = node.span.start,
+        .end = node.span.end,
       };
       node_ind_t ind = lookup_bnd(state->source.data, state->env_bnds,
                                   state->env_is_builtin, b);
@@ -366,8 +366,8 @@ static void cg_node(cg_state *state) {
     case PT_INT: {
       node_ind_t type_ind = state->tc_res.node_types[ind];
       LLVMTypeRef type = construct_type(state, type_ind);
-      const char *str = VEC_GET_PTR(state->source, node.start);
-      size_t len = node.end - node.start + 1;
+      const char *str = VEC_GET_PTR(state->source, node.span.start);
+      size_t len = node.span.end - node.span.start + 1;
       VEC_PUSH(&state->val_stack,
                LLVMConstIntOfStringAndSize(type, str, len, 10));
       break;

@@ -105,9 +105,9 @@ static bool test_err_eq(parse_tree tree, tc_res res, size_t err_ind,
   if (eA.type != test_err.type)
     return false;
   parse_node node = tree.nodes[eA.pos];
-  if (node.start != test_err.start)
+  if (node.span.start != test_err.start)
     return false;
-  if (node.end != test_err.end)
+  if (node.span.end != test_err.end)
     return false;
   switch (eA.type) {
     case TYPE_MISMATCH: {
@@ -141,7 +141,7 @@ static void test_types_match(test_state *state, parse_tree tree, tc_res res,
       parse_node node = tree.nodes[j];
       if (node.type == PT_ROOT)
         continue;
-      if (node.start == span.start && node.end == span.end) {
+      if (node.span.start == span.start && node.span.end == span.end) {
         seen = true;
         if (!test_type_eq(res.types, res.type_inds, res.node_types[j],
                           span.exp)) {

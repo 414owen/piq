@@ -64,9 +64,6 @@
     bool succeeded;
   } state;
 
-  #define mk_leaf(type, start, end) \
-    ((parse_node) { .type = type, .leaf_node = {.start = start, .end = end}})
-
   typedef struct {
     node_ind_t a;
     node_ind_t b;
@@ -94,12 +91,14 @@ root(RES) ::= toplevels(A) EOF . {
     .type = PT_ROOT,
     .subs_start = start,
     .sub_amt = A.len,
-    .start = 0,
-    .end = 0,
+    .span = {
+      .start = 0,
+      .end = 0,
+    }
   };
   if (A.len > 0) {
-    n.start = VEC_GET(s->nodes, VEC_GET(A, 0)).start;
-    n.end = VEC_GET(s->nodes, VEC_GET(A, A.len - 1)).end;
+    n.span.start = VEC_GET(s->nodes, VEC_GET(A, 0)).span.start;
+    n.span.end = VEC_GET(s->nodes, VEC_GET(A, A.len - 1)).span.end;
   }
   VEC_PUSH(&s->nodes, n);
   s->root_ind = s->nodes.len - 1;
@@ -138,9 +137,9 @@ block_el ::= expr.
 block_el(RES) ::= OPEN_PAREN(O) block_in_parens(A) CLOSE_PAREN(C). {
   BREAK_PARSER;
   token t = s->tokens[O];
-  VEC_DATA_PTR(&s->nodes)[A].start = t.start;
+  VEC_DATA_PTR(&s->nodes)[A].span.start = t.start;
   t = s->tokens[C];
-  VEC_DATA_PTR(&s->nodes)[A].end = t.end;
+  VEC_DATA_PTR(&s->nodes)[A].span.end = t.end;
   RES = A;
 }
 
@@ -157,9 +156,9 @@ let(RES) ::= LET lower_name(A) expr(B). {
 toplevel(RES) ::= OPEN_PAREN(O) toplevel_under(A) CLOSE_PAREN(C). {
   BREAK_PARSER;
   token t = s->tokens[O];
-  VEC_DATA_PTR(&s->nodes)[A].start = t.start;
+  VEC_DATA_PTR(&s->nodes)[A].span.start = t.start;
   t = s->tokens[C];
-  VEC_DATA_PTR(&s->nodes)[A].end = t.end;
+  VEC_DATA_PTR(&s->nodes)[A].span.end = t.end;
   RES = A;
 }
 
@@ -169,7 +168,14 @@ toplevel_under ::= sig.
 int(RES) ::= INT(A).  { 
   BREAK_PARSER;
   token t = s->tokens[A];
-  parse_node n = {.type = PT_INT, .start = t.start, .end = t.end, .sub_amt = 0};
+  parse_node n = {
+    .type = PT_INT,
+    .sub_amt = 0,
+    .span = {
+      .start = t.start,
+      .end = t.end,
+    },
+  };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
 }
@@ -199,7 +205,14 @@ expr ::= unit.
 string(RES) ::= STRING(A). {
   BREAK_PARSER;
   token t = s->tokens[A];
-  parse_node n = {.type = PT_STRING, .start = t.start, .end = t.end, .sub_amt = 0};
+  parse_node n = {
+    .type = PT_STRING,
+    .sub_amt = 0,
+    .span = {
+      .start = t.start,
+      .end = t.end,
+    },
+  };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
 }
@@ -207,7 +220,14 @@ string(RES) ::= STRING(A). {
 upper_name(RES) ::= UPPER_NAME(A). {
   BREAK_PARSER;
   token t = s->tokens[A];
-  parse_node n = {.type = PT_UPPER_NAME, .start = t.start, .end = t.end, .sub_amt = 0};
+  parse_node n = {
+    .type = PT_UPPER_NAME,
+    .sub_amt = 0,
+    .span = {
+      .start = t.start,
+      .end = t.end,
+    },
+  };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
 }
@@ -215,7 +235,14 @@ upper_name(RES) ::= UPPER_NAME(A). {
 lower_name(RES) ::= LOWER_NAME(A). {
   BREAK_PARSER;
   token t = s->tokens[A];
-  parse_node n = {.type = PT_LOWER_NAME, .start = t.start, .end = t.end, .sub_amt = 0};
+  parse_node n = {
+    .type = PT_LOWER_NAME,
+    .sub_amt = 0,
+    .span = {
+      .start = t.start,
+      .end = t.end,
+    },
+  };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
 }
@@ -223,9 +250,9 @@ lower_name(RES) ::= LOWER_NAME(A). {
 expr(RES) ::= OPEN_BRACKET(A) list_contents(B) CLOSE_BRACKET(C). {
   BREAK_PARSER;
   token a = s->tokens[A];
-  VEC_DATA_PTR(&s->nodes)[B].start = a.start;
+  VEC_DATA_PTR(&s->nodes)[B].span.start = a.start;
   a = s->tokens[C];
-  VEC_DATA_PTR(&s->nodes)[B].end = a.end;
+  VEC_DATA_PTR(&s->nodes)[B].span.end = a.end;
   RES = B;
 }
 
@@ -257,8 +284,8 @@ list_contents(RES) ::= . {
 expr(RES) ::= OPEN_PAREN(A) compound_expr(B) CLOSE_PAREN(C). {
   BREAK_PARSER;
   parse_node *node = VEC_GET_PTR(s->nodes, B);
-  node->start = s->tokens[A].start;
-  node->end = s->tokens[C].end;
+  node->span.start = s->tokens[A].start;
+  node->span.end = s->tokens[C].end;
   RES = B;
 }
 
@@ -309,8 +336,10 @@ fun_body(RES) ::= block(B). {
     .type = PT_FUN_BODY,
     .subs_start = start,
     .sub_amt = B.len,
-    .start = VEC_GET(s->nodes, VEC_FIRST(B)).start,
-    .end = VEC_GET(s->nodes, VEC_LAST(B)).end,
+    .span = {
+      .start = VEC_GET(s->nodes, VEC_FIRST(B)).span.start,
+      .end = VEC_GET(s->nodes, VEC_LAST(B)).span.end,
+    },
   };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
@@ -378,10 +407,12 @@ unit(RES) ::= UNIT(A). {
   token t = s->tokens[A];
   parse_node n = {
     .type = PT_UNIT,
-    .start = t.start,
-    .end = t.end,
     .sub_a = 0,
-    .sub_b = 0
+    .sub_b = 0,
+    .span = {
+      .start = t.start,
+      .end = t.end,
+    },
   };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
@@ -390,8 +421,8 @@ unit(RES) ::= UNIT(A). {
 pattern(RES) ::= OPEN_PAREN(O) pattern_in_parens(A) CLOSE_PAREN(C). {
   BREAK_PARSER;
   parse_node *node = VEC_GET_PTR(s->nodes, A);
-  node->start = s->tokens[O].start;
-  node->end = s->tokens[C].end;
+  node->span.start = s->tokens[O].start;
+  node->span.end = s->tokens[C].end;
   RES = A;
 }
 
@@ -408,10 +439,12 @@ pattern(RES) ::= OPEN_PAREN(O) upper_name(A) patterns(B) CLOSE_PAREN(C). {
   VEC_CAT(&s->inds, &B);
   parse_node n = {
     .type = PT_CONSTRUCTION,
-    .start = s->tokens[O].start,
-    .end = s->tokens[C].end,
     .subs_start = start,
-    .sub_amt = B.len + 1
+    .sub_amt = B.len + 1,
+    .span = {
+      .start = s->tokens[O].start,
+      .end = s->tokens[C].end,
+    },
   };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
@@ -426,8 +459,10 @@ pattern(RES) ::= OPEN_BRACKET(O) pattern_list(A) CLOSE_BRACKET(C). {
     .type = PT_LIST,
     .subs_start = start,
     .sub_amt = A.len,
-    .start = s->tokens[O].start,
-    .end = s->tokens[C].start,
+    .span = {
+      .start = s->tokens[O].start,
+      .end = s->tokens[C].start,
+    },
   };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
@@ -440,8 +475,8 @@ type ::= unit.
 
 type(RES) ::= OPEN_PAREN(A) type_inside_parens(B) CLOSE_PAREN(D). {
   BREAK_PARSER;
-  VEC_GET_PTR(s->nodes, B)->start = s->tokens[A].start;
-  VEC_GET_PTR(s->nodes, B)->end = s->tokens[D].end;
+  VEC_GET_PTR(s->nodes, B)->span.start = s->tokens[A].start;
+  VEC_GET_PTR(s->nodes, B)->span.end = s->tokens[D].end;
   RES = B;
 }
 
@@ -450,8 +485,10 @@ type(RES) ::= OPEN_BRACKET(O) enclosed_type(A) CLOSE_BRACKET(C). {
   parse_node n = {
     .type = PT_LIST_TYPE,
     .sub_a = A,
-    .start = s->tokens[O].start,
-    .end = s->tokens[C].start,
+    .span = {
+      .start = s->tokens[O].start,
+      .end = s->tokens[C].start,
+    },
   };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
@@ -496,8 +533,10 @@ type(RES) ::= OPEN_PAREN(O) type(A) type(B) CLOSE_PAREN(C). {
     .type = PT_CALL,
     .sub_a = A,
     .sub_b = B,
-    .start = s->tokens[O].start,
-    .end = s->tokens[C].end,
+    .span = {
+      .start = s->tokens[O].start,
+      .end = s->tokens[C].end,
+    },
   };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
@@ -589,7 +628,7 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
 
     // The generated tuples will have their end set to the end
     // of the last syntactic element. Best we can do.
-    buf_ind_t inner_end = VEC_GET(s->nodes, elems.len - 1).end;
+    buf_ind_t inner_end = VEC_GET(s->nodes, elems.len - 1).span.end;
 
     for (node_ind_t i = 0; i < elems.len - 2; i++) {
       node_ind_t sub_a_ind = VEC_GET(elems, i);
@@ -597,8 +636,10 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
         .type = PT_TUP,
         .sub_a = sub_a_ind,
         .sub_b = node_amt + i + 1,
-        .start = VEC_GET(s->nodes, sub_a_ind).start,
-        .end = inner_end,
+        .span = {
+          .start = VEC_GET(s->nodes, sub_a_ind).span.start,
+          .end = inner_end,
+        },
       };
       VEC_PUSH(&s->nodes, n);
     }
@@ -608,8 +649,10 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
       .type = PT_TUP,
       .sub_a = sub_a_ind,
       .sub_b = VEC_GET(elems, elems.len - 1),
-      .start = VEC_GET(s->nodes, sub_a_ind).start,
-      .end = inner_end,
+      .span = {
+        .start = VEC_GET(s->nodes, sub_a_ind).span.start,
+        .end = inner_end,
+      },
     };
     VEC_PUSH(&s->nodes, last_node);
 

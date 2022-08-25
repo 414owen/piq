@@ -38,9 +38,9 @@ size_t lookup_bnd(const char *source_file, vec_str_ref bnds, bitset is_builtin,
         return ind;
       }
     } else {
-      if (1 + a.end - a.start != len)
+      if (1 + a.span.end - a.span.start != len)
         continue;
-      if (strncmp(bndp, source_file + a.start, len) == 0)
+      if (strncmp(bndp, source_file + a.span.start, len) == 0)
         return ind;
     }
   }

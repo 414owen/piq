@@ -380,7 +380,7 @@ static bool check_int_fits(typecheck_state *state, node_ind_t node_ind,
   bool res = true;
   const char *buf = state->source.data;
   uint64_t last, n = 0;
-  for (size_t i = node.start; i <= node.end; i++) {
+  for (size_t i = node.span.start; i <= node.span.end; i++) {
     last = n;
     char digit = buf[i];
     n *= 10;
@@ -438,16 +438,6 @@ static bool check_int_fits_type(typecheck_state *state, node_ind_t node_ind,
     }
   }
   return fits;
-}
-
-static binding node_to_binding(parse_node node) {
-  binding b = {.start = node.start, .end = node.end};
-  return b;
-}
-
-static binding node_to_bnd(parse_node a) {
-  binding res = {.start = a.start, .end = a.end};
-  return res;
 }
 
 // fills in a type from a parse_tree type
@@ -518,7 +508,7 @@ static void tc_type(typecheck_state *state, tc_node_params params) {
       break;
     }
     case PT_UPPER_NAME: {
-      binding b = {.start = node.start, .end = node.end};
+      binding b = {.start = node.span.start, .end = node.span.end};
       size_t ind = lookup_bnd(state->source.data, state->type_env,
                               state->type_is_builtin, b);
       if (ind == state->type_env.len) {
@@ -635,8 +625,8 @@ static bool can_propagate_type(typecheck_state *state, parse_node from,
       return false;
   }
   return compare_bnds(state->source.data,
-                      node_to_bnd(state->tree.nodes[a_bnd_ind]),
-                      node_to_bnd(state->tree.nodes[b_bnd_ind])) == EQ;
+                      state->tree.nodes[a_bnd_ind].span,
+                      state->tree.nodes[b_bnd_ind].span) == EQ;
 }
 
 static void push_tc_sig(typecheck_state *state, node_ind_t node_ind,
@@ -651,7 +641,7 @@ static void push_tc_sig(typecheck_state *state, node_ind_t node_ind,
     {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = type_ind, .to = node_ind},
     {.tag = TC_PUSH_ENV,
      .node_ind = type_ind,
-     .binding = node_to_bnd(state->tree.nodes[name_ind])},
+     .binding = state->tree.nodes[name_ind].span},
   };
   push_actions(state, STATIC_LEN(actions), actions);
 }
@@ -1134,7 +1124,7 @@ static void tc_node_matches(typecheck_state *state, tc_node_params params) {
 
     case PT_UPPER_NAME:
     case PT_LOWER_NAME: {
-      binding b = node_to_binding(params.node);
+      binding b = params.node.span;
       size_t ind = lookup_bnd(state->source.data, state->term_env,
                               state->term_is_builtin, b);
       if (ind == state->term_env.len) {
@@ -1308,7 +1298,7 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
 
     case PT_UPPER_NAME:
     case PT_LOWER_NAME: {
-      binding b = node_to_binding(params.node);
+      binding b = params.node.span;
       size_t ind = lookup_bnd(state->source.data, state->term_env,
                               state->term_is_builtin, b);
       if (ind == state->term_env.len) {
@@ -1442,7 +1432,7 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
     }
 
     case PT_UPPER_NAME: {
-      binding b = node_to_binding(params.node);
+      binding b = params.node.span;
       size_t ind = lookup_bnd(state->source.data, state->term_env,
                               state->term_is_builtin, b);
       if (ind == state->term_env.len) {
@@ -1463,7 +1453,7 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
     case PT_LOWER_NAME: {
       tc_action action = {
         .tag = TC_PUSH_ENV,
-        .binding = node_to_binding(params.node),
+        .binding = params.node.span,
         .node_ind = params.node_ind,
       };
       push_action(state, action);
@@ -1537,7 +1527,7 @@ static void tc_pattern_unambiguous(typecheck_state *state,
     }
 
     case PT_UPPER_NAME: {
-      binding b = node_to_binding(params.node);
+      binding b = params.node.span;
       size_t ind = lookup_bnd(state->source.data, state->term_env,
                               state->term_is_builtin, b);
       if (ind == state->term_env.len) {
@@ -1720,8 +1710,8 @@ static void print_tc_error(FILE *f, tc_res res, source_file source,
       break;
   }
   parse_node node = tree.nodes[error.pos];
-  fprintf(f, "\nAt %d-%d:\n", node.start, node.end);
-  format_error_ctx(f, source.data, node.start, node.end);
+  fprintf(f, "\nAt %d-%d:\n", node.span.start, node.span.end);
+  format_error_ctx(f, source.data, node.span.start, node.span.end);
 }
 
 void print_tc_errors(FILE *f, source_file source, parse_tree tree, tc_res res) {
@@ -1776,6 +1766,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
           putc('\n', debug_out);
 
           parse_node to_node = tree.nodes[action.to];
+          format_error_ctx(debug_out, source.data, from_node.span.start,
           fprintf(debug_out, "To: '%d' '%s'\n", action.to,
                   parse_node_string(to_node.type));
           format_error_ctx(debug_out, source.data, to_node.start, to_node.end);

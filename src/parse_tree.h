@@ -5,6 +5,7 @@
 #include "ast_meta.h"
 #include "consts.h"
 #include "parser.h"
+#include "span.h"
 #include "token.h"
 #include "vec.h"
 
@@ -84,8 +85,7 @@ const char *parse_node_string(parse_node_type type);
 typedef struct {
   parse_node_type type;
 
-  buf_ind_t start;
-  buf_ind_t end;
+  span span;
 
   union {
     struct {
