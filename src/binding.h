@@ -2,20 +2,15 @@
 
 #include "consts.h"
 #include "vec.h"
+#include "span.h"
 
-typedef struct {
-  buf_ind_t start;
-  buf_ind_t end;
-} binding;
+#define binding span
 
-VEC_DECL(binding);
+VEC_DECL_CUSTOM(binding, vec_binding);
 
 typedef union {
   char *builtin;
-  struct {
-    buf_ind_t start;
-    buf_ind_t end;
-  };
+  binding span;
 } str_ref;
 
 VEC_DECL(str_ref);

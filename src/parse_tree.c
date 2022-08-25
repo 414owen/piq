@@ -207,16 +207,16 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       print_compound(s, "(Call ", " ", ")", node);
       break;
     case PT_INT:
-      fprintf(s->out, "(Int %.*s)", 1 + node.end - node.start,
-              s->input + node.start);
+      fprintf(s->out, "(Int %.*s)", 1 + node.span.end - node.span.start,
+              s->input + node.span.start);
       break;
     case PT_UPPER_NAME:
-      fprintf(s->out, "(Uname %.*s)", 1 + node.end - node.start,
-              s->input + node.start);
+      fprintf(s->out, "(Uname %.*s)", 1 + node.span.end - node.span.start,
+              s->input + node.span.start);
       break;
     case PT_LOWER_NAME:
-      fprintf(s->out, "(Lname %.*s)", 1 + node.end - node.start,
-              s->input + node.start);
+      fprintf(s->out, "(Lname %.*s)", 1 + node.span.end - node.span.start,
+              s->input + node.span.start);
       break;
     case PT_IF:
       print_compound(s, "(If ", " ", ")", node);
@@ -262,7 +262,7 @@ void print_parse_tree(FILE *f, char *input, parse_tree tree) {
     switch (action) {
       case PRINT_SOURCE: {
         parse_node node = tree.nodes[VEC_POP(&s.node_stack)];
-        fprintf(f, "%.*s", 1 + node.end - node.start, input + node.start);
+        fprintf(f, "%.*s", 1 + node.span.end - node.span.start, input + node.span.start);
         break;
       }
       case PRINT_STR:
