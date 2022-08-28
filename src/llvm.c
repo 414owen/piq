@@ -276,7 +276,7 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
       case COMBINE_TYPE: {
         switch (t.tag) {
           case T_LIST: {
-            node_ind_t sub_ind = t.sub_a;
+            node_ind_t sub_ind = T_LIST_SUB_IND(t);
             llvm_types[type_ind] =
               (LLVMTypeRef)LLVMArrayType(llvm_types[sub_ind], 0);
             break;
