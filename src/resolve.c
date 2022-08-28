@@ -11,7 +11,8 @@
 
 typedef struct {
   enum { RESOLVE_NODE, RESOLVE_TYPE } tag;
-  node_ind_t ind;
+  node_ind_t pt_ind;
+  node_ind_t ir_ind;
 } action;
 
 VEC_DECL(action);
@@ -56,7 +57,10 @@ typedef struct {
   node_ind_t ir_fun_ind;
   node_ind_t ir_sig_ind;
   node_ind_t ir_let_group_ind;
-  node_ind_t it_fun_group_ind;
+  node_ind_t ir_fun_group_ind;
+
+  // relate pt_nodes to elements of the above
+  node_ind_t *pt_node_inds;
 
   // TODO rename to term_scope?
   scope scope;
@@ -64,18 +68,57 @@ typedef struct {
   vec_node_ind scope_layers;
 } state;
 
-static void push_resolve_node(state *state, node_ind_t node_ind) {
+static state state_new(char *source, parse_tree tree) {
+  state res = {
+    .actions = VEC_NEW,
+    .source = source,
+    .tree = tree,
+    .module = {0},
+    .errors = VEC_NEW,
+
+    .ir_root_ind = 0,
+    .ir_call_ind = 0,
+    .ir_construction_ind = 0,
+    .ir_fn_ind = 0,
+    .ir_fn_type_ind = 0,
+    .ir_fun_body_ind = 0,
+    .ir_if_ind = 0,
+    .ir_int_ind = 0,
+    .ir_list_ind = 0,
+    .ir_list_type_ind = 0,
+    .ir_string_ind = 0,
+    .ir_tup_ind = 0,
+    .ir_as_ind = 0,
+    .ir_unit_ind = 0,
+    .ir_fun_ind = 0,
+    .ir_sig_ind = 0,
+    .ir_let_group_ind = 0,
+    .ir_fun_group_ind = 0,
+
+    // relate pt_nodes to elements of the above
+    .pt_node_inds = calloc(tree.node_amt, sizeof(node_ind_t)),
+
+    // TODO rename to term_scope?
+    .scope = scope_new(),
+    // amount of items in scope at different layers = 0,
+    .scope_layers = VEC_NEW,
+  };
+  return res;
+}
+
+static void push_resolve_node(state *state, node_ind_t pt_ind, node_ind_t ir_ind) {
   action a = {
     .tag = RESOLVE_NODE,
-    .ind = node_ind,
+    .pt_ind = pt_ind,
+    .ir_ind = ir_ind,
   };
   VEC_PUSH(&state->actions, a);
 }
 
-static void push_resolve_type(state *state, node_ind_t node_ind) {
+static void push_resolve_type(state *state, node_ind_t pt_ind) {
   action a = {
     .tag = RESOLVE_TYPE,
-    .ind = node_ind,
+    .pt_ind = pt_ind,
   };
   VEC_PUSH(&state->actions, a);
 }
@@ -291,8 +334,8 @@ static void resolve_root(state *state, parse_node node) {
             VEC_PUSH(&state->errors, err);
           }
         }
-        VEC_PUSH(&state->module.ir_fun_groups, group);
-        push_resolve_node(state, sub_ind);
+        state->module.ir_fun_groups[state->ir_fun_group_ind] = group;
+        push_resolve_node(state, sub_ind, state->ir_fun_group_ind++);
         break;
       }
       NOT_ROOT:
@@ -333,18 +376,10 @@ static void resolve_node(state *state, node_ind_t node_ind) {
 }
 
 resolve_res resolve(char *source, parse_tree tree) {
-  state state = {
-    .actions = VEC_NEW,
-    .source = source,
-    .tree = tree,
-    .module = module_new(tree),
-    .scope = scope_new(),
-    // I hope this does what I think it does...
-    // Someone read the C spec and tell me?
-    {0},
-  };
+  state state = state_new(source, tree);
 
-  push_resolve_node(&state, tree.root_ind);
+  push_resolve_node(&state, tree.root_ind, 0);
+
   while (state.actions.len > 0) {
     action act = VEC_POP(&state.actions);
     switch (act.tag) {
@@ -357,7 +392,6 @@ resolve_res resolve(char *source, parse_tree tree) {
     }
   }
 
-  push_resolve_node(&state, tree.root_ind);
   resolve_res res = {
     .module = state.module,
     .error_amt = state.errors.len,
