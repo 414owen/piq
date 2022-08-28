@@ -1,12 +1,6 @@
 #include "vec.h"
 #include "util.h"
 
-#define VEC_RESIZE(vec, _cap)                                                  \
-  __vec_resize((vec_void *)vec, _cap, sizeof((vec)->data[0]))
-
-#define VEC_GROW(vec, _cap)                                                    \
-  __vec_grow((vec_void *)vec, _cap, sizeof((vec)->data[0]))
-
 #if INLINE_VEC_BYTES > 0
 static void __vec_resize_internal_to_external(vec_void *vec, VEC_VEC_LEN_T cap,
                                               size_t elemsize) {
@@ -207,6 +201,8 @@ vec_void *__vec_pop(vec_void *vec) { return __vec_pop_n(vec, 1); }
 
 #if INLINE_VEC_BYTES > 0
 
+// This is dumb, finalize should just shrink the vector.
+// This should be called something else.
 char *__vec_finalize(vec_void *vec, size_t elemsize) {
   const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
   if (vec->len <= inline_amt) {
