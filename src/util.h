@@ -61,7 +61,8 @@ size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
 stringstream *ss_init(void);
 char *ss_finalize(stringstream *ss);
 
-void unimplemented(char *str, char *file, size_t line);
+HEDLEY_NO_RETURN void unimplemented(char *str, char *file, size_t line);
+
 int timespec_subtract(struct timespec *result, struct timespec *x,
                       struct timespec *y);
 void *memclone(void *src, size_t bytes);
