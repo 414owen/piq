@@ -12,6 +12,7 @@
 #include "consts.h"
 #include "util.h"
 
+HEDLEY_NO_RETURN
 void unimplemented(char *str, char *file, size_t line) {
   fprintf(stderr,
           "%s hasn't been implemented yet.\n"
