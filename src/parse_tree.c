@@ -262,7 +262,8 @@ void print_parse_tree(FILE *f, char *input, parse_tree tree) {
     switch (action) {
       case PRINT_SOURCE: {
         parse_node node = tree.nodes[VEC_POP(&s.node_stack)];
-        fprintf(f, "%.*s", 1 + node.span.end - node.span.start, input + node.span.start);
+        fprintf(f, "%.*s", 1 + node.span.end - node.span.start,
+                input + node.span.start);
         break;
       }
       case PRINT_STR:
