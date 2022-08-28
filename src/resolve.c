@@ -35,17 +35,14 @@ static void push_resolve_type(state *state, node_ind_t node_ind) {
 }
 
 static scope scope_new(void) {
-  scope module = {
-    .data_decls = VEC_NEW,
-    .data_constructors = VEC_NEW,
-    .type_refs = VEC_NEW,
-    .refs = VEC_NEW,
-  };
+  scope module = {0};
   return module;
 }
 
 static void push_ref(state *state, binding b, bnd_type type) {
-  str_ref ref = { .span = b, };
+  str_ref ref = {
+    .span = b,
+  };
   VEC_PUSH(&state->res.refs, ref);
   VEC_PUSH(&state->res.bnd_types, type);
   bs_push(&state->res.ref_is_builtin, false);
@@ -53,23 +50,23 @@ static void push_ref(state *state, binding b, bnd_type type) {
 
 static void resolve_letrec(state *state, parse_node node) {
 
-#define NOT_LETREC \
-  case PT_ROOT: \
-  case PT_CALL: \
-  case PT_CONSTRUCTION: \
-  case PT_FN: \
-  case PT_FN_TYPE: \
-  case PT_FUN_BODY: \
-  case PT_IF: \
-  case PT_INT: \
-  case PT_LIST: \
-  case PT_LIST_TYPE: \
-  case PT_LOWER_NAME: \
-  case PT_STRING: \
-  case PT_TUP: \
-  case PT_AS: \
-  case PT_UNIT: \
-  case PT_UPPER_NAME: \
+#define NOT_LETREC                                                             \
+  case PT_ROOT:                                                                \
+  case PT_CALL:                                                                \
+  case PT_CONSTRUCTION:                                                        \
+  case PT_FN:                                                                  \
+  case PT_FN_TYPE:                                                             \
+  case PT_FUN_BODY:                                                            \
+  case PT_IF:                                                                  \
+  case PT_INT:                                                                 \
+  case PT_LIST:                                                                \
+  case PT_LIST_TYPE:                                                           \
+  case PT_LOWER_NAME:                                                          \
+  case PT_STRING:                                                              \
+  case PT_TUP:                                                                 \
+  case PT_AS:                                                                  \
+  case PT_UNIT:                                                                \
+  case PT_UPPER_NAME:                                                          \
   case PT_LET
 
   bool prev_sig = false;

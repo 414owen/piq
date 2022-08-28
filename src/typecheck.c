@@ -624,8 +624,7 @@ static bool can_propagate_type(typecheck_state *state, parse_node from,
     default:
       return false;
   }
-  return compare_bnds(state->source.data,
-                      state->tree.nodes[a_bnd_ind].span,
+  return compare_bnds(state->source.data, state->tree.nodes[a_bnd_ind].span,
                       state->tree.nodes[b_bnd_ind].span) == EQ;
 }
 
