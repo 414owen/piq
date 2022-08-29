@@ -69,6 +69,7 @@ typedef struct {
 } state;
 
 static state state_new(char *source, parse_tree tree) {
+  node_ind_t invalid_ind = -1;
   state res = {
     .actions = VEC_NEW,
     .source = source,
@@ -96,7 +97,7 @@ static state state_new(char *source, parse_tree tree) {
     .ir_fun_group_ind = 0,
 
     // relate pt_nodes to elements of the above
-    .pt_node_inds = calloc(tree.node_amt, sizeof(node_ind_t)),
+    .pt_node_inds = malloc_fill(tree.node_amt, &invalid_ind),
 
     // TODO rename to term_scope?
     .scope = scope_new(),
