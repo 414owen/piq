@@ -86,3 +86,6 @@ bool prefix(const char *pre, const char *str);
 size_t count_char(char *data, int needle, size_t len);
 size_t split_buf_size(char *data, int needle, size_t len);
 void split(char *data, int needle, char **buf, size_t buf_size);
+
+#define malloc_fill(num, el) __malloc_fill((num), sizeof(*el), (el))
+void *__malloc_fill(size_t num, size_t elemsize, void *elem);

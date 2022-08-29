@@ -314,3 +314,9 @@ void split(char *data, int needle, char **buf, size_t buf_size) {
     buf[i] = data;
   }
 }
+
+void *__malloc_fill(size_t num, size_t elemsize, void *elem) {
+  void *res = malloc(num * elemsize);
+  memset_arbitrary(res, elem, num, elemsize);
+  return res;
+}
