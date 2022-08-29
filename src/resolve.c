@@ -68,62 +68,6 @@ typedef struct {
   vec_node_ind scope_layers;
 } state;
 
-static state state_new(char *source, parse_tree tree) {
-  node_ind_t invalid_ind = -1;
-  state res = {
-    .actions = VEC_NEW,
-    .source = source,
-    .tree = tree,
-    .module = {0},
-    .errors = VEC_NEW,
-
-    .ir_root_ind = 0,
-    .ir_call_ind = 0,
-    .ir_construction_ind = 0,
-    .ir_fn_ind = 0,
-    .ir_fn_type_ind = 0,
-    .ir_fun_body_ind = 0,
-    .ir_if_ind = 0,
-    .ir_int_ind = 0,
-    .ir_list_ind = 0,
-    .ir_list_type_ind = 0,
-    .ir_string_ind = 0,
-    .ir_tup_ind = 0,
-    .ir_as_ind = 0,
-    .ir_unit_ind = 0,
-    .ir_fun_ind = 0,
-    .ir_sig_ind = 0,
-    .ir_let_group_ind = 0,
-    .ir_fun_group_ind = 0,
-
-    // relate pt_nodes to elements of the above
-    .pt_node_inds = malloc_fill(tree.node_amt, &invalid_ind),
-
-    // TODO rename to term_scope?
-    .scope = scope_new(),
-    // amount of items in scope at different layers = 0,
-    .scope_layers = VEC_NEW,
-  };
-  return res;
-}
-
-static void push_resolve_node(state *state, node_ind_t pt_ind, node_ind_t ir_ind) {
-  action a = {
-    .tag = RESOLVE_NODE,
-    .pt_ind = pt_ind,
-    .ir_ind = ir_ind,
-  };
-  VEC_PUSH(&state->actions, a);
-}
-
-static void push_resolve_type(state *state, node_ind_t pt_ind) {
-  action a = {
-    .tag = RESOLVE_TYPE,
-    .pt_ind = pt_ind,
-  };
-  VEC_PUSH(&state->actions, a);
-}
-
 static ir_module module_new(parse_tree tree) {
   ir_module module = {
     .ir_root = {0},
@@ -271,6 +215,63 @@ static ir_module module_new(parse_tree tree) {
   return module;
 }
 
+static state state_new(char *source, parse_tree tree) {
+  node_ind_t invalid_ind = -1;
+  state res = {
+    .actions = VEC_NEW,
+    .source = source,
+    .tree = tree,
+    .module = module_new(tree),
+    .errors = VEC_NEW,
+
+    .ir_root_ind = 0,
+    .ir_call_ind = 0,
+    .ir_construction_ind = 0,
+    .ir_fn_ind = 0,
+    .ir_fn_type_ind = 0,
+    .ir_fun_body_ind = 0,
+    .ir_if_ind = 0,
+    .ir_int_ind = 0,
+    .ir_list_ind = 0,
+    .ir_list_type_ind = 0,
+    .ir_string_ind = 0,
+    .ir_tup_ind = 0,
+    .ir_as_ind = 0,
+    .ir_unit_ind = 0,
+    .ir_fun_ind = 0,
+    .ir_sig_ind = 0,
+    .ir_let_group_ind = 0,
+    .ir_fun_group_ind = 0,
+
+    // relate pt_nodes to elements of the above
+    .pt_node_inds = malloc_fill(tree.node_amt, &invalid_ind),
+
+    // TODO rename to term_scope?
+    .scope = scope_new(),
+    // amount of items in scope at different layers = 0,
+    .scope_layers = VEC_NEW,
+  };
+  return res;
+}
+
+static void push_resolve_node(state *state, node_ind_t pt_ind,
+                              node_ind_t ir_ind) {
+  action a = {
+    .tag = RESOLVE_NODE,
+    .pt_ind = pt_ind,
+    .ir_ind = ir_ind,
+  };
+  VEC_PUSH(&state->actions, a);
+}
+
+static void push_resolve_type(state *state, node_ind_t pt_ind) {
+  action a = {
+    .tag = RESOLVE_TYPE,
+    .pt_ind = pt_ind,
+  };
+  VEC_PUSH(&state->actions, a);
+}
+
 static bool bindings_eq(char *source, binding a, binding b) {
   if (a.end - a.start != b.end - b.start) {
     return false;
@@ -385,7 +386,7 @@ resolve_res resolve(char *source, parse_tree tree) {
     action act = VEC_POP(&state.actions);
     switch (act.tag) {
       case RESOLVE_NODE:
-        resolve_node(&state, act.ind);
+        resolve_node(&state, act.pt_ind);
         break;
       case RESOLVE_TYPE:
         UNIMPLEMENTED("resolving types");

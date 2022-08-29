@@ -26,8 +26,8 @@ order compare_bnds(const char *restrict source_file, binding a, binding b) {
 
 // TODO consider separating builtins into separate array somehow
 // Find index of binding, return bindings.len if not found
-size_t lookup_str_ref(const char *source_file, vec_str_ref bnds, bitset is_builtin,
-                  binding bnd) {
+size_t lookup_str_ref(const char *source_file, vec_str_ref bnds,
+                      bitset is_builtin, binding bnd) {
   size_t len = bnd.end - bnd.start + 1;
   const char *bndp = source_file + bnd.start;
   for (size_t i = 0; i < bnds.len; i++) {
@@ -48,7 +48,8 @@ size_t lookup_str_ref(const char *source_file, vec_str_ref bnds, bitset is_built
 }
 
 // TODO remove? not currently used AFAIK
-size_t lookup_bnd(const char *source_file, binding *bnds, node_ind_t bnd_amt, binding bnd) {
+size_t lookup_bnd(const char *source_file, binding *bnds, node_ind_t bnd_amt,
+                  binding bnd) {
   size_t len = bnd.end - bnd.start + 1;
   const char *bndp = source_file + bnd.start;
   for (size_t i = 0; i < bnd_amt; i++) {
