@@ -510,7 +510,7 @@ static void tc_type(typecheck_state *state, tc_node_params params) {
     case PT_UPPER_NAME: {
       binding b = {.start = node.span.start, .end = node.span.end};
       size_t ind = lookup_str_ref(state->source.data, state->type_env,
-                              state->type_is_builtin, b);
+                                  state->type_is_builtin, b);
       if (ind == state->type_env.len) {
         tc_error err = {
           .type = TYPE_NOT_FOUND,
@@ -1125,7 +1125,7 @@ static void tc_node_matches(typecheck_state *state, tc_node_params params) {
     case PT_LOWER_NAME: {
       binding b = params.node.span;
       size_t ind = lookup_str_ref(state->source.data, state->term_env,
-                              state->term_is_builtin, b);
+                                  state->term_is_builtin, b);
       if (ind == state->term_env.len) {
         tc_error err = {
           .type = BINDING_NOT_FOUND,
@@ -1299,7 +1299,7 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
     case PT_LOWER_NAME: {
       binding b = params.node.span;
       size_t ind = lookup_str_ref(state->source.data, state->term_env,
-                              state->term_is_builtin, b);
+                                  state->term_is_builtin, b);
       if (ind == state->term_env.len) {
         tc_error err = {
           .type = BINDING_NOT_FOUND,
@@ -1433,7 +1433,7 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
     case PT_UPPER_NAME: {
       binding b = params.node.span;
       size_t ind = lookup_str_ref(state->source.data, state->term_env,
-                              state->term_is_builtin, b);
+                                  state->term_is_builtin, b);
       if (ind == state->term_env.len) {
         tc_error err = {
           .type = BINDING_NOT_FOUND,
@@ -1528,7 +1528,7 @@ static void tc_pattern_unambiguous(typecheck_state *state,
     case PT_UPPER_NAME: {
       binding b = params.node.span;
       size_t ind = lookup_str_ref(state->source.data, state->term_env,
-                              state->term_is_builtin, b);
+                                  state->term_is_builtin, b);
       if (ind == state->term_env.len) {
         tc_error err = {
           .type = BINDING_NOT_FOUND,

@@ -357,7 +357,7 @@ static void cg_node(cg_state *state) {
         .end = node.span.end,
       };
       node_ind_t ind = lookup_str_ref(state->source.data, state->env_bnds,
-                                  state->env_is_builtin, b);
+                                      state->env_is_builtin, b);
       // missing refs are caught in typecheck phase
       debug_assert(ind != state->env_bnds.len);
       VEC_PUSH(&state->val_stack, VEC_GET(state->env_vals, ind));
