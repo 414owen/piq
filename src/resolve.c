@@ -68,84 +68,82 @@ typedef struct {
   vec_node_ind scope_layers;
 } state;
 
-static ir_module module_new(parse_tree tree) {
-  ir_module module = {
-    .ir_root = {0},
-    .ir_types = NULL,
-    .ir_node_inds = NULL,
-  };
+typedef struct {
+  node_ind_t pt_root;
+  node_ind_t pt_call;
+  node_ind_t pt_construction;
+  node_ind_t pt_fn;
+  node_ind_t pt_fn_type;
+  node_ind_t pt_fun_body;
+  node_ind_t pt_if;
+  node_ind_t pt_int;
+  node_ind_t pt_list;
+  node_ind_t pt_list_type;
+  node_ind_t pt_string;
+  node_ind_t pt_tup;
+  node_ind_t pt_as;
+  node_ind_t pt_unit;
+  node_ind_t pt_fun;
+  node_ind_t pt_sig;
+  node_ind_t pt_let;
+} pt_node_amounts;
 
-  node_ind_t PT_ROOT_AMT = 0;
-  node_ind_t PT_CALL_AMT = 0;
-  node_ind_t PT_CONSTRUCTION_AMT = 0;
-  node_ind_t PT_FN_AMT = 0;
-  node_ind_t PT_FN_TYPE_AMT = 0;
-  node_ind_t PT_FUN_BODY_AMT = 0;
-  node_ind_t PT_IF_AMT = 0;
-  node_ind_t PT_INT_AMT = 0;
-  node_ind_t PT_LIST_AMT = 0;
-  node_ind_t PT_LIST_TYPE_AMT = 0;
-  node_ind_t PT_STRING_AMT = 0;
-  node_ind_t PT_TUP_AMT = 0;
-  node_ind_t PT_AS_AMT = 0;
-  node_ind_t PT_UNIT_AMT = 0;
-  node_ind_t PT_FUN_AMT = 0;
-  node_ind_t PT_SIG_AMT = 0;
-  node_ind_t PT_LET_AMT = 0;
+static pt_node_amounts count_pt_node_amounts(parse_tree tree) {
+  pt_node_amounts res = {0};
 
   for (size_t i = 0; i < tree.node_amt; i++) {
     parse_node node = tree.nodes[i];
     switch (node.type) {
       case PT_ROOT:
-        PT_ROOT_AMT += 1;
+        res.pt_root += 1;
         break;
       case PT_CALL:
-        PT_CALL_AMT += 1;
+        res.pt_call += 1;
         break;
       case PT_CONSTRUCTION:
-        PT_CONSTRUCTION_AMT += 1;
+        res.pt_construction += 1;
         break;
       case PT_FN:
-        PT_FN_AMT += 1;
+        res.pt_fn += 1;
         break;
       case PT_FN_TYPE:
-        PT_FN_TYPE_AMT += 1;
+        res.pt_fn_type += 1;
         break;
       case PT_FUN_BODY:
-        PT_FUN_BODY_AMT += 1;
+        res.pt_fun_body += 1;
         break;
       case PT_IF:
-        PT_IF_AMT += 1;
+        res.pt_if += 1;
         break;
       case PT_INT:
-        PT_INT_AMT += 1;
+        res.pt_int += 1;
         break;
       case PT_LIST:
-        PT_LIST_AMT += 1;
+        res.pt_list += 1;
         break;
       case PT_LIST_TYPE:
-        PT_LIST_TYPE_AMT += 1;
+        res.pt_list_type += 1;
         break;
       case PT_STRING:
-        PT_STRING_AMT += 1;
+        res.pt_string += 1;
         break;
       case PT_TUP:
-        PT_TUP_AMT += 1;
+        res.pt_tup += 1;
         break;
       case PT_AS:
-        PT_AS_AMT += 1;
+        res.pt_as += 1;
         break;
       case PT_UNIT:
-        PT_UNIT_AMT += 1;
+        res.pt_unit += 1;
         break;
       case PT_FUN:
-        PT_FUN_AMT += 1;
+        res.pt_fun += 1;
         break;
       case PT_SIG:
-        PT_SIG_AMT += 1;
+        res.pt_sig += 1;
         break;
       case PT_LET:
-        PT_LET_AMT += 1;
+        res.pt_let += 1;
         break;
       case PT_LOWER_NAME:
       case PT_UPPER_NAME:
@@ -153,75 +151,86 @@ static ir_module module_new(parse_tree tree) {
     }
   }
 
-  char *ptr =
-    malloc((sizeof(module.ir_calls[0]) * PT_CALL_AMT) +
-           (sizeof(module.ir_constructions[0]) * PT_CONSTRUCTION_AMT) +
-           (sizeof(module.ir_fns[0]) * PT_FN_AMT) +
-           (sizeof(module.ir_fn_types[0]) * PT_FN_TYPE_AMT) +
-           (sizeof(module.ir_ifs[0]) * PT_IF_AMT) +
-           (sizeof(module.ir_ints[0]) * PT_INT_AMT) +
-           (sizeof(module.ir_lists[0]) * PT_LIST_AMT) +
-           (sizeof(module.ir_list_types[0]) * PT_LIST_TYPE_AMT) +
-           (sizeof(module.ir_strings[0]) * PT_STRING_AMT) +
-           (sizeof(module.ir_tups[0]) * PT_TUP_AMT) +
-           (sizeof(module.ir_ass[0]) * PT_AS_AMT) +
-           (sizeof(module.ir_units[0]) * PT_UNIT_AMT) +
-           (sizeof(module.ir_fun_groups[0]) * PT_FUN_AMT) +
-           (sizeof(module.ir_let_groups[0]) * PT_LET_AMT));
+  return res;
+}
+
+static size_t ir_count_bytes_required(pt_node_amounts *amounts) {
+  return (sizeof(ir_call) * amounts->pt_call) +
+         (sizeof(ir_construction) * amounts->pt_construction) +
+         (sizeof(ir_fn) * amounts->pt_fn) +
+         (sizeof(ir_fn_type) * amounts->pt_fn_type) +
+         (sizeof(ir_if) * amounts->pt_if) +
+         (sizeof(ir_int) * amounts->pt_int) +
+         (sizeof(ir_list) * amounts->pt_list) +
+         (sizeof(ir_list_type) * amounts->pt_list_type) +
+         (sizeof(ir_string) * amounts->pt_string) +
+         (sizeof(ir_tup) * amounts->pt_tup) +
+         (sizeof(ir_as) * amounts->pt_as) +
+         (sizeof(ir_unit) * amounts->pt_unit) +
+         (sizeof(ir_fun_group) * amounts->pt_fun) +
+         (sizeof(ir_let_group) * amounts->pt_let);
+}
+
+static ir_module module_new(pt_node_amounts *amounts, char *ptr) {
+  ir_module module = {
+    .ir_root = {0},
+    .ir_types = NULL,
+    .ir_node_inds = NULL,
+  };
 
   // Leave this here. Must match IR_MODULE_ALLOC_PTR
   module.ir_fun_groups = (typeof(module.ir_fun_groups[0]) *)ptr;
-  ptr += sizeof(module.ir_fun_groups[0]) * PT_FUN_AMT;
+  ptr += sizeof(module.ir_fun_groups[0]) * amounts->pt_fun;
 
   module.ir_let_groups = (typeof(module.ir_let_groups[0]) *)ptr;
-  ptr += sizeof(module.ir_let_groups[0]) * PT_LET_AMT;
+  ptr += sizeof(module.ir_let_groups[0]) * amounts->pt_let;
 
   module.ir_calls = (typeof(module.ir_calls[0]) *)ptr;
-  ptr += sizeof(module.ir_calls[0]) * PT_CALL_AMT;
+  ptr += sizeof(module.ir_calls[0]) * amounts->pt_call;
 
   module.ir_constructions = (typeof(module.ir_constructions[0]) *)ptr;
-  ptr += sizeof(module.ir_constructions[0]) * PT_CONSTRUCTION_AMT;
+  ptr += sizeof(module.ir_constructions[0]) * amounts->pt_construction;
 
   module.ir_fns = (typeof(module.ir_fns[0]) *)ptr;
-  ptr += sizeof(module.ir_fns[0]) * PT_FN_AMT;
+  ptr += sizeof(module.ir_fns[0]) * amounts->pt_fn;
 
   module.ir_fn_types = (typeof(module.ir_fn_types[0]) *)ptr;
-  ptr += sizeof(module.ir_fn_types[0]) * PT_FN_TYPE_AMT;
+  ptr += sizeof(module.ir_fn_types[0]) * amounts->pt_fn_type;
 
   module.ir_ifs = (typeof(module.ir_ifs[0]) *)ptr;
-  ptr += sizeof(module.ir_ifs[0]) * PT_IF_AMT;
+  ptr += sizeof(module.ir_ifs[0]) * amounts->pt_if;
 
   module.ir_ints = (typeof(module.ir_ints[0]) *)ptr;
-  ptr += sizeof(module.ir_ints[0]) * PT_INT_AMT;
+  ptr += sizeof(module.ir_ints[0]) * amounts->pt_int;
 
   module.ir_lists = (typeof(module.ir_lists[0]) *)ptr;
-  ptr += sizeof(module.ir_lists[0]) * PT_LIST_AMT;
+  ptr += sizeof(module.ir_lists[0]) * amounts->pt_list;
 
   module.ir_list_types = (typeof(module.ir_list_types[0]) *)ptr;
-  ptr += sizeof(module.ir_list_types[0]) * PT_LIST_TYPE_AMT;
+  ptr += sizeof(module.ir_list_types[0]) * amounts->pt_list_type;
 
   module.ir_strings = (typeof(module.ir_strings[0]) *)ptr;
-  ptr += sizeof(module.ir_strings[0]) * PT_STRING_AMT;
+  ptr += sizeof(module.ir_strings[0]) * amounts->pt_string;
 
   module.ir_tups = (typeof(module.ir_tups[0]) *)ptr;
-  ptr += sizeof(module.ir_tups[0]) * PT_TUP_AMT;
+  ptr += sizeof(module.ir_tups[0]) * amounts->pt_tup;
 
   module.ir_ass = (typeof(module.ir_ass[0]) *)ptr;
-  ptr += sizeof(module.ir_ass[0]) * PT_AS_AMT;
+  ptr += sizeof(module.ir_ass[0]) * amounts->pt_as;
 
   module.ir_units = (typeof(module.ir_units[0]) *)ptr;
-  ptr += sizeof(module.ir_units[0]) * PT_UNIT_AMT;
+  ptr += sizeof(module.ir_units[0]) * amounts->pt_unit;
 
   return module;
 }
 
 static state state_new(char *source, parse_tree tree) {
   node_ind_t invalid_ind = -1;
+
   state res = {
     .actions = VEC_NEW,
     .source = source,
     .tree = tree,
-    .module = module_new(tree),
     .errors = VEC_NEW,
 
     .ir_root_ind = 0,
@@ -243,14 +252,19 @@ static state state_new(char *source, parse_tree tree) {
     .ir_let_group_ind = 0,
     .ir_fun_group_ind = 0,
 
-    // relate pt_nodes to elements of the above
-    .pt_node_inds = malloc_fill(tree.node_amt, &invalid_ind),
-
     // TODO rename to term_scope?
     .scope = scope_new(),
     // amount of items in scope at different layers = 0,
     .scope_layers = VEC_NEW,
   };
+
+  pt_node_amounts node_amounts = count_pt_node_amounts(tree);
+  size_t pt_node_ind_alloc_size = tree.node_amt * sizeof(invalid_ind);
+  char *ptr = malloc(pt_node_ind_alloc_size + ir_count_bytes_required(&node_amounts));
+  res.pt_node_inds = (buf_ind_t*) ptr;
+  ptr += pt_node_ind_alloc_size;
+  res.module = module_new(&node_amounts, ptr);
+
   return res;
 }
 
@@ -279,8 +293,8 @@ static bool bindings_eq(char *source, binding a, binding b) {
   return strncmp(source + a.start, source + b.start, a.end - a.start + 1) == 0;
 }
 
-static void resolve_root(state *state, parse_node node) {
-
+static void resolve_root(state *state, node_ind_t node_ind) {
+  parse_node node = state->tree.nodes[node_ind];
 #define NOT_ROOT                                                               \
   case PT_ROOT:                                                                \
   case PT_CALL:                                                                \
@@ -351,9 +365,6 @@ static void resolve_root(state *state, parse_node node) {
 static void resolve_node(state *state, node_ind_t node_ind) {
   parse_node node = state->tree.nodes[node_ind];
   switch (node.type) {
-    case PT_ROOT:
-      resolve_root(state, node);
-      break;
     case PT_CALL:
     case PT_CONSTRUCTION:
     case PT_FN:
@@ -372,7 +383,39 @@ static void resolve_node(state *state, node_ind_t node_ind) {
     case PT_UPPER_NAME:
     case PT_SIG:
     case PT_LET:
-      UNIMPLEMENTED("resolveing node");
+      UNIMPLEMENTED("resolving node");
+      break;
+    case PT_ROOT:
+      give_up("non-root root");
+      break;
+  }
+}
+
+static void resolve_type(state *state, node_ind_t node_ind) {
+  parse_node node = state->tree.nodes[node_ind];
+  switch (node.type) {
+    case PT_CALL:
+    case PT_CONSTRUCTION:
+    case PT_FN:
+    case PT_FN_TYPE:
+    case PT_FUN:
+    case PT_FUN_BODY:
+    case PT_IF:
+    case PT_INT:
+    case PT_LIST:
+    case PT_LIST_TYPE:
+    case PT_LOWER_NAME:
+    case PT_STRING:
+    case PT_TUP:
+    case PT_AS:
+    case PT_UNIT:
+    case PT_UPPER_NAME:
+    case PT_SIG:
+    case PT_LET:
+      UNIMPLEMENTED("resolving node");
+      break;
+    case PT_ROOT:
+      give_up("non-root root");
       break;
   }
 }
@@ -380,7 +423,7 @@ static void resolve_node(state *state, node_ind_t node_ind) {
 resolve_res resolve(char *source, parse_tree tree) {
   state state = state_new(source, tree);
 
-  push_resolve_node(&state, tree.root_ind, 0);
+  resolve_root(&state, tree.root_ind);
 
   while (state.actions.len > 0) {
     action act = VEC_POP(&state.actions);
