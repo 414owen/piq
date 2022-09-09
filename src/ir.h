@@ -14,6 +14,7 @@
 
 typedef struct {
   span s;
+  // TODO remove the binding, when it's part of a ir_fun_group?
   binding b;
   node_ind_t param_pattern_ind;
   node_ind_t body_start;
@@ -130,15 +131,15 @@ typedef enum {
 VEC_DECL(ir_expr_type);
 
 typedef struct {
-  node_ind_t sig_ind;
-  node_ind_t fun_ind;
+  ir_sig sig;
+  ir_fun fun;
 } ir_fun_group;
 
 VEC_DECL(ir_fun_group);
 
 typedef struct {
-  node_ind_t sig_ind;
-  node_ind_t let_ind;
+  ir_sig sig;
+  ir_let let;
   // TODO consider storing inline
 } ir_let_group;
 

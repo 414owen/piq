@@ -13,6 +13,7 @@ typedef struct {
   enum {
     SIG_MISMATCH,
     SIG_WITHOUT_BINDING,
+    BINDING_WITHOUT_SIG,
   } tag;
 
   union {

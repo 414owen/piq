@@ -68,6 +68,11 @@ A language that does everything right
 * Get rid of PT_TOP_LEVEL, it's just more indirection
 * Higher order tuples are syntactic sugar over 2-tuples, so combinators work
 
+# Mistakes
+
+* Having sigs as separate syntactic constructs makes the compiler
+  unnecessarily complicated. We should just encode the relationship
+  in the grammar, with a `sigfun` node or something...
 
 # Building
 
