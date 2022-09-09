@@ -111,16 +111,15 @@ typedef struct {
 } parse_tree;
 
 typedef struct {
-  bool succeeded;
-
   // TODO restore union when I figure out how to disable lemon's error recovery
   // union {
   parse_tree tree;
-  struct {
-    node_ind_t error_pos;
-    uint8_t expected_amt;
-    token_type *expected;
-  };
+  // struct {
+  token_type *expected;
+  node_ind_t error_pos;
+  uint8_t expected_amt;
+  // };
+  bool succeeded;
   // };
 } parse_tree_res;
 
