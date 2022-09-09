@@ -10,9 +10,9 @@
 #include "parse_tree.h"
 
 typedef struct {
-  enum { RESOLVE_NODE, RESOLVE_TYPE } tag;
   node_ind_t pt_ind;
   node_ind_t ir_ind;
+  enum { RESOLVE_NODE, RESOLVE_TYPE } tag;
 } action;
 
 VEC_DECL(action);
@@ -58,9 +58,6 @@ typedef struct {
   node_ind_t ir_sig_ind;
   node_ind_t ir_let_group_ind;
   node_ind_t ir_fun_group_ind;
-
-  // relate pt_nodes to elements of the above
-  node_ind_t *pt_node_inds;
 
   // TODO rename to term_scope?
   scope scope;
@@ -259,10 +256,8 @@ static state state_new(char *source, parse_tree tree) {
   };
 
   pt_node_amounts node_amounts = count_pt_node_amounts(tree);
-  size_t pt_node_ind_alloc_size = tree.node_amt * sizeof(invalid_ind);
-  char *ptr = malloc(pt_node_ind_alloc_size + ir_count_bytes_required(&node_amounts));
-  res.pt_node_inds = (buf_ind_t*) ptr;
-  ptr += pt_node_ind_alloc_size;
+  size_t ir_node_bytes = ir_count_bytes_required(&node_amounts);
+  char *ptr = malloc(ir_node_bytes);
   res.module = module_new(&node_amounts, ptr);
 
   return res;
