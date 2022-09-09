@@ -24,10 +24,10 @@ typedef struct {
 VEC_DECL(token);
 
 typedef struct {
-  bool succeeded;
   token *tokens;
   size_t token_amt;
   buf_ind_t error_pos;
+  bool succeeded;
 } tokens_res;
 
 token_res scan(source_file file, buf_ind_t pos);

@@ -51,10 +51,8 @@ typedef uint32_t u32;
 #define VEC_DECL_CUSTOM(type, name)                                            \
   typedef struct {                                                             \
     VEC_LEN_T len;                                                             \
-    struct {                                                                   \
-      VEC_LEN_T cap;                                                           \
-      type *data;                                                              \
-    };                                                                         \
+    VEC_LEN_T cap;                                                             \
+    type *data;                                                                \
   } name
 #endif
 
@@ -78,10 +76,8 @@ typedef struct {
     };
   };
 #else
-  struct {
-    VEC_LEN_T cap;
-    void *data;
-  };
+  VEC_LEN_T cap;
+  void *data;
 #endif
 } vec_void;
 
