@@ -3,11 +3,12 @@
 
 #include "binding.h"
 #include "ir.h"
+#include "parse_tree.h"
 #include "resolve.h"
+#include "semantics.h"
 #include "scope.h"
 #include "util.h"
 #include "vec.h"
-#include "parse_tree.h"
 
 typedef struct {
   node_ind_t pt_ind;
@@ -220,8 +221,6 @@ static ir_module module_new(pt_node_amounts *amounts, char *ptr) {
 }
 
 static state state_new(char *source, parse_tree tree) {
-  node_ind_t invalid_ind = -1;
-
   state res = {
     .actions = VEC_NEW,
     .source = source,
@@ -253,6 +252,8 @@ static state state_new(char *source, parse_tree tree) {
     .scope_layers = VEC_NEW,
   };
 
+  // This is done here in case we want to allocate any state along with
+  // the module nodes
   pt_node_amounts node_amounts = count_pt_node_amounts(tree);
   size_t ir_node_bytes = ir_count_bytes_required(&node_amounts);
   char *ptr = malloc(ir_node_bytes);
@@ -286,7 +287,17 @@ static bool bindings_eq(char *source, binding a, binding b) {
   return strncmp(source + a.start, source + b.start, a.end - a.start + 1) == 0;
 }
 
-static void resolve_root(state *state, node_ind_t node_ind) {
+typedef struct {
+  const bool enforce_top_level_sigs: 1;
+} resolve_block_options;
+
+typedef enum {
+  BS_START,
+  BS_AFTER_SIG,
+  BS_AFTER_FN,
+} block_state;
+
+static void resolve_block(const resolve_block_options options, state *state, node_ind_t node_ind) {
   parse_node node = state->tree.nodes[node_ind];
 #define NOT_ROOT                                                               \
   case PT_ROOT:                                                                \
@@ -307,9 +318,11 @@ static void resolve_root(state *state, node_ind_t node_ind) {
   case PT_UPPER_NAME:                                                          \
   case PT_LET
 
-  bool last_was_sig = false;
+  block_state block_state = BS_START;
   binding last_sig_bnd = {0};
   node_ind_t last_sig_ind = 0;
+  ir_fun_group fun_group = {0};
+  ir_sig sig;
 
   for (node_ind_t i = 0; i < node.sub_amt; i++) {
     node_ind_t sub_ind = state->tree.inds[node.subs_start + i];
@@ -318,33 +331,62 @@ static void resolve_root(state *state, node_ind_t node_ind) {
       case PT_SIG: {
         node_ind_t bnd_ind = PT_SIG_BINDING_IND(sub);
         binding bnd = state->tree.nodes[bnd_ind].span;
-        last_was_sig = true;
         last_sig_bnd = bnd;
+        ir_sig sig_ = {
+          .s = sub.span,
+          .binding = bnd,
+          .type_ind = -1,
+        };
+        sig = sig_;
+        // VEC_PUSH()
         push_resolve_type(state, PT_SIG_TYPE_IND(sub));
+        block_state = BS_AFTER_SIG;
         break;
       }
       case PT_FUN: {
-        last_was_sig = false;
-        node_ind_t bnd_ind = PT_FUN_BINDING_IND(state->tree.inds, sub);
-        parse_node bnd = state->tree.nodes[bnd_ind];
-        ir_fun_group group = {
-          .sig_ind = -1,
-          .fun_ind = -1,
-        };
-        if (last_was_sig) {
-          if (bindings_eq(state->source, last_sig_bnd, bnd.span)) {
-            group.sig_ind = last_sig_ind;
-          } else {
-            resolve_error err = {
-              .tag = SIG_MISMATCH,
-              .node_type = FUN_NODE,
-              .node_ind = sub_ind,
-            };
-            VEC_PUSH(&state->errors, err);
+        switch (block_state) {
+          case BS_START: {
+            if (options.enforce_top_level_sigs) {
+              resolve_error err = {
+                .tag = BINDING_WITHOUT_SIG,
+                .node_type = FUN_NODE,
+                .node_ind = sub_ind,
+              };
+              VEC_PUSH(&state->errors, err);
+            }
+            break;
+          }
+          case BS_AFTER_FN:
+          case BS_AFTER_SIG: {
+            node_ind_t bnd_ind = PT_FUN_BINDING_IND(state->tree.inds, sub);
+            parse_node bnd = state->tree.nodes[bnd_ind];
+
+            if (block_state == BS_AFTER_SIG) {
+              if (bindings_eq(state->source, last_sig_bnd, bnd.span)) {
+                fun_group.sig = sig;
+                fun_group.fun = {
+                  .s = sub.span,
+                  .b = bnd,
+                  //TODO
+                  .param_pattern_ind = VEC_PUSH(&state->ac)
+                  node_ind_t body_start;
+                  node_ind_t body_amt;
+                  
+                };
+              } else {
+                resolve_error err = {
+                  .tag = SIG_MISMATCH,
+                  .node_type = FUN_NODE,
+                  .node_ind = sub_ind,
+                };
+                VEC_PUSH(&state->errors, err);
+              }
+            }
+            state->module.ir_fun_groups[state->ir_fun_group_ind] = fun_group;
+            push_resolve_node(state, sub_ind, state->ir_fun_group_ind++);
+            break;
           }
         }
-        state->module.ir_fun_groups[state->ir_fun_group_ind] = group;
-        push_resolve_node(state, sub_ind, state->ir_fun_group_ind++);
         break;
       }
       NOT_ROOT:
@@ -353,6 +395,14 @@ static void resolve_root(state *state, node_ind_t node_ind) {
     }
   }
 #undef NOT_ROOT
+}
+
+static const resolve_block_options root_block_options = {
+  .enforce_top_level_sigs = ENFORCE_TOP_LEVEL_SIGS,
+};
+
+static void resolve_root(state *state, node_ind_t node_ind) {
+  resolve_block(root_block_options, state, node_ind);
 }
 
 static void resolve_node(state *state, node_ind_t node_ind) {

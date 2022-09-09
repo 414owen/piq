@@ -37,7 +37,7 @@ size_t find_el(const void *haystack, size_t haystacklen, const void *needle,
   return (size_t)((ptr - haystack) / needlelen);
 }
 
-// TODO(speedup) Boyer-Moore
+// TODO(speedup) Boyer-Moore, or use memmem internally?
 size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
                   const void *needle, size_t needle_els) {
   if (el_amt == 0 || needle_els > el_amt)
