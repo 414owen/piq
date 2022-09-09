@@ -156,13 +156,11 @@ static size_t ir_count_bytes_required(pt_node_amounts *amounts) {
          (sizeof(ir_construction) * amounts->pt_construction) +
          (sizeof(ir_fn) * amounts->pt_fn) +
          (sizeof(ir_fn_type) * amounts->pt_fn_type) +
-         (sizeof(ir_if) * amounts->pt_if) +
-         (sizeof(ir_int) * amounts->pt_int) +
+         (sizeof(ir_if) * amounts->pt_if) + (sizeof(ir_int) * amounts->pt_int) +
          (sizeof(ir_list) * amounts->pt_list) +
          (sizeof(ir_list_type) * amounts->pt_list_type) +
          (sizeof(ir_string) * amounts->pt_string) +
-         (sizeof(ir_tup) * amounts->pt_tup) +
-         (sizeof(ir_as) * amounts->pt_as) +
+         (sizeof(ir_tup) * amounts->pt_tup) + (sizeof(ir_as) * amounts->pt_as) +
          (sizeof(ir_unit) * amounts->pt_unit) +
          (sizeof(ir_fun_group) * amounts->pt_fun) +
          (sizeof(ir_let_group) * amounts->pt_let);
