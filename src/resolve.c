@@ -288,7 +288,7 @@ static bool bindings_eq(char *source, binding a, binding b) {
 }
 
 typedef struct {
-  const bool enforce_top_level_sigs: 1;
+  const bool enforce_top_level_sigs : 1;
 } resolve_block_options;
 
 typedef enum {
@@ -297,7 +297,8 @@ typedef enum {
   BS_AFTER_FN,
 } block_state;
 
-static void resolve_block(const resolve_block_options options, state *state, node_ind_t node_ind) {
+static void resolve_block(const resolve_block_options options, state *state,
+                          node_ind_t node_ind) {
   parse_node node = state->tree.nodes[node_ind];
 #define NOT_ROOT                                                               \
   case PT_ROOT:                                                                \
@@ -364,15 +365,14 @@ static void resolve_block(const resolve_block_options options, state *state, nod
             if (block_state == BS_AFTER_SIG) {
               if (bindings_eq(state->source, last_sig_bnd, bnd.span)) {
                 fun_group.sig = sig;
-                fun_group.fun = {
-                  .s = sub.span,
-                  .b = bnd,
-                  //TODO
-                  .param_pattern_ind = VEC_PUSH(&state->ac)
-                  node_ind_t body_start;
-                  node_ind_t body_amt;
-                  
+                ir_fun fun = {
+                  .s = sub.span, .b = bnd.span,
+                  // TODO
+                  //  .param_pattern_ind = VEC_PUSH(&state->),
+                  //  node_ind_t body_start,
+                  //  node_ind_t body_amt,
                 };
+                // fun_group.fun =
               } else {
                 resolve_error err = {
                   .tag = SIG_MISMATCH,
