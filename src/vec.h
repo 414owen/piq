@@ -104,7 +104,10 @@ void debug_vec_get(vec_void *vec, VEC_LEN_T ind);
 void __vec_push(vec_void *vec, void *el, size_t elemsize);
 #define VEC_PUSH(vec, el)                                                      \
   {                                                                            \
-    debug_assert(sizeof((vec)->data[0]) == sizeof(el));                        \
+    /* printf("%zu, %zu, %zu, %zu\n", sizeof((vec)->data[0]),                  \
+     * sizeof(typeof((vec)->data[0])), sizeof(el), sizeof(typeof(el)));        \
+     */                                                                        \
+    debug_assert(sizeof(typeof((vec)->data[0])) == sizeof(typeof(el)));        \
     __typeof__(el) __el = el;                                                  \
     __vec_push((vec_void *)vec, (void *)&__el, sizeof(el));                    \
   }

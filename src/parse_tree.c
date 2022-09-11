@@ -125,17 +125,20 @@ typedef struct {
 } printer_state;
 
 static void push_str(printer_state *s, char *str) {
-  VEC_PUSH(&s->actions, PRINT_STR);
+  print_action action = PRINT_STR;
+  VEC_PUSH(&s->actions, action);
   VEC_PUSH(&s->string_stack, str);
 }
 
 static void push_node(printer_state *s, node_ind_t node) {
-  VEC_PUSH(&s->actions, PRINT_NODE);
+  print_action action = PRINT_NODE;
+  VEC_PUSH(&s->actions, action);
   VEC_PUSH(&s->node_stack, node);
 }
 
 static void push_source(printer_state *s, node_ind_t node) {
-  VEC_PUSH(&s->actions, PRINT_SOURCE);
+  print_action action = PRINT_SOURCE;
+  VEC_PUSH(&s->actions, action);
   VEC_PUSH(&s->node_stack, node);
 }
 
@@ -162,7 +165,8 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
       }
       break;
   }
-  VEC_PUSH(&s->actions, POP_TUP_BS);
+  print_action action = POP_TUP_BS;
+  VEC_PUSH(&s->actions, action);
   push_str(s, terminator);
 }
 
