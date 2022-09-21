@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ir.h"
 #include "parse_tree.h"
 #include "vec.h"
 #include "types.h"
@@ -45,6 +46,7 @@ VEC_DECL(tc_error);
 
 // TODO type_inds should be a pointer, not a vec...
 typedef struct {
+  ir_module module;
   vec_tc_error errors;
   // all the types
   vec_type types;

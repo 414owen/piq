@@ -1,3 +1,4 @@
+#include <alloca.h>
 #include <string.h>
 
 #include "diagnostic.h"
