@@ -13,81 +13,104 @@
   This is a memory-efficient representation, but it's not
   optimised for access patterns.
 
-  Ideally, whate we want to do is tell the compiler "I have a tagged union,
+  Ideally, what we want to do is tell the compiler "I have a tagged union,
   please store it as a struct of arrays, where all same-size variants are
   in the same array". I guess I'll implement that in the language, but
   it's just too much effort to do manually in C, so here we're storing
   an array of each variant type.
 */
 
-// sizeof: 28
+typedef struct {
+  node_ind_t pt_root;
+  node_ind_t pt_call;
+  node_ind_t pt_construction;
+  node_ind_t pt_fn;
+  node_ind_t pt_fn_type;
+  // stored inline
+  // node_ind_t pt_fun_body;
+  node_ind_t pt_if;
+  node_ind_t pt_int;
+  node_ind_t pt_list;
+  node_ind_t pt_list_type;
+  node_ind_t pt_string;
+  node_ind_t pt_tup;
+  node_ind_t pt_as;
+  node_ind_t pt_unit;
+  node_ind_t pt_fun;
+  node_ind_t pt_sig;
+  node_ind_t pt_let;
+  node_ind_t pt_binding;
+} pt_node_amounts;
+
+// sizeof: 32
 typedef struct {
   span s;
   // TODO remove the binding, when it's part of a ir_fun_group?
   binding b;
   node_ind_t param_pattern_ind;
-  node_ind_t body_start;
-  node_ind_t body_amt;
+  node_ind_t body_stmts_start;
+  node_ind_t body_stmts_amt;
+  node_ind_t type_ind;
 } ir_fun;
+
+// sizeof: 24
+typedef struct {
+  span s;
+  node_ind_t param_pattern_ind;
+  node_ind_t body_stmts_start;
+  node_ind_t body_stmts_amt;
+  node_ind_t type_ind;
+} ir_fn;
 
 // sizeof: 20
 typedef struct {
   span s;
-  node_ind_t param_pattern_ind;
-  node_ind_t body_start;
-  node_ind_t body_amt;
-} ir_fn;
-
-// sizeof: 16
-typedef struct {
-  span s;
   node_ind_t expr_a_ind;
   node_ind_t expr_b_ind;
+  node_ind_t type_ind;
 } ir_tup;
 
-// sizeof: 16
+// sizeof: 20
 typedef struct {
   node_ind_t function_decls_start;
   node_ind_t function_decl_amt;
   node_ind_t data_decls_start;
   node_ind_t data_decl_amt;
+  node_ind_t type_ind;
 } ir_root;
 
-// sizeof: 16
+// sizeof: 20
 typedef struct {
   span s;
   node_ind_t callee_expr_ind;
   node_ind_t param_expr_ind;
+  node_ind_t type_ind;
 } ir_call;
 
-// sizeof: 20
+// sizeof: 24
 typedef struct {
   span s;
   node_ind_t callee_data_decl_ind;
   node_ind_t callee_constructor_ind;
   node_ind_t param_expr_ind;
+  node_ind_t type_ind;
 } ir_construction;
 
-// sizeof: 16
+// sizeof: 20
 typedef struct {
   span s;
   node_ind_t param_ind;
   node_ind_t return_ind;
+  node_ind_t type_ind;
 } ir_fn_type;
 
-// sizeof: 16
-typedef struct {
-  span s;
-  node_ind_t stmts_start;
-  node_ind_t stmt_amt;
-} ir_fun_body;
-
-// sizeof: 20
+// sizeof: 24
 typedef struct {
   span s;
   node_ind_t cond_expr_ind;
   node_ind_t then_expr_ind;
   node_ind_t else_expr_ind;
+  node_ind_t type_ind;
 } ir_if;
 
 // sizeof: 8
@@ -100,12 +123,14 @@ typedef struct {
   span s;
   node_ind_t exprs_start;
   node_ind_t expr_amt;
+  node_ind_t type_ind;
 } ir_list;
 
 // sizeof: 12
 typedef struct {
   span s;
   node_ind_t inner_type_ind;
+  node_ind_t type_ind;
 } ir_list_type;
 
 // sizeof: 8
@@ -120,14 +145,20 @@ typedef struct {
   node_ind_t type_ind;
 } ir_as;
 
-// sizeof: 8
+// sizeof: 4
 typedef struct {
-  span s;
+  // always two chars
+  buf_ind_t span_start;
 } ir_unit;
 
-// sizeof: 8
 typedef struct {
   span s;
+} ir_binding;
+
+// sizeof: 12
+typedef struct {
+  span s;
+  node_ind_t type_ind;
 } ir_upper_name;
 
 // sizeof: 20
@@ -136,13 +167,6 @@ typedef struct {
   binding binding;
   node_ind_t type_ind;
 } ir_sig;
-
-// sizeof: 20
-typedef struct {
-  span s;
-  binding binding;
-  node_ind_t expr_ind;
-} ir_let;
 
 typedef enum {
   IR_EXPR_TUP,
@@ -154,9 +178,18 @@ typedef enum {
   IR_EXPR_CONSTRUCTOR_REF,
 } ir_expr_type;
 
+// sizeof: 28
+typedef struct {
+  span s;
+  binding binding;
+  ir_expr_type expr_type;
+  node_ind_t expr_ind;
+  node_ind_t type_ind;
+} ir_let;
+
 VEC_DECL(ir_expr_type);
 
-// sizeof: 48
+// sizeof: 52
 typedef struct {
   ir_sig sig;
   ir_fun fun;
@@ -164,7 +197,7 @@ typedef struct {
 
 VEC_DECL(ir_fun_group);
 
-// sizeof: 40
+// sizeof: 48
 typedef struct {
   ir_sig sig;
   ir_let let;
@@ -182,7 +215,6 @@ typedef struct {
   ir_construction *ir_constructions;
   ir_fn *ir_fns;
   ir_fn_type *ir_fn_types;
-  ir_fun_body *ir_fun_bodies;
   ir_if *ir_ifs;
   ir_int *ir_ints;
   ir_list *ir_lists;
@@ -191,11 +223,11 @@ typedef struct {
   ir_tup *ir_tups;
   ir_as *ir_ass;
   ir_unit *ir_units;
+  ir_binding *ir_bindings;
 
   type *ir_types;
-
-  // Used for types, expr_refs, constructor_refs
   node_ind_t *ir_node_inds;
 } ir_module;
 
-void ir_module_free(ir_module *);
+ir_module ir_module_new(parse_tree tree);
+void ir_module_free(ir_module *module);

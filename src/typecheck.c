@@ -8,6 +8,7 @@
 #include "bitset.h"
 #include "consts.h"
 #include "diagnostic.h"
+#include "ir.h"
 #include "parse_tree.h"
 #include "scope.h"
 #include "source.h"
@@ -130,6 +131,7 @@ VEC_DECL(tc_action);
 
 typedef struct {
   tc_res res;
+  pt_node_amounts pt_inds;
 
   // TODO technically it's more efficient to have a stack of node_ind_t,
   // and a separate stack of actions. It would also let us `VEC_APPEND` node
@@ -1226,7 +1228,7 @@ static void tc_node_matches(typecheck_state *state, tc_node_params params) {
 }
 
 // We have no wanted information, so ambiguity will error.
-// Used to assigned types based on syntax.
+// Used to assign types based on syntax.
 static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
   switch (params.node.type) {
     case PT_SIG:
@@ -1241,6 +1243,8 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
       typecheck_block(state, params, true);
       break;
     case PT_UNIT: {
+      state->res.module.ir_units[state->pt_inds.pt_unit++].span_start =
+        params.node.span.start;
       state->res.node_types[params.node_ind] = mk_primitive_type(state, T_UNIT);
       break;
     }
@@ -1249,6 +1253,8 @@ static void tc_node_unambiguous(typecheck_state *state, tc_node_params params) {
       break;
     }
     case PT_STRING: {
+      state->res.module.ir_strings[state->pt_inds.pt_string++].s =
+        params.node.span;
       state->res.node_types[params.node_ind] = state->string_type_ind;
       break;
     }
@@ -1634,7 +1640,8 @@ static const char *action_str(action_tag tag) {
 
 static typecheck_state tc_new_state(source_file source, parse_tree tree) {
   typecheck_state state = {
-    .res = {.types = VEC_NEW,
+    .res = {.module = ir_module_new(tree),
+            .types = VEC_NEW,
             .errors = VEC_NEW,
             .node_types = malloc(tree.node_amt * sizeof(node_ind_t))},
     .wanted = malloc(tree.node_amt * sizeof(node_ind_t)),

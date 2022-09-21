@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include <alloca.h>
 #include <errno.h>
 #include <pwd.h>
 #include <stdarg.h>

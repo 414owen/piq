@@ -4,11 +4,6 @@
 #include "ir.h"
 #include "vec.h"
 
-typedef enum {
-  FUN_NODE,
-  LET_NODE,
-} sig_err_type;
-
 typedef struct {
   enum {
     SIG_MISMATCH,
@@ -16,12 +11,7 @@ typedef struct {
     BINDING_WITHOUT_SIG,
   } tag;
 
-  union {
-    struct {
-      sig_err_type node_type;
-      node_ind_t node_ind;
-    };
-  };
+  node_ind_t node_ind;
 } resolve_error;
 
 VEC_DECL(resolve_error);
