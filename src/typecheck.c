@@ -62,6 +62,7 @@ typedef enum {
   TC_NODE_MATCHES,
   TC_NODE_UNAMBIGUOUS,
   TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO,
+  TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO,
 
   // types
   TC_TYPE,
@@ -1268,13 +1269,14 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_PATTERN_UNAMBIGUOUS:
       case TC_TYPE:
       case TC_NODE_UNAMBIGUOUS:
+      case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
+      case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO:
       case TC_RECONSTRUCT:
         node_params = mk_tc_node_params(&state, action.node_ind, action.stage);
         break;
       case TC_POP_N_VARS:
       case TC_POP_VARS_TO:
       case TC_PUSH_ENV:
-      case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
       case TC_CLONE_ACTUAL_ACTUAL:
       case TC_CLONE_ACTUAL_WANTED:
       case TC_CLONE_WANTED_ACTUAL:
@@ -1455,32 +1457,18 @@ tc_res typecheck(source_file source, parse_tree tree) {
             node_ind_t param_ind = PT_FUN_PARAM_IND(state.tree.inds, node_params.node);
             node_ind_t body_ind = PT_FUN_BODY_IND(state.tree.inds, node_params.node);
 
-            switch (node_params.stage.two_stage) {
-              case TWO_STAGE_ONE: {
-                tc_action actions[] = {
-                  {.tag = TC_NODE_UNAMBIGUOUS,
-                   .node_ind = param_ind,
-                   .stage = {.two_stage = TWO_STAGE_ONE}},
-                  {.tag = TC_NODE_UNAMBIGUOUS,
-                   .node_ind = body_ind,
-                   .stage = {.two_stage = TWO_STAGE_ONE}},
-                  {.tag = TC_POP_VARS_TO, .amt = state.term_env.len},
-                  {.tag = TC_NODE_UNAMBIGUOUS,
-                   .node_ind = node_params.node_ind,
-                   .stage = {.two_stage = TWO_STAGE_TWO}}};
-                push_actions(&state, STATIC_LEN(actions), actions);
-                break;
-              }
-              case TWO_STAGE_TWO: {
-                // TODO consider using wanted value?
-                node_ind_t type =
-                  mk_type_inline(&state, T_FN, state.res.node_types[param_ind],
-                                 state.res.node_types[body_ind]);
-                state.res.node_types[node_params.node_ind] = type;
-                state.res.node_types[bnd_ind] = type;
-                break;
-              }
-            }
+            tc_action actions[] = {
+              {.tag = TC_NODE_UNAMBIGUOUS,
+               .node_ind = param_ind,
+               .stage = {.two_stage = TWO_STAGE_ONE}},
+              {.tag = TC_NODE_UNAMBIGUOUS,
+               .node_ind = body_ind,
+               .stage = {.two_stage = TWO_STAGE_ONE}},
+              {.tag = TC_POP_VARS_TO, .amt = state.term_env.len},
+              {.tag = TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO,
+               .node_ind = node_params.node_ind,
+               .stage = {.two_stage = TWO_STAGE_TWO}}};
+            push_actions(&state, STATIC_LEN(actions), actions);
             break;
           }
 
@@ -1503,6 +1491,20 @@ tc_res typecheck(source_file source, parse_tree tree) {
         state.res.node_types[node_params.node_ind] =
           mk_type_inline(&state, T_FN, state.res.node_types[param_ind],
                          state.res.node_types[body_ind]);
+        break;
+      }
+
+      case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO: {
+        node_ind_t bnd_ind = PT_FUN_BINDING_IND(state.tree.inds, node_params.node);
+        node_ind_t param_ind = PT_FUN_PARAM_IND(state.tree.inds, node_params.node);
+        node_ind_t body_ind = PT_FUN_BODY_IND(state.tree.inds, node_params.node);
+
+        // TODO consider using wanted value?
+        node_ind_t type =
+          mk_type_inline(&state, T_FN, state.res.node_types[param_ind],
+                         state.res.node_types[body_ind]);
+        state.res.node_types[node_params.node_ind] = type;
+        state.res.node_types[bnd_ind] = type;
         break;
       }
 
