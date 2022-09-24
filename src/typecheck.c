@@ -1651,20 +1651,27 @@ tc_res typecheck(source_file source, parse_tree tree) {
         break;
 
       case TC_NODE_MATCHES:
-      // Here, we're typechecking a node against 'wanted' (an explicit type given to
-      // the node) Hence, we shouldn't need a combine two_stage, we just assign the
-      // 'wanted' type.
+        // Here, we're typechecking a node against 'wanted' (an explicit type given to
+        // the node) Hence, we shouldn't need a combine two_stage, we just assign the
+        // 'wanted' type.
         switch (node_params.node.type) {
+          // node_matches
           case PT_SIG:
           case PT_LET:
             give_up("Unexpected non-block-level construct");
             break;
+
+          // node_matches
           case PT_FUN_BODY:
             typecheck_block(&state, node_params, false);
             break;
+
+          // node_matches
           case PT_ROOT:
             typecheck_block(&state, node_params, true);
             break;
+
+          // node_matches
           case PT_UNIT:
             if (node_params.wanted.tag != T_UNIT) {
               tc_error err = {
@@ -1675,9 +1682,13 @@ tc_res typecheck(source_file source, parse_tree tree) {
               push_tc_err(&state, err);
             }
             break;
+
+          // node_matches
           case PT_CONSTRUCTION:
             UNIMPLEMENTED("Typechecking constructors");
             break;
+
+          // node_matches
           case PT_STRING:
             if (node_params.wanted_ind != state.string_type_ind) {
               tc_error err = {
@@ -1688,10 +1699,13 @@ tc_res typecheck(source_file source, parse_tree tree) {
               push_tc_err(&state, err);
             }
             break;
-          case PT_LIST: {
+
+          // node_matches
+          case PT_LIST:
             push_list_subs_match(&state, node_params, TC_NODE_MATCHES);
             break;
-          }
+
+          // node_matches
           case PT_AS: {
             switch (node_params.stage.two_stage) {
               case TWO_STAGE_ONE:
@@ -1718,6 +1732,8 @@ tc_res typecheck(source_file source, parse_tree tree) {
             }
             break;
           }
+
+          // node_matches
           case PT_TUP: {
             if (node_params.wanted.tag != T_TUP) {
               tc_error err = {
@@ -1743,6 +1759,8 @@ tc_res typecheck(source_file source, parse_tree tree) {
             push_tuple_subs(&state, node_params, TC_NODE_MATCHES);
             break;
           }
+
+          // node_matches
           case PT_IF: {
             node_ind_t cond = PT_IF_COND_IND(state.tree.inds, node_params.node);
             node_ind_t b1 = PT_IF_A_IND(state.tree.inds, node_params.node);
@@ -1768,11 +1786,12 @@ tc_res typecheck(source_file source, parse_tree tree) {
             break;
           }
 
-          case PT_INT: {
+          // node_matches
+          case PT_INT:
             check_int_fits_type(&state, node_params.node_ind, node_params.wanted_ind);
             break;
-          }
 
+          // node_matches
           case PT_UPPER_NAME:
           case PT_LOWER_NAME: {
             binding b = node_params.node.span;
@@ -1799,6 +1818,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
             break;
           }
 
+          // node_matches
           case PT_FN: {
             node_ind_t param_ind = PT_FN_PARAM_IND(node_params.node);
             node_ind_t body_ind = PT_FN_BODY_IND(node_params.node);
@@ -1830,6 +1850,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
             break;
           }
 
+          // node_matches
           case PT_FUN: {
             node_ind_t bnd_ind = PT_FUN_BINDING_IND(state.tree.inds, node_params.node);
             node_ind_t param_ind = PT_FUN_PARAM_IND(state.tree.inds, node_params.node);
@@ -1865,11 +1886,12 @@ tc_res typecheck(source_file source, parse_tree tree) {
             break;
           }
 
-          case PT_CALL: {
+          // node_matches
+          case PT_CALL:
             tc_call(&state, node_params);
             break;
-          }
 
+          // node_matches
           case PT_LIST_TYPE:
           case PT_FN_TYPE:
             give_up("Type node at term-level");
