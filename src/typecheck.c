@@ -1415,8 +1415,8 @@ tc_res typecheck(source_file source, parse_tree tree) {
         tc_action a = {
           .tag = TC_CLONE_WANTED_ACTUAL, .from = node_ind, .to = node_ind};
         push_action(&state, a);
-        HEDLEY_FALL_THROUGH;
       }
+      HEDLEY_FALL_THROUGH;
       case TC_PATTERN_UNAMBIGUOUS:
       case TC_TYPE:
       case TC_NODE_UNAMBIGUOUS:
@@ -1898,24 +1898,31 @@ tc_res typecheck(source_file source, parse_tree tree) {
             break;
         }
         break;
+
       case TC_PATTERN_MATCHES:
         tc_pattern_matches(&state, node_params);
         break;
+
       case TC_PATTERN_UNAMBIGUOUS:
         tc_pattern_unambiguous(&state, node_params);
         break;
+
       case TC_RECONSTRUCT:
         tc_reconstruct(&state, node_params);
         break;
+
       case TC_TYPE:
         tc_type(&state, node_params);
         break;
+
       case TC_ASSIGN_TYPE:
         state.res.node_types[action.to] = action.from;
         break;
+
       case TC_WANT_TYPE:
         state.wanted[action.to] = action.from;
         break;
+
       case TC_RECOVER: {
         tc_action a = VEC_POP(&state.stack);
         tc_action b = VEC_POP(&state.stack);
