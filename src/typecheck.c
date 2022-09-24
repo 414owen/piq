@@ -60,6 +60,8 @@ typedef enum {
 
   // terms
   TC_NODE_MATCHES,
+  TC_NODE_MATCHES_AS_STAGE_TWO,
+
   TC_NODE_UNAMBIGUOUS,
   TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO,
   TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO,
@@ -1259,6 +1261,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
 
     switch (action.tag) {
       case TC_PATTERN_MATCHES:
+      case TC_NODE_MATCHES_AS_STAGE_TWO:
       case TC_NODE_MATCHES: {
         node_ind_t node_ind = action.node_ind;
         tc_action a = {
@@ -1565,29 +1568,11 @@ tc_res typecheck(source_file source, parse_tree tree) {
 
           // node_matches
           case PT_AS: {
-            switch (node_params.stage.two_stage) {
-              case TWO_STAGE_ONE:
-                tc_as(&state, node_params);
-                tc_action action = {.tag = TC_NODE_MATCHES,
-                                    .node_ind = node_params.node_ind,
-                                    .stage = {.two_stage = TWO_STAGE_TWO}};
-                push_action(&state, action);
-                break;
-              case TWO_STAGE_TWO: {
-                node_ind_t sig_ind = PT_AS_TYPE_IND(node_params.node);
-                node_ind_t sig_type_ind = state.res.node_types[sig_ind];
-                if (node_params.wanted_ind != sig_type_ind) {
-                  tc_error err = {
-                    .type = TYPE_MISMATCH,
-                    .pos = node_params.node_ind,
-                    .expected = node_params.wanted_ind,
-                    .got = sig_type_ind,
-                  };
-                  push_tc_err(&state, err);
-                }
-                break;
-              }
-            }
+            tc_as(&state, node_params);
+            tc_action action = {.tag = TC_NODE_MATCHES_AS_STAGE_TWO,
+                                .node_ind = node_params.node_ind,
+                                .stage = {.two_stage = TWO_STAGE_TWO}};
+            push_action(&state, action);
             break;
           }
 
@@ -1756,6 +1741,21 @@ tc_res typecheck(source_file source, parse_tree tree) {
             break;
         }
         break;
+
+      case TC_NODE_MATCHES_AS_STAGE_TWO: {
+        node_ind_t sig_ind = PT_AS_TYPE_IND(node_params.node);
+        node_ind_t sig_type_ind = state.res.node_types[sig_ind];
+        if (node_params.wanted_ind != sig_type_ind) {
+          tc_error err = {
+            .type = TYPE_MISMATCH,
+            .pos = node_params.node_ind,
+            .expected = node_params.wanted_ind,
+            .got = sig_type_ind,
+          };
+          push_tc_err(&state, err);
+        }
+        break;
+      }
 
       case TC_PATTERN_MATCHES:
         tc_pattern_matches(&state, node_params);
