@@ -61,6 +61,7 @@ typedef enum {
   // terms
   TC_NODE_MATCHES,
   TC_NODE_UNAMBIGUOUS,
+  TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO,
 
   // types
   TC_TYPE,
@@ -270,6 +271,7 @@ static void break_suspicious_action(typecheck_state *state, tc_action action) {
       break;
     case TC_NODE_MATCHES:
     case TC_NODE_UNAMBIGUOUS:
+    case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
     case TC_TYPE:
       if (action.node_ind >= state->tree.node_amt)
         suspicious_action();
@@ -296,8 +298,6 @@ static void break_suspicious_action(typecheck_state *state, tc_action action) {
     case TC_RECOVER:
       if (state->stack.len < 2)
         suspicious_action();
-      break;
-    default:
       break;
   }
 }
@@ -1073,6 +1073,7 @@ static const char *action_str(action_tag tag) {
     MK_CASE(TC_POP_VARS_TO)
     MK_CASE(TC_NODE_MATCHES)
     MK_CASE(TC_NODE_UNAMBIGUOUS)
+    MK_CASE(TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO)
     MK_CASE(TC_PATTERN_MATCHES)
     MK_CASE(TC_PATTERN_UNAMBIGUOUS)
     MK_CASE(TC_TYPE)
@@ -1270,7 +1271,17 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_RECONSTRUCT:
         node_params = mk_tc_node_params(&state, action.node_ind, action.stage);
         break;
-      default:
+      case TC_POP_N_VARS:
+      case TC_POP_VARS_TO:
+      case TC_PUSH_ENV:
+      case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
+      case TC_CLONE_ACTUAL_ACTUAL:
+      case TC_CLONE_ACTUAL_WANTED:
+      case TC_CLONE_WANTED_ACTUAL:
+      case TC_CLONE_WANTED_WANTED:
+      case TC_WANT_TYPE:
+      case TC_ASSIGN_TYPE:
+      case TC_RECOVER:
         break;
     }
 
@@ -1422,30 +1433,19 @@ tc_res typecheck(source_file source, parse_tree tree) {
             node_ind_t param_ind = PT_FN_PARAM_IND(node_params.node);
             node_ind_t body_ind = PT_FN_BODY_IND(node_params.node);
 
-            switch (node_params.stage.two_stage) {
-              case TWO_STAGE_ONE: {
-                // TODO This is wrong. Need to add node_params to scope.
-                tc_action actions[] = {
-                  {.tag = TC_NODE_UNAMBIGUOUS,
-                   .node_ind = param_ind,
-                   .stage = {.two_stage = TWO_STAGE_ONE}},
-                  {.tag = TC_NODE_UNAMBIGUOUS,
-                   .node_ind = body_ind,
-                   .stage = {.two_stage = TWO_STAGE_ONE}},
-                  {.tag = TC_POP_VARS_TO, .amt = state.term_env.len},
-                  {.tag = TC_NODE_UNAMBIGUOUS,
-                   .node_ind = node_params.node_ind,
-                   .stage = {.two_stage = TWO_STAGE_TWO}}};
-                push_actions(&state, STATIC_LEN(actions), actions);
-                break;
-              }
-              case TWO_STAGE_TWO: {
-                state.res.node_types[node_params.node_ind] =
-                  mk_type_inline(&state, T_FN, state.res.node_types[param_ind],
-                                 state.res.node_types[body_ind]);
-                break;
-              }
-            }
+            // TODO This is wrong. Need to add node_params to scope.
+            tc_action actions[] = {
+              {.tag = TC_NODE_UNAMBIGUOUS,
+               .node_ind = param_ind,
+               .stage = {.two_stage = TWO_STAGE_ONE}},
+              {.tag = TC_NODE_UNAMBIGUOUS,
+               .node_ind = body_ind,
+               .stage = {.two_stage = TWO_STAGE_ONE}},
+              {.tag = TC_POP_VARS_TO, .amt = state.term_env.len},
+              {.tag = TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO,
+               .node_ind = node_params.node_ind,
+               .stage = {.two_stage = TWO_STAGE_TWO}}};
+            push_actions(&state, STATIC_LEN(actions), actions);
             break;
           }
 
@@ -1496,6 +1496,15 @@ tc_res typecheck(source_file source, parse_tree tree) {
             break;
         }
         break;
+
+      case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO: {
+        node_ind_t param_ind = PT_FN_PARAM_IND(node_params.node);
+        node_ind_t body_ind = PT_FN_BODY_IND(node_params.node);
+        state.res.node_types[node_params.node_ind] =
+          mk_type_inline(&state, T_FN, state.res.node_types[param_ind],
+                         state.res.node_types[body_ind]);
+        break;
+      }
 
       case TC_NODE_MATCHES:
         // Here, we're typechecking a node against 'wanted' (an explicit type given to
