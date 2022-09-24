@@ -442,159 +442,6 @@ static bool check_int_fits_type(typecheck_state *state, node_ind_t node_ind,
   return fits;
 }
 
-// fills in a type from a parse_tree type
-static void tc_type(typecheck_state *state, tc_node_params params) {
-  node_ind_t node_ind = params.node_ind;
-  parse_node node = state->tree.nodes[node_ind];
-
-  switch (node.type) {
-    case PT_LIST_TYPE: {
-      switch (params.stage.two_stage) {
-        // Typecheck subs
-        case TWO_STAGE_ONE: {
-          {
-            tc_action action = {.tag = TC_TYPE,
-                                .node_ind = PT_LIST_TYPE_SUB(node),
-                                .stage = {.two_stage = TWO_STAGE_ONE}};
-            push_action(state, action);
-          }
-          tc_action action = {.tag = TC_TYPE,
-                              .node_ind = node_ind,
-                              .stage = {.two_stage = TWO_STAGE_TWO}};
-          push_action(state, action);
-          break;
-        }
-        case TWO_STAGE_TWO: {
-          state->res.node_types[node_ind] = mk_type_inline(
-            state, T_LIST, state->res.node_types[PT_LIST_TYPE_SUB(node)], 0);
-          break;
-        }
-      }
-      break;
-    }
-    case PT_TUP: {
-      tc_action actions[3] = {{.tag = TC_TYPE, .node_ind = PT_TUP_SUB_A(node)},
-                              {.tag = TC_TYPE, .node_ind = PT_TUP_SUB_B(node)},
-                              {.tag = TC_RECONSTRUCT, .node_ind = node_ind}};
-      push_actions(state, STATIC_LEN(actions), actions);
-      break;
-    }
-    case PT_FN_TYPE: {
-      node_ind_t param_ind = PT_FN_TYPE_PARAM_IND(node);
-      node_ind_t return_ind = PT_FN_TYPE_RETURN_IND(node);
-      switch (params.stage.two_stage) {
-        // Typecheck subs
-        case TWO_STAGE_ONE: {
-          tc_action actions[] = {
-            {.tag = TC_TYPE,
-             .node_ind = param_ind,
-             .stage = {.two_stage = TWO_STAGE_ONE}},
-            {.tag = TC_TYPE,
-             .node_ind = return_ind,
-             .stage = {.two_stage = TWO_STAGE_ONE}},
-            {.tag = TC_TYPE,
-             .node_ind = node_ind,
-             .stage = {.two_stage = TWO_STAGE_TWO}},
-          };
-          push_actions(state, STATIC_LEN(actions), actions);
-          break;
-        }
-        // Combine
-        case TWO_STAGE_TWO: {
-          state->res.node_types[node_ind] =
-            mk_type_inline(state, T_FN, state->res.node_types[param_ind],
-                           state->res.node_types[return_ind]);
-          break;
-        }
-      }
-      break;
-    }
-    case PT_UPPER_NAME: {
-      binding b = {.start = node.span.start, .end = node.span.end};
-      size_t ind = lookup_str_ref(state->source.data, state->type_env,
-                                  state->type_is_builtin, b);
-      if (ind == state->type_env.len) {
-        tc_error err = {
-          .type = TYPE_NOT_FOUND,
-          .pos = node_ind,
-        };
-        push_tc_err(state, err);
-        break;
-      }
-      node_ind_t type_ind = VEC_GET(state->type_type_inds, ind);
-      state->res.node_types[node_ind] = type_ind;
-      break;
-    }
-    case PT_UNIT: {
-      node_ind_t type_ind = mk_primitive_type(state, T_UNIT);
-      state->res.node_types[node_ind] = type_ind;
-      break;
-    }
-    case PT_CALL: {
-      node_ind_t callee_ind = PT_CALL_CALLEE_IND(node);
-      node_ind_t param_ind = PT_CALL_PARAM_IND(node);
-      switch (params.stage.two_stage) {
-        case TWO_STAGE_ONE: {
-          tc_action actions[] = {
-            {.tag = TC_TYPE,
-             .node_ind = callee_ind,
-             .stage = {.two_stage = TWO_STAGE_ONE}},
-            {.tag = TC_TYPE,
-             .node_ind = param_ind,
-             .stage = {.two_stage = TWO_STAGE_ONE}},
-            {.tag = TC_TYPE,
-             .node_ind = node_ind,
-             .stage = {.two_stage = TWO_STAGE_ONE}},
-          };
-          push_actions(state, STATIC_LEN(actions), actions);
-          break;
-        }
-        case TWO_STAGE_TWO: {
-          node_ind_t callee_type_ind = state->res.node_types[callee_ind];
-          type callee = VEC_GET(state->res.types, callee_type_ind);
-          switch (callee.tag) {
-            case T_UNKNOWN:
-              break;
-            case T_FN: {
-              node_ind_t callee_return_type_ind = T_FN_RET_IND(callee);
-              state->res.node_types[node_ind] = callee_return_type_ind;
-              break;
-            }
-            default: {
-              node_ind_t from_to[2] = {state->unknown_ind, state->unknown_ind};
-              node_ind_t exp =
-                mk_type(state, T_FN, from_to, STATIC_LEN(from_to));
-              tc_error err = {.type = CALLED_NON_FUNCTION,
-                              .pos = node_ind,
-                              .expected = exp,
-                              .got = callee_ind};
-              push_tc_err(state, err);
-              break;
-            }
-          }
-          break;
-        }
-      }
-      break;
-    }
-    case PT_CONSTRUCTION:
-    case PT_FN:
-    case PT_FUN:
-    case PT_FUN_BODY:
-    case PT_IF:
-    case PT_INT:
-    case PT_LOWER_NAME:
-    case PT_ROOT:
-    case PT_STRING:
-    case PT_AS:
-    case PT_SIG:
-    case PT_LIST:
-    case PT_LET:
-      give_up("Tried creating type from unsupported node");
-      break;
-  }
-}
-
 static bool can_propagate_type(typecheck_state *state, parse_node from,
                                parse_node to) {
   node_ind_t a_bnd_ind;
@@ -1911,9 +1758,172 @@ tc_res typecheck(source_file source, parse_tree tree) {
         tc_reconstruct(&state, node_params);
         break;
 
-      case TC_TYPE:
-        tc_type(&state, node_params);
+      // fills in a type from a parse_tree type
+      case TC_TYPE: {
+        node_ind_t node_ind = node_params.node_ind;
+        parse_node node = state.tree.nodes[node_ind];
+
+        switch (node.type) {
+          // tc_type
+          case PT_LIST_TYPE: {
+            switch (node_params.stage.two_stage) {
+              // Typecheck subs
+              case TWO_STAGE_ONE: {
+                {
+                  tc_action action = {.tag = TC_TYPE,
+                                      .node_ind = PT_LIST_TYPE_SUB(node),
+                                      .stage = {.two_stage = TWO_STAGE_ONE}};
+                  push_action(&state, action);
+                }
+                tc_action action = {.tag = TC_TYPE,
+                                    .node_ind = node_ind,
+                                    .stage = {.two_stage = TWO_STAGE_TWO}};
+                push_action(&state, action);
+                break;
+              }
+              case TWO_STAGE_TWO: {
+                state.res.node_types[node_ind] = mk_type_inline(
+                  &state, T_LIST, state.res.node_types[PT_LIST_TYPE_SUB(node)], 0);
+                break;
+              }
+            }
+            break;
+          }
+
+          // tc_type
+          case PT_TUP: {
+            tc_action actions[3] = {{.tag = TC_TYPE, .node_ind = PT_TUP_SUB_A(node)},
+                                    {.tag = TC_TYPE, .node_ind = PT_TUP_SUB_B(node)},
+                                    {.tag = TC_RECONSTRUCT, .node_ind = node_ind}};
+            push_actions(&state, STATIC_LEN(actions), actions);
+            break;
+          }
+
+          // tc_type
+          case PT_FN_TYPE: {
+            node_ind_t param_ind = PT_FN_TYPE_PARAM_IND(node);
+            node_ind_t return_ind = PT_FN_TYPE_RETURN_IND(node);
+            switch (node_params.stage.two_stage) {
+              // Typecheck subs
+              case TWO_STAGE_ONE: {
+                tc_action actions[] = {
+                  {.tag = TC_TYPE,
+                   .node_ind = param_ind,
+                   .stage = {.two_stage = TWO_STAGE_ONE}},
+                  {.tag = TC_TYPE,
+                   .node_ind = return_ind,
+                   .stage = {.two_stage = TWO_STAGE_ONE}},
+                  {.tag = TC_TYPE,
+                   .node_ind = node_ind,
+                   .stage = {.two_stage = TWO_STAGE_TWO}},
+                };
+                push_actions(&state, STATIC_LEN(actions), actions);
+                break;
+              }
+              // Combine
+              case TWO_STAGE_TWO: {
+                state.res.node_types[node_ind] =
+                  mk_type_inline(&state, T_FN, state.res.node_types[param_ind],
+                                 state.res.node_types[return_ind]);
+                break;
+              }
+            }
+            break;
+          }
+
+          // tc_type
+          case PT_UPPER_NAME: {
+            binding b = {.start = node.span.start, .end = node.span.end};
+            size_t ind = lookup_str_ref(state.source.data, state.type_env,
+                                        state.type_is_builtin, b);
+            if (ind == state.type_env.len) {
+              tc_error err = {
+                .type = TYPE_NOT_FOUND,
+                .pos = node_ind,
+              };
+              push_tc_err(&state, err);
+              break;
+            }
+            node_ind_t type_ind = VEC_GET(state.type_type_inds, ind);
+            state.res.node_types[node_ind] = type_ind;
+            break;
+          }
+
+          // tc_type
+          case PT_UNIT: {
+            node_ind_t type_ind = mk_primitive_type(&state, T_UNIT);
+            state.res.node_types[node_ind] = type_ind;
+            break;
+          }
+
+          // tc_type
+          case PT_CALL: {
+            node_ind_t callee_ind = PT_CALL_CALLEE_IND(node);
+            node_ind_t param_ind = PT_CALL_PARAM_IND(node);
+            switch (node_params.stage.two_stage) {
+              case TWO_STAGE_ONE: {
+                tc_action actions[] = {
+                  {.tag = TC_TYPE,
+                   .node_ind = callee_ind,
+                   .stage = {.two_stage = TWO_STAGE_ONE}},
+                  {.tag = TC_TYPE,
+                   .node_ind = param_ind,
+                   .stage = {.two_stage = TWO_STAGE_ONE}},
+                  {.tag = TC_TYPE,
+                   .node_ind = node_ind,
+                   .stage = {.two_stage = TWO_STAGE_ONE}},
+                };
+                push_actions(&state, STATIC_LEN(actions), actions);
+                break;
+              }
+              case TWO_STAGE_TWO: {
+                node_ind_t callee_type_ind = state.res.node_types[callee_ind];
+                type callee = VEC_GET(state.res.types, callee_type_ind);
+                switch (callee.tag) {
+                  case T_UNKNOWN:
+                    break;
+                  case T_FN: {
+                    node_ind_t callee_return_type_ind = T_FN_RET_IND(callee);
+                    state.res.node_types[node_ind] = callee_return_type_ind;
+                    break;
+                  }
+                  default: {
+                    node_ind_t from_to[2] = {state.unknown_ind, state.unknown_ind};
+                    node_ind_t exp =
+                      mk_type(&state, T_FN, from_to, STATIC_LEN(from_to));
+                    tc_error err = {.type = CALLED_NON_FUNCTION,
+                                    .pos = node_ind,
+                                    .expected = exp,
+                                    .got = callee_ind};
+                    push_tc_err(&state, err);
+                    break;
+                  }
+                }
+                break;
+              }
+            }
+            break;
+          }
+
+          // tc_type
+          case PT_CONSTRUCTION:
+          case PT_FN:
+          case PT_FUN:
+          case PT_FUN_BODY:
+          case PT_IF:
+          case PT_INT:
+          case PT_LOWER_NAME:
+          case PT_ROOT:
+          case PT_STRING:
+          case PT_AS:
+          case PT_SIG:
+          case PT_LIST:
+          case PT_LET:
+            give_up("Tried creating type from unsupported node");
+            break;
+        }
         break;
+      }
 
       case TC_ASSIGN_TYPE:
         state.res.node_types[action.to] = action.from;
