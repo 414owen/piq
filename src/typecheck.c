@@ -92,6 +92,11 @@ typedef enum {
   // {.from = type index, .to = node index}
   TC_ASSIGN_TYPE,
 
+  TC_CALL_POST_PARAM,
+  TC_CALL_POST_CALLEE,
+  TC_CALL_PARAM_FIRST,
+  TC_CALL_CALLEE_FIRST,
+
   // If there were errors on top of this node, pop them
   // and execute the action two below
   // Otherwise, execute the action one below
@@ -286,6 +291,10 @@ static void break_suspicious_action(typecheck_state *state, tc_action action) {
     case TC_TYPE_LIST_STAGE_TWO:
     case TC_TYPE_FN_STAGE_TWO:
     case TC_TYPE_CALL_STAGE_TWO:
+    case TC_CALL_POST_PARAM:
+    case TC_CALL_POST_CALLEE:
+    case TC_CALL_PARAM_FIRST:
+    case TC_CALL_CALLEE_FIRST:
     case TC_RECONSTRUCT:
       if (action.node_ind >= state->tree.node_amt)
         suspicious_action();
@@ -640,139 +649,60 @@ static void tc_as(typecheck_state *state, tc_node_params params) {
   push_actions(state, STATIC_LEN(actions), actions);
 }
 
-// The triple-switch here isn't ideal.
-// Can we remove some while keeping the flow top-to-buttom.
-// I think we can, if we extract this into functions, and add call-specific
-// action-tags. The functions will be in the right order.
-static void tc_call(typecheck_state *state, tc_node_params params) {
-  node_ind_t callee_ind = PT_CALL_CALLEE_IND(params.node);
-  parse_node callee = state->tree.nodes[callee_ind];
-  node_ind_t param_ind = PT_CALL_PARAM_IND(params.node);
+static void tc_call_param_first(typecheck_state *state, node_ind_t call_node_ind) {
+  parse_node call_node = state->tree.nodes[call_node_ind];
+  node_ind_t param_ind = PT_CALL_PARAM_IND(call_node);
+  tc_action actions[] = {
+    {.tag = TC_NODE_UNAMBIGUOUS,
+     .node_ind = param_ind,
+     .stage = {.two_stage = TWO_STAGE_ONE}},
+    {.tag = TC_CALL_POST_PARAM,
+     .node_ind = call_node_ind,
+     .stage = {.two_stage = TWO_STAGE_TWO}}
+  };
+  push_actions(state, STATIC_LEN(actions), actions);
+}
 
-  // used in shared blocks
-  stage next_stage;
+static void tc_call_callee_first(typecheck_state *state, node_ind_t call_node_ind) {
+  parse_node call_node = state->tree.nodes[call_node_ind];
+  node_ind_t callee_ind = PT_CALL_CALLEE_IND(call_node);
 
-  switch (callee.type) {
-    case PT_FN:
-      switch (params.stage.two_stage) {
-        case TWO_STAGE_ONE: {
-          tc_action actions[] = {
-            {.tag = TC_NODE_UNAMBIGUOUS,
-             .node_ind = param_ind,
-             .stage = {.two_stage = TWO_STAGE_ONE}},
-            {.tag = TC_NODE_MATCHES,
-             .node_ind = params.node_ind,
-             .stage = {.two_stage = TWO_STAGE_TWO}},
-          };
-          push_actions(state, STATIC_LEN(actions), actions);
-          break;
-        }
-        case TWO_STAGE_TWO:
-          goto post_tc_param;
-      }
-      break;
-
-    case PT_UPPER_NAME:
-      switch (params.stage.two_stage) {
-        case TWO_STAGE_ONE:
-          next_stage.two_stage = TWO_STAGE_TWO;
-          goto push_tc_callee;
-        case TWO_STAGE_TWO:
-          goto post_tc_callee;
-      }
-      break;
-
-    default:
-      switch (params.stage.four_stage) {
-        case FOUR_STAGE_ONE: {
-          tc_action actions[] = {
-            {.tag = TC_NODE_UNAMBIGUOUS,
-             .node_ind = param_ind,
-             .stage = {.two_stage = TWO_STAGE_ONE}},
-            {.tag = TC_RECOVER, .amt = state->res.errors.len},
-            {.tag = TC_NODE_MATCHES,
-             .node_ind = params.node_ind,
-             .stage = {.four_stage = FOUR_STAGE_TWO}},
-            {.tag = TC_NODE_MATCHES,
-             .node_ind = params.node_ind,
-             .stage = {.four_stage = FOUR_STAGE_THREE}}};
-          push_actions(state, STATIC_LEN(actions), actions);
-          break;
-        }
-
-        case FOUR_STAGE_TWO:
-          goto post_tc_param;
-
-        // typechecking param failed
-        case FOUR_STAGE_THREE:
-          next_stage.four_stage = FOUR_STAGE_FOUR;
-          goto push_tc_callee;
-        case FOUR_STAGE_FOUR:
-          goto post_tc_callee;
-      }
-      break;
-  }
-  return;
-
-push_tc_callee : {
+  // TODO make it a matches call to a fn type
   tc_action actions[] = {
     {.tag = TC_NODE_UNAMBIGUOUS,
      .node_ind = callee_ind,
      .stage = {.two_stage = TWO_STAGE_TWO}},
-    {.tag = TC_NODE_MATCHES, .node_ind = params.node_ind, .stage = next_stage},
+    {.tag = TC_CALL_POST_CALLEE, .node_ind = call_node_ind, .stage = {.two_stage = TWO_STAGE_TWO}}
   };
   push_actions(state, STATIC_LEN(actions), actions);
-  return;
 }
-post_tc_param : {
-  node_ind_t wanted_fn_type = mk_type_inline(
-    state, T_FN, state->res.node_types[param_ind], params.wanted_ind);
-  tc_action actions[] = {
-    {.tag = TC_WANT_TYPE, .from = wanted_fn_type, .to = callee_ind},
-    // Can't be more specific, as the current node might be wanted=unknown
-    {.tag = TC_NODE_MATCHES,
-     .node_ind = callee_ind,
-     .stage = {.two_stage = TWO_STAGE_ONE}},
-  };
-  push_actions(state, STATIC_LEN(actions), actions);
-  return;
-}
-post_tc_callee : {
-  node_ind_t callee_type_ind = state->res.node_types[callee_ind];
-  type callee_type = VEC_GET(state->res.types, callee_type_ind);
-  switch (callee_type.tag) {
-    case T_FN: {
-      node_ind_t callee_param_type_ind = T_FN_RET_IND(callee_type);
-      node_ind_t callee_ret_type_ind = T_FN_RET_IND(callee_type);
-      if (callee_ret_type_ind != params.wanted_ind) {
-        tc_error err = {.type = TYPE_MISMATCH,
-                        .expected = params.wanted_ind,
-                        .got = callee_ret_type_ind,
-                        .pos = params.node_ind};
-        push_tc_err(state, err);
-        break;
-      }
+
+static void tc_call(typecheck_state *state, tc_node_params params) {
+  node_ind_t callee_ind = PT_CALL_CALLEE_IND(params.node);
+  parse_node callee = state->tree.nodes[callee_ind];
+
+  switch (callee.type) {
+    case PT_FN:
+      tc_call_param_first(state, params.node_ind);
+      break;
+
+    case PT_UPPER_NAME:
+      tc_call_callee_first(state, params.node_ind);
+      break;
+
+    default: {
       tc_action actions[] = {
-        {.tag = TC_WANT_TYPE, .to = param_ind, .from = callee_param_type_ind},
-        {.tag = TC_NODE_MATCHES,
-         .node_ind = param_ind,
-         .stage = {.two_stage = TWO_STAGE_TWO}},
-      };
+        {.tag = TC_RECOVER, .amt = state->res.errors.len},
+        {.tag = TC_CALL_PARAM_FIRST,
+         .node_ind = params.node_ind,
+         .stage = {.two_stage = TWO_STAGE_ONE}},
+        {.tag = TC_CALL_CALLEE_FIRST,
+         .node_ind = params.node_ind,
+         .stage = {.four_stage = FOUR_STAGE_TWO}}};
       push_actions(state, STATIC_LEN(actions), actions);
       break;
     }
-    default: {
-      tc_error err = {
-        .type = CALLED_NON_FUNCTION,
-        .got = callee_type_ind,
-        .pos = callee_ind,
-      };
-      push_tc_err(state, err);
-      break;
-    }
   }
-  return;
-}
 }
 
 static void push_reconstruct(typecheck_state *state, node_ind_t ind) {
@@ -1077,6 +1007,10 @@ static const char *action_str(action_tag tag) {
     MK_CASE(TC_RECOVER)
     MK_CASE(TC_PUSH_ENV)
     MK_CASE(TC_RECONSTRUCT)
+    MK_CASE(TC_CALL_POST_PARAM)
+    MK_CASE(TC_CALL_POST_CALLEE)
+    MK_CASE(TC_CALL_PARAM_FIRST)
+    MK_CASE(TC_CALL_CALLEE_FIRST)
 #undef MK_CASE
   }
   return res;
@@ -1253,6 +1187,10 @@ tc_res typecheck(source_file source, parse_tree tree) {
     switch (action.tag) {
       case TC_PATTERN_MATCHES:
       case TC_NODE_MATCHES_AS_STAGE_TWO:
+      case TC_CALL_POST_PARAM:
+      case TC_CALL_POST_CALLEE:
+      case TC_CALL_PARAM_FIRST:
+      case TC_CALL_CALLEE_FIRST:
       case TC_NODE_MATCHES: {
         node_ind_t node_ind = action.node_ind;
         tc_action a = {
@@ -1315,6 +1253,69 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_POP_VARS_TO:
         VEC_POP_N(&state.term_env.len, state.term_env.len - action.amt);
         break;
+
+      case TC_CALL_PARAM_FIRST:
+        tc_call_param_first(&state, action.node_ind);
+        break;
+
+      case TC_CALL_CALLEE_FIRST:
+        tc_call_param_first(&state, action.node_ind);
+        break;
+
+      case TC_CALL_POST_PARAM: {
+        node_ind_t callee_ind = PT_CALL_CALLEE_IND(node_params.node);
+        node_ind_t param_ind = PT_CALL_PARAM_IND(node_params.node);
+        node_ind_t wanted_fn_type = mk_type_inline(
+          &state, T_FN, state.res.node_types[param_ind], node_params.wanted_ind);
+        tc_action actions[] = {
+          {.tag = TC_WANT_TYPE, .from = wanted_fn_type, .to = callee_ind},
+          // Can't be more specific, as the current node might be wanted=unknown
+          {.tag = TC_NODE_MATCHES,
+           .node_ind = callee_ind,
+           .stage = {.two_stage = TWO_STAGE_ONE}},
+        };
+        push_actions(&state, STATIC_LEN(actions), actions);
+        break;
+      }
+
+      case TC_CALL_POST_CALLEE: {
+        node_ind_t callee_ind = PT_CALL_CALLEE_IND(node_params.node);
+        node_ind_t param_ind = PT_CALL_PARAM_IND(node_params.node);
+        node_ind_t callee_type_ind = state.res.node_types[callee_ind];
+        type callee_type = VEC_GET(state.res.types, callee_type_ind);
+        switch (callee_type.tag) {
+          case T_FN: {
+            node_ind_t callee_param_type_ind = T_FN_RET_IND(callee_type);
+            node_ind_t callee_ret_type_ind = T_FN_RET_IND(callee_type);
+            if (callee_ret_type_ind != node_params.wanted_ind) {
+              tc_error err = {.type = TYPE_MISMATCH,
+                              .expected = node_params.wanted_ind,
+                              .got = callee_ret_type_ind,
+                              .pos = node_params.node_ind};
+              push_tc_err(&state, err);
+              break;
+            }
+            tc_action actions[] = {
+              {.tag = TC_WANT_TYPE, .to = param_ind, .from = callee_param_type_ind},
+              {.tag = TC_NODE_MATCHES,
+               .node_ind = param_ind,
+               .stage = {.two_stage = TWO_STAGE_TWO}},
+            };
+            push_actions(&state, STATIC_LEN(actions), actions);
+            break;
+          }
+          default: {
+            tc_error err = {
+              .type = CALLED_NON_FUNCTION,
+              .got = callee_type_ind,
+              .pos = callee_ind,
+            };
+            push_tc_err(&state, err);
+            break;
+          }
+        }
+        break;
+      }
 
       // We have no wanted information, so ambiguity will error.
       // Used to assign types based on syntax.
