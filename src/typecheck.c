@@ -73,7 +73,8 @@ typedef enum {
   TC_TYPE_CALL_STAGE_TWO,
 
   // Construct a compound type from its children
-  TC_RECONSTRUCT,
+  TC_RECONSTRUCT_LIST,
+  TC_RECONSTRUCT_TUPLE,
 
   TC_PATTERN_MATCHES,
   TC_PATTERN_UNAMBIGUOUS,
@@ -274,7 +275,8 @@ static void break_suspicious_action(typecheck_state *state, tc_action action) {
     case TC_CALL_POST_CALLEE:
     case TC_CALL_PARAM_FIRST:
     case TC_CALL_CALLEE_FIRST:
-    case TC_RECONSTRUCT:
+    case TC_RECONSTRUCT_LIST:
+    case TC_RECONSTRUCT_TUPLE:
       if (action.node_ind >= state->tree.node_amt)
         suspicious_action();
       break;
@@ -684,11 +686,6 @@ static void tc_call(typecheck_state *state, tc_node_params params) {
   }
 }
 
-static void push_reconstruct(typecheck_state *state, node_ind_t ind) {
-  tc_action action = {.tag = TC_RECONSTRUCT, .node_ind = ind};
-  push_action(state, action);
-}
-
 static void push_list_subs_unambiguous(typecheck_state *state,
                                        tc_node_params params,
                                        action_tag first_tag,
@@ -725,7 +722,8 @@ static void push_list_subs_unambiguous(typecheck_state *state,
     push_actions(state, STATIC_LEN(actions), actions);
   }
 
-  push_reconstruct(state, params.node_ind);
+  tc_action action = {.tag = TC_RECONSTRUCT_LIST, .node_ind = params.node_ind};
+  push_action(state, action);
 }
 
 static void push_list_subs_match(typecheck_state *state, tc_node_params params,
@@ -890,7 +888,8 @@ static void tc_pattern_unambiguous(typecheck_state *state,
     case PT_TUP: {
       // TODO extract pushing out, as with push_list_subs()
       push_tuple_subs(state, params, TC_PATTERN_UNAMBIGUOUS);
-      push_reconstruct(state, params.node_ind);
+      tc_action action = {.tag = TC_RECONSTRUCT_TUPLE, .node_ind = params.node_ind};
+      push_action(state, action);
       break;
     }
 
@@ -980,7 +979,8 @@ static const char *action_str(action_tag tag) {
     MK_CASE(TC_ASSIGN_TYPE)
     MK_CASE(TC_RECOVER)
     MK_CASE(TC_PUSH_ENV)
-    MK_CASE(TC_RECONSTRUCT)
+    MK_CASE(TC_RECONSTRUCT_LIST)
+    MK_CASE(TC_RECONSTRUCT_TUPLE)
     MK_CASE(TC_CALL_POST_PARAM)
     MK_CASE(TC_CALL_POST_CALLEE)
     MK_CASE(TC_CALL_PARAM_FIRST)
@@ -1133,7 +1133,8 @@ tc_res typecheck(source_file source, parse_tree tree) {
         }
         case TC_TYPE:
         case TC_TYPE_LIST_STAGE_TWO:
-        case TC_RECONSTRUCT:
+        case TC_RECONSTRUCT_LIST:
+        case TC_RECONSTRUCT_TUPLE:
         case TC_NODE_MATCHES:
         case TC_NODE_MATCHES_AS_STAGE_TWO:
         case TC_PATTERN_UNAMBIGUOUS:
@@ -1160,10 +1161,6 @@ tc_res typecheck(source_file source, parse_tree tree) {
     switch (action.tag) {
       case TC_PATTERN_MATCHES:
       case TC_NODE_MATCHES_AS_STAGE_TWO:
-      case TC_CALL_POST_PARAM:
-      case TC_CALL_POST_CALLEE:
-      case TC_CALL_PARAM_FIRST:
-      case TC_CALL_CALLEE_FIRST:
       case TC_NODE_MATCHES: {
         node_ind_t node_ind = action.node_ind;
         tc_action a = {
@@ -1179,7 +1176,14 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_NODE_UNAMBIGUOUS:
       case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
       case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO:
-      case TC_RECONSTRUCT:
+      case TC_RECONSTRUCT_LIST:
+      // TODO do these belong here?
+      case TC_CALL_POST_PARAM:
+      case TC_CALL_POST_CALLEE:
+      case TC_CALL_PARAM_FIRST:
+      case TC_CALL_CALLEE_FIRST:
+
+      case TC_RECONSTRUCT_TUPLE:
         node_params = mk_tc_node_params(&state, action.node_ind);
         break;
       case TC_POP_N_VARS:
@@ -1343,7 +1347,8 @@ tc_res typecheck(source_file source, parse_tree tree) {
           // node_unambiguous
           case PT_TUP:
             push_tuple_subs(&state, node_params, TC_NODE_UNAMBIGUOUS);
-            push_reconstruct(&state, node_params.node_ind);
+            tc_action action = {.tag = TC_RECONSTRUCT_TUPLE, .node_ind = node_params.node_ind};
+            push_action(&state, action);
             break;
 
           // node_unambiguous
@@ -1732,37 +1737,29 @@ tc_res typecheck(source_file source, parse_tree tree) {
         tc_pattern_unambiguous(&state, node_params);
         break;
 
-      // TODO: Specialize operation to its node types
-      case TC_RECONSTRUCT:
-        // Doesn't matter if we came from _ambiguous, or _matches
-        switch (node_params.node.type) {
-          case PT_TUP: {
-            node_ind_t sub_a = PT_TUP_SUB_A(node_params.node);
-            node_ind_t sub_b = PT_TUP_SUB_B(node_params.node);
-            node_ind_t type_a = state.res.node_types[sub_a];
-            node_ind_t type_b = state.res.node_types[sub_b];
-            state.res.node_types[node_params.node_ind] =
-              mk_type_inline(&state, T_TUP, type_a, type_b);
-            break;
-          }
-          case PT_LIST: {
-            node_ind_t *inds = state.tree.inds;
-            node_ind_t sub_amt = PT_LIST_SUB_AMT(node_params.node);
-            if (sub_amt == 0)
-              break;
-            node_ind_t sub_ind = PT_LIST_SUB_IND(inds, node_params.node, 0);
-            node_ind_t sub_type_ind = state.res.node_types[sub_ind];
-            if (sub_type_ind == state.unknown_ind)
-              break;
-            state.res.node_types[node_params.node_ind] =
-              mk_type_inline(&state, T_LIST, sub_type_ind, 0);
-            break;
-          }
-          default:
-            give_up("Invalid node to reconstruct");
-            break;
-        }
+      case TC_RECONSTRUCT_TUPLE: {
+        node_ind_t sub_a = PT_TUP_SUB_A(node_params.node);
+        node_ind_t sub_b = PT_TUP_SUB_B(node_params.node);
+        node_ind_t type_a = state.res.node_types[sub_a];
+        node_ind_t type_b = state.res.node_types[sub_b];
+        state.res.node_types[node_params.node_ind] =
+          mk_type_inline(&state, T_TUP, type_a, type_b);
         break;
+      }
+
+      case TC_RECONSTRUCT_LIST: {
+        node_ind_t *inds = state.tree.inds;
+        node_ind_t sub_amt = PT_LIST_SUB_AMT(node_params.node);
+        if (sub_amt == 0)
+          break;
+        node_ind_t sub_ind = PT_LIST_SUB_IND(inds, node_params.node, 0);
+        node_ind_t sub_type_ind = state.res.node_types[sub_ind];
+        if (sub_type_ind == state.unknown_ind)
+          break;
+        state.res.node_types[node_params.node_ind] =
+          mk_type_inline(&state, T_LIST, sub_type_ind, 0);
+        break;
+      }
 
       // fills in a type from a parse_tree type
       case TC_TYPE: {
@@ -1789,7 +1786,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
           case PT_TUP: {
             tc_action actions[3] = {{.tag = TC_TYPE, .node_ind = PT_TUP_SUB_A(node)},
                                     {.tag = TC_TYPE, .node_ind = PT_TUP_SUB_B(node)},
-                                    {.tag = TC_RECONSTRUCT, .node_ind = node_ind}};
+                                    {.tag = TC_RECONSTRUCT_TUPLE, .node_ind = node_ind}};
             push_actions(&state, STATIC_LEN(actions), actions);
             break;
           }
