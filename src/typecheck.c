@@ -69,6 +69,7 @@ typedef enum {
   // types
   TC_TYPE,
   TC_TYPE_LIST_STAGE_TWO,
+  TC_TYPE_FN_STAGE_TWO,
 
   // Construct a compound type from its children
   TC_RECONSTRUCT,
@@ -1257,6 +1258,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_PATTERN_UNAMBIGUOUS:
       case TC_TYPE:
       case TC_TYPE_LIST_STAGE_TWO:
+      case TC_TYPE_FN_STAGE_TWO:
       case TC_NODE_UNAMBIGUOUS:
       case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
       case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO:
@@ -1817,31 +1819,18 @@ tc_res typecheck(source_file source, parse_tree tree) {
           case PT_FN_TYPE: {
             node_ind_t param_ind = PT_FN_TYPE_PARAM_IND(node);
             node_ind_t return_ind = PT_FN_TYPE_RETURN_IND(node);
-            switch (node_params.stage.two_stage) {
-              // Typecheck subs
-              case TWO_STAGE_ONE: {
-                tc_action actions[] = {
-                  {.tag = TC_TYPE,
-                   .node_ind = param_ind,
-                   .stage = {.two_stage = TWO_STAGE_ONE}},
-                  {.tag = TC_TYPE,
-                   .node_ind = return_ind,
-                   .stage = {.two_stage = TWO_STAGE_ONE}},
-                  {.tag = TC_TYPE,
-                   .node_ind = node_ind,
-                   .stage = {.two_stage = TWO_STAGE_TWO}},
-                };
-                push_actions(&state, STATIC_LEN(actions), actions);
-                break;
-              }
-              // Combine
-              case TWO_STAGE_TWO: {
-                state.res.node_types[node_ind] =
-                  mk_type_inline(&state, T_FN, state.res.node_types[param_ind],
-                                 state.res.node_types[return_ind]);
-                break;
-              }
-            }
+            tc_action actions[] = {
+              {.tag = TC_TYPE,
+               .node_ind = param_ind,
+               .stage = {.two_stage = TWO_STAGE_ONE}},
+              {.tag = TC_TYPE,
+               .node_ind = return_ind,
+               .stage = {.two_stage = TWO_STAGE_ONE}},
+              {.tag = TC_TYPE_FN_STAGE_TWO,
+               .node_ind = node_ind,
+               .stage = {.two_stage = TWO_STAGE_TWO}},
+            };
+            push_actions(&state, STATIC_LEN(actions), actions);
             break;
           }
 
@@ -1942,6 +1931,15 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_TYPE_LIST_STAGE_TWO: {
         state.res.node_types[node_params.node_ind] = mk_type_inline(
           &state, T_LIST, state.res.node_types[PT_LIST_TYPE_SUB(node_params.node)], 0);
+        break;
+      }
+
+      case TC_TYPE_FN_STAGE_TWO: {
+        node_ind_t param_ind = PT_FN_TYPE_PARAM_IND(node_params.node);
+        node_ind_t return_ind = PT_FN_TYPE_RETURN_IND(node_params.node);
+        state.res.node_types[action.node_ind] =
+          mk_type_inline(&state, T_FN, state.res.node_types[param_ind],
+                         state.res.node_types[return_ind]);
         break;
       }
 
