@@ -103,23 +103,6 @@ typedef enum {
   TC_RECOVER,
 } action_tag;
 
-typedef enum {
-  TWO_STAGE_ONE = 0,
-  TWO_STAGE_TWO = 1,
-} two_stage_tag;
-
-typedef enum {
-  FOUR_STAGE_ONE = 0,
-  FOUR_STAGE_TWO = 1,
-  FOUR_STAGE_THREE = 2,
-  FOUR_STAGE_FOUR = 3,
-} four_stage_tag;
-
-typedef union {
-  two_stage_tag two_stage;
-  four_stage_tag four_stage;
-} stage;
-
 // This looks like ass.
 typedef struct {
   action_tag tag;
@@ -127,10 +110,7 @@ typedef struct {
     node_ind_t amt;
     struct {
       node_ind_t node_ind;
-      union {
-        stage stage;
-        binding binding;
-      };
+      binding binding;
     };
     struct {
       node_ind_t from;
@@ -176,7 +156,6 @@ typedef struct {
 
 typedef struct {
   node_ind_t node_ind;
-  stage stage;
   parse_node node;
   node_ind_t wanted_ind;
   type wanted;
@@ -509,7 +488,7 @@ static void push_tc_sig(typecheck_state *state, node_ind_t node_ind,
   tc_action actions[] = {
     {.tag = TC_TYPE,
      .node_ind = type_ind,
-     .stage = {.two_stage = TWO_STAGE_ONE}},
+     },
     {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = type_ind, .to = name_ind},
     {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = type_ind, .to = node_ind},
     {.tag = TC_PUSH_ENV,
@@ -615,7 +594,7 @@ static void typecheck_block(typecheck_state *state, tc_node_params params,
                                                         : TC_NODE_UNAMBIGUOUS;
         tc_action action = {.tag = tag,
                             .node_ind = sub_ind,
-                            .stage = {.two_stage = TWO_STAGE_ONE}};
+                            };
         push_action(state, action);
         break;
       }
@@ -637,14 +616,14 @@ static void tc_as(typecheck_state *state, tc_node_params params) {
   tc_action actions[] = {
     {.tag = TC_TYPE,
      .node_ind = type_node_ind,
-     .stage = {.two_stage = TWO_STAGE_ONE}},
+     },
     {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = type_node_ind, .to = val_node_ind},
     {.tag = TC_CLONE_ACTUAL_ACTUAL,
      .from = type_node_ind,
      .to = params.node_ind},
     {.tag = TC_NODE_MATCHES,
      .node_ind = val_node_ind,
-     .stage = {.two_stage = TWO_STAGE_ONE}},
+     },
   };
   push_actions(state, STATIC_LEN(actions), actions);
 }
@@ -655,10 +634,10 @@ static void tc_call_param_first(typecheck_state *state, node_ind_t call_node_ind
   tc_action actions[] = {
     {.tag = TC_NODE_UNAMBIGUOUS,
      .node_ind = param_ind,
-     .stage = {.two_stage = TWO_STAGE_ONE}},
+     },
     {.tag = TC_CALL_POST_PARAM,
      .node_ind = call_node_ind,
-     .stage = {.two_stage = TWO_STAGE_TWO}}
+     }
   };
   push_actions(state, STATIC_LEN(actions), actions);
 }
@@ -671,8 +650,8 @@ static void tc_call_callee_first(typecheck_state *state, node_ind_t call_node_in
   tc_action actions[] = {
     {.tag = TC_NODE_UNAMBIGUOUS,
      .node_ind = callee_ind,
-     .stage = {.two_stage = TWO_STAGE_TWO}},
-    {.tag = TC_CALL_POST_CALLEE, .node_ind = call_node_ind, .stage = {.two_stage = TWO_STAGE_TWO}}
+     },
+    {.tag = TC_CALL_POST_CALLEE, .node_ind = call_node_ind, }
   };
   push_actions(state, STATIC_LEN(actions), actions);
 }
@@ -695,10 +674,10 @@ static void tc_call(typecheck_state *state, tc_node_params params) {
         {.tag = TC_RECOVER, .amt = state->res.errors.len},
         {.tag = TC_CALL_PARAM_FIRST,
          .node_ind = params.node_ind,
-         .stage = {.two_stage = TWO_STAGE_ONE}},
+         },
         {.tag = TC_CALL_CALLEE_FIRST,
          .node_ind = params.node_ind,
-         .stage = {.four_stage = FOUR_STAGE_TWO}}};
+         }};
       push_actions(state, STATIC_LEN(actions), actions);
       break;
     }
@@ -730,7 +709,6 @@ static void push_list_subs_unambiguous(typecheck_state *state,
     tc_action action = {
       .tag = first_tag,
       .node_ind = sub_ind,
-      .stage = {.two_stage = TWO_STAGE_ONE},
     };
     push_action(state, action);
   }
@@ -743,7 +721,6 @@ static void push_list_subs_unambiguous(typecheck_state *state,
       {
         .tag = wanted_tag,
         .node_ind = sub_ind,
-        .stage = {.two_stage = TWO_STAGE_ONE},
       }};
     push_actions(state, STATIC_LEN(actions), actions);
   }
@@ -776,7 +753,7 @@ static void push_list_subs_match(typecheck_state *state, tc_node_params params,
   for (node_ind_t i = 0; i < sub_amt; i++) {
     node_ind_t sub_ind = PT_LIST_SUB_IND(state->tree.inds, params.node, i);
     tc_action action = {
-      .tag = tag, .node_ind = sub_ind, .stage = {.two_stage = TWO_STAGE_ONE}};
+      .tag = tag, .node_ind = sub_ind, };
     push_action(state, action);
   }
 }
@@ -786,12 +763,10 @@ static void push_tuple_subs(typecheck_state *state, tc_node_params params,
   tc_action actions[2] = {{
                             .tag = tag,
                             .node_ind = PT_TUP_SUB_A(params.node),
-                            .stage = {.two_stage = TWO_STAGE_ONE},
                           },
                           {
                             .tag = tag,
                             .node_ind = PT_TUP_SUB_B(params.node),
-                            .stage = {.two_stage = TWO_STAGE_ONE},
                           }};
   push_actions(state, STATIC_LEN(actions), actions);
 }
@@ -907,7 +882,7 @@ static void tc_pattern_unambiguous(typecheck_state *state,
       // Screw it, reconstruction is the same for nodes. Let's make them do it.
       tc_action action = {.tag = TC_NODE_MATCHES,
                           .node_ind = params.node_ind,
-                          .stage = {.two_stage = TWO_STAGE_TWO}};
+                          };
       push_action(state, action);
       break;
     }
@@ -967,10 +942,9 @@ static void tc_pattern_unambiguous(typecheck_state *state,
 }
 
 static tc_node_params mk_tc_node_params(typecheck_state *state,
-                                        node_ind_t node_ind, stage stage) {
+                                        node_ind_t node_ind) {
   tc_node_params params;
   params.node_ind = node_ind;
-  params.stage = stage;
   params.node = state->tree.nodes[params.node_ind];
   params.wanted_ind = state->wanted[params.node_ind];
   params.wanted = VEC_GET(state->res.types, params.wanted_ind);
@@ -1040,7 +1014,7 @@ static typecheck_state tc_new_state(source_file source, parse_tree tree) {
   };
   tc_action action = {.tag = TC_NODE_UNAMBIGUOUS,
                       .node_ind = tree.root_ind,
-                      .stage = {.two_stage = TWO_STAGE_ONE}};
+                      };
   VEC_PUSH(&state.stack, action);
   return state;
 }
@@ -1170,7 +1144,6 @@ tc_res typecheck(source_file source, parse_tree tree) {
           fprintf(debug_out, "Node ind: '%d'\n", action.node_ind);
           parse_node node = tree.nodes[action.node_ind];
           fprintf(debug_out, "Node: '%s'\n", parse_node_string(node.type));
-          fprintf(debug_out, "Stage: '%d'\n", action.stage.four_stage);
           format_error_ctx(debug_out, source.data, node.span.start, node.span.end);
           putc('\n', debug_out);
           break;
@@ -1207,7 +1180,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
       case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO:
       case TC_RECONSTRUCT:
-        node_params = mk_tc_node_params(&state, action.node_ind, action.stage);
+        node_params = mk_tc_node_params(&state, action.node_ind);
         break;
       case TC_POP_N_VARS:
       case TC_POP_VARS_TO:
@@ -1272,7 +1245,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
           // Can't be more specific, as the current node might be wanted=unknown
           {.tag = TC_NODE_MATCHES,
            .node_ind = callee_ind,
-           .stage = {.two_stage = TWO_STAGE_ONE}},
+           },
         };
         push_actions(&state, STATIC_LEN(actions), actions);
         break;
@@ -1299,7 +1272,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
               {.tag = TC_WANT_TYPE, .to = param_ind, .from = callee_param_type_ind},
               {.tag = TC_NODE_MATCHES,
                .node_ind = param_ind,
-               .stage = {.two_stage = TWO_STAGE_TWO}},
+               },
             };
             push_actions(&state, STATIC_LEN(actions), actions);
             break;
@@ -1383,14 +1356,14 @@ tc_res typecheck(source_file source, parse_tree tree) {
               {.tag = TC_WANT_TYPE, .from = state.bool_type_ind, .to = cond},
               {.tag = TC_NODE_MATCHES,
                .node_ind = cond,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
               {.tag = TC_NODE_UNAMBIGUOUS,
                .node_ind = b1,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
               {.tag = TC_CLONE_ACTUAL_WANTED, .from = b1, .to = b2},
               {.tag = TC_NODE_MATCHES,
                .node_ind = b2,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
               {.tag = TC_CLONE_ACTUAL_ACTUAL, .from = b2, .to = node_params.node_ind}};
 
             push_actions(&state, STATIC_LEN(actions), actions);
@@ -1437,14 +1410,14 @@ tc_res typecheck(source_file source, parse_tree tree) {
             tc_action actions[] = {
               {.tag = TC_NODE_UNAMBIGUOUS,
                .node_ind = param_ind,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
               {.tag = TC_NODE_UNAMBIGUOUS,
                .node_ind = body_ind,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
               {.tag = TC_POP_VARS_TO, .amt = state.term_env.len},
               {.tag = TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO,
                .node_ind = node_params.node_ind,
-               .stage = {.two_stage = TWO_STAGE_TWO}}};
+               }};
             push_actions(&state, STATIC_LEN(actions), actions);
             break;
           }
@@ -1457,14 +1430,14 @@ tc_res typecheck(source_file source, parse_tree tree) {
             tc_action actions[] = {
               {.tag = TC_NODE_UNAMBIGUOUS,
                .node_ind = param_ind,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
               {.tag = TC_NODE_UNAMBIGUOUS,
                .node_ind = body_ind,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
               {.tag = TC_POP_VARS_TO, .amt = state.term_env.len},
               {.tag = TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO,
                .node_ind = node_params.node_ind,
-               .stage = {.two_stage = TWO_STAGE_TWO}}};
+               }};
             push_actions(&state, STATIC_LEN(actions), actions);
             break;
           }
@@ -1565,7 +1538,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
             tc_as(&state, node_params);
             tc_action action = {.tag = TC_NODE_MATCHES_AS_STAGE_TWO,
                                 .node_ind = node_params.node_ind,
-                                .stage = {.two_stage = TWO_STAGE_TWO}};
+                                };
             push_action(&state, action);
             break;
           }
@@ -1607,16 +1580,16 @@ tc_res typecheck(source_file source, parse_tree tree) {
               {.tag = TC_WANT_TYPE, .from = state.bool_type_ind, .to = cond},
               {.tag = TC_NODE_MATCHES,
                .node_ind = cond,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
               {.tag = TC_CLONE_WANTED_WANTED, .from = node_params.node_ind, .to = b1},
               {.tag = TC_NODE_MATCHES,
                .node_ind = b1,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
               // second branch wanted == first branch
               {.tag = TC_CLONE_ACTUAL_WANTED, .from = b1, .to = b2},
               {.tag = TC_NODE_MATCHES,
                .node_ind = b2,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
             };
 
             push_actions(&state, STATIC_LEN(actions), actions);
@@ -1666,13 +1639,13 @@ tc_res typecheck(source_file source, parse_tree tree) {
                  .to = param_ind},
                 {.tag = TC_NODE_MATCHES,
                  .node_ind = param_ind,
-                 .stage = {.two_stage = TWO_STAGE_ONE}},
+                 },
                 {.tag = TC_WANT_TYPE,
                  .from = T_FN_RET_IND(node_params.wanted),
                  .to = body_ind},
                 {.tag = TC_NODE_MATCHES,
                  .node_ind = body_ind,
-                 .stage = {.two_stage = TWO_STAGE_ONE}},
+                 },
                 {.tag = TC_POP_VARS_TO, .amt = state.term_env.len}};
               push_actions(&state, STATIC_LEN(actions), actions);
               break;
@@ -1703,13 +1676,13 @@ tc_res typecheck(source_file source, parse_tree tree) {
                  .to = param_ind},
                 {.tag = TC_PATTERN_MATCHES,
                  .node_ind = param_ind,
-                 .stage = {.two_stage = TWO_STAGE_ONE}},
+                 },
                 {.tag = TC_WANT_TYPE,
                  .from = T_FN_RET_IND(node_params.wanted),
                  .to = body_ind},
                 {.tag = TC_NODE_MATCHES,
                  .node_ind = body_ind,
-                 .stage = {.two_stage = TWO_STAGE_ONE}},
+                 },
                 {.tag = TC_POP_VARS_TO, .amt = state.term_env.len},
               };
               push_actions(&state, STATIC_LEN(actions), actions);
@@ -1802,12 +1775,12 @@ tc_res typecheck(source_file source, parse_tree tree) {
             {
               tc_action action = {.tag = TC_TYPE,
                                   .node_ind = PT_LIST_TYPE_SUB(node),
-                                  .stage = {.two_stage = TWO_STAGE_ONE}};
+                                  };
               push_action(&state, action);
             }
             tc_action action = {.tag = TC_TYPE_LIST_STAGE_TWO,
                                 .node_ind = node_ind,
-                                .stage = {.two_stage = TWO_STAGE_TWO}};
+                                };
             push_action(&state, action);
             break;
           }
@@ -1828,13 +1801,13 @@ tc_res typecheck(source_file source, parse_tree tree) {
             tc_action actions[] = {
               {.tag = TC_TYPE,
                .node_ind = param_ind,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
               {.tag = TC_TYPE,
                .node_ind = return_ind,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
               {.tag = TC_TYPE_FN_STAGE_TWO,
                .node_ind = node_ind,
-               .stage = {.two_stage = TWO_STAGE_TWO}},
+               },
             };
             push_actions(&state, STATIC_LEN(actions), actions);
             break;
@@ -1872,13 +1845,13 @@ tc_res typecheck(source_file source, parse_tree tree) {
             tc_action actions[] = {
               {.tag = TC_TYPE,
                .node_ind = callee_ind,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
               {.tag = TC_TYPE,
                .node_ind = param_ind,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
               {.tag = TC_TYPE_CALL_STAGE_TWO,
                .node_ind = node_ind,
-               .stage = {.two_stage = TWO_STAGE_ONE}},
+               },
             };
             push_actions(&state, STATIC_LEN(actions), actions);
             break;
