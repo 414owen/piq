@@ -68,6 +68,7 @@ typedef enum {
 
   // types
   TC_TYPE,
+  TC_TYPE_LIST_STAGE_TWO,
 
   // Construct a compound type from its children
   TC_RECONSTRUCT,
@@ -272,10 +273,16 @@ static void break_suspicious_action(typecheck_state *state, tc_action action) {
       if (action.amt > 10000)
         suspicious_action();
       break;
+    case TC_PATTERN_MATCHES:
+    case TC_PATTERN_UNAMBIGUOUS:
     case TC_NODE_MATCHES:
+    case TC_NODE_MATCHES_AS_STAGE_TWO:
     case TC_NODE_UNAMBIGUOUS:
     case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
+    case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO:
     case TC_TYPE:
+    case TC_TYPE_LIST_STAGE_TWO:
+    case TC_RECONSTRUCT:
       if (action.node_ind >= state->tree.node_amt)
         suspicious_action();
       break;
@@ -301,6 +308,8 @@ static void break_suspicious_action(typecheck_state *state, tc_action action) {
     case TC_RECOVER:
       if (state->stack.len < 2)
         suspicious_action();
+      break;
+    case TC_PUSH_ENV:
       break;
   }
 }
@@ -1023,36 +1032,6 @@ static void tc_pattern_unambiguous(typecheck_state *state,
   }
 }
 
-static void tc_reconstruct(typecheck_state *state, tc_node_params params) {
-  switch (params.node.type) {
-    case PT_TUP: {
-      node_ind_t sub_a = PT_TUP_SUB_A(params.node);
-      node_ind_t sub_b = PT_TUP_SUB_B(params.node);
-      node_ind_t type_a = state->res.node_types[sub_a];
-      node_ind_t type_b = state->res.node_types[sub_b];
-      state->res.node_types[params.node_ind] =
-        mk_type_inline(state, T_TUP, type_a, type_b);
-      break;
-    }
-    case PT_LIST: {
-      node_ind_t *inds = state->tree.inds;
-      node_ind_t sub_amt = PT_LIST_SUB_AMT(params.node);
-      if (sub_amt == 0)
-        return;
-      node_ind_t sub_ind = PT_LIST_SUB_IND(inds, params.node, 0);
-      node_ind_t sub_type_ind = state->res.node_types[sub_ind];
-      if (sub_type_ind == state->unknown_ind)
-        return;
-      state->res.node_types[params.node_ind] =
-        mk_type_inline(state, T_LIST, sub_type_ind, 0);
-      break;
-    }
-    default:
-      give_up("Invalid node to reconstruct");
-      break;
-  }
-}
-
 static tc_node_params mk_tc_node_params(typecheck_state *state,
                                         node_ind_t node_ind, stage stage) {
   tc_node_params params;
@@ -1075,11 +1054,14 @@ static const char *action_str(action_tag tag) {
     MK_CASE(TC_POP_N_VARS)
     MK_CASE(TC_POP_VARS_TO)
     MK_CASE(TC_NODE_MATCHES)
+    MK_CASE(TC_NODE_MATCHES_AS_STAGE_TWO)
     MK_CASE(TC_NODE_UNAMBIGUOUS)
     MK_CASE(TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO)
+    MK_CASE(TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO)
     MK_CASE(TC_PATTERN_MATCHES)
     MK_CASE(TC_PATTERN_UNAMBIGUOUS)
     MK_CASE(TC_TYPE)
+    MK_CASE(TC_TYPE_LIST_STAGE_TWO)
     MK_CASE(TC_CLONE_ACTUAL_ACTUAL)
     MK_CASE(TC_CLONE_ACTUAL_WANTED)
     MK_CASE(TC_CLONE_WANTED_WANTED)
@@ -1210,10 +1192,10 @@ tc_res typecheck(source_file source, parse_tree tree) {
           break;
         case TC_POP_VARS_TO:
           fprintf(debug_out, "Keeping %d vars\n", action.amt);
-          break;
+         break;
         case TC_WANT_TYPE: {
           parse_node node = tree.nodes[action.to];
-          format_error_ctx(debug_out, source.data, node.start, node.end);
+          format_error_ctx(debug_out, source.data, node.span.start, node.span.end);
           putc('\n', debug_out);
           break;
         }
@@ -1224,29 +1206,32 @@ tc_res typecheck(source_file source, parse_tree tree) {
           parse_node from_node = tree.nodes[action.from];
           fprintf(debug_out, "From: '%d' '%s'\n", action.from,
                   parse_node_string(from_node.type));
-          format_error_ctx(debug_out, source.data, from_node.start,
-                           from_node.end);
+          format_error_ctx(debug_out, source.data, from_node.span.start,
+                           from_node.span.end);
           putc('\n', debug_out);
 
           parse_node to_node = tree.nodes[action.to];
-          format_error_ctx(debug_out, source.data, from_node.span.start,
           fprintf(debug_out, "To: '%d' '%s'\n", action.to,
                   parse_node_string(to_node.type));
-          format_error_ctx(debug_out, source.data, to_node.start, to_node.end);
+          format_error_ctx(debug_out, source.data, to_node.span.start, to_node.span.end);
           putc('\n', debug_out);
           break;
         }
         case TC_TYPE:
+        case TC_TYPE_LIST_STAGE_TWO:
         case TC_RECONSTRUCT:
         case TC_NODE_MATCHES:
+        case TC_NODE_MATCHES_AS_STAGE_TWO:
         case TC_PATTERN_UNAMBIGUOUS:
         case TC_PATTERN_MATCHES:
+        case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
+        case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO:
         case TC_NODE_UNAMBIGUOUS: {
           fprintf(debug_out, "Node ind: '%d'\n", action.node_ind);
           parse_node node = tree.nodes[action.node_ind];
           fprintf(debug_out, "Node: '%s'\n", parse_node_string(node.type));
           fprintf(debug_out, "Stage: '%d'\n", action.stage.four_stage);
-          format_error_ctx(debug_out, source.data, node.start, node.end);
+          format_error_ctx(debug_out, source.data, node.span.start, node.span.end);
           putc('\n', debug_out);
           break;
         }
@@ -1271,6 +1256,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
       HEDLEY_FALL_THROUGH;
       case TC_PATTERN_UNAMBIGUOUS:
       case TC_TYPE:
+      case TC_TYPE_LIST_STAGE_TWO:
       case TC_NODE_UNAMBIGUOUS:
       case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
       case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO:
@@ -1765,8 +1751,36 @@ tc_res typecheck(source_file source, parse_tree tree) {
         tc_pattern_unambiguous(&state, node_params);
         break;
 
+      // TODO: Specialize operation to its node types
       case TC_RECONSTRUCT:
-        tc_reconstruct(&state, node_params);
+        // Doesn't matter if we came from _ambiguous, or _matches
+        switch (node_params.node.type) {
+          case PT_TUP: {
+            node_ind_t sub_a = PT_TUP_SUB_A(node_params.node);
+            node_ind_t sub_b = PT_TUP_SUB_B(node_params.node);
+            node_ind_t type_a = state.res.node_types[sub_a];
+            node_ind_t type_b = state.res.node_types[sub_b];
+            state.res.node_types[node_params.node_ind] =
+              mk_type_inline(&state, T_TUP, type_a, type_b);
+            break;
+          }
+          case PT_LIST: {
+            node_ind_t *inds = state.tree.inds;
+            node_ind_t sub_amt = PT_LIST_SUB_AMT(node_params.node);
+            if (sub_amt == 0)
+              break;
+            node_ind_t sub_ind = PT_LIST_SUB_IND(inds, node_params.node, 0);
+            node_ind_t sub_type_ind = state.res.node_types[sub_ind];
+            if (sub_type_ind == state.unknown_ind)
+              break;
+            state.res.node_types[node_params.node_ind] =
+              mk_type_inline(&state, T_LIST, sub_type_ind, 0);
+            break;
+          }
+          default:
+            give_up("Invalid node to reconstruct");
+            break;
+        }
         break;
 
       // fills in a type from a parse_tree type
@@ -1777,27 +1791,16 @@ tc_res typecheck(source_file source, parse_tree tree) {
         switch (node.type) {
           // tc_type
           case PT_LIST_TYPE: {
-            switch (node_params.stage.two_stage) {
-              // Typecheck subs
-              case TWO_STAGE_ONE: {
-                {
-                  tc_action action = {.tag = TC_TYPE,
-                                      .node_ind = PT_LIST_TYPE_SUB(node),
-                                      .stage = {.two_stage = TWO_STAGE_ONE}};
-                  push_action(&state, action);
-                }
-                tc_action action = {.tag = TC_TYPE,
-                                    .node_ind = node_ind,
-                                    .stage = {.two_stage = TWO_STAGE_TWO}};
-                push_action(&state, action);
-                break;
-              }
-              case TWO_STAGE_TWO: {
-                state.res.node_types[node_ind] = mk_type_inline(
-                  &state, T_LIST, state.res.node_types[PT_LIST_TYPE_SUB(node)], 0);
-                break;
-              }
+            {
+              tc_action action = {.tag = TC_TYPE,
+                                  .node_ind = PT_LIST_TYPE_SUB(node),
+                                  .stage = {.two_stage = TWO_STAGE_ONE}};
+              push_action(&state, action);
             }
+            tc_action action = {.tag = TC_TYPE_LIST_STAGE_TWO,
+                                .node_ind = node_ind,
+                                .stage = {.two_stage = TWO_STAGE_TWO}};
+            push_action(&state, action);
             break;
           }
 
@@ -1936,6 +1939,12 @@ tc_res typecheck(source_file source, parse_tree tree) {
         break;
       }
 
+      case TC_TYPE_LIST_STAGE_TWO: {
+        state.res.node_types[node_params.node_ind] = mk_type_inline(
+          &state, T_LIST, state.res.node_types[PT_LIST_TYPE_SUB(node_params.node)], 0);
+        break;
+      }
+
       case TC_ASSIGN_TYPE:
         state.res.node_types[action.to] = action.from;
         break;
@@ -1972,8 +1981,12 @@ tc_res typecheck(source_file source, parse_tree tree) {
         putc('\n', debug_out);
         break;
       case TC_TYPE:
+      case TC_TYPE_LIST_STAGE_TWO:
       case TC_NODE_MATCHES:
+      case TC_NODE_MATCHES_AS_STAGE_TWO:
       case TC_NODE_UNAMBIGUOUS:
+      case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
+      case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO:
       case TC_PATTERN_MATCHES:
       case TC_PATTERN_UNAMBIGUOUS:
       case TC_CLONE_ACTUAL_ACTUAL:
