@@ -577,7 +577,8 @@ static void typecheck_block(typecheck_state *state, tc_node_params params,
   if (!can_continue) {
     // remove actions
     state->stack.len = start_action_amt;
-    goto cleanup_tc_block;
+    stfree(sub_has_wanted, BITNSLOTS(params.node.sub_amt));
+    return;
   }
 
   node_ind_t bnd_amt = 0;
@@ -608,7 +609,6 @@ static void typecheck_block(typecheck_state *state, tc_node_params params,
                           .to = params.node_ind}};
   push_actions(state, STATIC_LEN(actions), actions);
 
-cleanup_tc_block:
   stfree(sub_has_wanted, BITNSLOTS(params.node.sub_amt));
 }
 
