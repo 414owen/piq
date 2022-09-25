@@ -160,6 +160,10 @@ static void destroy_cg_state(cg_state *state) {
   VEC_FREE(&state->env_nodes);
 }
 
+static void push_action(cg_state *state, cg_action action) {
+  VEC_PUSH(&state->actions, action);
+}
+
 static stage pop_stage(bitset *bs) {
   debug_assert(bs->len > 0);
   return bs_pop(bs) ? STAGE_TWO : STAGE_ONE;
@@ -168,22 +172,27 @@ static stage pop_stage(bitset *bs) {
 static void push_stage(bitset *bs, stage s) { bs_push(bs, s == STAGE_TWO); }
 
 static void push_node_act(cg_state *state, node_ind_t node_ind, stage stage) {
-  VEC_PUSH(&state->actions, CG_NODE);
+  push_action(state, CG_NODE);
   push_stage(&state->act_stage, stage);
   VEC_PUSH(&state->act_nodes, node_ind);
 }
 
 static void push_pattern_act(cg_state *state, node_ind_t node_ind) {
-  VEC_PUSH(&state->actions, CG_PATTERN);
+  push_action(state, CG_PATTERN);
   VEC_PUSH(&state->act_nodes, node_ind);
 }
 
 typedef enum {
   GEN_TYPE,
+  // TODO speialize this, to avoid switch-in-switch?
   COMBINE_TYPE,
 } gen_type_action;
 
 VEC_DECL(gen_type_action);
+
+static void push_gen_type_action(vec_gen_type_action *actions, gen_type_action action) {
+  VEC_PUSH(actions, action);
+}
 
 static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
 
@@ -195,7 +204,7 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
   }
 
   vec_gen_type_action actions = VEC_NEW;
-  VEC_PUSH(&actions, GEN_TYPE);
+  push_gen_type_action(&actions, GEN_TYPE);
   vec_node_ind inds = VEC_NEW;
   VEC_PUSH(&inds, root_type_ind);
   while (inds.len > 0) {
@@ -212,9 +221,9 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
             break;
           }
           case T_LIST: {
-            VEC_PUSH(&actions, COMBINE_TYPE);
+            push_gen_type_action(&actions, COMBINE_TYPE);
             VEC_PUSH(&inds, type_ind);
-            VEC_PUSH(&actions, GEN_TYPE);
+            push_gen_type_action(&actions, GEN_TYPE);
             VEC_PUSH(&inds, T_LIST_SUB_IND(t));
             break;
           }
@@ -239,20 +248,20 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
             break;
           }
           case T_TUP: {
-            VEC_PUSH(&actions, COMBINE_TYPE);
+            push_gen_type_action(&actions, COMBINE_TYPE);
             VEC_PUSH(&inds, type_ind);
-            VEC_PUSH(&actions, GEN_TYPE);
+            push_gen_type_action(&actions, GEN_TYPE);
             VEC_PUSH(&inds, T_TUP_SUB_A(t));
-            VEC_PUSH(&actions, GEN_TYPE);
+            push_gen_type_action(&actions, GEN_TYPE);
             VEC_PUSH(&inds, T_TUP_SUB_B(t));
             break;
           }
           case T_FN: {
-            VEC_PUSH(&actions, COMBINE_TYPE);
+            push_gen_type_action(&actions, COMBINE_TYPE);
             VEC_PUSH(&inds, type_ind);
-            VEC_PUSH(&actions, GEN_TYPE);
+            push_gen_type_action(&actions, GEN_TYPE);
             VEC_PUSH(&inds, T_FN_PARAM_IND(t));
-            VEC_PUSH(&actions, GEN_TYPE);
+            push_gen_type_action(&actions, GEN_TYPE);
             VEC_PUSH(&inds, T_FN_RET_IND(t));
             break;
           }
@@ -383,13 +392,13 @@ static void cg_node(cg_state *state) {
 
           // then
           VEC_PUSH(&state->strs, THEN_STR);
-          VEC_PUSH(&state->actions, CG_GEN_BLOCK);
+          push_action(state, CG_GEN_BLOCK);
           VEC_PUSH(&state->act_nodes,
                    PT_IF_A_IND(state->parse_tree.inds, node));
 
           // else
           VEC_PUSH(&state->strs, ELSE_STR);
-          VEC_PUSH(&state->actions, CG_GEN_BLOCK);
+          push_action(state, CG_GEN_BLOCK);
           VEC_PUSH(&state->act_nodes,
                    PT_IF_B_IND(state->parse_tree.inds, node));
           break;
@@ -474,7 +483,7 @@ static void cg_node(cg_state *state) {
           VEC_PUSH(&state->function_stack, fn);
 
           u32 env_amt = state->env_bnds.len;
-          VEC_PUSH(&state->actions, CG_POP_ENV_TO);
+          push_action(state, CG_POP_ENV_TO);
           VEC_PUSH(&state->act_sizes, env_amt);
 
           push_node_act(state, ind, STAGE_TWO);
@@ -484,7 +493,7 @@ static void cg_node(cg_state *state) {
           LLVMValueRef arg = LLVMGetParam(fn, 0);
           VEC_PUSH(&state->act_vals, arg);
 
-          VEC_PUSH(&state->actions, CG_GEN_BLOCK);
+          push_action(state, CG_GEN_BLOCK);
           VEC_PUSH(&state->strs, EMPTY_STR);
           VEC_PUSH(&state->act_nodes,
                    PT_FUN_BODY_IND(state->parse_tree.inds, node));
@@ -604,7 +613,7 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
           state.context, VEC_PEEK(state.function_stack), name);
         LLVMPositionBuilderAtEnd(state.builder, block);
         VEC_PUSH(&state.block_stack, block);
-        VEC_PUSH(&state.actions, CG_NODE);
+        push_action(&state, CG_NODE);
         push_stage(&state.act_stage, STAGE_ONE);
         break;
       }
