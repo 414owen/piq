@@ -115,5 +115,16 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
 
+  /*
+  test_start(state, "Returns last number in block");
+  {
+    const char *input = "(sig test (Fn () I32))\n"
+                        "(fun test () 2 3)";
+
+    test_llvm_produces(state, &ctx, input, 2);
+  }
+  test_end(state);
+  */
+
   test_group_end(state);
 }
