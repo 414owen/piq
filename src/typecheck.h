@@ -44,18 +44,23 @@ typedef struct {
 
 VEC_DECL(tc_error);
 
-// TODO type_inds should be a pointer, not a vec...
 typedef struct {
-  ir_module module;
-  vec_tc_error errors;
   // all the types
-  vec_type types;
+  type *types;
   // type sub-indices
-  vec_node_ind type_inds;
+  node_ind_t *type_inds;
   // index into types, one per parse_node
   node_ind_t *node_types;
+  node_ind_t type_amt;
+} type_info;
+
+// TODO type_inds should be a pointer, not a vec...
+typedef struct {
+  tc_error *errors;
+  node_ind_t error_amt;
+  type_info types;
 } tc_res;
 
-void print_tc_errors(FILE *, source_file, parse_tree, tc_res);
-tc_res typecheck(source_file source, parse_tree tree);
+void print_tc_errors(FILE *, const char *input, parse_tree, tc_res);
+tc_res typecheck(const char *input, parse_tree tree);
 void free_tc_res(tc_res res);

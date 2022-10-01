@@ -13,6 +13,7 @@
 #include "scope.h"
 #include "source.h"
 #include "typecheck.h"
+#include "types.h"
 #include "util.h"
 #include "vec.h"
 
@@ -123,7 +124,17 @@ typedef struct {
 VEC_DECL(tc_action);
 
 typedef struct {
-  tc_res res;
+  struct {
+    // all the types
+    vec_type types;
+    // type sub-indices
+    vec_node_ind type_inds;
+    // index into types, one per parse_node
+    node_ind_t *node_types;
+  } types;
+
+  vec_tc_error errors;
+
   pt_node_amounts pt_inds;
 
   // TODO technically it's more efficient to have a stack of node_ind_t,
@@ -145,14 +156,14 @@ typedef struct {
   // index into res.types
   vec_node_ind term_type_inds;
 
-  // res.node_types is wanted or known
+  // types.node_types is wanted or known
   node_ind_t *wanted;
   node_ind_t unknown_ind;
   node_ind_t string_type_ind;
   node_ind_t bool_type_ind;
 
   parse_tree tree;
-  source_file source;
+  const char *restrict input;
 } typecheck_state;
 
 typedef struct {
@@ -163,44 +174,44 @@ typedef struct {
 } tc_node_params;
 
 static void push_tc_err(typecheck_state *state, tc_error err) {
-  VEC_PUSH(&state->res.errors, err);
+  VEC_PUSH(&state->errors, err);
 }
 
 static node_ind_t find_primitive_type(typecheck_state *state, type_tag tag) {
-  for (node_ind_t i = 0; i < state->res.types.len; i++) {
-    type t = VEC_GET(state->res.types, i);
+  for (node_ind_t i = 0; i < state->types.types.len; i++) {
+    type t = VEC_GET(state->types.types, i);
     if (t.tag == tag)
       return i;
   }
-  return state->res.types.len;
+  return state->types.types.len;
 }
 
 static node_ind_t find_type(typecheck_state *state, type_tag tag,
                             node_ind_t *subs, node_ind_t sub_amt) {
-  for (node_ind_t i = 0; i < state->res.types.len; i++) {
-    type t = VEC_GET(state->res.types, i);
+  for (node_ind_t i = 0; i < state->types.types.len; i++) {
+    type t = VEC_GET(state->types.types, i);
     if (t.tag != tag || t.sub_amt != sub_amt)
       continue;
-    node_ind_t *p1 = &VEC_DATA_PTR(&state->res.type_inds)[t.subs_start];
+    node_ind_t *p1 = &VEC_DATA_PTR(&state->types.type_inds)[t.subs_start];
     if (memcmp(p1, subs, sub_amt) != 0)
       continue;
     return i;
   }
-  return state->res.types.len;
+  return state->types.types.len;
 }
 
 static node_ind_t mk_primitive_type(typecheck_state *state, type_tag tag) {
   debug_assert(type_repr(tag) == SUBS_NONE);
   node_ind_t ind = find_primitive_type(state, tag);
-  if (ind < state->res.types.len)
+  if (ind < state->types.types.len)
     return ind;
   type t = {
     .tag = tag,
     .sub_amt = 0,
     .subs_start = 0,
   };
-  VEC_PUSH(&state->res.types, t);
-  return state->res.types.len - 1;
+  VEC_PUSH(&state->types.types, t);
+  return state->types.types.len - 1;
 }
 
 static node_ind_t mk_type_inline(typecheck_state *state, type_tag tag,
@@ -211,14 +222,14 @@ static node_ind_t mk_type_inline(typecheck_state *state, type_tag tag,
     .sub_a = sub_a,
     .sub_b = sub_b,
   };
-  for (size_t i = 0; i < state->res.types.len; i++) {
-    type t2 = VEC_GET(state->res.types, i);
+  for (size_t i = 0; i < state->types.types.len; i++) {
+    type t2 = VEC_GET(state->types.types, i);
     if (inline_types_eq(t, t2)) {
       return i;
     }
   }
-  VEC_PUSH(&state->res.types, t);
-  return state->res.types.len - 1;
+  VEC_PUSH(&state->types.types, t);
+  return state->types.types.len - 1;
 }
 
 static node_ind_t mk_type(typecheck_state *state, type_tag tag,
@@ -228,23 +239,23 @@ static node_ind_t mk_type(typecheck_state *state, type_tag tag,
     return mk_primitive_type(state, tag);
   }
   node_ind_t ind = find_type(state, tag, subs, sub_amt);
-  if (ind < state->res.types.len)
+  if (ind < state->types.types.len)
     return ind;
-  debug_assert(sizeof(subs[0]) == sizeof(VEC_GET(state->res.type_inds, 0)));
+  debug_assert(sizeof(subs[0]) == sizeof(VEC_GET(state->types.type_inds, 0)));
   // size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
   // const void *needle, size_t needle_els);
-  ind = find_range(VEC_DATA_PTR(&state->res.type_inds), sizeof(subs[0]),
-                   state->res.type_inds.len, subs, sub_amt);
-  if (ind == state->res.type_inds.len) {
-    VEC_APPEND(&state->res.type_inds, sub_amt, subs);
+  ind = find_range(VEC_DATA_PTR(&state->types.type_inds), sizeof(subs[0]),
+                   state->types.type_inds.len, subs, sub_amt);
+  if (ind == state->types.type_inds.len) {
+    VEC_APPEND(&state->types.type_inds, sub_amt, subs);
   }
   type t = {
     .tag = tag,
     .sub_amt = sub_amt,
     .subs_start = ind,
   };
-  VEC_PUSH(&state->res.types, t);
-  return state->res.types.len - 1;
+  VEC_PUSH(&state->types.types, t);
+  return state->types.types.len - 1;
 }
 
 #ifdef DEBUG_TC
@@ -296,7 +307,7 @@ static void break_suspicious_action(typecheck_state *state, tc_action action) {
     case TC_WANT_TYPE:
       if (action.to >= state->tree.node_amt)
         suspicious_action();
-      if (action.from >= state->res.types.len)
+      if (action.from >= state->types.types.len)
         suspicious_action();
       break;
     case TC_RECOVER:
@@ -333,11 +344,11 @@ static void setup_type_env(typecheck_state *state) {
 
   {
     type t = {.tag = T_UNKNOWN, .sub_amt = 0, .subs_start = 0};
-    VEC_PUSH(&state->res.types, t);
-    state->unknown_ind = state->res.types.len - 1;
+    VEC_PUSH(&state->types.types, t);
+    state->unknown_ind = state->types.types.len - 1;
   }
 
-  memset_arbitrary(state->res.node_types, &state->unknown_ind,
+  memset_arbitrary(state->types.node_types, &state->unknown_ind,
                    state->tree.node_amt, sizeof(node_ind_t));
   memset_arbitrary(state->wanted, &state->unknown_ind, state->tree.node_amt,
                    sizeof(node_ind_t));
@@ -351,11 +362,11 @@ static void setup_type_env(typecheck_state *state) {
       T_BOOL, T_U8, T_U16, T_U32, T_U64, T_I8, T_I16, T_I32, T_I64};
 
     VEC_APPEND(&state->type_env, STATIC_LEN(builtin_names), builtin_names);
-    node_ind_t start_type_ind = state->res.types.len;
+    node_ind_t start_type_ind = state->types.types.len;
     for (node_ind_t i = 0; i < STATIC_LEN(primitive_types); i++) {
       VEC_PUSH(&state->type_type_inds, start_type_ind + i);
       type t = {.tag = primitive_types[i], .subs_start = 0, .sub_amt = 0};
-      VEC_PUSH(&state->res.types, t);
+      VEC_PUSH(&state->types.types, t);
       bs_push(&state->type_is_builtin, true);
     }
 
@@ -363,7 +374,7 @@ static void setup_type_env(typecheck_state *state) {
       node_ind_t u8_ind = mk_primitive_type(state, T_U8);
       node_ind_t list_ind = mk_type_inline(state, T_LIST, u8_ind, 0);
       state->string_type_ind = list_ind;
-      VEC_PUSH(&state->type_type_inds, state->res.types.len - 1);
+      VEC_PUSH(&state->type_type_inds, state->types.types.len - 1);
       bs_push(&state->type_is_builtin, true);
     }
     state->bool_type_ind = mk_primitive_type(state, T_BOOL);
@@ -386,7 +397,7 @@ static bool check_int_fits(typecheck_state *state, node_ind_t node_ind,
                            uint64_t max) {
   parse_node node = state->tree.nodes[node_ind];
   bool res = true;
-  const char *buf = state->source.data;
+  const char *buf = state->input;
   uint64_t last, n = 0;
   for (size_t i = node.span.start; i <= node.span.end; i++) {
     last = n;
@@ -408,7 +419,7 @@ static bool check_int_fits(typecheck_state *state, node_ind_t node_ind,
 
 static bool check_int_fits_type(typecheck_state *state, node_ind_t node_ind,
                                 node_ind_t wanted_ind) {
-  type wanted = VEC_GET(state->res.types, wanted_ind);
+  type wanted = VEC_GET(state->types.types, wanted_ind);
   bool fits = true;
   switch (wanted.tag) {
     case T_U8:
@@ -479,7 +490,7 @@ static bool can_propagate_type(typecheck_state *state, parse_node from,
     default:
       return false;
   }
-  return compare_bnds(state->source.data, state->tree.nodes[a_bnd_ind].span,
+  return compare_bnds(state->input, state->tree.nodes[a_bnd_ind].span,
                       state->tree.nodes[b_bnd_ind].span) == EQ;
 }
 
@@ -673,7 +684,7 @@ static void tc_call(typecheck_state *state, tc_node_params params) {
 
     default: {
       tc_action actions[] = {
-        {.tag = TC_RECOVER, .amt = state->res.errors.len},
+        {.tag = TC_RECOVER, .amt = state->errors.len},
         {.tag = TC_CALL_PARAM_FIRST,
          .node_ind = params.node_ind,
          },
@@ -810,7 +821,7 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
 
     case PT_UPPER_NAME: {
       binding b = params.node.span;
-      size_t ind = lookup_str_ref(state->source.data, state->term_env,
+      size_t ind = lookup_str_ref(state->input, state->term_env,
                                   state->term_is_builtin, b);
       if (ind == state->term_env.len) {
         tc_error err = {
@@ -862,7 +873,7 @@ static void tc_pattern_unambiguous(typecheck_state *state,
                                    tc_node_params params) {
   switch (params.node.type) {
     case PT_UNIT: {
-      state->res.node_types[params.node_ind] = mk_primitive_type(state, T_UNIT);
+      state->types.node_types[params.node_ind] = mk_primitive_type(state, T_UNIT);
       break;
     }
     case PT_CONSTRUCTION: {
@@ -871,7 +882,7 @@ static void tc_pattern_unambiguous(typecheck_state *state,
       break;
     }
     case PT_STRING: {
-      state->res.node_types[params.node_ind] = state->string_type_ind;
+      state->types.node_types[params.node_ind] = state->string_type_ind;
       break;
     }
     case PT_LIST: {
@@ -906,7 +917,7 @@ static void tc_pattern_unambiguous(typecheck_state *state,
 
     case PT_UPPER_NAME: {
       binding b = params.node.span;
-      size_t ind = lookup_str_ref(state->source.data, state->term_env,
+      size_t ind = lookup_str_ref(state->input, state->term_env,
                                   state->term_is_builtin, b);
       if (ind == state->term_env.len) {
         tc_error err = {
@@ -946,7 +957,7 @@ static tc_node_params mk_tc_node_params(typecheck_state *state,
   params.node_ind = node_ind;
   params.node = state->tree.nodes[params.node_ind];
   params.wanted_ind = state->wanted[params.node_ind];
-  params.wanted = VEC_GET(state->res.types, params.wanted_ind);
+  params.wanted = VEC_GET(state->types.types, params.wanted_ind);
   return params;
 }
 
@@ -991,12 +1002,13 @@ static const char *action_str(action_tag tag) {
 };
 #endif
 
-static typecheck_state tc_new_state(source_file source, parse_tree tree) {
+static typecheck_state tc_new_state(const char *restrict input, parse_tree tree) {
   typecheck_state state = {
-    .res = {.module = ir_module_new(tree),
+    .types = {
             .types = VEC_NEW,
-            .errors = VEC_NEW,
+            .type_inds = VEC_NEW,
             .node_types = malloc(tree.node_amt * sizeof(node_ind_t))},
+    .errors = VEC_NEW,
     .wanted = malloc(tree.node_amt * sizeof(node_ind_t)),
 
     .type_env = VEC_NEW,
@@ -1009,7 +1021,7 @@ static typecheck_state tc_new_state(source_file source, parse_tree tree) {
 
     .stack = VEC_NEW,
 
-    .source = source,
+    .input = input,
     .tree = tree,
   };
   tc_action action = {.tag = TC_NODE_UNAMBIGUOUS,
@@ -1019,9 +1031,9 @@ static typecheck_state tc_new_state(source_file source, parse_tree tree) {
   return state;
 }
 
-static void print_tc_error(FILE *f, tc_res res, source_file source,
+static void print_tc_error(FILE *f, tc_res res, const char *restrict input,
                            parse_tree tree, node_ind_t err_ind) {
-  tc_error error = VEC_GET(res.errors, err_ind);
+  tc_error error = res.errors[err_ind];
   switch (error.type) {
     case CALLED_NON_FUNCTION:
       fputs("Tried to call a non-function", f);
@@ -1046,19 +1058,19 @@ static void print_tc_error(FILE *f, tc_res res, source_file source,
       break;
     case TYPE_MISMATCH:
       fputs("Type mismatch. Expected ", f);
-      print_type(f, VEC_DATA_PTR(&res.types), error.expected);
+      print_type(f, res.types.types, error.expected);
       fputs("\nGot ", f);
-      print_type(f, VEC_DATA_PTR(&res.types), error.got);
+      print_type(f, res.types.types, error.got);
       break;
     case TYPE_HEAD_MISMATCH:
       fputs("Type mismatch. Expected ", f);
-      print_type(f, VEC_DATA_PTR(&res.types), error.expected);
+      print_type(f, res.types.types, error.expected);
       fputs("\nGot: ", f);
       print_type_head_placeholders(f, error.got_type_head);
       break;
     case LITERAL_MISMATCH:
       fputs("Literal mismatch. Expected ", f);
-      print_type(f, VEC_DATA_PTR(&res.types), error.expected);
+      print_type(f, res.types.types, error.expected);
       fputs("", f);
       break;
     case MISSING_SIG:
@@ -1070,18 +1082,18 @@ static void print_tc_error(FILE *f, tc_res res, source_file source,
   }
   parse_node node = tree.nodes[error.pos];
   fprintf(f, "\nAt %d-%d:\n", node.span.start, node.span.end);
-  format_error_ctx(f, source.data, node.span.start, node.span.end);
+  format_error_ctx(f, input, node.span.start, node.span.end);
 }
 
-void print_tc_errors(FILE *f, source_file source, parse_tree tree, tc_res res) {
-  for (size_t i = 0; i < res.errors.len; i++) {
+void print_tc_errors(FILE *f, const char *restrict input, parse_tree tree, tc_res res) {
+  for (size_t i = 0; i < res.error_amt; i++) {
     putc('\n', f);
-    print_tc_error(f, res, source, tree, i);
+    print_tc_error(f, res, input, tree, i);
   }
 }
 
-tc_res typecheck(source_file source, parse_tree tree) {
-  typecheck_state state = tc_new_state(source, tree);
+tc_res typecheck(const char *restrict input, parse_tree tree) {
+  typecheck_state state = tc_new_state(input, tree);
   setup_type_env(&state);
   // resolve_types(&state);
 #ifdef DEBUG_TC
@@ -1109,7 +1121,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
          break;
         case TC_WANT_TYPE: {
           parse_node node = tree.nodes[action.to];
-          format_error_ctx(debug_out, source.data, node.span.start, node.span.end);
+          format_error_ctx(debug_out, input, node.span.start, node.span.end);
           putc('\n', debug_out);
           break;
         }
@@ -1120,14 +1132,14 @@ tc_res typecheck(source_file source, parse_tree tree) {
           parse_node from_node = tree.nodes[action.from];
           fprintf(debug_out, "From: '%d' '%s'\n", action.from,
                   parse_node_string(from_node.type));
-          format_error_ctx(debug_out, source.data, from_node.span.start,
+          format_error_ctx(debug_out, input, from_node.span.start,
                            from_node.span.end);
           putc('\n', debug_out);
 
           parse_node to_node = tree.nodes[action.to];
           fprintf(debug_out, "To: '%d' '%s'\n", action.to,
                   parse_node_string(to_node.type));
-          format_error_ctx(debug_out, source.data, to_node.span.start, to_node.span.end);
+          format_error_ctx(debug_out, input, to_node.span.start, to_node.span.end);
           putc('\n', debug_out);
           break;
         }
@@ -1145,7 +1157,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
           fprintf(debug_out, "Node ind: '%d'\n", action.node_ind);
           parse_node node = tree.nodes[action.node_ind];
           fprintf(debug_out, "Node: '%s'\n", parse_node_string(node.type));
-          format_error_ctx(debug_out, source.data, node.span.start, node.span.end);
+          format_error_ctx(debug_out, input, node.span.start, node.span.end);
           putc('\n', debug_out);
           break;
         }
@@ -1154,7 +1166,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
           break;
       }
     }
-    size_t starting_err_amt = state.res.errors.len;
+    size_t starting_err_amt = res.errors[le];
 #endif
     tc_node_params node_params;
 
@@ -1202,21 +1214,21 @@ tc_res typecheck(source_file source, parse_tree tree) {
     switch (action.tag) {
 
       case TC_CLONE_ACTUAL_ACTUAL:
-        state.res.node_types[action.to] = state.res.node_types[action.from];
+        state.types.node_types[action.to] = state.types.node_types[action.from];
         break;
 
       case TC_CLONE_ACTUAL_WANTED:
-        state.wanted[action.to] = state.res.node_types[action.from];
+        state.wanted[action.to] = state.types.node_types[action.from];
         break;
 
       case TC_CLONE_WANTED_ACTUAL:
-        state.res.node_types[action.to] = state.wanted[action.from];
+        state.types.node_types[action.to] = state.wanted[action.from];
         break;
 
       case TC_PUSH_ENV:
         VEC_PUSH(&state.term_env, action.binding);
         bs_push(&state.term_is_builtin, false);
-        VEC_PUSH(&state.term_type_inds, state.res.node_types[action.node_ind]);
+        VEC_PUSH(&state.term_type_inds, state.types.node_types[action.node_ind]);
         break;
 
       case TC_CLONE_WANTED_WANTED:
@@ -1243,7 +1255,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
         node_ind_t callee_ind = PT_CALL_CALLEE_IND(node_params.node);
         node_ind_t param_ind = PT_CALL_PARAM_IND(node_params.node);
         node_ind_t wanted_fn_type = mk_type_inline(
-          &state, T_FN, state.res.node_types[param_ind], node_params.wanted_ind);
+          &state, T_FN, state.types.node_types[param_ind], node_params.wanted_ind);
         tc_action actions[] = {
           {.tag = TC_WANT_TYPE, .from = wanted_fn_type, .to = callee_ind},
           // Can't be more specific, as the current node might be wanted=unknown
@@ -1258,8 +1270,8 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_CALL_POST_CALLEE: {
         node_ind_t callee_ind = PT_CALL_CALLEE_IND(node_params.node);
         node_ind_t param_ind = PT_CALL_PARAM_IND(node_params.node);
-        node_ind_t callee_type_ind = state.res.node_types[callee_ind];
-        type callee_type = VEC_GET(state.res.types, callee_type_ind);
+        node_ind_t callee_type_ind = state.types.node_types[callee_ind];
+        type callee_type = VEC_GET(state.types.types, callee_type_ind);
         switch (callee_type.tag) {
           case T_FN: {
             node_ind_t callee_param_type_ind = T_FN_RET_IND(callee_type);
@@ -1316,9 +1328,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
 
           // node_unambiguous
           case PT_UNIT:
-            state.res.module.ir_units[state.pt_inds.pt_unit++].span_start =
-              node_params.node.span.start;
-            state.res.node_types[node_params.node_ind] = mk_primitive_type(&state, T_UNIT);
+            state.types.node_types[node_params.node_ind] = mk_primitive_type(&state, T_UNIT);
             break;
 
           // node_unambiguous
@@ -1328,9 +1338,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
 
           // node_unambiguous
           case PT_STRING:
-            state.res.module.ir_strings[state.pt_inds.pt_string++].s =
-              node_params.node.span;
-            state.res.node_types[node_params.node_ind] = state.string_type_ind;
+            state.types.node_types[node_params.node_ind] = state.string_type_ind;
             break;
 
           // node_unambiguous
@@ -1389,7 +1397,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
           case PT_UPPER_NAME:
           case PT_LOWER_NAME: {
             binding b = node_params.node.span;
-            size_t ind = lookup_str_ref(state.source.data, state.term_env,
+            size_t ind = lookup_str_ref(state.input, state.term_env,
                                         state.term_is_builtin, b);
             if (ind == state.term_env.len) {
               tc_error err = {
@@ -1463,9 +1471,9 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO: {
         node_ind_t param_ind = PT_FN_PARAM_IND(node_params.node);
         node_ind_t body_ind = PT_FN_BODY_IND(node_params.node);
-        state.res.node_types[node_params.node_ind] =
-          mk_type_inline(&state, T_FN, state.res.node_types[param_ind],
-                         state.res.node_types[body_ind]);
+        state.types.node_types[node_params.node_ind] =
+          mk_type_inline(&state, T_FN, state.types.node_types[param_ind],
+                         state.types.node_types[body_ind]);
         break;
       }
 
@@ -1476,10 +1484,10 @@ tc_res typecheck(source_file source, parse_tree tree) {
 
         // TODO consider using wanted value?
         node_ind_t type =
-          mk_type_inline(&state, T_FN, state.res.node_types[param_ind],
-                         state.res.node_types[body_ind]);
-        state.res.node_types[node_params.node_ind] = type;
-        state.res.node_types[bnd_ind] = type;
+          mk_type_inline(&state, T_FN, state.types.node_types[param_ind],
+                         state.types.node_types[body_ind]);
+        state.types.node_types[node_params.node_ind] = type;
+        state.types.node_types[bnd_ind] = type;
         break;
       }
 
@@ -1610,7 +1618,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
           case PT_UPPER_NAME:
           case PT_LOWER_NAME: {
             binding b = node_params.node.span;
-            size_t ind = lookup_str_ref(state.source.data, state.term_env,
+            size_t ind = lookup_str_ref(state.input, state.term_env,
                                         state.term_is_builtin, b);
             if (ind == state.term_env.len) {
               tc_error err = {
@@ -1716,7 +1724,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
 
       case TC_NODE_MATCHES_AS_STAGE_TWO: {
         node_ind_t sig_ind = PT_AS_TYPE_IND(node_params.node);
-        node_ind_t sig_type_ind = state.res.node_types[sig_ind];
+        node_ind_t sig_type_ind = state.types.node_types[sig_ind];
         if (node_params.wanted_ind != sig_type_ind) {
           tc_error err = {
             .type = TYPE_MISMATCH,
@@ -1740,9 +1748,9 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_RECONSTRUCT_TUPLE: {
         node_ind_t sub_a = PT_TUP_SUB_A(node_params.node);
         node_ind_t sub_b = PT_TUP_SUB_B(node_params.node);
-        node_ind_t type_a = state.res.node_types[sub_a];
-        node_ind_t type_b = state.res.node_types[sub_b];
-        state.res.node_types[node_params.node_ind] =
+        node_ind_t type_a = state.types.node_types[sub_a];
+        node_ind_t type_b = state.types.node_types[sub_b];
+        state.types.node_types[node_params.node_ind] =
           mk_type_inline(&state, T_TUP, type_a, type_b);
         break;
       }
@@ -1753,10 +1761,10 @@ tc_res typecheck(source_file source, parse_tree tree) {
         if (sub_amt == 0)
           break;
         node_ind_t sub_ind = PT_LIST_SUB_IND(inds, node_params.node, 0);
-        node_ind_t sub_type_ind = state.res.node_types[sub_ind];
+        node_ind_t sub_type_ind = state.types.node_types[sub_ind];
         if (sub_type_ind == state.unknown_ind)
           break;
-        state.res.node_types[node_params.node_ind] =
+        state.types.node_types[node_params.node_ind] =
           mk_type_inline(&state, T_LIST, sub_type_ind, 0);
         break;
       }
@@ -1813,7 +1821,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
           // tc_type
           case PT_UPPER_NAME: {
             binding b = {.start = node.span.start, .end = node.span.end};
-            size_t ind = lookup_str_ref(state.source.data, state.type_env,
+            size_t ind = lookup_str_ref(state.input, state.type_env,
                                         state.type_is_builtin, b);
             if (ind == state.type_env.len) {
               tc_error err = {
@@ -1824,14 +1832,14 @@ tc_res typecheck(source_file source, parse_tree tree) {
               break;
             }
             node_ind_t type_ind = VEC_GET(state.type_type_inds, ind);
-            state.res.node_types[node_ind] = type_ind;
+            state.types.node_types[node_ind] = type_ind;
             break;
           }
 
           // tc_type
           case PT_UNIT: {
             node_ind_t type_ind = mk_primitive_type(&state, T_UNIT);
-            state.res.node_types[node_ind] = type_ind;
+            state.types.node_types[node_ind] = type_ind;
             break;
           }
 
@@ -1875,30 +1883,30 @@ tc_res typecheck(source_file source, parse_tree tree) {
       }
 
       case TC_TYPE_LIST_STAGE_TWO: {
-        state.res.node_types[node_params.node_ind] = mk_type_inline(
-          &state, T_LIST, state.res.node_types[PT_LIST_TYPE_SUB(node_params.node)], 0);
+        state.types.node_types[node_params.node_ind] = mk_type_inline(
+          &state, T_LIST, state.types.node_types[PT_LIST_TYPE_SUB(node_params.node)], 0);
         break;
       }
 
       case TC_TYPE_FN_STAGE_TWO: {
         node_ind_t param_ind = PT_FN_TYPE_PARAM_IND(node_params.node);
         node_ind_t return_ind = PT_FN_TYPE_RETURN_IND(node_params.node);
-        state.res.node_types[action.node_ind] =
-          mk_type_inline(&state, T_FN, state.res.node_types[param_ind],
-                         state.res.node_types[return_ind]);
+        state.types.node_types[action.node_ind] =
+          mk_type_inline(&state, T_FN, state.types.node_types[param_ind],
+                         state.types.node_types[return_ind]);
         break;
       }
 
       case TC_TYPE_CALL_STAGE_TWO: {
         node_ind_t callee_ind = PT_CALL_CALLEE_IND(node_params.node);
-        node_ind_t callee_type_ind = state.res.node_types[callee_ind];
-        type callee = VEC_GET(state.res.types, callee_type_ind);
+        node_ind_t callee_type_ind = state.types.node_types[callee_ind];
+        type callee = VEC_GET(state.types.types, callee_type_ind);
         switch (callee.tag) {
           case T_UNKNOWN:
             break;
           case T_FN: {
             node_ind_t callee_return_type_ind = T_FN_RET_IND(callee);
-            state.res.node_types[action.node_ind] = callee_return_type_ind;
+            state.types.node_types[action.node_ind] = callee_return_type_ind;
             break;
           }
           default: {
@@ -1917,7 +1925,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
       }
 
       case TC_ASSIGN_TYPE:
-        state.res.node_types[action.to] = action.from;
+        state.types.node_types[action.to] = action.from;
         break;
 
       case TC_WANT_TYPE:
@@ -1927,11 +1935,11 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_RECOVER: {
         tc_action a = VEC_POP(&state.stack);
         tc_action b = VEC_POP(&state.stack);
-        size_t err_diff = state.res.errors.len - action.amt;
+        size_t err_diff = state.errors.len - action.amt;
         if (err_diff == 0) {
           VEC_PUSH(&state.stack, a);
         } else {
-          VEC_POP_N(&state.res.errors, err_diff);
+          VEC_POP_N(&state.errors, err_diff);
           VEC_PUSH(&state.stack, b);
         }
         break;
@@ -1939,7 +1947,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
     }
 
 #ifdef DEBUG_TC
-    if (state.res.errors.len > starting_err_amt) {
+    if (statees.errors[len > starting_err_amt)];
       fprintf(debug_out, "Caused an error.\n");
     }
     switch (action.tag) {
@@ -1947,7 +1955,7 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_CLONE_WANTED_WANTED:
       case TC_WANT_TYPE:
         fputs("New wanted: ", debug_out);
-        print_type(debug_out, VEC_DATA_PTR(&state.res.types),
+        print_type(debug_out, VEC_DATA_PTR(&state.types.types),
                    state.wanted[action.to]);
         putc('\n', debug_out);
         break;
@@ -1964,8 +1972,8 @@ tc_res typecheck(source_file source, parse_tree tree) {
       case TC_CLONE_WANTED_ACTUAL:
       case TC_ASSIGN_TYPE:
         fputs("Result: ", debug_out);
-        print_type(debug_out, VEC_DATA_PTR(&state.res.types),
-                   state.res.node_types[action.node_ind]);
+        print_type(debug_out, VEC_DATA_PTR(&state.types.types),
+                   state.types.node_types[action.node_ind]);
         putc('\n', debug_out);
         break;
       default:
@@ -1995,12 +2003,24 @@ tc_res typecheck(source_file source, parse_tree tree) {
   fclose(debug_out);
 #endif
 
-  return state.res;
+  tc_res res = {
+    .error_amt = state.errors.len,
+    .errors = VEC_FINALIZE(&state.errors),
+    .types = {
+      .type_amt = state.types.types.len,
+      .types = VEC_FINALIZE(&state.types.types),
+      .node_types = state.types.node_types,
+      .type_inds = VEC_FINALIZE(&state.types.type_inds),
+    }
+  };
+  return res;
 }
 
 void free_tc_res(tc_res res) {
-  VEC_FREE(&res.errors);
-  VEC_FREE(&res.types);
-  VEC_FREE(&res.type_inds);
-  free(res.node_types);
+  free(res.types.types);
+  free(res.types.type_inds);
+  free(res.types.node_types);
+  if (res.error_amt > 0) {
+    free(res.errors);
+  }
 }

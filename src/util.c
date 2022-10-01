@@ -188,8 +188,11 @@ char *join(const size_t str_amt, const char *const *const strs,
   return buf;
 }
 
-void give_up(const char *err) {
-  fprintf(stderr, "%s.\nThis is a compiler bug! Giving up.\n", err);
+void give_up(const char *err, ...) {
+  va_list argp;
+  va_start(argp, err);
+  vfprintf(stderr, err, argp);
+  fputs("\nThis is a compiler bug! Giving up.\n", stderr);
   exit(1);
 }
 

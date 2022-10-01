@@ -45,7 +45,7 @@
           ];
 
           buildInputs = with pkgs; [
-            llvmPackages_13.libllvm
+            llvmPackages_14.libllvm
             hedley
           ];
 

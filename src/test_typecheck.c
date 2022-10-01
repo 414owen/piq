@@ -58,7 +58,7 @@ typedef struct {
   };
 } tc_test;
 
-static bool test_type_eq(vec_type types, vec_node_ind inds, node_ind_t root,
+static bool test_type_eq(type *types, node_ind_t *inds, node_ind_t root,
                          test_type t) {
   vec_node_ind stackA = VEC_NEW;
   VEC_PUSH(&stackA, root);
@@ -72,7 +72,7 @@ static bool test_type_eq(vec_type types, vec_node_ind inds, node_ind_t root,
     }
     if (stackA.len == 0)
       break;
-    type tA = VEC_GET(types, VEC_POP(&stackA));
+    type tA = types[VEC_POP(&stackA)];
     test_type tB = VEC_POP(&stackB);
     if (tA.tag != tB.tag) {
       res = false;
@@ -80,7 +80,7 @@ static bool test_type_eq(vec_type types, vec_node_ind inds, node_ind_t root,
     }
     switch (type_repr(tA.tag)) {
       case SUBS_EXTERNAL:
-        VEC_APPEND(&stackA, tA.sub_amt, VEC_DATA_PTR(&inds) + tA.subs_start);
+        VEC_APPEND(&stackA, tA.sub_amt, inds + tA.subs_start);
         break;
       case SUBS_ONE:
         VEC_PUSH(&stackA, tA.sub_a);
@@ -101,7 +101,7 @@ static bool test_type_eq(vec_type types, vec_node_ind inds, node_ind_t root,
 
 static bool test_err_eq(parse_tree tree, tc_res res, size_t err_ind,
                         tc_err_test test_err) {
-  tc_error eA = VEC_GET(res.errors, err_ind);
+  tc_error eA = res.errors[err_ind];
   if (eA.type != test_err.type)
     return false;
   parse_node node = tree.nodes[eA.pos];
@@ -111,9 +111,9 @@ static bool test_err_eq(parse_tree tree, tc_res res, size_t err_ind,
     return false;
   switch (eA.type) {
     case TYPE_MISMATCH: {
-      return test_type_eq(res.types, res.type_inds, eA.expected,
+      return test_type_eq(res.types.types, res.types.type_inds, eA.expected,
                           test_err.type_exp) &&
-             test_type_eq(res.types, res.type_inds, eA.got, test_err.type_got);
+             test_type_eq(res.types.types, res.types.type_inds, eA.got, test_err.type_got);
     }
     default:
       break;
@@ -123,7 +123,7 @@ static bool test_err_eq(parse_tree tree, tc_res res, size_t err_ind,
 
 static bool all_errors_match(parse_tree tree, tc_res res, size_t exp_error_amt,
                              const tc_err_test *exp_errors) {
-  if (res.errors.len != exp_error_amt)
+  if (res.error_amt != exp_error_amt)
     return false;
   for (size_t i = 0; i < exp_error_amt; i++) {
     if (!test_err_eq(tree, res, i, exp_errors[i]))
@@ -143,10 +143,10 @@ static void test_types_match(test_state *state, parse_tree tree, tc_res res,
         continue;
       if (node.span.start == span.start && node.span.end == span.end) {
         seen = true;
-        if (!test_type_eq(res.types, res.type_inds, res.node_types[j],
+        if (!test_type_eq(res.types.types, res.types.type_inds, res.types.node_types[j],
                           span.exp)) {
           stringstream *ss = ss_init();
-          print_type(ss->stream, res.types.data, res.node_types[j]);
+          print_type(ss->stream, res.types.types, res.types.node_types[j]);
           char *str = ss_finalize(ss);
           failf(state, "Type mismatch in test. Got: %s", str);
           free(str);
@@ -161,21 +161,20 @@ static void test_types_match(test_state *state, parse_tree tree, tc_res res,
 
 static void run_typecheck_test(test_state *state, const char *input,
                                tc_test test) {
-  source_file test_file = {.path = "typecheck-test", .data = input};
   parse_tree_res pres = test_upto_parse_tree(state, input);
   if (!pres.succeeded) {
     free_parse_tree_res(pres);
     return;
   }
 
-  tc_res res = typecheck(test_file, pres.tree);
+  tc_res res = typecheck(input, pres.tree);
   switch (test.type) {
     case TYPE_MATCHES: {
-      if (res.errors.len > 0) {
+      if (res.error_amt > 0) {
         stringstream *ss = ss_init();
         fprintf(ss->stream, "Didn't expect typecheck errors. Got %d:\n",
-                res.errors.len);
-        print_tc_errors(ss->stream, test_file, pres.tree, res);
+                res.error_amt);
+        print_tc_errors(ss->stream, input, pres.tree, res);
         failf(state, ss_finalize(ss), input);
       } else {
         test_types_match(state, pres.tree, res, test);
@@ -186,11 +185,11 @@ static void run_typecheck_test(test_state *state, const char *input,
       if (!all_errors_match(pres.tree, res, test.error_amt, test.errors)) {
         stringstream *ss = ss_init();
         fprintf(ss->stream, "Expected %zu errors, got %d.\n", test.error_amt,
-                res.errors.len);
-        if (res.errors.len > 0) {
+                res.error_amt);
+        if (res.error_amt > 0) {
           fputs("Errors:\n", ss->stream);
         }
-        print_tc_errors(ss->stream, test_file, pres.tree, res);
+        print_tc_errors(ss->stream, input, pres.tree, res);
         char *str = ss_finalize(ss);
         failf(state, str, input);
         free(str);

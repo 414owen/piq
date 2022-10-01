@@ -1,6 +1,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include <llvm-c/LLJIT.h>
+#include <llvm-c/ExecutionEngine.h>
+#include <llvm-c/Orc.h>
+#include <llvm-c/OrcEE.h>
+
 #include "diagnostic.h"
 #include "llvm.h"
 #include "parse_tree.h"
@@ -8,47 +13,107 @@
 #include "typecheck.h"
 #include "util.h"
 
-// TODO this even has the wrong name -_-
-static void test_typecheck_produces(test_state *state, char *input,
-                                    size_t error_amt, uint32_t res) {
-  source_file test_file = {.path = "parser-test", .data = input};
-  tokens_res tres = scan_all(test_file);
-  if (!tres.succeeded) {
-    failf(state, "Parser test \"%s\" failed tokenization at position %d", input,
-          tres.error_pos);
-    goto end_a;
+typedef struct {
+  LLVMContextRef llvm_ctx;
+  LLVMOrcThreadSafeContextRef orc_ctx;
+  LLVMOrcLLJITRef jit;
+  LLVMOrcExecutionSessionRef session;
+  LLVMOrcJITDylibRef dylib;
+  
+  LLVMTargetRef target;
+  LLVMTargetMachineRef target_machine;
+} jit_ctx;
+
+static jit_ctx jit_llvm_init(void) {
+  LLVMInitializeCore(LLVMGetGlobalPassRegistry());
+  LLVMInitializeNativeTarget();
+  LLVMInitializeNativeAsmPrinter();
+  LLVMOrcLLJITBuilderRef builder = LLVMOrcCreateLLJITBuilder();
+
+  LLVMOrcLLJITRef jit;
+  {
+    LLVMErrorRef error = LLVMOrcCreateLLJIT(&jit, builder);
+
+    if (error != LLVMErrorSuccess) {
+      char *msg = LLVMGetErrorMessage(error);
+      give_up("LLVMOrcCreateLLJIT failed: %s", msg);
+    }
   }
 
-  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
-  if (!pres.succeeded) {
-    failf(state, "Parsing \"%s\" failed.", input);
-    goto end_b;
+  LLVMOrcExecutionSessionRef session = LLVMOrcLLJITGetExecutionSession(jit);
+  LLVMOrcJITDylibRef dylib = LLVMOrcLLJITGetMainJITDylib(jit);
+  LLVMOrcThreadSafeContextRef orc_ctx = LLVMOrcCreateNewThreadSafeContext();
+
+  char *triple = LLVMGetDefaultTargetTriple();
+  char *error;
+  LLVMTargetRef target;
+  if (LLVMGetTargetFromTriple(triple, &target, &error)) {
+    give_up("Failed to get LLVM target for %s: %s", triple, error);
   }
 
-  tc_res tc_res = typecheck(test_file, pres.tree);
-  if (tc_res.errors.len > 0) {
-    failf(state, "Typechecking \"%s\" failed.", input);
-    goto end_c;
-  }
+  LLVMTargetMachineRef target_machine = LLVMCreateTargetMachine(target, triple, "", "",
+                                       LLVMCodeGenLevelDefault,
+                                       LLVMRelocDefault,
+                                       LLVMCodeModelJITDefault);
 
-  // LLVMModuleRef module = codegen(tc_res);
+  LLVMDisposeMessage(triple);
+  assert(target_machine);
 
-end_c:
-  VEC_FREE(&tc_res.errors);
-  VEC_FREE(&tc_res.types);
-  VEC_FREE(&tc_res.type_inds);
-  free(tc_res.node_types);
+  jit_ctx state = {
+    .llvm_ctx = LLVMOrcThreadSafeContextGetContext(orc_ctx),
+    .orc_ctx = orc_ctx,
+    .jit = jit,
+    .session = session,
+    .dylib = dylib,
 
-end_b:
-  free(pres.tree.inds);
-  free(pres.tree.nodes);
+    .target = target,
+    .target_machine = target_machine,
+  };
 
-end_a:
-  free(tres.tokens);
+  return state;
 }
 
-void test_typecheck(test_state *state) {
+static void test_llvm_produces(test_state *state, jit_ctx *ctx, const char *input, int32_t expected) {
+  parse_tree tree;
+  bool success = false;
+  tc_res tc = test_upto_typecheck(state, input, &success, &tree);
+
+  source_file test_file = {
+    .path = "test_jit",
+    .data = input,
+  };
+
+  LLVMModuleRef module = gen_module(test_file.path, test_file, tree, tc.types, ctx->llvm_ctx);
+  LLVMOrcThreadSafeModuleRef tsm = LLVMOrcCreateNewThreadSafeModule(module, ctx->orc_ctx);
+  LLVMOrcLLJITAddLLVMIRModule(ctx->jit, ctx->dylib, tsm);
+  LLVMOrcJITTargetAddress entry_addr;
+  {
+    LLVMErrorRef error = LLVMOrcLLJITLookup(ctx->jit, &entry_addr, "test");
+    if (error != LLVMErrorSuccess) {
+      char *msg = LLVMGetErrorMessage(error);
+      give_up("LLVMLLJITLookup failed: %s", msg);
+    }
+  }
+
+  int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
+  int32_t got = entry();
+  if (got != expected) {
+    failf(state, "Jit function returned wrong result. Expected: %d, Got: %d", expected, got);
+  }
+}
+
+void test_llvm(test_state *state) {
+  jit_ctx ctx = jit_llvm_init();
   test_group_start(state, "LLVM");
+
+  test_start(state, "Can return number");
+  {
+    const char *input = "(sig test (Fn () I32))\n"
+                        "(fun test () 2)";
+
+    test_llvm_produces(state, &ctx, input, 2);
+  }
+  test_end(state);
 
   test_group_end(state);
 }
