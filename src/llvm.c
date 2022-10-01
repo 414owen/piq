@@ -465,8 +465,10 @@ static void cg_node(cg_state *state) {
     }
     case PT_FUN_BODY:
     case PT_ROOT: {
+      size_t last = PT_BLOCK_SUB_AMT(node) - 1;
       for (size_t i = 0; i < PT_BLOCK_SUB_AMT(node); i++) {
-        node_ind_t sub_ind = PT_BLOCK_SUB_IND(state->parse_tree.inds, node, i);
+        size_t j = last - i;
+        node_ind_t sub_ind = PT_BLOCK_SUB_IND(state->parse_tree.inds, node, j);
         parse_node sub = state->parse_tree.nodes[sub_ind];
         if (sub.type == PT_SIG)
           continue;
