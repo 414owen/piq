@@ -291,7 +291,8 @@ parse_tree_res test_upto_parse_tree(test_state *state,
   return pres;
 }
 
-tc_res test_upto_typecheck(test_state *state, const char *restrict input, bool *success, parse_tree *tree) {
+tc_res test_upto_typecheck(test_state *state, const char *restrict input,
+                           bool *success, parse_tree *tree) {
   parse_tree_res tree_res = test_upto_parse_tree(state, input);
   tc_res tc = typecheck(input, tree_res.tree);
   if (!tree_res.succeeded) {

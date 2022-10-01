@@ -19,7 +19,7 @@ typedef struct {
   LLVMOrcLLJITRef jit;
   LLVMOrcExecutionSessionRef session;
   LLVMOrcJITDylibRef dylib;
-  
+
   LLVMTargetRef target;
   LLVMTargetMachineRef target_machine;
 } jit_ctx;
@@ -51,10 +51,9 @@ static jit_ctx jit_llvm_init(void) {
     give_up("Failed to get LLVM target for %s: %s", triple, error);
   }
 
-  LLVMTargetMachineRef target_machine = LLVMCreateTargetMachine(target, triple, "", "",
-                                       LLVMCodeGenLevelDefault,
-                                       LLVMRelocDefault,
-                                       LLVMCodeModelJITDefault);
+  LLVMTargetMachineRef target_machine =
+    LLVMCreateTargetMachine(target, triple, "", "", LLVMCodeGenLevelDefault,
+                            LLVMRelocDefault, LLVMCodeModelJITDefault);
 
   LLVMDisposeMessage(triple);
   assert(target_machine);
@@ -73,7 +72,8 @@ static jit_ctx jit_llvm_init(void) {
   return state;
 }
 
-static void test_llvm_produces(test_state *state, jit_ctx *ctx, const char *input, int32_t expected) {
+static void test_llvm_produces(test_state *state, jit_ctx *ctx,
+                               const char *input, int32_t expected) {
   parse_tree tree;
   bool success = false;
   tc_res tc = test_upto_typecheck(state, input, &success, &tree);
@@ -83,8 +83,10 @@ static void test_llvm_produces(test_state *state, jit_ctx *ctx, const char *inpu
     .data = input,
   };
 
-  LLVMModuleRef module = gen_module(test_file.path, test_file, tree, tc.types, ctx->llvm_ctx);
-  LLVMOrcThreadSafeModuleRef tsm = LLVMOrcCreateNewThreadSafeModule(module, ctx->orc_ctx);
+  LLVMModuleRef module =
+    gen_module(test_file.path, test_file, tree, tc.types, ctx->llvm_ctx);
+  LLVMOrcThreadSafeModuleRef tsm =
+    LLVMOrcCreateNewThreadSafeModule(module, ctx->orc_ctx);
   LLVMOrcLLJITAddLLVMIRModule(ctx->jit, ctx->dylib, tsm);
   LLVMOrcJITTargetAddress entry_addr;
   {
@@ -98,7 +100,8 @@ static void test_llvm_produces(test_state *state, jit_ctx *ctx, const char *inpu
   int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
   int32_t got = entry();
   if (got != expected) {
-    failf(state, "Jit function returned wrong result. Expected: %d, Got: %d", expected, got);
+    failf(state, "Jit function returned wrong result. Expected: %d, Got: %d",
+          expected, got);
   }
 }
 
