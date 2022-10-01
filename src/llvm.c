@@ -192,7 +192,8 @@ typedef enum {
 
 VEC_DECL(gen_type_action);
 
-static void push_gen_type_action(vec_gen_type_action *actions, gen_type_action action) {
+static void push_gen_type_action(vec_gen_type_action *actions,
+                                 gen_type_action action) {
   VEC_PUSH(actions, action);
 }
 
@@ -476,16 +477,20 @@ static void cg_node(cg_state *state) {
     case PT_FUN:
       switch (stage) {
         case STAGE_ONE: {
-          LLVMTypeRef fn_type = construct_type(state, state->types.node_types[ind]);
+          LLVMTypeRef fn_type =
+            construct_type(state, state->types.node_types[ind]);
 
           // TODO use twine here
-          node_ind_t binding_ind = PT_FUN_BINDING_IND(state->parse_tree.inds, node);
+          node_ind_t binding_ind =
+            PT_FUN_BINDING_IND(state->parse_tree.inds, node);
           parse_node binding = state->parse_tree.nodes[binding_ind];
           buf_ind_t binding_len = 1 + binding.span.end - binding.span.start;
 
           // We should add this back at some point, I guess
           // LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
-          LLVMValueRef fn = LLVMAddFunctionCustom(state->module, &state->source.data[binding.span.start], binding_len, fn_type);
+          LLVMValueRef fn = LLVMAddFunctionCustom(
+            state->module, &state->source.data[binding.span.start], binding_len,
+            fn_type);
           VEC_PUSH(&state->function_stack, fn);
 
           u32 env_amt = state->env_bnds.len;
@@ -593,7 +598,8 @@ static void cg_pattern(cg_state *state) {
 }
 
 static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
-                           source_file source, parse_tree tree, type_info types) {
+                           source_file source, parse_tree tree,
+                           type_info types) {
 
   LLVMInitializeNativeTarget();
   LLVMInitializeNativeAsmPrinter();
@@ -646,7 +652,8 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
   destroy_cg_state(&state);
 }
 
-LLVMModuleRef gen_module(char *module_name, source_file source, parse_tree tree, type_info types, LLVMContextRef ctx) {
+LLVMModuleRef gen_module(char *module_name, source_file source, parse_tree tree,
+                         type_info types, LLVMContextRef ctx) {
   LLVMModuleRef mod = LLVMModuleCreateWithNameInContext(module_name, ctx);
   cg_llvm_module(ctx, mod, source, tree, types);
   return mod;
