@@ -13,8 +13,6 @@
 #include "typecheck.h"
 #include "util.h"
 
-static LLVMTargetMachineRef target_machine;
-
 typedef struct {
   LLVMContextRef llvm_ctx;
   LLVMOrcThreadSafeContextRef orc_ctx;
@@ -51,8 +49,12 @@ static jit_ctx jit_llvm_init(void) {
   return state;
 }
 
-static void test_llvm_produces(test_state *state, const char *input,
-                               int32_t expected) {
+static void jit_dispose(jit_ctx *ctx) {
+  LLVMOrcDisposeLLJIT(ctx->jit);
+  LLVMOrcDisposeThreadSafeContext(ctx->orc_ctx);
+}
+
+static void test_llvm_produces(test_state *state, const char *input, int32_t expected) {
   jit_ctx ctx = jit_llvm_init();
   parse_tree tree;
   bool success = false;
@@ -80,33 +82,23 @@ static void test_llvm_produces(test_state *state, const char *input,
   int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
   int32_t got = entry();
   if (got != expected) {
-    failf(state,
-          "Jit function returned wrong result. Expected: %d, Got: %d.\n%s",
+    failf(state, "Jit function returned wrong result. Expected: %d, Got: %d.\n%s",
           expected, got, LLVMPrintModuleToString(module));
   }
+  free_parse_tree(tree);
+  free_tc_res(tc);
+  jit_dispose(&ctx);
 }
 
-void test_llvm(test_state *state) {
+static void init() {
   LLVMInitializeCore(LLVMGetGlobalPassRegistry());
   LLVMInitializeNativeTarget();
   LLVMInitializeNativeAsmPrinter();
+}
 
-  {
-    char *triple = LLVMGetDefaultTargetTriple();
-    char *error;
-    LLVMTargetRef target;
-    if (LLVMGetTargetFromTriple(triple, &target, &error)) {
-      give_up("Failed to get LLVM target for %s: %s", triple, error);
-    }
-
-    LLVMTargetMachineRef target_machine =
-      LLVMCreateTargetMachine(target, triple, "", "", LLVMCodeGenLevelDefault,
-                              LLVMRelocDefault, LLVMCodeModelJITDefault);
-
-    LLVMDisposeMessage(triple);
-    assert(target_machine);
-  }
-
+void test_llvm(test_state *state) {
+  init();
+  
   test_group_start(state, "LLVM");
 
   test_start(state, "Can return number");

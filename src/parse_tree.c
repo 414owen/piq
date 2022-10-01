@@ -310,10 +310,14 @@ char *print_parse_tree_str(char *input, parse_tree tree) {
   return ss_finalize(ss);
 }
 
+void free_parse_tree(parse_tree tree) {
+  free(tree.inds);
+  free(tree.nodes);
+}
+
 void free_parse_tree_res(parse_tree_res res) {
   if (res.succeeded) {
-    free(res.tree.inds);
-    free(res.tree.nodes);
+    free_parse_tree(res.tree);
   } else {
     free(res.expected);
   }
