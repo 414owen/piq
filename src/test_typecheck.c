@@ -304,6 +304,24 @@ static void test_typecheck_succeeds(test_state *state) {
   }
   test_end(state);
 
+  test_start(state, "Multi-expression block");
+  {
+    exp_type_span spans[] = {{
+      .start = 33,
+      .end = 35,
+      .exp = {.tag = T_U8},
+    }};
+    tc_test test = {
+      .type = TYPE_MATCHES,
+      .span_amt = STATIC_LEN(spans),
+      .spans = spans,
+    };
+    const char *input = "(sig a (Fn U8 [U8]))\n"
+                        "(fun a 1 2 [12])";
+    run_typecheck_test(state, input, test);
+  }
+  test_end(state);
+
   test_start(state, "Param shadows binding");
   {
     run_typecheck_error_test(state,
