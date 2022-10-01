@@ -113,7 +113,8 @@ static bool test_err_eq(parse_tree tree, tc_res res, size_t err_ind,
     case TYPE_MISMATCH: {
       return test_type_eq(res.types.types, res.types.type_inds, eA.expected,
                           test_err.type_exp) &&
-             test_type_eq(res.types.types, res.types.type_inds, eA.got, test_err.type_got);
+             test_type_eq(res.types.types, res.types.type_inds, eA.got,
+                          test_err.type_got);
     }
     default:
       break;
@@ -143,8 +144,8 @@ static void test_types_match(test_state *state, parse_tree tree, tc_res res,
         continue;
       if (node.span.start == span.start && node.span.end == span.end) {
         seen = true;
-        if (!test_type_eq(res.types.types, res.types.type_inds, res.types.node_types[j],
-                          span.exp)) {
+        if (!test_type_eq(res.types.types, res.types.type_inds,
+                          res.types.node_types[j], span.exp)) {
           stringstream *ss = ss_init();
           print_type(ss->stream, res.types.types, res.types.node_types[j]);
           char *str = ss_finalize(ss);
@@ -306,18 +307,25 @@ static void test_typecheck_succeeds(test_state *state) {
 
   test_start(state, "Multi-expression block");
   {
-    exp_type_span spans[] = {{
-      .start = 33,
-      .end = 35,
-      .exp = {.tag = T_U8},
-    }};
+    exp_type_span spans[] = {
+      {
+        .start = 42,
+        .end = 43,
+        .exp = {.tag = T_U8},
+      },
+      {
+        .start = 38,
+        .end = 38,
+        .exp = {.tag = T_I32},
+      },
+    };
     tc_test test = {
       .type = TYPE_MATCHES,
       .span_amt = STATIC_LEN(spans),
       .spans = spans,
     };
     const char *input = "(sig a (Fn U8 [U8]))\n"
-                        "(fun a 1 2 [12])";
+                        "(fun a 1 (as I32 2) [12])";
     run_typecheck_test(state, input, test);
   }
   test_end(state);
