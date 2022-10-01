@@ -1,3 +1,5 @@
+#pragma once
+
 #include <llvm-c/Core.h>
 
 LLVMValueRef LLVMAddFunctionCustom(LLVMModuleRef M, const char *name,
