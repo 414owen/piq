@@ -54,7 +54,8 @@ static void jit_dispose(jit_ctx *ctx) {
   LLVMOrcDisposeThreadSafeContext(ctx->orc_ctx);
 }
 
-static void test_llvm_produces(test_state *state, const char *input, int32_t expected) {
+static void test_llvm_produces(test_state *state, const char *input,
+                               int32_t expected) {
   jit_ctx ctx = jit_llvm_init();
   parse_tree tree;
   bool success = false;
@@ -82,7 +83,8 @@ static void test_llvm_produces(test_state *state, const char *input, int32_t exp
   int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
   int32_t got = entry();
   if (got != expected) {
-    failf(state, "Jit function returned wrong result. Expected: %d, Got: %d.\n%s",
+    failf(state,
+          "Jit function returned wrong result. Expected: %d, Got: %d.\n%s",
           expected, got, LLVMPrintModuleToString(module));
   }
   free_parse_tree(tree);
@@ -98,7 +100,7 @@ static void init() {
 
 void test_llvm(test_state *state) {
   init();
-  
+
   test_group_start(state, "LLVM");
 
   test_start(state, "Can return number");
