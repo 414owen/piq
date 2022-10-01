@@ -150,16 +150,21 @@ static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
 }
 
 static void destroy_cg_state(cg_state *state) {
+  bs_free(&state->env_is_builtin);
+  free(state->llvm_types);
+  LLVMDisposeBuilder(state->builder);
+  bs_free(&state->act_stage);
   VEC_FREE(&state->actions);
+  VEC_FREE(&state->act_nodes);
+  VEC_FREE(&state->act_sizes);
+  VEC_FREE(&state->act_vals);
+  VEC_FREE(&state->block_stack);
+  VEC_FREE(&state->env_bnds);
+  VEC_FREE(&state->env_nodes);
+  VEC_FREE(&state->env_vals);
+  VEC_FREE(&state->function_stack);
   VEC_FREE(&state->strs);
   VEC_FREE(&state->val_stack);
-  VEC_FREE(&state->block_stack);
-  VEC_FREE(&state->function_stack);
-  free(state->llvm_types);
-  VEC_FREE(&state->env_bnds);
-  VEC_FREE(&state->env_vals);
-  bs_free(&state->env_is_builtin);
-  VEC_FREE(&state->env_nodes);
 }
 
 static void push_action(cg_state *state, cg_action action) {
@@ -333,6 +338,8 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
       }
     }
   }
+  VEC_FREE(&actions);
+  VEC_FREE(&inds);
   return llvm_types[root_type_ind];
 }
 

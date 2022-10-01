@@ -128,4 +128,5 @@ parse_tree_res parse(token *tokens, size_t token_amt);
 void print_parse_tree(FILE *f, char *input, parse_tree t);
 char *print_parse_tree_str(char *input, parse_tree tree);
 tree_node_repr subs_type(parse_node_type type);
+void free_parse_tree(parse_tree tree);
 void free_parse_tree_res(parse_tree_res res);
