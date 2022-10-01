@@ -1,5 +1,8 @@
 ![example workflow](https://github.com/414owen/lang-c/actions/workflows/ci.yml/badge.svg)
 
+# Possible names
+
+* YAMLLL - Yet Another Modern Low Level Language
 
 # Goal
 
