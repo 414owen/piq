@@ -11,6 +11,7 @@
 #include "token.h"
 #include "util.h"
 #include "vec.h"
+#include "typecheck.h"
 
 static const int test_indent = 2;
 
@@ -253,7 +254,7 @@ void write_test_results(test_state *state) {
   VEC_FREE(&class_path);
 }
 
-tokens_res test_upto_tokens(test_state *state, const char *volatile input) {
+tokens_res test_upto_tokens(test_state *state, const char *restrict input) {
   source_file test_file = {.path = "parser-test", .data = input};
   tokens_res tres = scan_all(test_file);
   if (!tres.succeeded) {
@@ -265,7 +266,7 @@ tokens_res test_upto_tokens(test_state *state, const char *volatile input) {
 }
 
 parse_tree_res test_upto_parse_tree(test_state *state,
-                                    const char *volatile input) {
+                                    const char *restrict input) {
   tokens_res tres = test_upto_tokens(state, input);
   if (!tres.succeeded) {
     parse_tree_res res = {
@@ -288,4 +289,24 @@ parse_tree_res test_upto_parse_tree(test_state *state,
   }
   free_tokens_res(tres);
   return pres;
+}
+
+tc_res test_upto_typecheck(test_state *state, const char *restrict input, bool *success, parse_tree *tree) {
+  parse_tree_res tree_res = test_upto_parse_tree(state, input);
+  tc_res tc = typecheck(input, tree_res.tree);
+  if (!tree_res.succeeded) {
+    *success = false;
+    free_parse_tree_res(tree_res);
+  } else {
+    if (tc.error_amt > 0) {
+      *success = false;
+      stringstream *ss = ss_init();
+      print_tc_errors(ss->stream, input, tree_res.tree, tc);
+      char *error = ss_finalize(ss);
+      failf(state, "Typecheck failed:\n%s", error);
+      free(error);
+    }
+    *tree = tree_res.tree;
+  }
+  return tc;
 }

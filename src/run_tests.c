@@ -10,14 +10,13 @@ static void run_tests(test_config conf) {
 
   test_state state = test_state_new(conf);
 
-  // TODO just add the config to state -_-
-
   test_vec(&state);
   test_bitset(&state);
   test_utils(&state);
   test_scanner(&state);
   test_parser(&state);
   test_typecheck(&state);
+  test_llvm(&state);
 
   test_state_finalize(&state);
 

@@ -205,6 +205,10 @@ vec_void *__vec_pop(vec_void *vec) { return __vec_pop_n(vec, 1); }
 // This should be called something else.
 char *__vec_finalize(vec_void *vec, size_t elemsize) {
   const size_t inline_amt = SIZE_TO_INLINE_AMT(elemsize);
+  if (vec->len == 0) {
+    free(vec->data);
+    return NULL;
+  }
   if (vec->len <= inline_amt) {
     __vec_resize_internal_to_external(vec, vec->len, elemsize);
   }
@@ -213,7 +217,13 @@ char *__vec_finalize(vec_void *vec, size_t elemsize) {
 
 #else
 
-char *__vec_finalize(vec_void *vec) { return vec->data; }
+char *__vec_finalize(vec_void *vec) {
+  if (vec->len == 0) {
+    free(vec->data);
+    return NULL;
+  }
+  return vec->data;
+}
 
 #endif
 

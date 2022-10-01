@@ -28,28 +28,24 @@ static void reply(char *input, FILE *out) {
     goto end_b;
   }
 
-  tc_res tc_res = typecheck(test_file, pres.tree);
-  if (tc_res.errors.len > 0) {
-    print_tc_errors(stdout, test_file, pres.tree, tc_res);
+  tc_res tc_res = typecheck(input, pres.tree);
+  if (tc_res.error_amt > 0) {
+    print_tc_errors(stdout, input, pres.tree, tc_res);
     putc('\n', stdout);
     goto end_c;
   }
 
-  gen_and_print_module(test_file, pres.tree, tc_res, out);
+  gen_and_print_module(test_file, pres.tree, tc_res.types, out);
   fflush(out);
 
 end_c:
-  VEC_FREE(&tc_res.errors);
-  VEC_FREE(&tc_res.types);
-  VEC_FREE(&tc_res.type_inds);
-  free(tc_res.node_types);
+  free_tc_res(tc_res);
 
 end_b:
-  free(pres.tree.inds);
-  free(pres.tree.nodes);
+  free_parse_tree_res(pres);
 
 end_a:
-  free(tres.tokens);
+  free_tokens_res(tres);
 }
 
 int main(void) {
