@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ir.h"
 #include "parse_tree.h"
 #include "vec.h"
 #include "types.h"
