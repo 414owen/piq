@@ -8,7 +8,6 @@
 #include "bitset.h"
 #include "consts.h"
 #include "diagnostic.h"
-#include "ir.h"
 #include "parse_tree.h"
 #include "scope.h"
 #include "source.h"
@@ -134,8 +133,6 @@ typedef struct {
   } types;
 
   vec_tc_error errors;
-
-  pt_node_amounts pt_inds;
 
   // TODO technically it's more efficient to have a stack of node_ind_t,
   // and a separate stack of actions. It would also let us `VEC_APPEND` node
