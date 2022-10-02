@@ -7,11 +7,8 @@
 #include "typecheck.h"
 #include "util.h"
 
-#define MARKER_START "→"
-#define MARKER_END "←"
-
-static char *marker_start = MARKER_START;
-static char *marker_end = MARKER_END;
+static char *marker_start = "→";
+static char *marker_end = "←";
 
 typedef struct test_type {
   type_tag tag;
@@ -290,7 +287,7 @@ static void test_typecheck_succeeds(test_state *state) {
   test_group_start(state, "Succeeds");
 
   {
-    const char *input = "(sig a (Fn () " MARKER_START "U8" MARKER_END "))\n"
+    const char *input = "(sig a (Fn () →U8←))\n"
                         "(fun a () 2)";
     test_start(state, "Return type U8");
     test_type types[] = { u8_t };
@@ -300,7 +297,7 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     const char *input = "(sig a (Fn () I8))\n"
-                        "(fun a () " MARKER_START "2" MARKER_END ")";
+                        "(fun a () →2←)";
     test_start(state, "Return value");
     test_type types[] = { i8 };
     test_types_match(state, input, types, STATIC_LEN(types));
@@ -309,7 +306,7 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     const char *input = "(sig a (Fn () I16))\n"
-                        "(fun " MARKER_START "a" MARKER_END " () 2)";
+                        "(fun →a← () 2)";
     test_start(state, "Fn bnd");
     const test_type fn_subs[] = {unit, i16};
     const test_type fn_type = {
@@ -327,7 +324,7 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     const char *input = "(sig a (Fn U8 [U8]))\n"
-                        "(fun a 1 [" MARKER_START "12" MARKER_END "])";
+                        "(fun a 1 [→12←])";
     test_start(state, "[U8] Literals");
     test_type types[] = { u8_t, };
     test_types_match(state, input, types, STATIC_LEN(types));
@@ -336,7 +333,7 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     const char *input = "(sig a (Fn U8 [U8]))\n"
-                        "(fun a 1 (as I32 " MARKER_START "2" MARKER_END ") [" MARKER_START "12" MARKER_END "])";
+                        "(fun a 1 (as I32 →2←) [→12←])";
     test_start(state, "Multi-expression block");
     test_type types[] = {
       i32,
@@ -360,7 +357,7 @@ static void test_errors(test_state *state) {
       }
     };
     static const char *prog = "(sig a (Fn () I32))\n"
-                              "(fun a () " MARKER_START "(2, 3)" MARKER_END ")";
+                              "(fun a () →(2, 3)←)";
     test_typecheck_errors(state, prog, errors, STATIC_LEN(errors));
     test_end(state);
   }
@@ -386,7 +383,7 @@ static void test_errors(test_state *state) {
     };
     test_typecheck_errors(state,
                              "(sig a (Fn () I32))\n"
-                             "(fun a () " MARKER_START "(fn () 1)" MARKER_END ")",
+                             "(fun a () →(fn () 1)←)",
                              errors, STATIC_LEN(errors));
     test_end(state);
   }
@@ -400,7 +397,7 @@ static void test_errors(test_state *state) {
     };
     test_typecheck_errors(state,
                              "(sig a (Fn () I32))\n"
-                             "(fun a () " MARKER_START "[3]" MARKER_END ")",
+                             "(fun a () →[3]←)",
                              errors, STATIC_LEN(errors));
     test_end(state);
   }
@@ -414,7 +411,7 @@ static void test_errors(test_state *state) {
     };
     test_typecheck_errors(state,
                              "(sig a (Fn () I32))\n"
-                             "(fun a () " MARKER_START "\"hi\"" MARKER_END ")",
+                             "(fun a () →\"hi\"←)",
                              errors, STATIC_LEN(errors));
     test_end(state);
   }
@@ -428,7 +425,7 @@ static void test_errors(test_state *state) {
     };
     test_typecheck_errors(state,
                              "(sig a (Fn () String))\n"
-                             "(fun a () " MARKER_START "321" MARKER_END ")",
+                             "(fun a () →321←)",
                              errors, STATIC_LEN(errors));
     test_end(state);
   }
