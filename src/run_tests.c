@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "test.h"
+#include "args.h"
 
 static void run_tests(test_config conf) {
 
@@ -40,7 +41,7 @@ static void run_tests(test_config conf) {
   VEC_FREE(&state.path);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, const char **argv) {
   test_config conf = {
     .junit = false,
     .lite = false,
@@ -49,21 +50,21 @@ int main(int argc, char **argv) {
 
   int times = 1;
 
-  for (int i = 0; i < argc; i++) {
-    char *arg = argv[i];
-    if (strcmp(arg, "--lite") == 0) {
-      puts("Test lite mode");
-      conf.lite = true;
-    }
-    if (strcmp(arg, "--junit") == 0) {
-      conf.junit = true;
-    }
-    // if (strcmp(arg, "--match"))
-    const char *times_str = "--times=";
-    if (prefix(times_str, arg)) {
-      times = atoi(arg + strlen(times_str));
-    }
-  }
+  argument args[] = {{
+    .long_name = "lite",
+    .short_name = 'l',
+    .flag_data = &conf.lite,
+  }, {
+    .long_name = "junit",
+    .short_name = 'j',
+    .flag_data = &conf.junit,
+  }, {
+    .long_name = "times",
+    .short_name = 't',
+    .int_data = &times,
+  }};
+
+  parse_args(args, STATIC_LEN(args), argc, argv);
 
   for (int i = 0; i < times; i++) {
     run_tests(conf);
