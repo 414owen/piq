@@ -191,7 +191,7 @@ static void test_types_match(test_state *state, const char *input,
     fprintf(ss->stream, "Didn't expect typecheck errors. Got %d:\n",
             res.error_amt);
     print_tc_errors(ss->stream, input, pres.tree, res);
-    failf(state, ss_finalize(ss), input);
+    failf(state, ss_finalize_free(ss), input);
     return;
   }
 
@@ -209,7 +209,7 @@ static void test_types_match(test_state *state, const char *input,
                           res.types.node_types[j], exp)) {
           stringstream *ss = ss_init();
           print_type(ss->stream, res.types.types, res.types.node_types[j]);
-          char *str = ss_finalize(ss);
+          char *str = ss_finalize_free(ss);
           failf(state, "Type mismatch in test. Got: %s", str);
           free(str);
         }
@@ -244,7 +244,7 @@ static void test_typecheck_errors(test_state *state, const char *input,
       fputs("Errors:\n", ss->stream);
     }
     print_tc_errors(ss->stream, input, pres.tree, res);
-    char *str = ss_finalize(ss);
+    char *str = ss_finalize_free(ss);
     failf(state, str, input);
     free(str);
   }
@@ -461,7 +461,7 @@ static void test_typecheck_stress(test_state *state) {
     fputs("U8", ss->stream);
     fputs(")))\n", ss->stream);
     fputs("(fun a b b)", ss->stream);
-    test_typecheck_errors(state, ss_finalize(ss), NULL, 0);
+    test_typecheck_errors(state, ss_finalize_free(ss), NULL, 0);
   }
   test_end(state);
 }

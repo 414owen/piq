@@ -307,7 +307,7 @@ void print_parse_tree(FILE *f, char *input, parse_tree tree) {
 char *print_parse_tree_str(char *input, parse_tree tree) {
   stringstream *ss = ss_init();
   print_parse_tree(ss->stream, input, tree);
-  return ss_finalize(ss);
+  return ss_finalize_free(ss);
 }
 
 void free_parse_tree(parse_tree tree) {

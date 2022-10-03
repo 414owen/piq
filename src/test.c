@@ -67,7 +67,7 @@ void test_fail_eq(test_state *state, char *a, char *b) {
   fail_with(state, ne_reason(a, b));
 }
 
-void test_start(test_state *state, char *name) {
+void test_start_internal(test_state *state, const char *name) {
   assert(!state->in_test);
   print_depth_indent(state);
   fputs(name, stdout);
@@ -80,7 +80,7 @@ void test_start(test_state *state, char *name) {
   }
 }
 
-void test_end(test_state *state) {
+void test_end_internal(test_state *state) {
   printf(" %s" RESET "\n", state->current_failed ? RED "❌" : GRN "✓");
   if (!state->current_failed)
     state->tests_passed++;
@@ -100,7 +100,7 @@ void failf_(test_state *state, char *file, size_t line, const char *fmt, ...) {
   vfprintf(ss->stream, fmt, ap);
   va_end(ap);
 
-  char *err = ss_finalize(ss);
+  char *err = ss_finalize_free(ss);
   fail_with(state, err);
 }
 
@@ -124,13 +124,18 @@ void test_state_finalize(test_state *state) {
   clock_gettime(CLOCK_MONOTONIC, &state->end_time);
 }
 
+static void print_test_path(vec_string v, FILE *out) {
+  if (v.len == 0) return;
+  fputs(VEC_GET(v, 0), out);
+  for (size_t i = 1; i < v.len; i++) {
+    putc('/', out);
+    fputs(VEC_GET(v, i), out);
+  }
+}
+
 static void print_failure(failure f) {
   fputs("\n" RED "FAILED" RESET ": ", stdout);
-  for (size_t i = 0; i < f.path.len; i++) {
-    if (i != 0)
-      putc('/', stdout);
-    fputs(VEC_GET(f.path, i), stdout);
-  }
+  print_test_path(f.path, stdout);
   putc('\n', stdout);
   puts(f.reason);
 }
@@ -260,7 +265,7 @@ tokens_res test_upto_tokens(test_state *state, const char *restrict input) {
   if (!tres.succeeded) {
     stringstream *ss = ss_init();
     format_error_ctx(ss->stream, input, tres.error_pos, tres.error_pos);
-    failf(state, "Scanning failed:\n%s", input, ss_finalize(ss));
+    failf(state, "Scanning failed:\n%s", input, ss_finalize_free(ss));
   }
   return tres;
 }
@@ -283,7 +288,7 @@ parse_tree_res test_upto_parse_tree(test_state *state,
     stringstream *ss = ss_init();
     token t = tres.tokens[pres.error_pos];
     format_error_ctx(ss->stream, input, t.start, t.end);
-    char *error = ss_finalize(ss);
+    char *error = ss_finalize_free(ss);
     failf(state, "Parsing failed:\n%s", error);
     free(error);
   }
@@ -303,11 +308,24 @@ tc_res test_upto_typecheck(test_state *state, const char *restrict input,
       *success = false;
       stringstream *ss = ss_init();
       print_tc_errors(ss->stream, input, tree_res.tree, tc);
-      char *error = ss_finalize(ss);
+      char *error = ss_finalize_free(ss);
       failf(state, "Typecheck failed:\n%s", error);
       free(error);
     }
     *tree = tree_res.tree;
   }
   return tc;
+}
+
+bool test_matches(const test_state *restrict state, const char *restrict test_name) {
+  if (state->filter_str == NULL) {
+    return true;
+  }
+  VEC_PUSH(&state->path, test_name);
+  stringstream ss;
+  ss_init_immovable(&ss);
+  print_test_path(state->path, ss.stream);
+  ss_finalize(&ss);
+  VEC_POP(&state->path);
+  return strstr(ss.string, state->filter_str) != NULL;
 }

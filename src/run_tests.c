@@ -38,14 +38,13 @@ static void run_tests(test_config conf) {
 
   VEC_FREE(&state.failures);
   VEC_FREE(&state.path);
-  // if (state.failures.len > 0)
-  //   exit(1);
 }
 
 int main(int argc, char **argv) {
   test_config conf = {
     .junit = false,
     .lite = false,
+    .filter_str = NULL,
   };
 
   int times = 1;
@@ -59,7 +58,8 @@ int main(int argc, char **argv) {
     if (strcmp(arg, "--junit") == 0) {
       conf.junit = true;
     }
-    static const char *times_str = "--times=";
+    // if (strcmp(arg, "--match"))
+    const char *times_str = "--times=";
     if (prefix(times_str, arg)) {
       times = atoi(arg + strlen(times_str));
     }

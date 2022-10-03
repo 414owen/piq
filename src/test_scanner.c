@@ -19,7 +19,7 @@ static char *print_tokens(size_t token_amt, const token_type *restrict tokens) {
     fputs(yyTokenName[tokens[i]], ss->stream);
   }
   fputc(']', ss->stream);
-  return ss_finalize(ss);
+  return ss_finalize_free(ss);
 }
 
 static void test_scanner_tokens(test_state *restrict state,
