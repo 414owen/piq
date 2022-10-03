@@ -50,6 +50,7 @@ test_objs += test_scanner.o
 test_objs += test_typecheck.o
 test_objs += test_utils.o
 test_objs += test_vec.o
+test_objs += args.o
 
 LDFLAGS = `pkg-config --libs "readline"`
 LDFLAGS += `llvm-config --cxxflags --ldflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
