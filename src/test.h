@@ -22,6 +22,7 @@
 typedef struct {
   bool junit;
   bool lite;
+  char *filter_str;
 } test_config;
 
 typedef struct {
@@ -48,13 +49,21 @@ typedef struct {
   uint32_t tests_run;
   struct timespec start_time;
   struct timespec end_time;
-  char *current_name;
+  const char *current_name;
   bool current_failed;
   bool in_test;
   vec_failure failures;
   vec_test_action actions;
   vec_string strs;
+  char *filter_str;
 } test_state;
+
+#define test_start(state, desc) { \
+    const char *test_name = desc; \
+    if (test_matches(state, test_name)) { \
+      test_start_internal(state, test_name);
+
+#define test_end(state) test_end_internal(state); } }
 
 test_state test_state_new(test_config config);
 void test_state_finalize(test_state *state);
@@ -62,8 +71,8 @@ void test_state_finalize(test_state *state);
 void test_group_end(test_state *state);
 void test_group_start(test_state *state, char *name);
 
-void test_end(test_state *state);
-void test_start(test_state *state, char *name);
+void test_end_internal(test_state *state);
+void test_start_internal(test_state *state, const char *name);
 
 void failf_(test_state *state, char *file, size_t line, const char *fmt, ...);
 
@@ -85,3 +94,4 @@ tokens_res test_upto_tokens(test_state *state, const char *input);
 parse_tree_res test_upto_parse_tree(test_state *state, const char *input);
 tc_res test_upto_typecheck(test_state *state, const char *input, bool *success,
                            parse_tree *tree);
+bool test_matches(const test_state *restrict state, const char *restrict test_name);

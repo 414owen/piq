@@ -160,11 +160,11 @@ static void test_parser_robustness(test_state *state) {
     for (size_t i = 0; i < depth; i++) {
       fputs("))", in->stream);
     }
-    char *str = ss_finalize(in);
+    char *str = ss_finalize_free(in);
     expected_output out = {.tag = ANY};
     test_parser_succeeds_on_form(state, str, out);
-    test_end(state);
     free(str);
+    test_end(state);
   }
 
   test_group_end(state);

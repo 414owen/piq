@@ -58,8 +58,10 @@ size_t find_el(const void *haystack, size_t haystacklen, const void *needle,
 size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
                   const void *needle, size_t needle_els);
 
+void ss_init_immovable(stringstream *ss);
 stringstream *ss_init(void);
-char *ss_finalize(stringstream *ss);
+void ss_finalize(stringstream *ss);
+char *ss_finalize_free(stringstream *ss);
 
 HEDLEY_NO_RETURN void unimplemented(char *str, char *file, size_t line);
 

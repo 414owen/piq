@@ -84,11 +84,15 @@ int timespec_subtract(struct timespec *result, struct timespec *x,
   return x->tv_sec < y->tv_sec;
 }
 
+void ss_init_immovable(stringstream *ss) {
+  ss->stream = open_memstream(&ss->string, &ss->size);
+}
+
 stringstream *ss_init(void) {
   stringstream *ss = malloc(sizeof(stringstream));
   if (ss == NULL)
     goto err;
-  ss->stream = open_memstream(&ss->string, &ss->size);
+  ss_init_immovable(ss);
   if (ss->stream == NULL)
     goto err;
   return ss;
@@ -97,10 +101,14 @@ err:
   exit(1);
 }
 
-// Won't update copies of the stringstream that was used to `init`.
-char *ss_finalize(stringstream *ss) {
+void ss_finalize(stringstream *ss) {
   putc(0, ss->stream);
   fclose(ss->stream);
+}
+
+// Won't update copies of the stringstream that was used to `init`.
+char *ss_finalize_free(stringstream *ss) {
+  ss_finalize(ss);
   char *res = ss->string;
   free(ss);
   return res;
@@ -109,7 +117,7 @@ char *ss_finalize(stringstream *ss) {
 int vasprintf(char **buf, const char *restrict fmt, va_list rest) {
   stringstream *ss = ss_init();
   int res = vfprintf(ss->stream, fmt, rest);
-  *buf = ss_finalize(ss);
+  *buf = ss_finalize_free(ss);
   return res;
 }
 
@@ -155,7 +163,7 @@ char *join(const size_t str_amt, const char *const *const strs,
         fputs(sep, ss->stream);
       fputs(strs[i], ss->stream);
     }
-    return ss_finalize(ss);
+    return ss_finalize_free(ss);
   */
   size_t len = 0;
   size_t seplen = strlen(sep);
