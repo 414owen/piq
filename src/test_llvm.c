@@ -61,36 +61,38 @@ static void test_llvm_produces(test_state *state, const char *input,
   bool success = false;
   tc_res tc = test_upto_typecheck(state, input, &success, &tree);
 
-  source_file test_file = {
-    .path = "test_jit",
-    .data = input,
-  };
+  if (success) {
+    source_file test_file = {
+      .path = "test_jit",
+      .data = input,
+    };
 
-  LLVMModuleRef module =
-    gen_module(test_file.path, test_file, tree, tc.types, ctx.llvm_ctx);
-  LLVMOrcThreadSafeModuleRef tsm =
-    LLVMOrcCreateNewThreadSafeModule(module, ctx.orc_ctx);
-  LLVMOrcLLJITAddLLVMIRModule(ctx.jit, ctx.dylib, tsm);
-  LLVMOrcJITTargetAddress entry_addr;
-  {
-    LLVMErrorRef error = LLVMOrcLLJITLookup(ctx.jit, &entry_addr, "test");
-    if (error != LLVMErrorSuccess) {
-      char *msg = LLVMGetErrorMessage(error);
-      give_up("LLVMLLJITLookup failed: %s", msg);
+    LLVMModuleRef module =
+      gen_module(test_file.path, test_file, tree, tc.types, ctx.llvm_ctx);
+    LLVMOrcThreadSafeModuleRef tsm =
+      LLVMOrcCreateNewThreadSafeModule(module, ctx.orc_ctx);
+    LLVMOrcLLJITAddLLVMIRModule(ctx.jit, ctx.dylib, tsm);
+    LLVMOrcJITTargetAddress entry_addr;
+    {
+      LLVMErrorRef error = LLVMOrcLLJITLookup(ctx.jit, &entry_addr, "test");
+      if (error != LLVMErrorSuccess) {
+        char *msg = LLVMGetErrorMessage(error);
+        give_up("LLVMLLJITLookup failed: %s", msg);
+      }
     }
-  }
 
-  int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
-  int32_t got = entry();
-  if (got != expected) {
-    failf(state,
-          "Jit function returned wrong result. Expected: %d, Got: %d.\n%s",
-          expected,
-          got,
-          LLVMPrintModuleToString(module));
+    int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
+    int32_t got = entry();
+    if (got != expected) {
+      failf(state,
+            "Jit function returned wrong result. Expected: %d, Got: %d.\n%s",
+            expected,
+            got,
+            LLVMPrintModuleToString(module));
+    }
+    free_parse_tree(tree);
+    free_tc_res(tc);
   }
-  free_parse_tree(tree);
-  free_tc_res(tc);
   jit_dispose(&ctx);
 }
 
@@ -118,6 +120,17 @@ void test_llvm(test_state *state) {
   {
     const char *input = "(sig test (Fn () I32))\n"
                         "(fun test () (as U8 4) 3)";
+
+    test_llvm_produces(state, input, 3);
+  }
+  test_end(state);
+
+  test_start(state, "Two fns and a call");
+  {
+    const char *input = "(sig test (Fn () ()))\n"
+                        "(fun test () (a ()))\n"
+                        "(sig a () ())\n"
+                        "(fun a () ())";
 
     test_llvm_produces(state, input, 3);
   }

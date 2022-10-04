@@ -279,6 +279,7 @@ tokens_res test_upto_tokens(test_state *state, const char *restrict input) {
     stringstream *ss = ss_init();
     format_error_ctx(ss->stream, input, tres.error_pos, tres.error_pos);
     failf(state, "Scanning failed:\n%s", input, ss_finalize_free(ss));
+    free_tokens_res(tres);
   }
   return tres;
 }
@@ -304,6 +305,7 @@ parse_tree_res test_upto_parse_tree(test_state *state,
     char *error = ss_finalize_free(ss);
     failf(state, "Parsing failed:\n%s", error);
     free(error);
+    free_parse_tree_res(pres);
   }
   free_tokens_res(tres);
   return pres;
@@ -312,11 +314,9 @@ parse_tree_res test_upto_parse_tree(test_state *state,
 tc_res test_upto_typecheck(test_state *state, const char *restrict input,
                            bool *success, parse_tree *tree) {
   parse_tree_res tree_res = test_upto_parse_tree(state, input);
-  tc_res tc = typecheck(input, tree_res.tree);
-  if (!tree_res.succeeded) {
-    *success = false;
-    free_parse_tree_res(tree_res);
-  } else {
+  tc_res tc;
+  if (tree_res.succeeded) {
+    tc = typecheck(input, tree_res.tree);
     if (tc.error_amt > 0) {
       *success = false;
       stringstream *ss = ss_init();
@@ -324,8 +324,12 @@ tc_res test_upto_typecheck(test_state *state, const char *restrict input,
       char *error = ss_finalize_free(ss);
       failf(state, "Typecheck failed:\n%s", error);
       free(error);
+      free_tc_res(tc);
     }
     *tree = tree_res.tree;
+    free_parse_tree_res(tree_res);
+  } else {
+    *success = false;
   }
   return tc;
 }
