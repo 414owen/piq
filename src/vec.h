@@ -159,8 +159,8 @@ void __vec_clone(vec_void *dest, vec_void *src, size_t elemsize);
 #define VEC_CLONE(dest, src)                                                   \
   {                                                                            \
     debug_assert(sizeof((dest)->data[0]) == sizeof((src)->data[0]));           \
-    __vec_clone((vec_void *)(dest), (vec_void *)(src),                         \
-                sizeof((src)->data[0]));                                       \
+    __vec_clone(                                                               \
+      (vec_void *)(dest), (vec_void *)(src), sizeof((src)->data[0]));          \
   }
 
 #if INLINE_VEC_BYTES > 0

@@ -206,7 +206,9 @@ void write_test_results(test_state *state) {
           "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
           "<testsuites name=\"Unit tests\" tests=\"%u\" disabled=\"0\" "
           "errors=\"0\" failures=\"%u\" time=\"%lld\">\n",
-          current.tests, current.failures, (long long)elapsed.tv_sec);
+          current.tests,
+          current.failures,
+          (long long)elapsed.tv_sec);
 
   size_t agg_ind = aggs.len - 1;
   size_t str_ind = 0;
@@ -229,14 +231,18 @@ void write_test_results(test_state *state) {
       case GROUP_ENTER: {
         test_aggregate agg = VEC_GET(aggs, agg_ind--);
         char *str = VEC_GET(state->strs, str_ind++);
-        fprintf(f, "<testsuite name=\"%s\" tests=\"%u\" failures=\"%u\">\n",
-                str, agg.tests, agg.failures);
+        fprintf(f,
+                "<testsuite name=\"%s\" tests=\"%u\" failures=\"%u\">\n",
+                str,
+                agg.tests,
+                agg.failures);
         VEC_PUSH(&class_path, str);
         depth++;
         break;
       }
       case TEST_ENTER:
-        fprintf(f, "<testcase name=\"%s\" classname=\"",
+        fprintf(f,
+                "<testcase name=\"%s\" classname=\"",
                 VEC_GET(state->strs, str_ind++));
         for (size_t i = 0; i < class_path.len; i++) {
           if (i > 0)
@@ -252,7 +258,8 @@ void write_test_results(test_state *state) {
         fputs("</testsuite>\n", f);
         break;
       case TEST_FAIL:
-        fprintf(f, "<failure message=\"Assertion failure\">%s</failure>\n",
+        fprintf(f,
+                "<failure message=\"Assertion failure\">%s</failure>\n",
                 VEC_GET(state->failures, fail_ind++).reason);
         break;
     }
