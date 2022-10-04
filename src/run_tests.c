@@ -51,17 +51,25 @@ int main(int argc, const char **argv) {
   int times = 1;
 
   argument args[] = {{
+    .tag = ARG_FLAG,
     .long_name = "lite",
     .short_name = 'l',
     .flag_data = &conf.lite,
   }, {
+    .tag = ARG_FLAG,
     .long_name = "junit",
     .short_name = 'j',
     .flag_data = &conf.junit,
   }, {
+    .tag = ARG_INT,
     .long_name = "times",
     .short_name = 't',
     .int_data = &times,
+  }, {
+    .tag = ARG_STRING,
+    .long_name = "match",
+    .short_name = 'm',
+    .string_data = &conf.filter_str,
   }};
 
   parse_args(args, STATIC_LEN(args), argc, argv);

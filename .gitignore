@@ -21,3 +21,4 @@ build-aux
 .tup
 result
 .struct.debug.c
+perf.data*
