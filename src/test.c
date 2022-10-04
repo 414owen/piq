@@ -119,6 +119,7 @@ test_state test_state_new(test_config config) {
     .current_name = NULL,
     .current_failed = false,
     .failures = VEC_NEW,
+    .filter_str = config.filter_str,
   };
   clock_gettime(CLOCK_MONOTONIC, &res.start_time);
   return res;
