@@ -167,11 +167,12 @@ void parse_short(parse_state *state, const char *restrict arg_str, size_t arg_st
     }
   }
   if (unmatched.len > 0) {
-    fprintf(stderr, "Unknown short argument: '%c'\n", VEC_GET(unmatched, 0));
-    print_help(state);
+    fprintf(stderr, "Unknown short argument%s: '%c'", unmatched.len > 1 ? "s" : "", VEC_GET(unmatched, 0));
     for (size_t i = 1; i < unmatched.len; i++) {
-      fprintf(stderr, ", %c", VEC_GET(unmatched, i));
+      fprintf(stderr, ", '%c'", VEC_GET(unmatched, i));
     }
+    fputc('\n', stderr);
+    print_help(state);
     exit(1);
   }
   state->arg_cursor = cursor + 1;
