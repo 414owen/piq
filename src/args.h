@@ -13,6 +13,7 @@ typedef struct {
   arg_type tag;
   char short_name;
   char *long_name;
+  char *description;
   union {
     bool *flag_data;
     const char **string_data;
