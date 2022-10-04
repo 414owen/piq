@@ -53,7 +53,7 @@ static void unknown_arg(parse_state *restrict state, const char *restrict arg_st
 
 HEDLEY_NO_RETURN
 static void expected_argument(parse_state *restrict state, const char *restrict arg_name) {
-  fprintf(stderr, "Argument %s expected a value, but none given", arg_name);
+  fprintf(stderr, "Argument %s expected a value, but none given.\n", arg_name);
   print_help(state);
   exit(1);
 }
@@ -93,7 +93,7 @@ static void parse_long(parse_state *restrict state, const char *restrict arg_str
       case ARG_INT:
       case ARG_STRING:
         if (matches) {
-          if (state->arg_cursor >= state->argc) {
+          if (state->arg_cursor == state->argc - 1) {
             expected_argument(state, a.long_name);
           }
           state->arg_cursor++;
@@ -151,7 +151,7 @@ void parse_short(parse_state *state, const char *restrict arg_str, size_t arg_st
               print_help(state);
               exit(1);
             }
-            if (cursor >= state->argc) {
+            if (cursor == state->argc - 1) {
               char s[2] = { a.short_name, '0' };
               expected_argument(state, s);
             }
