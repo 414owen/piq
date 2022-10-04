@@ -345,5 +345,7 @@ bool test_matches(const test_state *restrict state,
   print_test_path(state->path, ss.stream);
   ss_finalize(&ss);
   VEC_POP(&state->path);
-  return strstr(ss.string, state->filter_str) != NULL;
+  bool res = strstr(ss.string, state->filter_str) != NULL;
+  free(ss.string);
+  return res;
 }
