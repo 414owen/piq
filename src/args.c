@@ -147,7 +147,7 @@ void parse_short(parse_state *state, const char *restrict arg_str, size_t arg_st
         case ARG_STRING:
           if (matched) {
             if (arg_str_len > 1) {
-              fprintf(stderr, "Short argument '%c' takes a parameter, so can't be used with other short arguments.", a.short_name);
+              fprintf(stderr, "Short argument '%c' takes a parameter, so can't be used with other short arguments.\n", a.short_name);
               print_help(state);
               exit(1);
             }
