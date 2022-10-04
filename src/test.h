@@ -58,12 +58,16 @@ typedef struct {
   char *filter_str;
 } test_state;
 
-#define test_start(state, desc) { \
-    const char *test_name = desc; \
-    if (test_matches(state, test_name)) { \
+#define test_start(state, desc)                                                \
+  {                                                                            \
+    const char *test_name = desc;                                              \
+    if (test_matches(state, test_name)) {                                      \
       test_start_internal(state, test_name);
 
-#define test_end(state) test_end_internal(state); } }
+#define test_end(state)                                                        \
+  test_end_internal(state);                                                    \
+  }                                                                            \
+  }
 
 test_state test_state_new(test_config config);
 void test_state_finalize(test_state *state);
@@ -94,4 +98,5 @@ tokens_res test_upto_tokens(test_state *state, const char *input);
 parse_tree_res test_upto_parse_tree(test_state *state, const char *input);
 tc_res test_upto_typecheck(test_state *state, const char *input, bool *success,
                            parse_tree *tree);
-bool test_matches(const test_state *restrict state, const char *restrict test_name);
+bool test_matches(const test_state *restrict state,
+                  const char *restrict test_name);

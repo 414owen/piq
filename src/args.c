@@ -17,48 +17,50 @@ typedef struct {
   int argument_amt;
 } parse_state;
 
-static bool valid_short_flag(char c) {
-  return c >= 'a' && c <= 'z';
-}
+static bool valid_short_flag(char c) { return c >= 'a' && c <= 'z'; }
+
+static char *type_strs[] = {
+  [ARG_FLAG] = "",
+  [ARG_STRING] = "STRING",
+  [ARG_INT] = "INT",
+};
 
 void print_help(parse_state *state) {
-  int max_len = 0;
+  printf("Usage: %s\n", state->argv[0]);
+  int max_long_len = 0;
   for (int i = 0; i < state->argument_amt; i++) {
     argument a = state->args[i];
-    max_len = MAX(max_len, a.long_len);
+    max_long_len = MAX(max_long_len, a.long_len);
+  }
+  int max_type_len = 0;
+  for (size_t i = 0; i < STATIC_LEN(type_strs); i++) {
+    max_type_len = MAX(max_type_len, (int) strlen(type_strs[i]));
   }
   for (int i = 0; i < state->argument_amt; i++) {
     argument a = state->args[i];
-    printf("  -%c      %*s--%s", a.short_name, max_len - a.long_len, "", a.long_name);
-    switch (a.tag) {
-      case ARG_FLAG:
-        putc('\n', stdout);
-        break;
-      case ARG_STRING:
-        puts("   STRING");
-        break;
-      case ARG_INT:
-        puts("   INT");
-        break;
-    }
+    char *type_str = type_strs[a.tag];
+    printf("  -%c%*s--%s%*s  %s\n", a.short_name, 6 + max_long_len - a.long_len,
+           "", a.long_name, 2 + max_type_len, type_str, a.description);
   }
 }
 
 HEDLEY_NO_RETURN
-static void unknown_arg(parse_state *restrict state, const char *restrict arg_str) {
-  fprintf(stderr, "Unknown argument: %s\n", arg_str);
+static void unknown_arg(parse_state *restrict state,
+                        const char *restrict arg_str) {
+  fprintf(stderr, "Unknown argument: '%s'.\n", arg_str);
   print_help(state);
   exit(1);
 }
 
 HEDLEY_NO_RETURN
-static void expected_argument(parse_state *restrict state, const char *restrict arg_name) {
-  fprintf(stderr, "Argument %s expected a value, but none given.\n", arg_name);
+static void expected_argument(parse_state *restrict state,
+                              const char *restrict arg_name) {
+  fprintf(stderr, "Argument '%s' expected a value, but none given.\n", arg_name);
   print_help(state);
   exit(1);
 }
 
-static void assign_data(argument a, const char* str) {
+static void assign_data(argument a, const char *str) {
   // convert from string to type
   switch (a.tag) {
     case ARG_INT:
@@ -72,7 +74,8 @@ static void assign_data(argument a, const char* str) {
   }
 }
 
-static void parse_long(parse_state *restrict state, const char *restrict arg_str, int arg_str_len) {
+static void parse_long(parse_state *restrict state,
+                       const char *restrict arg_str, int arg_str_len) {
   if (strcmp(arg_str, "help") == 0) {
     print_help(state);
     exit(0);
@@ -80,7 +83,8 @@ static void parse_long(parse_state *restrict state, const char *restrict arg_str
   for (int i = 0; i < state->argument_amt; i++) {
     argument a = state->args[i];
     // TODO --arg=val form
-    bool prefix_matches = arg_str_len >= a.long_len && strncmp(arg_str, a.long_name, a.long_len) == 0;
+    bool prefix_matches = arg_str_len >= a.long_len &&
+                          strncmp(arg_str, a.long_name, a.long_len) == 0;
     bool matches = prefix_matches && arg_str_len == a.long_len;
     bool matched = false;
     switch (a.tag) {
@@ -115,7 +119,8 @@ static void parse_long(parse_state *restrict state, const char *restrict arg_str
   unknown_arg(state, arg_str);
 }
 
-void parse_short(parse_state *state, const char *restrict arg_str, size_t arg_str_len) {
+void parse_short(parse_state *state, const char *restrict arg_str,
+                 size_t arg_str_len) {
   int cursor = state->arg_cursor;
   if (strchr(arg_str, 'h')) {
     print_help(state);
@@ -147,12 +152,15 @@ void parse_short(parse_state *state, const char *restrict arg_str, size_t arg_st
         case ARG_STRING:
           if (matched) {
             if (arg_str_len > 1) {
-              fprintf(stderr, "Short argument '%c' takes a parameter, so can't be used with other short arguments.\n", a.short_name);
+              fprintf(stderr,
+                      "Short argument '%c' takes a parameter, so can't be used "
+                      "with other short arguments.\n",
+                      a.short_name);
               print_help(state);
               exit(1);
             }
             if (cursor == state->argc - 1) {
-              char s[2] = { a.short_name, '0' };
+              char s[2] = {a.short_name, '\0'};
               expected_argument(state, s);
             }
             cursor++;
@@ -167,7 +175,8 @@ void parse_short(parse_state *state, const char *restrict arg_str, size_t arg_st
     }
   }
   if (unmatched.len > 0) {
-    fprintf(stderr, "Unknown short argument%s: '%c'", unmatched.len > 1 ? "s" : "", VEC_GET(unmatched, 0));
+    fprintf(stderr, "Unknown short argument%s: '%c'",
+            unmatched.len > 1 ? "s" : "", VEC_GET(unmatched, 0));
     for (size_t i = 1; i < unmatched.len; i++) {
       fprintf(stderr, ", '%c'", VEC_GET(unmatched, i));
     }
@@ -178,7 +187,8 @@ void parse_short(parse_state *state, const char *restrict arg_str, size_t arg_st
   state->arg_cursor = cursor + 1;
 }
 
-void parse_args(argument *restrict args, int argument_amt, int argc, const char **restrict argv) {
+void parse_args(argument *restrict args, int argument_amt, int argc,
+                const char **restrict argv) {
 
   // preprocess
   for (int i = 0; i < argument_amt; i++) {
@@ -187,11 +197,8 @@ void parse_args(argument *restrict args, int argument_amt, int argc, const char 
 
   parse_state state = {
     // assume the first parameter is the program name
-    .arg_cursor = 1,
-    .args = args,
-    .argument_amt = argument_amt,
-    .argc = argc,
-    .argv = argv,
+    .arg_cursor = 1, .args = args, .argument_amt = argument_amt,
+    .argc = argc,    .argv = argv,
   };
 
   for (int i = 0; i < argument_amt; i++) {
@@ -210,7 +217,8 @@ void parse_args(argument *restrict args, int argument_amt, int argc, const char 
         is_long = true;
       }
     } else {
-      printf("Malformed argument, try adding prefixed dashes: %s\n", argv[state.arg_cursor]);
+      printf("Malformed argument, try adding prefixed dashes: %s\n",
+             argv[state.arg_cursor]);
       print_help(&state);
       exit(1);
     }

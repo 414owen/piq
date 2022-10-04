@@ -129,7 +129,8 @@ void test_state_finalize(test_state *state) {
 }
 
 static void print_test_path(vec_string v, FILE *out) {
-  if (v.len == 0) return;
+  if (v.len == 0)
+    return;
   fputs(VEC_GET(v, 0), out);
   for (size_t i = 1; i < v.len; i++) {
     putc('/', out);
@@ -321,7 +322,8 @@ tc_res test_upto_typecheck(test_state *state, const char *restrict input,
   return tc;
 }
 
-bool test_matches(const test_state *restrict state, const char *restrict test_name) {
+bool test_matches(const test_state *restrict state,
+                  const char *restrict test_name) {
   if (state->filter_str == NULL) {
     return true;
   }

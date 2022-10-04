@@ -1,6 +1,5 @@
 #pragma once
 
-
 /* THIS MODULE IS NOT USED */
 
 #include "consts.h"

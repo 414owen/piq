@@ -109,8 +109,9 @@ static bool test_err_eq(parse_tree tree, tc_res res, size_t err_ind,
   return true;
 }
 
-static bool all_errors_match(parse_tree tree, tc_res res, const tc_err_test *exps,
-                             const span *spans, node_ind_t error_amt) {
+static bool all_errors_match(parse_tree tree, tc_res res,
+                             const tc_err_test *exps, const span *spans,
+                             node_ind_t error_amt) {
   if (res.error_amt != error_amt)
     return false;
   for (size_t i = 0; i < error_amt; i++) {
@@ -120,7 +121,8 @@ static bool all_errors_match(parse_tree tree, tc_res res, const tc_err_test *exp
   return true;
 }
 
-static char *process_spans(const char *input, span **spans_p, node_ind_t cases) {
+static char *process_spans(const char *input, span **spans_p,
+                           node_ind_t cases) {
   size_t len = strlen(input);
   span *spans = malloc(sizeof(span) * cases);
   *spans_p = spans;
@@ -222,7 +224,7 @@ static void test_types_match(test_state *state, const char *input,
 }
 
 static void test_typecheck_errors(test_state *state, const char *input,
-                             const tc_err_test *exps, node_ind_t cases) {
+                                  const tc_err_test *exps, node_ind_t cases) {
 
   span *spans;
   input = process_spans(input, &spans, cases);
@@ -238,8 +240,7 @@ static void test_typecheck_errors(test_state *state, const char *input,
 
   if (!all_errors_match(pres.tree, res, exps, spans, cases)) {
     stringstream *ss = ss_init();
-    fprintf(ss->stream, "Expected %d errors, got %d.\n", cases,
-            res.error_amt);
+    fprintf(ss->stream, "Expected %d errors, got %d.\n", cases, res.error_amt);
     if (res.error_amt > 0) {
       fputs("Errors:\n", ss->stream);
     }
@@ -290,7 +291,7 @@ static void test_typecheck_succeeds(test_state *state) {
     const char *input = "(sig a (Fn () →U8←))\n"
                         "(fun a () 2)";
     test_start(state, "Return type U8");
-    test_type types[] = { u8_t };
+    test_type types[] = {u8_t};
     test_types_match(state, input, types, STATIC_LEN(types));
     test_end(state);
   }
@@ -299,7 +300,7 @@ static void test_typecheck_succeeds(test_state *state) {
     const char *input = "(sig a (Fn () I8))\n"
                         "(fun a () →2←)";
     test_start(state, "Return value");
-    test_type types[] = { i8 };
+    test_type types[] = {i8};
     test_types_match(state, input, types, STATIC_LEN(types));
     test_end(state);
   }
@@ -326,7 +327,9 @@ static void test_typecheck_succeeds(test_state *state) {
     const char *input = "(sig a (Fn U8 [U8]))\n"
                         "(fun a 1 [→12←])";
     test_start(state, "[U8] Literals");
-    test_type types[] = { u8_t, };
+    test_type types[] = {
+      u8_t,
+    };
     test_types_match(state, input, types, STATIC_LEN(types));
     test_end(state);
   }
@@ -351,11 +354,9 @@ static void test_errors(test_state *state) {
 
   {
     test_start(state, "I32 vs (Int, Int)");
-    const tc_err_test errors[] = {
-      {
+    const tc_err_test errors[] = {{
       .type = TYPE_HEAD_MISMATCH,
-      }
-    };
+    }};
     static const char *prog = "(sig a (Fn () I32))\n"
                               "(fun a () →(2, 3)←)";
     test_typecheck_errors(state, prog, errors, STATIC_LEN(errors));
@@ -382,9 +383,9 @@ static void test_errors(test_state *state) {
       },
     };
     test_typecheck_errors(state,
-                             "(sig a (Fn () I32))\n"
-                             "(fun a () →(fn () 1)←)",
-                             errors, STATIC_LEN(errors));
+                          "(sig a (Fn () I32))\n"
+                          "(fun a () →(fn () 1)←)",
+                          errors, STATIC_LEN(errors));
     test_end(state);
   }
 
@@ -396,9 +397,9 @@ static void test_errors(test_state *state) {
       },
     };
     test_typecheck_errors(state,
-                             "(sig a (Fn () I32))\n"
-                             "(fun a () →[3]←)",
-                             errors, STATIC_LEN(errors));
+                          "(sig a (Fn () I32))\n"
+                          "(fun a () →[3]←)",
+                          errors, STATIC_LEN(errors));
     test_end(state);
   }
 
@@ -410,9 +411,9 @@ static void test_errors(test_state *state) {
       },
     };
     test_typecheck_errors(state,
-                             "(sig a (Fn () I32))\n"
-                             "(fun a () →\"hi\"←)",
-                             errors, STATIC_LEN(errors));
+                          "(sig a (Fn () I32))\n"
+                          "(fun a () →\"hi\"←)",
+                          errors, STATIC_LEN(errors));
     test_end(state);
   }
 
@@ -424,20 +425,20 @@ static void test_errors(test_state *state) {
       },
     };
     test_typecheck_errors(state,
-                             "(sig a (Fn () String))\n"
-                             "(fun a () →321←)",
-                             errors, STATIC_LEN(errors));
+                          "(sig a (Fn () String))\n"
+                          "(fun a () →321←)",
+                          errors, STATIC_LEN(errors));
     test_end(state);
   }
 
   {
     test_start(state, "Param shadows binding");
     test_typecheck_errors(state,
-                             "(sig a (Fn () [U8]))\n"
-                             "(fun a () "
-                             "(sig b (Fn () ()))"
-                             "(fun b a a))",
-                             NULL, 0);
+                          "(sig a (Fn () [U8]))\n"
+                          "(fun a () "
+                          "(sig b (Fn () ()))"
+                          "(fun b a a))",
+                          NULL, 0);
     test_end(state);
   }
 
