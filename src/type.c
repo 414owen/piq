@@ -175,7 +175,8 @@ void print_type(FILE *f, type *types, node_ind_t root) {
             break;
         }
         reverse_arbitrary(&VEC_DATA_PTR(&stack)[stack_top],
-                          stack.len - stack_top, sizeof(print_action));
+                          stack.len - stack_top,
+                          sizeof(print_action));
       }
     }
   }

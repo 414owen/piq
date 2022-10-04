@@ -20,7 +20,9 @@ void unimplemented(char *str, char *file, size_t line) {
           "file: %s\n"
           "line: %zu\n"
           "Giving up.\n",
-          str, file, line);
+          str,
+          file,
+          line);
   exit(1);
 }
 
@@ -146,8 +148,8 @@ void reverse_arbitrary(void *dest, size_t amt, size_t elsize) {
   void *tmp = alloca(elsize);
   while (start < end) {
     memcpy(tmp, ((char *)dest) + elsize * start, elsize);
-    memcpy(((char *)dest) + elsize * start, ((char *)dest) + elsize * end,
-           elsize);
+    memcpy(
+      ((char *)dest) + elsize * start, ((char *)dest) + elsize * end, elsize);
     memcpy(((char *)dest) + elsize * end, tmp, elsize);
     start++;
     end--;

@@ -98,10 +98,12 @@ static bool test_err_eq(parse_tree tree, tc_res res, size_t err_ind,
     return false;
   switch (eA.type) {
     case TYPE_MISMATCH: {
-      return test_type_eq(res.types.types, res.types.type_inds, eA.expected,
+      return test_type_eq(res.types.types,
+                          res.types.type_inds,
+                          eA.expected,
                           test_err.type_exp) &&
-             test_type_eq(res.types.types, res.types.type_inds, eA.got,
-                          test_err.type_got);
+             test_type_eq(
+               res.types.types, res.types.type_inds, eA.got, test_err.type_got);
     }
     default:
       break;
@@ -190,8 +192,8 @@ static void test_types_match(test_state *state, const char *input,
 
   if (res.error_amt > 0) {
     stringstream *ss = ss_init();
-    fprintf(ss->stream, "Didn't expect typecheck errors. Got %d:\n",
-            res.error_amt);
+    fprintf(
+      ss->stream, "Didn't expect typecheck errors. Got %d:\n", res.error_amt);
     print_tc_errors(ss->stream, input, pres.tree, res);
     failf(state, ss_finalize_free(ss), input);
     return;
@@ -207,8 +209,10 @@ static void test_types_match(test_state *state, const char *input,
         continue;
       if (node.span.start == span.start && node.span.end == span.end) {
         seen = true;
-        if (!test_type_eq(res.types.types, res.types.type_inds,
-                          res.types.node_types[j], exp)) {
+        if (!test_type_eq(res.types.types,
+                          res.types.type_inds,
+                          res.types.node_types[j],
+                          exp)) {
           stringstream *ss = ss_init();
           print_type(ss->stream, res.types.types, res.types.node_types[j]);
           char *str = ss_finalize_free(ss);
@@ -385,7 +389,8 @@ static void test_errors(test_state *state) {
     test_typecheck_errors(state,
                           "(sig a (Fn () I32))\n"
                           "(fun a () →(fn () 1)←)",
-                          errors, STATIC_LEN(errors));
+                          errors,
+                          STATIC_LEN(errors));
     test_end(state);
   }
 
@@ -399,7 +404,8 @@ static void test_errors(test_state *state) {
     test_typecheck_errors(state,
                           "(sig a (Fn () I32))\n"
                           "(fun a () →[3]←)",
-                          errors, STATIC_LEN(errors));
+                          errors,
+                          STATIC_LEN(errors));
     test_end(state);
   }
 
@@ -413,7 +419,8 @@ static void test_errors(test_state *state) {
     test_typecheck_errors(state,
                           "(sig a (Fn () I32))\n"
                           "(fun a () →\"hi\"←)",
-                          errors, STATIC_LEN(errors));
+                          errors,
+                          STATIC_LEN(errors));
     test_end(state);
   }
 
@@ -427,7 +434,8 @@ static void test_errors(test_state *state) {
     test_typecheck_errors(state,
                           "(sig a (Fn () String))\n"
                           "(fun a () →321←)",
-                          errors, STATIC_LEN(errors));
+                          errors,
+                          STATIC_LEN(errors));
     test_end(state);
   }
 
@@ -438,7 +446,8 @@ static void test_errors(test_state *state) {
                           "(fun a () "
                           "(sig b (Fn () ()))"
                           "(fun b a a))",
-                          NULL, 0);
+                          NULL,
+                          0);
     test_end(state);
   }
 

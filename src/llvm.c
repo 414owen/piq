@@ -375,8 +375,8 @@ static void cg_node(cg_state *state) {
         .start = node.span.start,
         .end = node.span.end,
       };
-      node_ind_t ind = lookup_str_ref(state->source.data, state->env_bnds,
-                                      state->env_is_builtin, b);
+      node_ind_t ind = lookup_str_ref(
+        state->source.data, state->env_bnds, state->env_is_builtin, b);
       // missing refs are caught in typecheck phase
       debug_assert(ind != state->env_bnds.len);
       VEC_PUSH(&state->val_stack, VEC_GET(state->env_vals, ind));
@@ -397,8 +397,8 @@ static void cg_node(cg_state *state) {
           push_node_act(state, ind, STAGE_TWO);
 
           // cond
-          push_node_act(state, PT_IF_COND_IND(state->parse_tree.inds, node),
-                        STAGE_ONE);
+          push_node_act(
+            state, PT_IF_COND_IND(state->parse_tree.inds, node), STAGE_ONE);
 
           // then
           VEC_PUSH(&state->strs, THEN_STR);
@@ -497,9 +497,11 @@ static void cg_node(cg_state *state) {
 
           // We should add this back at some point, I guess
           // LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
-          LLVMValueRef fn = LLVMAddFunctionCustom(
-            state->module, &state->source.data[binding.span.start], binding_len,
-            fn_type);
+          LLVMValueRef fn =
+            LLVMAddFunctionCustom(state->module,
+                                  &state->source.data[binding.span.start],
+                                  binding_len,
+                                  fn_type);
           VEC_PUSH(&state->function_stack, fn);
 
           u32 env_amt = state->env_bnds.len;

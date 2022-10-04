@@ -34,13 +34,19 @@ void print_help(parse_state *state) {
   }
   int max_type_len = 0;
   for (size_t i = 0; i < STATIC_LEN(type_strs); i++) {
-    max_type_len = MAX(max_type_len, (int) strlen(type_strs[i]));
+    max_type_len = MAX(max_type_len, (int)strlen(type_strs[i]));
   }
   for (int i = 0; i < state->argument_amt; i++) {
     argument a = state->args[i];
     char *type_str = type_strs[a.tag];
-    printf("  -%c%*s--%s%*s  %s\n", a.short_name, 6 + max_long_len - a.long_len,
-           "", a.long_name, 2 + max_type_len, type_str, a.description);
+    printf("  -%c%*s--%s%*s  %s\n",
+           a.short_name,
+           6 + max_long_len - a.long_len,
+           "",
+           a.long_name,
+           2 + max_type_len,
+           type_str,
+           a.description);
   }
 }
 
@@ -55,7 +61,8 @@ static void unknown_arg(parse_state *restrict state,
 HEDLEY_NO_RETURN
 static void expected_argument(parse_state *restrict state,
                               const char *restrict arg_name) {
-  fprintf(stderr, "Argument '%s' expected a value, but none given.\n", arg_name);
+  fprintf(
+    stderr, "Argument '%s' expected a value, but none given.\n", arg_name);
   print_help(state);
   exit(1);
 }
@@ -175,8 +182,10 @@ void parse_short(parse_state *state, const char *restrict arg_str,
     }
   }
   if (unmatched.len > 0) {
-    fprintf(stderr, "Unknown short argument%s: '%c'",
-            unmatched.len > 1 ? "s" : "", VEC_GET(unmatched, 0));
+    fprintf(stderr,
+            "Unknown short argument%s: '%c'",
+            unmatched.len > 1 ? "s" : "",
+            VEC_GET(unmatched, 0));
     for (size_t i = 1; i < unmatched.len; i++) {
       fprintf(stderr, ", '%c'", VEC_GET(unmatched, i));
     }
@@ -197,8 +206,11 @@ void parse_args(argument *restrict args, int argument_amt, int argc,
 
   parse_state state = {
     // assume the first parameter is the program name
-    .arg_cursor = 1, .args = args, .argument_amt = argument_amt,
-    .argc = argc,    .argv = argv,
+    .arg_cursor = 1,
+    .args = args,
+    .argument_amt = argument_amt,
+    .argc = argc,
+    .argv = argv,
   };
 
   for (int i = 0; i < argument_amt; i++) {

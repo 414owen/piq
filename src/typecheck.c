@@ -241,8 +241,11 @@ static node_ind_t mk_type(typecheck_state *state, type_tag tag,
   debug_assert(sizeof(subs[0]) == sizeof(VEC_GET(state->types.type_inds, 0)));
   // size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
   // const void *needle, size_t needle_els);
-  ind = find_range(VEC_DATA_PTR(&state->types.type_inds), sizeof(subs[0]),
-                   state->types.type_inds.len, subs, sub_amt);
+  ind = find_range(VEC_DATA_PTR(&state->types.type_inds),
+                   sizeof(subs[0]),
+                   state->types.type_inds.len,
+                   subs,
+                   sub_amt);
   if (ind == state->types.type_inds.len) {
     VEC_APPEND(&state->types.type_inds, sub_amt, subs);
   }
@@ -345,9 +348,13 @@ static void setup_type_env(typecheck_state *state) {
     state->unknown_ind = state->types.types.len - 1;
   }
 
-  memset_arbitrary(state->types.node_types, &state->unknown_ind,
-                   state->tree.node_amt, sizeof(node_ind_t));
-  memset_arbitrary(state->wanted, &state->unknown_ind, state->tree.node_amt,
+  memset_arbitrary(state->types.node_types,
+                   &state->unknown_ind,
+                   state->tree.node_amt,
+                   sizeof(node_ind_t));
+  memset_arbitrary(state->wanted,
+                   &state->unknown_ind,
+                   state->tree.node_amt,
                    sizeof(node_ind_t));
 
   // Prelude
@@ -487,7 +494,8 @@ static bool can_propagate_type(typecheck_state *state, parse_node from,
     default:
       return false;
   }
-  return compare_bnds(state->input, state->tree.nodes[a_bnd_ind].span,
+  return compare_bnds(state->input,
+                      state->tree.nodes[a_bnd_ind].span,
                       state->tree.nodes[b_bnd_ind].span) == EQ;
 }
 
@@ -829,8 +837,8 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
 
     case PT_UPPER_NAME: {
       binding b = params.node.span;
-      size_t ind = lookup_str_ref(state->input, state->term_env,
-                                  state->term_is_builtin, b);
+      size_t ind = lookup_str_ref(
+        state->input, state->term_env, state->term_is_builtin, b);
       if (ind == state->term_env.len) {
         tc_error err = {
           .type = BINDING_NOT_FOUND,
@@ -895,8 +903,8 @@ static void tc_pattern_unambiguous(typecheck_state *state,
       break;
     }
     case PT_LIST: {
-      push_list_subs_unambiguous(state, params, TC_PATTERN_MATCHES,
-                                 TC_PATTERN_MATCHES);
+      push_list_subs_unambiguous(
+        state, params, TC_PATTERN_MATCHES, TC_PATTERN_MATCHES);
       // Screw it, reconstruction is the same for nodes. Let's make them do it.
       tc_action action = {
         .tag = TC_NODE_MATCHES,
@@ -928,8 +936,8 @@ static void tc_pattern_unambiguous(typecheck_state *state,
 
     case PT_UPPER_NAME: {
       binding b = params.node.span;
-      size_t ind = lookup_str_ref(state->input, state->term_env,
-                                  state->term_is_builtin, b);
+      size_t ind = lookup_str_ref(
+        state->input, state->term_env, state->term_is_builtin, b);
       if (ind == state->term_env.len) {
         tc_error err = {
           .type = BINDING_NOT_FOUND,
@@ -1143,17 +1151,21 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         case TC_CLONE_WANTED_ACTUAL:
         case TC_CLONE_WANTED_WANTED: {
           parse_node from_node = tree.nodes[action.from];
-          fprintf(debug_out, "From: '%d' '%s'\n", action.from,
+          fprintf(debug_out,
+                  "From: '%d' '%s'\n",
+                  action.from,
                   parse_node_string(from_node.type));
-          format_error_ctx(debug_out, input, from_node.span.start,
-                           from_node.span.end);
+          format_error_ctx(
+            debug_out, input, from_node.span.start, from_node.span.end);
           putc('\n', debug_out);
 
           parse_node to_node = tree.nodes[action.to];
-          fprintf(debug_out, "To: '%d' '%s'\n", action.to,
+          fprintf(debug_out,
+                  "To: '%d' '%s'\n",
+                  action.to,
                   parse_node_string(to_node.type));
-          format_error_ctx(debug_out, input, to_node.span.start,
-                           to_node.span.end);
+          format_error_ctx(
+            debug_out, input, to_node.span.start, to_node.span.end);
           putc('\n', debug_out);
           break;
         }
@@ -1270,7 +1282,9 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         node_ind_t callee_ind = PT_CALL_CALLEE_IND(node_params.node);
         node_ind_t param_ind = PT_CALL_PARAM_IND(node_params.node);
         node_ind_t wanted_fn_type =
-          mk_type_inline(&state, T_FN, state.types.node_types[param_ind],
+          mk_type_inline(&state,
+                         T_FN,
+                         state.types.node_types[param_ind],
                          node_params.wanted_ind);
         tc_action actions[] = {
           {.tag = TC_WANT_TYPE, .from = wanted_fn_type, .to = callee_ind},
@@ -1365,8 +1379,8 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
 
           // node_unambiguous
           case PT_LIST:
-            push_list_subs_unambiguous(&state, node_params, TC_NODE_UNAMBIGUOUS,
-                                       TC_NODE_MATCHES);
+            push_list_subs_unambiguous(
+              &state, node_params, TC_NODE_UNAMBIGUOUS, TC_NODE_MATCHES);
             break;
 
           // node_unambiguous
@@ -1425,8 +1439,8 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           case PT_UPPER_NAME:
           case PT_LOWER_NAME: {
             binding b = node_params.node.span;
-            size_t ind = lookup_str_ref(state.input, state.term_env,
-                                        state.term_is_builtin, b);
+            size_t ind = lookup_str_ref(
+              state.input, state.term_env, state.term_is_builtin, b);
             if (ind == state.term_env.len) {
               tc_error err = {
                 .type = BINDING_NOT_FOUND,
@@ -1509,7 +1523,9 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         node_ind_t param_ind = PT_FN_PARAM_IND(node_params.node);
         node_ind_t body_ind = PT_FN_BODY_IND(node_params.node);
         state.types.node_types[node_params.node_ind] =
-          mk_type_inline(&state, T_FN, state.types.node_types[param_ind],
+          mk_type_inline(&state,
+                         T_FN,
+                         state.types.node_types[param_ind],
                          state.types.node_types[body_ind]);
         break;
       }
@@ -1523,9 +1539,10 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           PT_FUN_BODY_IND(state.tree.inds, node_params.node);
 
         // TODO consider using wanted value?
-        node_ind_t type =
-          mk_type_inline(&state, T_FN, state.types.node_types[param_ind],
-                         state.types.node_types[body_ind]);
+        node_ind_t type = mk_type_inline(&state,
+                                         T_FN,
+                                         state.types.node_types[param_ind],
+                                         state.types.node_types[body_ind]);
         state.types.node_types[node_params.node_ind] = type;
         state.types.node_types[bnd_ind] = type;
         break;
@@ -1657,16 +1674,16 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
 
           // node_matches
           case PT_INT:
-            check_int_fits_type(&state, node_params.node_ind,
-                                node_params.wanted_ind);
+            check_int_fits_type(
+              &state, node_params.node_ind, node_params.wanted_ind);
             break;
 
           // node_matches
           case PT_UPPER_NAME:
           case PT_LOWER_NAME: {
             binding b = node_params.node.span;
-            size_t ind = lookup_str_ref(state.input, state.term_env,
-                                        state.term_is_builtin, b);
+            size_t ind = lookup_str_ref(
+              state.input, state.term_env, state.term_is_builtin, b);
             if (ind == state.term_env.len) {
               tc_error err = {
                 .type = BINDING_NOT_FOUND,
@@ -1881,8 +1898,8 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           // tc_type
           case PT_UPPER_NAME: {
             binding b = {.start = node.span.start, .end = node.span.end};
-            size_t ind = lookup_str_ref(state.input, state.type_env,
-                                        state.type_is_builtin, b);
+            size_t ind = lookup_str_ref(
+              state.input, state.type_env, state.type_is_builtin, b);
             if (ind == state.type_env.len) {
               tc_error err = {
                 .type = TYPE_NOT_FOUND,
@@ -1947,8 +1964,10 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
 
       case TC_TYPE_LIST_STAGE_TWO: {
         state.types.node_types[node_params.node_ind] = mk_type_inline(
-          &state, T_LIST,
-          state.types.node_types[PT_LIST_TYPE_SUB(node_params.node)], 0);
+          &state,
+          T_LIST,
+          state.types.node_types[PT_LIST_TYPE_SUB(node_params.node)],
+          0);
         break;
       }
 
@@ -1956,7 +1975,9 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         node_ind_t param_ind = PT_FN_TYPE_PARAM_IND(node_params.node);
         node_ind_t return_ind = PT_FN_TYPE_RETURN_IND(node_params.node);
         state.types.node_types[action.node_ind] =
-          mk_type_inline(&state, T_FN, state.types.node_types[param_ind],
+          mk_type_inline(&state,
+                         T_FN,
+                         state.types.node_types[param_ind],
                          state.types.node_types[return_ind]);
         break;
       }
@@ -2019,8 +2040,8 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
       case TC_CLONE_WANTED_WANTED:
       case TC_WANT_TYPE:
         fputs("New wanted: ", debug_out);
-        print_type(debug_out, VEC_DATA_PTR(&state.types.types),
-                   state.wanted[action.to]);
+        print_type(
+          debug_out, VEC_DATA_PTR(&state.types.types), state.wanted[action.to]);
         putc('\n', debug_out);
         break;
       case TC_TYPE:
@@ -2036,7 +2057,8 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
       case TC_CLONE_WANTED_ACTUAL:
       case TC_ASSIGN_TYPE:
         fputs("Result: ", debug_out);
-        print_type(debug_out, VEC_DATA_PTR(&state.types.types),
+        print_type(debug_out,
+                   VEC_DATA_PTR(&state.types.types),
                    state.types.node_types[action.node_ind]);
         putc('\n', debug_out);
         break;

@@ -85,7 +85,9 @@ static void test_llvm_produces(test_state *state, const char *input,
   if (got != expected) {
     failf(state,
           "Jit function returned wrong result. Expected: %d, Got: %d.\n%s",
-          expected, got, LLVMPrintModuleToString(module));
+          expected,
+          got,
+          LLVMPrintModuleToString(module));
   }
   free_parse_tree(tree);
   free_tc_res(tc);

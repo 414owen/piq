@@ -143,19 +143,19 @@ void __vec_replicate(vec_void *vec, void *el, VEC_LEN_T amt, size_t elemsize) {
       __vec_resize_external_to_external(
         vec, MAX((vec->len + amt) * 2, VEC_FIRST_SIZE), elemsize);
     }
-    memset_arbitrary((char *)vec->data + elemsize * vec->len, el, amt,
-                     elemsize);
+    memset_arbitrary(
+      (char *)vec->data + elemsize * vec->len, el, amt, elemsize);
   } else {
     // we're internal
     if (vec->len + amt > inline_amt) {
       // going external
       __vec_resize_internal_to_external(
         vec, MAX((vec->len + amt) * 2, VEC_FIRST_SIZE), elemsize);
-      memset_arbitrary((char *)vec->data + elemsize * vec->len, el, amt,
-                       elemsize);
+      memset_arbitrary(
+        (char *)vec->data + elemsize * vec->len, el, amt, elemsize);
     } else {
-      memset_arbitrary(vec->inline_data + elemsize * vec->len, el, amt,
-                       elemsize);
+      memset_arbitrary(
+        vec->inline_data + elemsize * vec->len, el, amt, elemsize);
     }
   }
 #else

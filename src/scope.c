@@ -20,7 +20,8 @@ static bool strn1eq(const char *a, const char *b, size_t alen) {
 }
 
 order compare_bnds(const char *restrict source_file, binding a, binding b) {
-  return strncmp(source_file + a.start, source_file + b.start,
+  return strncmp(source_file + a.start,
+                 source_file + b.start,
                  MIN(a.end - a.start, b.end - b.start));
 }
 

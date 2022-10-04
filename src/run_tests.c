@@ -22,7 +22,8 @@ static void run_tests(test_config conf) {
   test_state_finalize(&state);
 
   print_failures(&state);
-  printf("Tests passed: %" PRIu32 "/%" PRIu32 "\n", state.tests_passed,
+  printf("Tests passed: %" PRIu32 "/%" PRIu32 "\n",
+         state.tests_passed,
          state.tests_run);
 
   if (conf.junit) {
@@ -50,34 +51,34 @@ int main(int argc, const char **argv) {
 
   int times = 1;
 
-  argument args[] = {{
-                       .tag = ARG_FLAG,
-                       .long_name = "lite",
-                       .short_name = 'l',
-                       .flag_data = &conf.lite,
-                       .description = "Turn off stress tests",
-                     },
-                     {
-                       .tag = ARG_FLAG,
-                       .long_name = "junit",
-                       .short_name = 'j',
-                       .flag_data = &conf.junit,
-                       .description = "Create JUnit compatible test-results.xml file"
-                     },
-                     {
-                       .tag = ARG_INT,
-                       .long_name = "times",
-                       .short_name = 't',
-                       .int_data = &times,
-                       .description = "Run the test suite more than once (for benchmarking)"
-                     },
-                     {
-                       .tag = ARG_STRING,
-                       .long_name = "match",
-                       .short_name = 'm',
-                       .string_data = &conf.filter_str,
-                       .description = "filter tests by name. Matches on <group>.<group>.<test>"
-                     }};
+  argument args[] = {
+    {
+      .tag = ARG_FLAG,
+      .long_name = "lite",
+      .short_name = 'l',
+      .flag_data = &conf.lite,
+      .description = "Turn off stress tests",
+    },
+    {.tag = ARG_FLAG,
+     .long_name = "junit",
+     .short_name = 'j',
+     .flag_data = &conf.junit,
+     .description = "Create JUnit compatible test-results.xml file"},
+    {
+      .tag = ARG_INT,
+      .long_name = "times",
+      .short_name = 't',
+      .int_data = &times,
+      .description = "Run the test suite more than once (for benchmarking)",
+    },
+    {
+      .tag = ARG_STRING,
+      .long_name = "match",
+      .short_name = 'm',
+      .string_data = &conf.filter_str,
+      .description = "filter tests by name. Matches on <group>.<group>.<test>",
+    },
+  };
 
   parse_args(args, STATIC_LEN(args), argc, argv);
 
