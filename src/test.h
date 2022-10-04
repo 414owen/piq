@@ -55,7 +55,7 @@ typedef struct {
   vec_failure failures;
   vec_test_action actions;
   vec_string strs;
-  char *filter_str;
+  const char *filter_str;
 } test_state;
 
 #define test_start(state, desc)                                                \
@@ -98,5 +98,5 @@ tokens_res test_upto_tokens(test_state *state, const char *input);
 parse_tree_res test_upto_parse_tree(test_state *state, const char *input);
 tc_res test_upto_typecheck(test_state *state, const char *input, bool *success,
                            parse_tree *tree);
-bool test_matches(const test_state *restrict state,
-                  const char *restrict test_name);
+bool test_matches(const test_state *state,
+                  const char *test_name);
