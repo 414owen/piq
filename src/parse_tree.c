@@ -120,7 +120,7 @@ typedef struct {
   vec_string string_stack;
   bitset in_tuple;
   parse_tree tree;
-  char *input;
+  const char *input;
   FILE *out;
 } printer_state;
 
@@ -253,7 +253,7 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
   }
 }
 
-void print_parse_tree(FILE *f, char *input, parse_tree tree) {
+void print_parse_tree(FILE *f, const char *restrict input, parse_tree tree) {
   printer_state s = {
     .actions = VEC_NEW,
     .node_stack = VEC_NEW,
@@ -312,7 +312,7 @@ void print_parse_tree(FILE *f, char *input, parse_tree tree) {
   bs_free(&s.in_tuple);
 }
 
-char *print_parse_tree_str(char *input, parse_tree tree) {
+char *print_parse_tree_str(const char *restrict input, const parse_tree tree) {
   stringstream *ss = ss_init();
   print_parse_tree(ss->stream, input, tree);
   return ss_finalize_free(ss);
