@@ -724,7 +724,7 @@ static void push_list_subs_unambiguous(typecheck_state *state,
     return;
   }
 
-  node_ind_t *inds = state->tree.inds;
+  const node_ind_t *inds = state->tree.inds;
 
   {
     node_ind_t sub_ind = PT_LIST_SUB_IND(inds, params.node, 0);
@@ -1827,7 +1827,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
       }
 
       case TC_RECONSTRUCT_LIST: {
-        node_ind_t *inds = state.tree.inds;
+        const node_ind_t *inds = state.tree.inds;
         node_ind_t sub_amt = PT_LIST_SUB_AMT(node_params.node);
         if (sub_amt == 0)
           break;

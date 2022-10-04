@@ -325,11 +325,14 @@ tc_res test_upto_typecheck(test_state *state, const char *restrict input,
       failf(state, "Typecheck failed:\n%s", error);
       free(error);
       free_tc_res(tc);
+      free_parse_tree_res(tree_res);
+    } else {
+      *success = true;
     }
     *tree = tree_res.tree;
-    free_parse_tree_res(tree_res);
   } else {
     *success = false;
+    free_parse_tree_res(tree_res);
   }
   return tc;
 }

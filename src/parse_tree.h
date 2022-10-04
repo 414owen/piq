@@ -35,6 +35,7 @@ typedef enum {
 } parse_node_type;
 
 #define PT_FUN_BINDING_IND(inds, node) inds[node.subs_start + 0]
+          // TODO use twine here
 #define PT_FUN_PARAM_IND(inds, node) inds[node.subs_start + 1]
 #define PT_FUN_BODY_IND(inds, node) inds[node.subs_start + 2]
 
@@ -104,8 +105,8 @@ VEC_DECL_CUSTOM(node_ind_t, vec_node_ind);
 VEC_DECL(token_type);
 
 typedef struct {
-  parse_node *nodes;
-  node_ind_t *inds;
+  const parse_node *nodes;
+  const node_ind_t *inds;
   node_ind_t root_ind;
   node_ind_t node_amt;
 } parse_tree;
@@ -125,8 +126,8 @@ typedef struct {
 
 parse_tree_res parse(token *tokens, size_t token_amt);
 
-void print_parse_tree(FILE *f, char *input, parse_tree t);
-char *print_parse_tree_str(char *input, parse_tree tree);
+void print_parse_tree(FILE *f, const char *input, const parse_tree tree);
+char *print_parse_tree_str(const char *input, const parse_tree tree);
 tree_node_repr subs_type(parse_node_type type);
 void free_parse_tree(parse_tree tree);
 void free_parse_tree_res(parse_tree_res res);

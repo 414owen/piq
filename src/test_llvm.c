@@ -129,10 +129,10 @@ void test_llvm(test_state *state) {
   {
     const char *input = "(sig test (Fn () ()))\n"
                         "(fun test () (a ()))\n"
-                        "(sig a () ())\n"
+                        "(sig a (Fn () ()))\n"
                         "(fun a () ())";
 
-    test_llvm_produces(state, input, 3);
+    test_llvm_produces(state, input, 2);
   }
   test_end(state);
 
