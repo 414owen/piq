@@ -183,8 +183,6 @@ static void test_types_match(test_state *state, const char *input,
 
   parse_tree_res pres = test_upto_parse_tree(state, input);
   if (!pres.succeeded) {
-    failf(state, "Parsing failed");
-    free_parse_tree_res(pres);
     return;
   }
 
