@@ -22,7 +22,7 @@
 typedef struct {
   bool junit;
   bool lite;
-  char *filter_str;
+  const char *filter_str;
 } test_config;
 
 typedef struct {

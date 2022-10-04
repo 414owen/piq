@@ -27,7 +27,8 @@ void test_group_start(test_state *state, char *name) {
   printf("%s\n", name);
   VEC_PUSH(&state->path, name);
   if (state->config.junit) {
-    VEC_PUSH(&state->actions, GROUP_ENTER);
+    test_action a = GROUP_ENTER;
+    VEC_PUSH(&state->actions, a);
     VEC_PUSH(&state->strs, name);
   }
 }
@@ -36,7 +37,8 @@ void test_group_end(test_state *state) {
   assert(!state->in_test);
   VEC_POP_(&state->path);
   if (state->config.junit) {
-    VEC_PUSH(&state->actions, GROUP_LEAVE);
+    test_action a = GROUP_LEAVE;
+    VEC_PUSH(&state->actions, a);
   }
 }
 
@@ -75,7 +77,8 @@ void test_start_internal(test_state *state, const char *name) {
   state->current_failed = false;
   state->in_test = true;
   if (state->config.junit) {
-    VEC_PUSH(&state->actions, TEST_ENTER);
+    test_action a = TEST_ENTER;
+    VEC_PUSH(&state->actions, a);
     VEC_PUSH(&state->strs, name);
   }
 }
@@ -87,7 +90,8 @@ void test_end_internal(test_state *state) {
   state->tests_run++;
   state->in_test = false;
   if (state->config.junit) {
-    VEC_PUSH(&state->actions, TEST_LEAVE);
+    test_action a = TEST_LEAVE;
+    VEC_PUSH(&state->actions, a);
   }
 }
 
