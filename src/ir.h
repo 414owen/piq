@@ -42,130 +42,177 @@ typedef struct {
   node_ind_t pt_binding;
 } pt_node_amounts;
 
-// sizeof: 32
 typedef struct {
-  span s;
-  // TODO remove the binding, when it's part of a ir_fun_group?
-  binding b;
-  node_ind_t param_pattern_ind;
-  node_ind_t body_stmts_start;
-  node_ind_t body_stmts_amt;
-  node_ind_t type_ind;
-} ir_fun;
+  node_ind_t n;
+} ir_expr_ind;
 
-// sizeof: 24
 typedef struct {
-  span s;
-  node_ind_t param_pattern_ind;
-  node_ind_t body_stmts_start;
-  node_ind_t body_stmts_amt;
-  node_ind_t type_ind;
+  node_ind_t n;
+} ir_type_ind;
+
+typedef struct {
+  node_ind_t n;
+} ir_function_decl_ind;
+
+typedef struct {
+  node_ind_t n;
+} ir_data_decl_ind;
+
+typedef struct {
+  node_ind_t n;
+} data_constructor_ind;
+
+typedef struct {
+  node_ind_t n;
+} ir_pattern_ind;
+
+typedef struct {
+  ir_data_decl_ind     ir_data_constructor_ref_data_decl_ind;
+  data_constructor_ind ir_data_constructor_ref_constructor_ind;
+} ir_data_constructor_ref;
+
+typedef struct {
+  enum {
+    PAT_TUP,
+    PAT_CONSTRUCT,
+    PAT_INT,
+    PAT_STR,
+    PAT_UNIT,
+  };
+
+  union {
+    struct {
+      ir_pattern_ind ir_pattern_tup_left_ind;
+      ir_pattern_ind ir_pattern_tup_right_ind;
+    };
+    struct {
+      ir_data_constructor_ref ir_pattern_data_construction_callee_ind;
+      ir_pattern_ind          ir_pattern_data_construction_param_ind;
+    };
+    span ir_pattern_int_span;
+    span ir_pattern_str_span;
+  };
+} ir_pattern;
+
+typedef struct {
+  ir_pattern ir_fn_param;
+  node_ind_t ir_fn_body_stmts_start;
+  node_ind_t ir_fn_body_stmts_amt;
+  node_ind_t ir_fn_type_ind;
 } ir_fn;
 
-// sizeof: 20
 typedef struct {
-  span s;
-  node_ind_t expr_a_ind;
-  node_ind_t expr_b_ind;
-  node_ind_t type_ind;
+  // TODO remove the binding, when it's part of an ir_fun_group?
+  binding b;
+  ir_pattern ir_fn_param;
+  node_ind_t ir_fn_body_stmts_start;
+  node_ind_t ir_fn_body_stmts_amt;
+  node_ind_t ir_fn_type_ind;
+} ir_fun;
+
+typedef enum {
+  EXPR_TUP,
+  EXPR_STR,
+  EXPR_LIST,
+  EXPR_U8,
+  EXPR_I8,
+  EXPR_U16,
+  EXPR_I16,
+  EXPR_U32,
+  EXPR_I32,
+  EXPR_U64,
+  EXPR_I64,
+} expr_type;
+
+typedef struct {
+  ir_type_ind type;
+  expr_type   ir_expr_tag;
+
+  union {
+    uint8_t  ir_expr_u8;
+    int8_t   ir_expr_i8;
+    uint16_t ir_expr_u16;
+    int16_t  ir_expr_i16;
+    uint32_t ir_expr_u32;
+    int32_t  ir_expr_i32;
+    // tuples, strings, lists, {i,u}64
+    ir_expr_ind ir_expr_ind;
+  };
+} ir_expr;
+
+typedef struct {
+  ir_type_ind ir_tup_type_ind;
+  ir_expr     ir_tup_expr_a;
+  ir_expr     ir_tup_expr_b;
 } ir_tup;
 
-// sizeof: 20
+// Why doesn't this contain everything?
+// Well, I think we'll want to generate functions, so they wouldn't belong here.
 typedef struct {
-  node_ind_t function_decls_start;
-  node_ind_t function_decl_amt;
-  node_ind_t data_decls_start;
-  node_ind_t data_decl_amt;
-  node_ind_t type_ind;
+  ir_type_ind          ir_root_type_ind;
+  ir_function_decl_ind ir_root_function_decls_start;
+  ir_function_decl_ind ir_root_function_decl_amt;
+  ir_data_decl_ind     ir_root_data_decls_start;
+  ir_data_decl_ind     ir_root_data_decl_amt;
 } ir_root;
 
-// sizeof: 20
 typedef struct {
-  span s;
-  node_ind_t callee_expr_ind;
-  node_ind_t param_expr_ind;
-  node_ind_t type_ind;
+  ir_type_ind ir_call_type_ind;
+  ir_expr     ir_call_expr_a;
+  ir_expr     ir_call_expr_b;
 } ir_call;
 
-// sizeof: 24
 typedef struct {
-  span s;
-  node_ind_t callee_data_decl_ind;
-  node_ind_t callee_constructor_ind;
-  node_ind_t param_expr_ind;
-  node_ind_t type_ind;
-} ir_construction;
+  ir_type_ind             ir_data_construction_type_ind;
+  ir_data_constructor_ref ir_data_construction_callee_ref;
+  ir_expr                 ir_data_construction_param;
+} ir_data_construction;
 
-// sizeof: 20
 typedef struct {
-  span s;
-  node_ind_t param_ind;
-  node_ind_t return_ind;
-  node_ind_t type_ind;
+  ir_type_ind ir_fun_type_ind;
+  ir_type_ind ir_fun_param_ind;
+  ir_type_ind ir_fun_return_ind;
 } ir_fn_type;
 
-// sizeof: 24
 typedef struct {
-  span s;
-  node_ind_t cond_expr_ind;
-  node_ind_t then_expr_ind;
-  node_ind_t else_expr_ind;
-  node_ind_t type_ind;
+  ir_type_ind ir_if_type_ind;
+  ir_expr     ir_if_cond_expr;
+  ir_expr     ir_if_then_expr;
+  ir_expr     ir_if_else_expr;
 } ir_if;
 
-// sizeof: 8
 typedef struct {
-  span s;
-} ir_int;
-
-// sizeof: 16
-typedef struct {
-  span s;
-  node_ind_t exprs_start;
-  node_ind_t expr_amt;
-  node_ind_t type_ind;
+  ir_type_ind ir_list_type_ind;
+  ir_expr_ind ir_list_exprs_start;
+  ir_expr_ind ir_list_expr_amt;
 } ir_list;
 
-// sizeof: 12
+// TODO delete?
 typedef struct {
-  span s;
-  node_ind_t inner_type_ind;
-  node_ind_t type_ind;
+  ir_type_ind ir_list_type_inner_type;
 } ir_list_type;
 
-// sizeof: 8
 typedef struct {
   span s;
 } ir_string;
 
-// sizeof: 16
 typedef struct {
-  span s;
-  node_ind_t expr_ind;
-  node_ind_t type_ind;
+  ir_type_ind ir_as_type_ind;
+  ir_expr     ir_as_expr_ind;
 } ir_as;
-
-// sizeof: 4
-typedef struct {
-  // always two chars
-  buf_ind_t span_start;
-} ir_unit;
 
 typedef struct {
   span s;
 } ir_binding;
 
-// sizeof: 12
 typedef struct {
-  span s;
-  node_ind_t type_ind;
+  // TODO
+  ir_expr_ind ir_upper_name;
 } ir_upper_name;
 
-// sizeof: 20
 typedef struct {
-  span s;
-  binding binding;
-  node_ind_t type_ind;
+  ir_binding  ir_sig_binding;
+  ir_type_ind ir_sig_type_ind;
 } ir_sig;
 
 typedef enum {
@@ -178,18 +225,15 @@ typedef enum {
   IR_EXPR_CONSTRUCTOR_REF,
 } ir_expr_type;
 
-// sizeof: 28
 typedef struct {
-  span s;
-  binding binding;
-  ir_expr_type expr_type;
-  node_ind_t expr_ind;
-  node_ind_t type_ind;
+  binding      ir_let_binding;
+  ir_expr_type ir_let_expr_type;
+  ir_expr      ir_let_expr;
+  ir_type_ind  ir_let_type_ind;
 } ir_let;
 
 VEC_DECL(ir_expr_type);
 
-// sizeof: 52
 typedef struct {
   ir_sig sig;
   ir_fun fun;
@@ -197,7 +241,6 @@ typedef struct {
 
 VEC_DECL(ir_fun_group);
 
-// sizeof: 48
 typedef struct {
   ir_sig sig;
   ir_let let;
@@ -205,24 +248,21 @@ typedef struct {
 
 VEC_DECL(ir_let_group);
 
-// sizeof: 152
 typedef struct {
   ir_root ir_root;
 
   ir_fun_group *ir_fun_groups;
   ir_let_group *ir_let_groups;
   ir_call *ir_calls;
-  ir_construction *ir_constructions;
+  ir_data_construction *ir_constructions;
   ir_fn *ir_fns;
   ir_fn_type *ir_fn_types;
   ir_if *ir_ifs;
-  ir_int *ir_ints;
   ir_list *ir_lists;
   ir_list_type *ir_list_types;
   ir_string *ir_strings;
   ir_tup *ir_tups;
   ir_as *ir_ass;
-  ir_unit *ir_units;
   ir_binding *ir_bindings;
 
   type *ir_types;
