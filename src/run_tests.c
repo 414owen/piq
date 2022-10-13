@@ -17,6 +17,7 @@ static void run_tests(test_config conf) {
   test_scanner(&state);
   test_parser(&state);
   test_typecheck(&state);
+  test_ir_layout(&state);
   test_llvm(&state);
 
   test_state_finalize(&state);

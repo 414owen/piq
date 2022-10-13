@@ -41,6 +41,8 @@
     free(ptr);                                                                 \
   }
 
+#define give_up(...) give_up_internal(__FILE__, __LINE__, __VA_ARGS__)
+
 typedef struct {
   char *string;
   FILE *stream;
@@ -74,7 +76,8 @@ char *join(const size_t str_amt, const char *const *const strs,
 int vasprintf(char **, const char *restrict, va_list);
 int asprintf(char **, const char *restrict, ...);
 void reverse_arbitrary(void *dest, size_t amt, size_t elsize);
-HEDLEY_NO_RETURN void give_up(const char *err, ...);
+HEDLEY_NO_RETURN void give_up_internal(const char *file, size_t line,
+                                       const char *err, ...);
 void debug_assert_internal(bool b, const char *file, size_t line);
 
 char *join_paths(const char *const *paths, size_t path_num);
