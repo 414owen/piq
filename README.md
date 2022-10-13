@@ -72,6 +72,7 @@ A language that does everything right
 * Higher order tuples are syntactic sugar over 2-tuples, so combinators work
 * Generics: Generics introduce a block, where everything in the block
   is generic. Think it'll look clean.
+* Use mermaid in doc strings to produce diagrams
 
 # Mistakes
 
