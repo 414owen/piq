@@ -44,6 +44,7 @@ common_objs += llvm_shim.o
 test_objs += run_tests.o
 test_objs += test_bitset.o
 test_objs += test.o
+test_objs += test_ir.o
 test_objs += test_llvm.o
 test_objs += test_parser.o
 test_objs += test_scanner.o

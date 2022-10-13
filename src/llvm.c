@@ -489,7 +489,8 @@ static void cg_node(cg_state *state) {
           LLVMTypeRef fn_type =
             construct_type(state, state->types.node_types[ind]);
 
-          node_ind_t binding_ind = PT_FUN_BINDING_IND(state->parse_tree.inds, node);
+          node_ind_t binding_ind =
+            PT_FUN_BINDING_IND(state->parse_tree.inds, node);
           parse_node binding = state->parse_tree.nodes[binding_ind];
           buf_ind_t binding_len = 1 + binding.span.end - binding.span.start;
 

@@ -35,7 +35,7 @@ typedef enum {
 } parse_node_type;
 
 #define PT_FUN_BINDING_IND(inds, node) inds[node.subs_start + 0]
-          // TODO use twine here
+// TODO use twine here
 #define PT_FUN_PARAM_IND(inds, node) inds[node.subs_start + 1]
 #define PT_FUN_BODY_IND(inds, node) inds[node.subs_start + 2]
 

@@ -198,9 +198,10 @@ char *join(const size_t str_amt, const char *const *const strs,
   return buf;
 }
 
-void give_up(const char *err, ...) {
+void give_up_internal(const char *file, size_t line, const char *err, ...) {
   va_list argp;
-  va_start(argp, err);
+  va_start(argp, line);
+  fprintf(stderr, "%s:%zu", file, line);
   vfprintf(stderr, err, argp);
   fputs("\nThis is a compiler bug! Giving up.\n", stderr);
   exit(1);
