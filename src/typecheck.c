@@ -18,7 +18,7 @@
 
 // Typechecking is implemented as an interpreter for a stack based language
 // of typechecking operations.
-// This is to avoid stackoverflow on enormous ASTs.
+// This is to avoid stackoverflow on enormous(ly deep) ASTs.
 
 /*
 
