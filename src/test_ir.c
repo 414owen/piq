@@ -41,6 +41,41 @@ void print_union_upto(node_info *nodes, size_t from, size_t to, FILE *out) {
   fputs("  };\n\n", out);
 }
 
+typedef struct {
+  size_t pos;
+  size_t total;
+  size_t total_padding;
+} size_state;
+
+static size_state new_size_state(void) {
+  size_state res = {
+    .pos = 0,
+    .total = 0,
+    .total_padding = 0,
+  };
+  return res;
+}
+
+// calculate the size of a struct, taking into account padding
+static void add_size(size_state *s, size_t size) {
+  if (size == 0) return;
+  size_t align = 0;
+  if (size < 3) {
+    align = size;
+  } else if (size <= 4) {
+    align = 4;
+  } else {
+    align = 8;
+  }
+  while (s->pos % align > 0) {
+    s->total_padding += 1;
+    s->total += 1;
+    s->pos += 1;
+  }
+  s->total += size;
+  s->pos += size;
+}
+
 void test_ir_layout(test_state *state) {
   test_start(state, "layout");
   node_info nodes[] = {
@@ -60,18 +95,22 @@ void test_ir_layout(test_state *state) {
 
   qsort(nodes, STATIC_LEN(nodes), sizeof(nodes[0]), cmp_node_info);
 
-  size_t min_total_size =
-    sizeof(ir_root) + sizeof(vec_type) + sizeof(vec_node_ind);
+  size_t min_total_size;
 
   {
+    size_state state = new_size_state();
+    add_size(&state, sizeof(ir_root));
     size_t prev_size = 0;
     for (size_t i = 0; i < STATIC_LEN(nodes); i++) {
       node_info info = nodes[i];
       if (prev_size != info.node_size) {
-        min_total_size += info.vec_size;
+        add_size(&state, info.vec_size);
         prev_size = info.node_size;
       }
     }
+    add_size(&state, sizeof(vec_type));
+    add_size(&state, sizeof(vec_node_ind));
+    min_total_size = state.pos;
   }
 
   if (min_total_size != sizeof(ir_module)) {
@@ -83,9 +122,10 @@ void test_ir_layout(test_state *state) {
       ss_init_immovable(&ss);
       size_t prev_size = 0;
       size_t prev_ind = 0;
-      fputs("typedef struct {\n"
-            "  ir_root root;\n\n",
-            ss.stream);
+      fprintf(ss.stream,
+            "typedef struct {\n"
+            "  // sizeof el: %zu\n"
+            "  ir_root root;\n\n", sizeof(ir_root));
       for (size_t i = 0; i < STATIC_LEN(nodes); i++) {
         node_info info = nodes[i];
         if (prev_size != info.node_size) {
@@ -104,7 +144,11 @@ void test_ir_layout(test_state *state) {
     }
     failf(state,
           "ir_module could be optimized for construction and access patterns.\n"
+          "Your size: %zu\n"
+          "Optimal: %zu\n"
           "Try something like this:\n%s",
+          sizeof(ir_module),
+          min_total_size,
           str);
   }
   test_end(state);
