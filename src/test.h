@@ -91,7 +91,7 @@ void test_scanner(test_state *state);
 void test_parser(test_state *state);
 void test_typecheck(test_state *state);
 void test_llvm(test_state *state);
-void test_ir_layout(test_state *state);
+void test_ir(test_state *state);
 
 void write_test_results(test_state *state);
 
