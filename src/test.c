@@ -71,6 +71,7 @@ void test_fail_eq(test_state *state, char *a, char *b) {
 
 void test_start_internal(test_state *state, const char *name) {
   assert(!state->in_test);
+  assert(state->path.len > 0);
   print_depth_indent(state);
   fputs(name, stdout);
   state->current_name = name;
