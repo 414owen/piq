@@ -14,7 +14,7 @@
 #include "dir_exists.h"
 #include "util.h"
 
-static inline int platform_mkdir(char *pathname, mode_t mode) { 
+static inline int platform_mkdir(char *pathname, mode_t mode) {
 #ifdef _WIN32
   // http://msdn.microsoft.com/en-us/library/2fkk4dzw.aspx
   return _mkdir(pathname);

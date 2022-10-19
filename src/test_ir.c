@@ -58,7 +58,8 @@ static size_state new_size_state(void) {
 
 // calculate the size of a struct, taking into account padding
 static void add_size(size_state *s, size_t size) {
-  if (size == 0) return;
+  if (size == 0)
+    return;
   size_t align = 0;
   if (size < 3) {
     align = size;
@@ -123,9 +124,10 @@ void test_ir_layout(test_state *state) {
       size_t prev_size = 0;
       size_t prev_ind = 0;
       fprintf(ss.stream,
-            "typedef struct {\n"
-            "  // sizeof el: %zu\n"
-            "  ir_root root;\n\n", sizeof(ir_root));
+              "typedef struct {\n"
+              "  // sizeof el: %zu\n"
+              "  ir_root root;\n\n",
+              sizeof(ir_root));
       for (size_t i = 0; i < STATIC_LEN(nodes); i++) {
         node_info info = nodes[i];
         if (prev_size != info.node_size) {

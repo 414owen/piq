@@ -124,8 +124,7 @@ static bool all_errors_match(parse_tree tree, tc_res res,
   return true;
 }
 
-static char *process_spans(const char *input, span *spans,
-                           node_ind_t cases) {
+static char *process_spans(const char *input, span *spans, node_ind_t cases) {
   size_t len = strlen(input);
   size_t marker_start_len = strlen(marker_start);
   size_t marker_end_len = strlen(marker_end);
@@ -136,7 +135,7 @@ static char *process_spans(const char *input, span *spans,
   buf_ind_t offset = 0;
   for (node_ind_t i = 0; i < cases; i++) {
     const char *start = strstr(cursor, marker_start);
-    spans[i].start = (buf_ind_t) (start - input) - offset;
+    spans[i].start = (buf_ind_t)(start - input) - offset;
     offset += marker_start_len;
     size_t amt = start - cursor;
     memcpy(edit_cursor, cursor, amt);
@@ -144,7 +143,7 @@ static char *process_spans(const char *input, span *spans,
     start += marker_start_len;
 
     const char *end = strstr(start, marker_end);
-    spans[i].end = (buf_ind_t) (end - input) - offset;
+    spans[i].end = (buf_ind_t)(end - input) - offset;
     offset += marker_end_len;
     amt = end - start;
     memcpy(edit_cursor, start, amt);
@@ -308,7 +307,7 @@ static void test_typecheck_succeeds(test_state *state) {
     const char *input = "(sig a (Fn () I16))\n"
                         "(fun →a← () 2)";
     test_start(state, "Fn bnd");
-    const test_type fn_subs[2] = { unit, i16 };
+    const test_type fn_subs[2] = {unit, i16};
     const test_type fn_type = {
       .tag = T_FN,
       .sub_amt = STATIC_LEN(fn_subs),

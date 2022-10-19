@@ -49,11 +49,9 @@
 
 #define stalloc(bytes) malloc(bytes)
 
-#define stcalloc(n, size)                                                      \
-  calloc((n), (size))
+#define stcalloc(n, size) calloc((n), (size))
 
-#define stfree(ptr, bytes)                                                     \
-    free(ptr);
+#define stfree(ptr, bytes) free(ptr);
 
 #endif
 

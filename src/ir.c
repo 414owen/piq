@@ -70,14 +70,16 @@ ir_module build_module(parse_tree tree) {
       case BUILD_TOP_LEVEL: {
         switch (node.type) {
           case PT_FUN: {
-            action todo[] = {{
-                               .tag = BUILD_FUN_2,
-                               .node_ind = act.node_ind,
-                             },
-                             {
-                               .tag = BUILD_PATTERN,
-                               .node_ind = PT_FUN_PARAM_IND(tree.inds, node),
-                             }};
+            action todo[] = {
+              {
+                .tag = BUILD_FUN_2,
+                .node_ind = act.node_ind,
+              },
+              {
+                .tag = BUILD_PATTERN,
+                .node_ind = PT_FUN_PARAM_IND(tree.inds, node),
+              },
+            };
             VEC_APPEND_STATIC(&actions, todo);
             break;
           }
@@ -89,14 +91,16 @@ ir_module build_module(parse_tree tree) {
       case BUILD_NODE:
         switch (node.type) {
           case PT_CALL: {
-            action todo[] = {{
-                               .tag = BUILD_CALL_2,
-                               .node_ind = act.node_ind,
-                             },
-                             {
-                               .tag = BUILD_NODE,
-                               .node_ind = node.sub_a,
-                             }};
+            action todo[] = {
+              {
+                .tag = BUILD_CALL_2,
+                .node_ind = act.node_ind,
+              },
+              {
+                .tag = BUILD_NODE,
+                .node_ind = node.sub_a,
+              },
+            };
             VEC_APPEND_STATIC(&actions, todo);
             break;
           }
