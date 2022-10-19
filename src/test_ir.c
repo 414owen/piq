@@ -115,43 +115,58 @@ void test_ir_layout(test_state *state) {
   }
 
   if (min_total_size != sizeof(ir_module)) {
-    char *str;
+    char *decl_str;
+    char *init_str;
 
     // print optimal representation
     {
-      stringstream ss;
-      ss_init_immovable(&ss);
+      stringstream decl_ss;
+      ss_init_immovable(&decl_ss);
+      stringstream init_ss;
+      ss_init_immovable(&init_ss);
+
       size_t prev_size = 0;
       size_t prev_ind = 0;
-      fprintf(ss.stream,
+      fprintf(decl_ss.stream,
               "typedef struct {\n"
               "  // sizeof el: %zu\n"
-              "  ir_root root;\n\n",
+              "  ir_root ir_root;\n\n",
               sizeof(ir_root));
+      fputs("  .ir_root = root,\n", init_ss.stream);
+
       for (size_t i = 0; i < STATIC_LEN(nodes); i++) {
         node_info info = nodes[i];
         if (prev_size != info.node_size) {
-          print_union_upto(nodes, prev_ind, i, ss.stream);
+          print_union_upto(nodes, prev_ind, i, decl_ss.stream);
+          fprintf(init_ss.stream, "  .%ss = VEC_NEW,\n", info.name);
           prev_ind = i;
           prev_size = info.node_size;
         }
       }
-      print_union_upto(nodes, prev_ind, STATIC_LEN(nodes), ss.stream);
+
+      print_union_upto(nodes, prev_ind, STATIC_LEN(nodes), decl_ss.stream);
       fputs("  vec_type types;\n"
             "  vec_node_ind node_inds;\n"
             "} ir_module;",
-            ss.stream);
-      ss_finalize(&ss);
-      str = ss.string;
+            decl_ss.stream);
+      fputs("  .types = VEC_NEW,\n"
+            "  .node_inds = VEC_NEW,",
+            init_ss.stream);
+      ss_finalize(&decl_ss);
+      ss_finalize(&init_ss);
+      decl_str = decl_ss.string;
+      init_str = init_ss.string;
     }
     failf(state,
           "ir_module could be optimized for construction and access patterns.\n"
           "Your size: %zu\n"
           "Optimal: %zu\n"
-          "Try something like this:\n%s",
+          "Try something like this:\n\n%s\n\n---\n\n"
+          "Initialization code:\n\n%s",
           sizeof(ir_module),
           min_total_size,
-          str);
+          decl_str,
+          init_str);
   }
   test_end(state);
 }
