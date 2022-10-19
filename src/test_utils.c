@@ -1,5 +1,6 @@
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "diagnostic.h"
@@ -33,7 +34,7 @@ static void run_join_tests(test_state *state) {
   test_group_start(state, "Join");
   {
     test_start(state, "Empty");
-    static const char *strs[] = {};
+    static const char *strs[0] = {};
     test_join(state, strs, STATIC_LEN(strs), "");
     test_end(state);
   }

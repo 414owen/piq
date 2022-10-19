@@ -311,7 +311,7 @@ static void test_typecheck_succeeds(test_state *state) {
     const char *input = "(sig a (Fn () I16))\n"
                         "(fun →a← () 2)";
     test_start(state, "Fn bnd");
-    const test_type fn_subs[] = {unit, i16};
+    const test_type fn_subs[] = { unit, i16 };
     const test_type fn_type = {
       .tag = T_FN,
       .sub_amt = STATIC_LEN(fn_subs),
