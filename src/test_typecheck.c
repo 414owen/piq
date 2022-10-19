@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "diagnostic.h"
 #include "parse_tree.h"
@@ -123,52 +124,41 @@ static bool all_errors_match(parse_tree tree, tc_res res,
   return true;
 }
 
-static char *process_spans(const char *input, span **spans_p,
+static char *process_spans(const char *input, span *spans,
                            node_ind_t cases) {
   size_t len = strlen(input);
-  span *spans = malloc(sizeof(span) * cases);
-  *spans_p = spans;
-  {
-    buf_ind_t cursor = 0;
-    buf_ind_t offset = 0;
-    for (node_ind_t i = 0; i < cases; i++) {
-      buf_ind_t start = strstr(&input[cursor], marker_start) - input;
-      spans[i].start = start - offset;
-      offset += strlen(marker_start);
-
-      buf_ind_t end = strstr(&input[start], marker_end) - input;
-      spans[i].end = end - offset;
-      offset += strlen(marker_end);
-      cursor = end;
-    }
-  }
-
-  // TODO this doesn't work
+  size_t marker_start_len = strlen(marker_start);
+  size_t marker_end_len = strlen(marker_end);
   char *edit = malloc(len + 1);
-  {
-    buf_ind_t cursor = 0;
-    node_ind_t span_ind = 0;
-    bool start = true;
-    buf_ind_t next_ind = spans[span_ind].start;
-    buf_ind_t offset = 0;
-    for (buf_ind_t i = 0; i < len; i++) {
-      if (next_ind + offset == i) {
-        if (start) {
-          i += strlen(marker_start) - 1;
-          offset += strlen(marker_start);
-          next_ind = spans[span_ind].end;
-        } else {
-          i += strlen(marker_end) - 1;
-          offset += strlen(marker_end);
-          next_ind = spans[++span_ind].start;
-        }
-        start = !start;
-      } else {
-        edit[cursor++] = input[i];
-      }
-    }
-    edit[cursor] = '\0';
+
+  char *edit_cursor = edit;
+  const char *cursor = input;
+  buf_ind_t offset = 0;
+  for (node_ind_t i = 0; i < cases; i++) {
+    const char *start = strstr(cursor, marker_start);
+    spans[i].start = (buf_ind_t) (start - input) - offset;
+    offset += marker_start_len;
+    size_t amt = start - cursor;
+    memcpy(edit_cursor, cursor, amt);
+    edit_cursor += amt;
+    start += marker_start_len;
+
+    const char *end = strstr(start, marker_end);
+    spans[i].end = (buf_ind_t) (end - input) - offset;
+    offset += marker_end_len;
+    amt = end - start;
+    memcpy(edit_cursor, start, amt);
+    edit_cursor += amt;
+    cursor = end + marker_end_len;
   }
+  if (strstr(cursor, marker_start) != NULL) {
+    puts("\nMore markers than there are test cases!");
+    exit(1);
+  }
+  size_t remaining = (input + len) - cursor;
+  memcpy(edit_cursor, cursor, remaining);
+  edit_cursor += remaining;
+  edit_cursor[0] = '\0';
 
   for (node_ind_t i = 0; i < cases; i++) {
     spans[i].end -= 1;
@@ -176,10 +166,11 @@ static char *process_spans(const char *input, span **spans_p,
   return edit;
 }
 
-static void test_types_match(test_state *state, const char *input,
+static void test_types_match(test_state *state, const char *input_p,
                              test_type *exps, node_ind_t cases) {
-  span *spans;
-  input = process_spans(input, &spans, cases);
+  size_t span_bytes = sizeof(span) * cases;
+  span *spans = stalloc(span_bytes);
+  char *input = process_spans(input_p, spans, cases);
 
   parse_tree_res pres = test_upto_parse_tree(state, input);
   if (!pres.succeeded) {
@@ -223,13 +214,17 @@ static void test_types_match(test_state *state, const char *input,
       failf(state, "No node matching position %d-%d", span.start, span.end);
     }
   }
+  free_tc_res(res);
+  stfree(spans, span_bytes);
+  free_parse_tree_res(pres);
+  free(input);
 }
 
-static void test_typecheck_errors(test_state *state, const char *input,
+static void test_typecheck_errors(test_state *state, const char *input_p,
                                   const tc_err_test *exps, node_ind_t cases) {
-
-  span *spans;
-  input = process_spans(input, &spans, cases);
+  size_t span_bytes = sizeof(span) * cases;
+  span *spans = stalloc(span_bytes);
+  char *input = process_spans(input_p, spans, cases);
 
   parse_tree_res pres = test_upto_parse_tree(state, input);
   if (!pres.succeeded) {
@@ -252,8 +247,10 @@ static void test_typecheck_errors(test_state *state, const char *input,
     free(str);
   }
 
+  free(input);
   free_tc_res(res);
   free_parse_tree_res(pres);
+  stfree(spans, span_bytes);
 }
 
 static const test_type u8_t = {
@@ -455,21 +452,24 @@ static void test_errors(test_state *state) {
 static void test_typecheck_stress(test_state *state) {
   test_start(state, "Stress");
   {
-    stringstream *ss = ss_init();
+    stringstream ss;
+    ss_init_immovable(&ss);
     const unsigned n = 10;
-    fputs("(sig a (Fn (", ss->stream);
+    fputs("(sig a (Fn (", ss.stream);
     for (unsigned i = 1; i < n; i++) {
-      fputs("U8,", ss->stream);
+      fputs("U8,", ss.stream);
     }
-    fputs("U8", ss->stream);
-    fputs(") (", ss->stream);
+    fputs("U8", ss.stream);
+    fputs(") (", ss.stream);
     for (unsigned i = 1; i < n; i++) {
-      fputs("U8,", ss->stream);
+      fputs("U8,", ss.stream);
     }
-    fputs("U8", ss->stream);
-    fputs(")))\n", ss->stream);
-    fputs("(fun a b b)", ss->stream);
-    test_typecheck_errors(state, ss_finalize_free(ss), NULL, 0);
+    fputs("U8", ss.stream);
+    fputs(")))\n", ss.stream);
+    fputs("(fun a b b)", ss.stream);
+    ss_finalize(&ss);
+    test_typecheck_errors(state, ss.string, NULL, 0);
+    free(ss.string);
   }
   test_end(state);
 }
