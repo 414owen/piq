@@ -73,6 +73,7 @@ A language that does everything right
 * Generics: Generics introduce a block, where everything in the block
   is generic. Think it'll look clean.
 * Use mermaid in doc strings to produce diagrams
+* Add tcc to CI
 
 # Mistakes
 
