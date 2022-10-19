@@ -21,13 +21,14 @@ COMMON_FLAGS = \
 
 CXXFLAGS = $(COMMON_FLAGS) -std=gnu++17 $CXXFLAGS -fno-exceptions
 
-CFLAGS = $(COMMON_FLAGS) -std=gnu11
+# This seems to get tinycc to pick up c11, but gcc/clang to pick up gnu11
+CFLAGS = $(COMMON_FLAGS) -std=c11 -std=gnu11
 
 common_objs += bitset.o
 common_objs += consts.o
 common_objs += diagnostic.o
 common_objs += dir_exists.o
-// common_objs += ir.o
+# common_objs += ir.o
 common_objs += mkdir_p.o
 common_objs += parser.o
 common_objs += parse_tree.o

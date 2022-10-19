@@ -28,6 +28,10 @@
 #define UNIMPLEMENTED(str) unimplemented(str, __FILE__, __LINE__)
 
 #define MAX_STACK_ALLOC 1024
+
+// Haven't figured out how to get alloca working in tcc
+#if ((defined(__GNUC__) || defined(__clang__)))
+
 #define stalloc(bytes)                                                         \
   (((bytes) > MAX_STACK_ALLOC) ? malloc(bytes) : alloca(bytes))
 
@@ -40,6 +44,18 @@
   if ((bytes) > MAX_STACK_ALLOC) {                                             \
     free(ptr);                                                                 \
   }
+
+#else
+
+#define stalloc(bytes) malloc(bytes)
+
+#define stcalloc(n, size)                                                      \
+  calloc((n), (size))
+
+#define stfree(ptr, bytes)                                                     \
+    free(ptr);
+
+#endif
 
 #define give_up(...) give_up_internal(__FILE__, __LINE__, __VA_ARGS__)
 

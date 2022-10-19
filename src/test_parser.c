@@ -89,17 +89,20 @@ static void test_parser_fails_on(test_state *state, char *input, buf_ind_t pos,
   }
 
   if (!expected_tokens_match) {
-    const char **a = alloca(sizeof(char *) * expected_amt);
+    const char **a = stalloc(sizeof(char *) * expected_amt);
     for (size_t i = 0; i < expected_amt; i++) {
       a[i] = yyTokenName[expected[i]];
     }
     char *as = join(expected_amt, a, ", ");
-    const char **b = alloca(sizeof(char *) * pres.expected_amt);
+    const char **b = stalloc(sizeof(char *) * pres.expected_amt);
     for (size_t i = 0; i < pres.expected_amt; i++) {
       b[i] = yyTokenName[pres.expected[i]];
     }
     char *bs = join(pres.expected_amt, b, ", ");
     failf(state, "Expected token mismatch.\nExpected: [%s]\nGot: [%s]", as, bs);
+
+    stfree(b, sizeof(char *) * pres.expected_amt);
+    stfree(a, sizeof(char *) * expected_amt);
     free(as);
     free(bs);
   }
