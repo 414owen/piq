@@ -298,16 +298,14 @@ typedef struct {
 // for every set of equally-sized node types,
 // union the vectors, for a single compact heterogeneous-element
 typedef struct {
-  ir_root root;
-
-  // sizeof: 48
-  vec_ir_fun_group ir_fun_groups;
+  // sizeof el: 16
+  ir_root ir_root;
 
   // sizeof: 40
-  union {
-    vec_ir_let_group ir_let_groups;
-    vec_ir_if ir_ifs;
-  };
+  vec_ir_if ir_ifs;
+
+  // sizeof: 32
+  vec_ir_let_group ir_let_groups;
 
   // sizeof: 28
   union {
@@ -318,6 +316,9 @@ typedef struct {
 
   // sizeof: 24
   vec_ir_data_construction ir_data_constructions;
+
+  // sizeof: 20
+  vec_ir_fun_group ir_fun_groups;
 
   // sizeof: 16
   vec_ir_as ir_ass;
@@ -337,3 +338,4 @@ typedef struct {
   vec_type types;
   vec_node_ind node_inds;
 } ir_module;
+

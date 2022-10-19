@@ -53,7 +53,6 @@ typedef struct {
   node_ind_t type_amt;
 } type_info;
 
-// TODO type_inds should be a pointer, not a vec...
 typedef struct {
   tc_error *errors;
   node_ind_t error_amt;
