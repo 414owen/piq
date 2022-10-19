@@ -48,6 +48,10 @@ typedef struct {
 
 typedef struct {
   node_ind_t n;
+} ir_fn_ind;
+
+typedef struct {
+  node_ind_t n;
 } ir_type_ind;
 
 typedef struct {
@@ -104,8 +108,6 @@ typedef struct {
 VEC_DECL(ir_fn);
 
 typedef struct {
-  // TODO remove the binding, when it's part of an ir_fun_group?
-  binding b;
   ir_pattern ir_fn_param;
   node_ind_t ir_fn_body_stmts_start;
   node_ind_t ir_fn_body_stmts_amt;
@@ -155,7 +157,6 @@ VEC_DECL(ir_tup);
 // Why doesn't this contain everything?
 // Well, I think we'll want to generate functions, so they wouldn't belong here.
 typedef struct {
-  ir_type_ind ir_root_type_ind;
   ir_function_decl_ind ir_root_function_decls_start;
   ir_function_decl_ind ir_root_function_decl_amt;
   ir_data_decl_ind ir_root_data_decls_start;
@@ -234,8 +235,6 @@ typedef struct {
 } ir_upper_name;
 
 typedef struct {
-  ir_binding ir_sig_binding;
-  ir_type_ind ir_sig_type_ind;
 } ir_sig;
 
 typedef enum {
@@ -258,14 +257,16 @@ typedef struct {
 VEC_DECL(ir_expr_type);
 
 typedef struct {
-  ir_sig sig;
-  ir_fun fun;
+  binding b;
+  ir_type_ind ir_sig;
+  ir_fn_ind ir_fun_group_clauses_start;
+  ir_fn_ind ir_fun_group_clause_amt;
 } ir_fun_group;
 
 VEC_DECL(ir_fun_group);
 
 typedef struct {
-  ir_sig sig;
+  ir_type_ind ir_sig;
   ir_let let;
 } ir_let_group;
 
