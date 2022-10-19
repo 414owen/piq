@@ -41,8 +41,34 @@ typedef union {
   ir_as ir_ass;
 } ret;
 
+static ir_module new_module(void) {
+  ir_root root = {
+    .ir_root_function_decls_start = {0},
+    .ir_root_function_decl_amt = {0},
+    .ir_root_data_decls_start = {0},
+    .ir_root_data_decl_amt = {0},
+  };
+
+  ir_module res = {
+    .ir_root = root,
+    .ir_ifs = VEC_NEW,
+    .ir_let_groups = VEC_NEW,
+    .ir_calls = VEC_NEW,
+    .ir_data_constructions = VEC_NEW,
+    .ir_fun_groups = VEC_NEW,
+    .ir_ass = VEC_NEW,
+    .ir_fn_types = VEC_NEW,
+    .ir_strings = VEC_NEW,
+    .ir_list_types = VEC_NEW,
+    .types = VEC_NEW,
+    .node_inds = VEC_NEW,
+  };
+
+  return res;
+}
+
 ir_module build_module(parse_tree tree) {
-  ir_module module;
+  ir_module module = new_module();
   vec_action actions;
 
   {
@@ -60,9 +86,6 @@ ir_module build_module(parse_tree tree) {
     action act = VEC_POP(&actions);
     parse_node node = tree.nodes[act.node_ind];
     switch (act.tag) {
-      case BUILD_FUN_2: {
-        break;
-      }
       case BUILD_PATTERN: {
         UNIMPLEMENTED("Building patterns");
         break;
@@ -87,6 +110,7 @@ ir_module build_module(parse_tree tree) {
             give_up("Unexpected non-top-level parse node");
             break;
         }
+        break;
       }
       case BUILD_NODE:
         switch (node.type) {
@@ -105,6 +129,7 @@ ir_module build_module(parse_tree tree) {
             break;
           }
           case PT_CONSTRUCTION:
+            UNIMPLEMENTED("build construction");
             break;
           case PT_FN:
             break;
@@ -145,6 +170,9 @@ ir_module build_module(parse_tree tree) {
         break;
       case BUILD_CALL_2:
         UNIMPLEMENTED("build call 2");
+        break;
+      case BUILD_FUN_2:
+        UNIMPLEMENTED("build fun 2");
         break;
     }
   }
