@@ -145,7 +145,7 @@ void reverse_arbitrary(void *dest, size_t amt, size_t elsize) {
     return;
   size_t start = 0;
   size_t end = amt - 1;
-  void *tmp = alloca(elsize);
+  void *tmp = stalloc(elsize);
   while (start < end) {
     memcpy(tmp, ((char *)dest) + elsize * start, elsize);
     memcpy(
@@ -154,6 +154,7 @@ void reverse_arbitrary(void *dest, size_t amt, size_t elsize) {
     start++;
     end--;
   }
+  stfree(tmp, elsize);
 }
 
 char *join(const size_t str_amt, const char *const *const strs,

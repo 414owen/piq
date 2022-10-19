@@ -1,4 +1,3 @@
-#include <alloca.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -41,9 +40,7 @@ int mkdirp(char *path, mode_t mode) {
       sep_amt++;
   }
 
-  // alloca is enough, if you have a 15k segment directory, you're already
-  // wrong.
-  size_t *seps = alloca(sep_amt * sizeof(size_t));
+  size_t *seps = stalloc(sep_amt * sizeof(size_t));
 
   {
     size_t sep_ind = 0;
@@ -79,5 +76,6 @@ int mkdirp(char *path, mode_t mode) {
     path[boundary] = path_sep[0];
   }
 
+  stfree(seps, sep_amt * sizeof(size_t));
   return 0;
 }
