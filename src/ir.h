@@ -338,4 +338,3 @@ typedef struct {
   vec_type types;
   vec_node_ind node_inds;
 } ir_module;
-

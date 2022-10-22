@@ -168,14 +168,16 @@ static void test_scanner_accepts(test_state *restrict state) {
 
   {
     test_start(state, "Kitchen Sink");
-    static const token_type tokens[] = {TK_LOWER_NAME,
-                                        TK_CLOSE_PAREN,
-                                        TK_LOWER_NAME,
-                                        TK_OPEN_PAREN,
-                                        TK_UPPER_NAME,
-                                        TK_COMMA,
-                                        TK_INT,
-                                        TK_LOWER_NAME};
+    static const token_type tokens[] = {
+      TK_LOWER_NAME,
+      TK_CLOSE_PAREN,
+      TK_LOWER_NAME,
+      TK_OPEN_PAREN,
+      TK_UPPER_NAME,
+      TK_COMMA,
+      TK_INT,
+      TK_LOWER_NAME,
+    };
     test_scanner_tokens(state, "abc)b3(Aef,234a", STATIC_LEN(tokens), tokens);
     test_end(state);
   }

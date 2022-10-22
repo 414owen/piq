@@ -33,14 +33,12 @@
 %type tuple_rec vec_node_ind
 %type type_inner_tuple vec_node_ind
 %type params_tuple vec_node_ind
-// %type exprs vec_node_ind
 %type toplevels vec_node_ind
 %type block vec_node_ind
 %type comma_types vec_node_ind
 
 %include {
 
-  // #include <stdio.h>
   #include <assert.h>
 
   #include "parse_tree.h"
@@ -426,13 +424,13 @@ pattern(RES) ::= OPEN_PAREN(O) pattern_in_parens(A) CLOSE_PAREN(C). {
   RES = A;
 }
 
+pattern_in_parens ::= pattern_construction.
+
 pattern_in_parens(RES) ::= pattern_tuple(A). {
   RES = desugar_tuple(s, A);
 }
 
-pattern_in_parens ::= pattern.
-
-pattern(RES) ::= OPEN_PAREN(O) upper_name(A) patterns(B) CLOSE_PAREN(C). {
+pattern_construction(RES) ::= upper_name(A) patterns(B). {
   BREAK_PARSER;
   node_ind_t start = s->inds.len;
   VEC_PUSH(&s->inds, &A);
@@ -441,10 +439,6 @@ pattern(RES) ::= OPEN_PAREN(O) upper_name(A) patterns(B) CLOSE_PAREN(C). {
     .type = PT_CONSTRUCTION,
     .subs_start = start,
     .sub_amt = B.len + 1,
-    .span = {
-      .start = s->tokens[O].start,
-      .end = s->tokens[C].end,
-    },
   };
   VEC_PUSH(&s->nodes, n);
   RES = s->nodes.len - 1;
