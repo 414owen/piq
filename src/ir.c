@@ -67,9 +67,26 @@ static ir_module new_module(void) {
   return res;
 }
 
+typedef struct {
+  // You'll know the general type, hence this union of tagged unions
+  union {
+    struct {
+      enum {
+        E_INT,
+        E_FN,
+        E_STRING,
+      } expr_tag;
+      union {
+        span s;
+      };
+    };
+  };
+} build_res;
+
 ir_module build_module(parse_tree tree) {
   ir_module module = new_module();
   vec_action actions;
+  build_res res;
 
   {
     parse_node root = tree.nodes[tree.root_ind];
@@ -87,7 +104,19 @@ ir_module build_module(parse_tree tree) {
     parse_node node = tree.nodes[act.node_ind];
     switch (act.tag) {
       case BUILD_PATTERN: {
-        UNIMPLEMENTED("Building patterns");
+        switch (node.type) {
+          // wildcard binding
+          case PT_UNIT:
+            break;
+          case PT_LOWER_NAME:
+            break;
+          case PT_LIST:
+            break;
+          case PT_TUP:
+            break;
+          case PT_INT:
+            break;
+        }
         break;
       }
       case BUILD_TOP_LEVEL: {
@@ -112,6 +141,7 @@ ir_module build_module(parse_tree tree) {
         }
         break;
       }
+      // TODO get rid of this, and make BUILD_EXPR and similar groups
       case BUILD_NODE:
         switch (node.type) {
           case PT_CALL: {
@@ -142,6 +172,8 @@ ir_module build_module(parse_tree tree) {
           case PT_IF:
             break;
           case PT_INT:
+            res.expr_tag = E_INT;
+            res.s = node.span;
             break;
           case PT_LIST:
             break;
@@ -150,6 +182,8 @@ ir_module build_module(parse_tree tree) {
           case PT_LOWER_NAME:
             break;
           case PT_STRING:
+            res.expr_tag = E_STRING;
+            res.s = node.span;
             break;
           case PT_TUP:
             break;
