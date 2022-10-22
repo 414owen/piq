@@ -116,24 +116,8 @@ typedef struct {
 
 VEC_DECL(ir_fun);
 
-typedef enum {
-  EXPR_TUP,
-  EXPR_STR,
-  EXPR_LIST,
-  EXPR_U8,
-  EXPR_I8,
-  EXPR_U16,
-  EXPR_I16,
-  EXPR_U32,
-  EXPR_I32,
-  EXPR_U64,
-  EXPR_I64,
-} expr_type;
-
 typedef struct {
   ir_type_ind type;
-  expr_type ir_expr_tag;
-
   union {
     uint8_t ir_expr_u8;
     int8_t ir_expr_i8;
@@ -212,9 +196,7 @@ typedef struct {
 VEC_DECL(ir_list_type);
 
 // TODO: inline into expr?
-typedef struct {
-  span s;
-} ir_string;
+typedef span ir_string;
 
 VEC_DECL(ir_string);
 
@@ -294,9 +276,6 @@ typedef struct {
 } ir_module;
 */
 
-// TODO:
-// for every set of equally-sized node types,
-// union the vectors, for a single compact heterogeneous-element
 typedef struct {
   // sizeof el: 16
   ir_root ir_root;

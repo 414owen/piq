@@ -196,16 +196,14 @@ static void test_parser_succeeds_kitchen_sink(test_state *state) {
   test_group_end(state);
 }
 
-static const token_type comma_or_expr_start[] = {
-  TK_COMMA,
-  TK_INT,
-  TK_LOWER_NAME,
-  TK_OPEN_BRACKET,
-  TK_OPEN_PAREN,
-  TK_UPPER_NAME,
-  TK_STRING,
-  TK_UNIT,
-};
+static const token_type comma_or_expr_start[] = {TK_COMMA,
+                                                 TK_INT,
+                                                 TK_LOWER_NAME,
+                                                 TK_OPEN_BRACKET,
+                                                 TK_OPEN_PAREN,
+                                                 TK_UPPER_NAME,
+                                                 TK_STRING,
+                                                 TK_UNIT,};
 
 #define expr_start (comma_or_expr_start + 1)
 #define expr_start_amt (STATIC_LEN(comma_or_expr_start) - 1)
@@ -380,35 +378,31 @@ static void test_parser_succeeds_compound(test_state *state) {
   test_group_end(state);
 }
 
-static token_type inside_expr[] = {
-  TK_AS,
-  TK_FN,
-  TK_FUN,
-  TK_IF,
-  TK_INT,
-  TK_LOWER_NAME,
-  TK_OPEN_BRACKET,
-  TK_OPEN_PAREN,
-  TK_UPPER_NAME,
-  TK_STRING,
-  TK_UNIT,
-};
+static token_type inside_expr[] = {TK_AS,
+                                   TK_FN,
+                                   TK_FUN,
+                                   TK_IF,
+                                   TK_INT,
+                                   TK_LOWER_NAME,
+                                   TK_OPEN_BRACKET,
+                                   TK_OPEN_PAREN,
+                                   TK_UPPER_NAME,
+                                   TK_STRING,
+                                   TK_UNIT,};
 
-static token_type inside_block_el[] = {
-  TK_AS,
-  TK_FN,
-  TK_FUN,
-  TK_IF,
-  TK_INT,
-  TK_LOWER_NAME,
-  TK_OPEN_BRACKET,
-  TK_OPEN_PAREN,
-  TK_SIG,
-  TK_UPPER_NAME,
-  TK_LET,
-  TK_STRING,
-  TK_UNIT,
-};
+static token_type inside_block_el[] = {TK_AS,
+                                       TK_FN,
+                                       TK_FUN,
+                                       TK_IF,
+                                       TK_INT,
+                                       TK_LOWER_NAME,
+                                       TK_OPEN_BRACKET,
+                                       TK_OPEN_PAREN,
+                                       TK_SIG,
+                                       TK_UPPER_NAME,
+                                       TK_LET,
+                                       TK_STRING,
+                                       TK_UNIT,};
 
 static const size_t inside_expr_amt = STATIC_LEN(inside_expr);
 
