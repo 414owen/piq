@@ -74,6 +74,9 @@ A language that does everything right
   is generic. Think it'll look clean.
 * Use mermaid in doc strings to produce diagrams
 * Add tcc to CI
+* Don't have a cabal/cargo/pip/whatever style thing to declare dependencies,
+  have a universal namespace for packages, and when one is used in source,
+  its dependency is implicit.
 
 # Mistakes
 

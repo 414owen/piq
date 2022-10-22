@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "ir.h"
+#include "typecheck.h"
 #include "util.h"
 #include "vec.h"
 
@@ -67,26 +68,14 @@ static ir_module new_module(void) {
   return res;
 }
 
-typedef struct {
-  // You'll know the general type, hence this union of tagged unions
-  union {
-    struct {
-      enum {
-        E_INT,
-        E_FN,
-        E_STRING,
-      } expr_tag;
-      union {
-        span s;
-      };
-    };
-  };
-} build_res;
-
-ir_module build_module(parse_tree tree) {
+ir_module build_module(parse_tree tree, type_info types) {
   ir_module module = new_module();
   vec_action actions;
-  build_res res;
+
+  union {
+    ir_expr expr;
+  } build_res;
+
 
   {
     parse_node root = tree.nodes[tree.root_ind];
@@ -102,12 +91,13 @@ ir_module build_module(parse_tree tree) {
   while (actions.len > 0) {
     action act = VEC_POP(&actions);
     parse_node node = tree.nodes[act.node_ind];
+    node_ind_t type_ind = types.node_types[act.node_ind];
     switch (act.tag) {
       case BUILD_PATTERN: {
         switch (node.type) {
-          // wildcard binding
           case PT_UNIT:
             break;
+          // wildcard binding
           case PT_LOWER_NAME:
             break;
           case PT_LIST:
@@ -172,8 +162,6 @@ ir_module build_module(parse_tree tree) {
           case PT_IF:
             break;
           case PT_INT:
-            res.expr_tag = E_INT;
-            res.s = node.span;
             break;
           case PT_LIST:
             break;
@@ -182,8 +170,11 @@ ir_module build_module(parse_tree tree) {
           case PT_LOWER_NAME:
             break;
           case PT_STRING:
-            res.expr_tag = E_STRING;
-            res.s = node.span;
+            VEC_PUSH(&module.ir_strings, node.span);
+            // I guess just assume the type is string
+            build_res.expr = {
+              .type_ind = 
+            };
             break;
           case PT_TUP:
             break;
