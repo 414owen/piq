@@ -76,13 +76,7 @@ typedef struct {
 } ir_data_constructor_ref;
 
 typedef struct {
-  enum {
-    PAT_TUP,
-    PAT_CONSTRUCT,
-    PAT_INT,
-    PAT_STR,
-    PAT_UNIT,
-  } tag;
+  ir_type_ind type;
 
   union {
     struct {
@@ -93,6 +87,7 @@ typedef struct {
       ir_data_constructor_ref ir_pattern_data_construction_callee_ind;
       ir_pattern_ind ir_pattern_data_construction_param_ind;
     };
+    span ir_pattern_binding_span;
     span ir_pattern_int_span;
     span ir_pattern_str_span;
   };
@@ -280,32 +275,26 @@ typedef struct {
   // sizeof el: 16
   ir_root ir_root;
 
-  // sizeof: 40
-  vec_ir_if ir_ifs;
-
-  // sizeof: 32
-  vec_ir_let_group ir_let_groups;
-
   // sizeof: 28
   union {
-    vec_ir_call ir_calls;
+    vec_ir_let_group ir_let_groups;
     vec_ir_fn ir_fns;
-    vec_ir_tup ir_tups;
+    vec_ir_if ir_ifs;
   };
 
-  // sizeof: 24
-  vec_ir_data_construction ir_data_constructions;
-
   // sizeof: 20
-  vec_ir_fun_group ir_fun_groups;
-
-  // sizeof: 16
-  vec_ir_as ir_ass;
+  union {
+    vec_ir_fun_group ir_fun_groups;
+    vec_ir_call ir_calls;
+    vec_ir_data_construction ir_data_constructions;
+    vec_ir_tup ir_tups;
+  };
 
   // sizeof: 12
   union {
     vec_ir_fn_type ir_fn_types;
     vec_ir_list ir_lists;
+    vec_ir_as ir_ass;
   };
 
   // sizeof: 8

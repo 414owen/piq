@@ -400,6 +400,8 @@ pattern ::= unit.
 
 pattern ::= int.
 
+pattern ::= string.
+
 unit(RES) ::= UNIT(A). {
   BREAK_PARSER;
   token t = s->tokens[A];

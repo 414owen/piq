@@ -52,12 +52,8 @@ static ir_module new_module(void) {
 
   ir_module res = {
     .ir_root = root,
-    .ir_ifs = VEC_NEW,
     .ir_let_groups = VEC_NEW,
-    .ir_calls = VEC_NEW,
-    .ir_data_constructions = VEC_NEW,
     .ir_fun_groups = VEC_NEW,
-    .ir_ass = VEC_NEW,
     .ir_fn_types = VEC_NEW,
     .ir_strings = VEC_NEW,
     .ir_list_types = VEC_NEW,
@@ -74,8 +70,8 @@ ir_module build_module(parse_tree tree, type_info types) {
 
   union {
     ir_expr expr;
+    ir_pattern pattern;
   } build_res;
-
 
   {
     parse_node root = tree.nodes[tree.root_ind];
@@ -92,19 +88,44 @@ ir_module build_module(parse_tree tree, type_info types) {
     action act = VEC_POP(&actions);
     parse_node node = tree.nodes[act.node_ind];
     node_ind_t type_ind = types.node_types[act.node_ind];
+    ir_type_ind ti = {
+      .n = type_ind,
+    };
     switch (act.tag) {
       case BUILD_PATTERN: {
+        build_res.pattern.type = ti;
         switch (node.type) {
-          case PT_UNIT:
+          case PT_UNIT: {
+            // assume the type is unit, I guess
             break;
+          }
           // wildcard binding
           case PT_LOWER_NAME:
+            // TODO introduce binding somehow
+            build_res.pattern.ir_pattern_binding_span = node.span;
             break;
-          case PT_LIST:
+          case PT_LIST: {
+            // TODO
+            action todo[] = {
+              {
+                .tag = BUILD_LIST_PAT_2,
+                .node_ind = act.node_ind,
+              },
+              {
+                .tag = BUILD_PATTERN,
+                .node_ind = PT_LIST_SUB_IND(tree.inds, node),
+              },
+            };
+            VEC_APPEND_STATIC(&actions, todo);
             break;
+          }
           case PT_TUP:
             break;
           case PT_INT:
+            build_res.pattern.ir_pattern_int_span = node.span;
+            break;
+          case PT_STRING:
+            build_res.pattern.ir_pattern_str_span = node.span;
             break;
         }
         break;
@@ -172,9 +193,10 @@ ir_module build_module(parse_tree tree, type_info types) {
           case PT_STRING:
             VEC_PUSH(&module.ir_strings, node.span);
             // I guess just assume the type is string
-            build_res.expr = {
-              .type_ind = 
+            ir_type_ind ti = {
+              .n = type_ind,
             };
+            build_res.expr.type = ti;
             break;
           case PT_TUP:
             break;
