@@ -250,7 +250,7 @@ static void test_if_failures(test_state *state) {
 }
 
 static token_type start_pattern[] = {
-  TK_INT, TK_LOWER_NAME, TK_OPEN_BRACKET, TK_OPEN_PAREN, TK_UNIT};
+  TK_INT, TK_LOWER_NAME, TK_OPEN_BRACKET, TK_OPEN_PAREN, TK_STRING, TK_UNIT};
 static void test_fn_failures(test_state *state) {
   test_group_start(state, "Fn");
 

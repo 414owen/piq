@@ -2,6 +2,7 @@
 
 #include "binding.h"
 #include "bitset.h"
+#include "slice.h"
 #include "span.h"
 #include "types.h"
 #include "vec.h"
@@ -87,11 +88,14 @@ typedef struct {
       ir_data_constructor_ref ir_pattern_data_construction_callee_ind;
       ir_pattern_ind ir_pattern_data_construction_param_ind;
     };
+    node_slice subs;
     span ir_pattern_binding_span;
     span ir_pattern_int_span;
     span ir_pattern_str_span;
   };
 } ir_pattern;
+
+VEC_DECL(ir_pattern);
 
 typedef struct {
   ir_pattern ir_fn_param;
@@ -111,8 +115,20 @@ typedef struct {
 
 VEC_DECL(ir_fun);
 
+// Yes, this is needed, you can't reconstruct this from the *type* information
+typedef enum {
+  IR_EXPR_TUP,
+  IR_EXPR_CALL,
+  IR_EXPR_FN,
+  IR_EXPR_IF,
+  IR_EXPR_INT,
+  IR_EXPR_EXPR_REF,
+  IR_EXPR_CONSTRUCTOR_REF,
+} ir_expr_type;
+
 typedef struct {
-  ir_type_ind type;
+  ir_expr_type ir_expr_tag;
+  ir_type_ind ir_expr_type;
   union {
     uint8_t ir_expr_u8;
     int8_t ir_expr_i8;
@@ -124,6 +140,8 @@ typedef struct {
     ir_expr_ind ir_expr_ind;
   };
 } ir_expr;
+
+VEC_DECL(ir_expr);
 
 typedef struct {
   ir_type_ind ir_tup_type_ind;
@@ -143,9 +161,10 @@ typedef struct {
 } ir_root;
 
 typedef struct {
-  ir_type_ind ir_call_type_ind;
-  ir_expr ir_call_expr_a;
-  ir_expr ir_call_expr_b;
+  // don't need type, it's in the expr
+  // ir_type_ind ir_call_type_ind;
+  ir_expr ir_call_callee;
+  ir_expr ir_call_param;
 } ir_call;
 
 VEC_DECL(ir_call);
@@ -214,19 +233,8 @@ typedef struct {
 typedef struct {
 } ir_sig;
 
-typedef enum {
-  IR_EXPR_TUP,
-  IR_EXPR_CALL,
-  IR_EXPR_FN,
-  IR_EXPR_IF,
-  IR_EXPR_INT,
-  IR_EXPR_EXPR_REF,
-  IR_EXPR_CONSTRUCTOR_REF,
-} ir_expr_type;
-
 typedef struct {
   binding ir_let_binding;
-  ir_expr_type ir_let_expr_type;
   ir_expr ir_let_expr;
   ir_type_ind ir_let_type_ind;
 } ir_let;
@@ -249,52 +257,42 @@ typedef struct {
 
 VEC_DECL(ir_let_group);
 
-/*
-typedef struct {
-  ir_root ir_root;
-
-  ir_fun_group *ir_fun_groups;
-  ir_let_group *ir_let_groups;
-  ir_call *ir_calls;
-  ir_data_construction *ir_constructions;
-  ir_fn *ir_fns;
-  ir_fn_type *ir_fn_types;
-  ir_if *ir_ifs;
-  ir_list *ir_lists;
-  ir_list_type *ir_list_types;
-  ir_string *ir_strings;
-  ir_tup *ir_tups;
-  ir_as *ir_ass;
-
-  type *ir_types;
-  node_ind_t *ir_node_inds;
-} ir_module;
-*/
+// If you want to add something here, first add it to test_ir.c
+// then run `test -m 'IR/layout'` to find out where it belongs.
 
 typedef struct {
   // sizeof el: 16
   ir_root ir_root;
 
+  // sizeof: 40
+  vec_ir_if ir_ifs;
+
   // sizeof: 28
   union {
     vec_ir_let_group ir_let_groups;
     vec_ir_fn ir_fns;
-    vec_ir_if ir_ifs;
+    vec_ir_tup ir_tups;
+  };
+
+  // sizeof: 24
+  union {
+    vec_ir_call ir_calls;
+    vec_ir_data_construction ir_data_constructions;
   };
 
   // sizeof: 20
+  vec_ir_fun_group ir_fun_groups;
+
+  // sizeof: 16
   union {
-    vec_ir_fun_group ir_fun_groups;
-    vec_ir_call ir_calls;
-    vec_ir_data_construction ir_data_constructions;
-    vec_ir_tup ir_tups;
+    vec_ir_as ir_ass;
+    vec_ir_pattern ir_patterns;
   };
 
   // sizeof: 12
   union {
     vec_ir_fn_type ir_fn_types;
     vec_ir_list ir_lists;
-    vec_ir_as ir_ass;
   };
 
   // sizeof: 8

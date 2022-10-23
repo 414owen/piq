@@ -77,6 +77,7 @@ A language that does everything right
 * Don't have a cabal/cargo/pip/whatever style thing to declare dependencies,
   have a universal namespace for packages, and when one is used in source,
   its dependency is implicit.
+* Instrument stage timings
 
 # Mistakes
 

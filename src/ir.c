@@ -13,11 +13,17 @@ typedef struct {
   enum {
     BUILD_PATTERN,
     BUILD_TOP_LEVEL,
-    BUILD_NODE,
+    BUILD_EXPR,
     BUILD_CALL_2,
+    BUILD_CALL_3,
     BUILD_FUN_2,
+    BUILD_LIST_PAT_2,
+    BUILD_LIST_PAT_3,
   } tag;
   node_ind_t node_ind;
+  union {
+    ir_call partial_call;
+  };
 } action;
 
 VEC_DECL(action);
@@ -52,8 +58,11 @@ static ir_module new_module(void) {
 
   ir_module res = {
     .ir_root = root,
+    .ir_ifs = VEC_NEW,
     .ir_let_groups = VEC_NEW,
+    .ir_calls = VEC_NEW,
     .ir_fun_groups = VEC_NEW,
+    .ir_ass = VEC_NEW,
     .ir_fn_types = VEC_NEW,
     .ir_strings = VEC_NEW,
     .ir_list_types = VEC_NEW,
@@ -67,6 +76,9 @@ static ir_module new_module(void) {
 ir_module build_module(parse_tree tree, type_info types) {
   ir_module module = new_module();
   vec_action actions;
+
+  vec_ir_pattern ir_patterns = VEC_NEW;
+  vec_node_ind ir_pattern_amts = VEC_NEW;
 
   union {
     ir_expr expr;
@@ -105,18 +117,24 @@ ir_module build_module(parse_tree tree, type_info types) {
             build_res.pattern.ir_pattern_binding_span = node.span;
             break;
           case PT_LIST: {
-            // TODO
-            action todo[] = {
-              {
-                .tag = BUILD_LIST_PAT_2,
-                .node_ind = act.node_ind,
-              },
-              {
-                .tag = BUILD_PATTERN,
-                .node_ind = PT_LIST_SUB_IND(tree.inds, node),
-              },
+            for (size_t i = 0; i < PT_LIST_SUB_AMT(node); i++) {
+              action todos[] = {
+                {
+                  .tag = BUILD_PATTERN,
+                  .node_ind = PT_LIST_SUB_IND(tree.inds, node, i),
+                },
+                {
+                  .tag = BUILD_LIST_PAT_2,
+                  .node_ind = act.node_ind,
+                },
+              };
+              VEC_APPEND_STATIC(&actions, todos);
+            }
+            action todos = {
+              .tag = BUILD_LIST_PAT_3,
+              .node_ind = act.node_ind,
             };
-            VEC_APPEND_STATIC(&actions, todo);
+            VEC_PUSH(&actions, todos);
             break;
           }
           case PT_TUP:
@@ -127,7 +145,46 @@ ir_module build_module(parse_tree tree, type_info types) {
           case PT_STRING:
             build_res.pattern.ir_pattern_str_span = node.span;
             break;
+          case PT_LET:
+          case PT_AS:
+          case PT_UPPER_NAME:
+          case PT_SIG:
+          case PT_IF:
+          case PT_LIST_TYPE:
+          case PT_ROOT:
+          case PT_FUN:
+          case PT_FN:
+          case PT_FUN_BODY:
+          case PT_FN_TYPE:
+          case PT_CONSTRUCTION:
+          case PT_CALL:
+            give_up("Unexpected pattern node");
+            break;
         }
+        break;
+      }
+      case BUILD_LIST_PAT_2: {
+        VEC_PUSH(&ir_patterns, build_res.pattern);
+        *VEC_PEEK_PTR(ir_pattern_amts) += 1;
+        break;
+      }
+      // Use the topmost vector of patterns
+      case BUILD_LIST_PAT_3: {
+        node_ind_t pattern_amt = VEC_POP(&ir_pattern_amts);
+        ir_pattern *patterns =
+          VEC_GET_PTR(ir_patterns, ir_patterns.len - pattern_amt);
+        node_ind_t start = module.ir_patterns.len;
+        VEC_APPEND(&module.ir_patterns, pattern_amt, patterns);
+        ir_pattern pattern = {
+          .type = ti,
+          .subs =
+            {
+              .start = start,
+              .amt = pattern_amt,
+            },
+        };
+        // TODO is it more efficient to assign the three fields individually?
+        build_res.pattern = pattern;
         break;
       }
       case BUILD_TOP_LEVEL: {
@@ -153,7 +210,7 @@ ir_module build_module(parse_tree tree, type_info types) {
         break;
       }
       // TODO get rid of this, and make BUILD_EXPR and similar groups
-      case BUILD_NODE:
+      case BUILD_EXPR:
         switch (node.type) {
           case PT_CALL: {
             action todo[] = {
@@ -162,8 +219,8 @@ ir_module build_module(parse_tree tree, type_info types) {
                 .node_ind = act.node_ind,
               },
               {
-                .tag = BUILD_NODE,
-                .node_ind = node.sub_a,
+                .tag = BUILD_EXPR,
+                .node_ind = PT_CALL_CALLEE_IND(node),
               },
             };
             VEC_APPEND_STATIC(&actions, todo);
@@ -173,15 +230,35 @@ ir_module build_module(parse_tree tree, type_info types) {
             UNIMPLEMENTED("build construction");
             break;
           case PT_FN:
-            break;
-          case PT_FN_TYPE:
+            UNIMPLEMENTED("build clusure fn");
             break;
           case PT_FUN:
+            UNIMPLEMENTED("build closure fun");
             break;
-          case PT_FUN_BODY:
+          case PT_IF: {
+            /*
+            action todo[] = {
+              {
+                .tag = BUILD_IF_EXPR_2,
+                .node_ind = act.node_ind,
+              },
+              {
+                .tag = BUILD_EXPR,
+                .node_ind = node.sub_a,
+              },
+              {
+                .tag = BUILD_IF_EXPR_2,
+                .node_ind = act.node_ind,
+              },
+              {
+                .tag = BUILD_EXPR,
+                .node_ind = node.sub_a,
+              },
+            };
+            VEC_APPEND_STATIC(&actions, todo);
+            */
             break;
-          case PT_IF:
-            break;
+          }
           case PT_INT:
             break;
           case PT_LIST:
@@ -196,7 +273,7 @@ ir_module build_module(parse_tree tree, type_info types) {
             ir_type_ind ti = {
               .n = type_ind,
             };
-            build_res.expr.type = ti;
+            build_res.expr.ir_expr_type = ti;
             break;
           case PT_TUP:
             break;
@@ -210,14 +287,42 @@ ir_module build_module(parse_tree tree, type_info types) {
             break;
           case PT_LET:
             break;
+          case PT_FUN_BODY:
+          case PT_FN_TYPE:
           case PT_ROOT:
-            give_up("unexpected node in IR translation");
+            give_up("unexpected node in IR expr translation");
             break;
         }
         break;
-      case BUILD_CALL_2:
-        UNIMPLEMENTED("build call 2");
+      case BUILD_CALL_2: {
+        ir_expr callee = build_res.expr;
+        ir_call call = {
+          .ir_call_callee = callee,
+        };
+        action todo[] = {
+          {
+            .tag = BUILD_CALL_3,
+            .node_ind = act.node_ind,
+            .partial_call = call,
+          },
+          {
+            .tag = BUILD_EXPR,
+            .node_ind = PT_CALL_PARAM_IND(node),
+          },
+        };
+        VEC_APPEND_STATIC(&actions, todo);
         break;
+      }
+      case BUILD_CALL_3: {
+        ir_expr param = build_res.expr;
+        act.partial_call.ir_call_param = param;
+        VEC_PUSH(&module.ir_calls, act.partial_call);
+        ir_expr e = {
+          .ir_expr_tag = IR_EXPR_CALL,
+          .ir_expr_type = ti,
+          .ir_expr_ind = module.ir_calls.len - 1,
+        };
+      }
       case BUILD_FUN_2:
         UNIMPLEMENTED("build fun 2");
         break;
