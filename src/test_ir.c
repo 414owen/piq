@@ -92,6 +92,7 @@ void test_ir_layout(test_state *state) {
     DECL_NODE_TYPE(ir_string),
     DECL_NODE_TYPE(ir_tup),
     DECL_NODE_TYPE(ir_as),
+    DECL_NODE_TYPE(ir_pattern),
   };
 
   qsort(nodes, STATIC_LEN(nodes), sizeof(nodes[0]), cmp_node_info);

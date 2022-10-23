@@ -137,9 +137,9 @@ vec_void *__vec_pop_n(vec_void *vec, VEC_LEN_T n);
     __el;                                                                      \
   })
 
-#define VEC_PEEK(vec) VEC_GET(vec, (vec).len - 1)
+#define VEC_PEEK(vec) VEC_GET((vec), (vec).len - 1)
 
-#define VEC_PEEK_REF(vec) VEC_GET(*(vec), (vec)->len - 1)
+#define VEC_PEEK_PTR(vec) VEC_GET_PTR((vec), (vec).len - 1)
 
 #define VEC_BACK(vec) VEC_PEEK(vec)
 
