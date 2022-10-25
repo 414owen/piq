@@ -14,6 +14,7 @@ typedef struct {
     BUILD_PATTERN,
     BUILD_TOP_LEVEL,
     BUILD_EXPR,
+    BUILD_EXPR_CONSTRUCTION_2,
     BUILD_CALL_2,
     BUILD_CALL_3,
     BUILD_FUN_2,
@@ -77,6 +78,9 @@ ir_module build_module(parse_tree tree, type_info types) {
   ir_module module = new_module();
   vec_action actions;
 
+  vec_ir_pattern ir_stmt = VEC_NEW;
+  vec_node_ind ir_stmt_amts = VEC_NEW;
+
   vec_ir_pattern ir_patterns = VEC_NEW;
   vec_node_ind ir_pattern_amts = VEC_NEW;
 
@@ -105,7 +109,7 @@ ir_module build_module(parse_tree tree, type_info types) {
     };
     switch (act.tag) {
       case BUILD_PATTERN: {
-        build_res.pattern.type = ti;
+        build_res.pattern.ir_pattern_type = ti;
         switch (node.type) {
           case PT_UNIT: {
             // assume the type is unit, I guess
@@ -147,6 +151,7 @@ ir_module build_module(parse_tree tree, type_info types) {
             break;
           case PT_LET:
           case PT_AS:
+          // TODO construction
           case PT_UPPER_NAME:
           case PT_SIG:
           case PT_IF:
@@ -176,7 +181,7 @@ ir_module build_module(parse_tree tree, type_info types) {
         node_ind_t start = module.ir_patterns.len;
         VEC_APPEND(&module.ir_patterns, pattern_amt, patterns);
         ir_pattern pattern = {
-          .type = ti,
+          .ir_pattern_type = ti,
           .subs =
             {
               .start = start,
@@ -203,7 +208,24 @@ ir_module build_module(parse_tree tree, type_info types) {
             VEC_APPEND_STATIC(&actions, todo);
             break;
           }
-          default:
+          case PT_UNIT:
+          case PT_LOWER_NAME:
+          case PT_TUP:
+          case PT_INT:
+          case PT_STRING:
+          case PT_LET:
+          case PT_LIST:
+          case PT_AS:
+          case PT_UPPER_NAME:
+          case PT_SIG:
+          case PT_IF:
+          case PT_LIST_TYPE:
+          case PT_ROOT:
+          case PT_FN:
+          case PT_FUN_BODY:
+          case PT_FN_TYPE:
+          case PT_CONSTRUCTION:
+          case PT_CALL:
             give_up("Unexpected non-top-level parse node");
             break;
         }
@@ -211,6 +233,7 @@ ir_module build_module(parse_tree tree, type_info types) {
       }
       // TODO get rid of this, and make BUILD_EXPR and similar groups
       case BUILD_EXPR:
+        build_res.expr.ir_expr_type = ti;
         switch (node.type) {
           case PT_CALL: {
             action todo[] = {
@@ -226,14 +249,22 @@ ir_module build_module(parse_tree tree, type_info types) {
             VEC_APPEND_STATIC(&actions, todo);
             break;
           }
-          case PT_CONSTRUCTION:
-            UNIMPLEMENTED("build construction");
+          case PT_CONSTRUCTION: {
+            action todo[] = {
+              {
+                .tag = BUILD_EXPR_CONSTRUCTION_2,
+                .node_ind = act.node_ind,
+              },
+              {
+                .tag = BUILD_EXPR,
+                .node_ind = PT_CALL_CALLEE_IND(node),
+              },
+            };
+            VEC_APPEND_STATIC(&actions, todo);
             break;
+          }
           case PT_FN:
             UNIMPLEMENTED("build clusure fn");
-            break;
-          case PT_FUN:
-            UNIMPLEMENTED("build closure fun");
             break;
           case PT_IF: {
             /*
@@ -259,13 +290,39 @@ ir_module build_module(parse_tree tree, type_info types) {
             */
             break;
           }
-          case PT_INT:
+          case PT_INT: {
+            type t = types.types[type_ind];
+            switch (t.tag) {
+              case T_I8:
+                // build_res.expr.ir_expr_i8 =
+                break;
+              case T_UNKNOWN:
+              case T_UNIT:
+              case T_U8:
+              case T_I16:
+              case T_U16:
+              case T_I32:
+              case T_U32:
+              case T_I64:
+              case T_U64:
+              case T_FN:
+              case T_BOOL:
+              case T_TUP:
+              case T_LIST:
+              case T_CALL:
+                break;
+            }
+            // build_res.expr.
             break;
+          }
           case PT_LIST:
+            // TODO
             break;
           case PT_LIST_TYPE:
+            // TODO
             break;
           case PT_LOWER_NAME:
+            // TODO
             break;
           case PT_STRING:
             VEC_PUSH(&module.ir_strings, node.span);
@@ -276,24 +333,39 @@ ir_module build_module(parse_tree tree, type_info types) {
             build_res.expr.ir_expr_type = ti;
             break;
           case PT_TUP:
+            // TODO
             break;
           case PT_AS:
+            // TODO
             break;
           case PT_UNIT:
+            // TODO
             break;
           case PT_UPPER_NAME:
+            // TODO
             break;
           case PT_SIG:
-            break;
           case PT_LET:
-            break;
           case PT_FUN_BODY:
+          case PT_FUN:
           case PT_FN_TYPE:
           case PT_ROOT:
             give_up("unexpected node in IR expr translation");
             break;
         }
         break;
+      case BUILD_EXPR_CONSTRUCTION_2: {
+        ir_data_construction construction = {
+          .ir_data_construction_param = build_res.expr,
+        };
+        VEC_PUSH(&module.ir_data_constructions, construction);
+        ir_expr expr = {
+          .ir_expr_tag = IR_EXPR_CONSTRUCTOR,
+          .ir_expr_type = ti,
+        };
+        build_res.expr = expr;
+        break;
+      }
       case BUILD_CALL_2: {
         ir_expr callee = build_res.expr;
         ir_call call = {
@@ -323,9 +395,14 @@ ir_module build_module(parse_tree tree, type_info types) {
           .ir_expr_ind = module.ir_calls.len - 1,
         };
       }
-      case BUILD_FUN_2:
-        UNIMPLEMENTED("build fun 2");
+      case BUILD_FUN_2: {
+        ir_fun_case fun = {
+          .ir_fun_param = build_res.pattern,
+          // TODO with a vec_stmt like the patterns
+          //.ir_fun_body_stmts_start =
+        };
         break;
+      }
     }
   }
   return module;
