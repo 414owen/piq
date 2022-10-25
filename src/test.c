@@ -57,6 +57,7 @@ static char *ne_reason(char *a_name, char *b_name) {
 
 // Static to avoid someone failing with a non-alloced string
 static void fail_with(test_state *state, char *reason) {
+  assert(state->in_test);
   state->current_failed = true;
   failure f = {.path = make_test_path(state), .reason = reason};
   VEC_PUSH(&state->failures, f);
