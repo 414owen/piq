@@ -77,7 +77,7 @@ typedef struct {
 } ir_data_constructor_ref;
 
 typedef struct {
-  ir_type_ind type;
+  ir_type_ind ir_pattern_type;
 
   union {
     struct {
@@ -107,13 +107,12 @@ typedef struct {
 VEC_DECL(ir_fn);
 
 typedef struct {
-  ir_pattern ir_fn_param;
-  node_ind_t ir_fn_body_stmts_start;
-  node_ind_t ir_fn_body_stmts_amt;
-  node_ind_t ir_fn_type_ind;
-} ir_fun;
+  ir_pattern ir_fun_param;
+  node_ind_t ir_fun_body_stmts_start;
+  node_ind_t ir_fun_body_stmts_amt;
+} ir_fun_case;
 
-VEC_DECL(ir_fun);
+VEC_DECL(ir_fun_case);
 
 // Yes, this is needed, you can't reconstruct this from the *type* information
 typedef enum {
@@ -122,8 +121,7 @@ typedef enum {
   IR_EXPR_FN,
   IR_EXPR_IF,
   IR_EXPR_INT,
-  IR_EXPR_EXPR_REF,
-  IR_EXPR_CONSTRUCTOR_REF,
+  IR_EXPR_CONSTRUCTOR,
 } ir_expr_type;
 
 typedef struct {
@@ -170,7 +168,8 @@ typedef struct {
 VEC_DECL(ir_call);
 
 typedef struct {
-  ir_type_ind ir_data_construction_type_ind;
+  // not needed, provided by ir_expr
+  // ir_type_ind ir_data_construction_type_ind;
   ir_data_constructor_ref ir_data_construction_callee_ref;
   ir_expr ir_data_construction_param;
 } ir_data_construction;
@@ -279,6 +278,8 @@ typedef struct {
     vec_ir_call ir_calls;
     vec_ir_data_construction ir_data_constructions;
   };
+
+  vec_ir_fun_case ir_funs;
 
   // sizeof: 20
   vec_ir_fun_group ir_fun_groups;
