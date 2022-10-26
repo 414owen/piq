@@ -17,6 +17,10 @@
   if ((a) != (b))                                                              \
     test_fail_eq(state, #a, #b);
 
+#define test_assert_neq(state, a, b)                                            \
+  if ((a) == (b))                                                              \
+    test_fail_eq(state, #a, #b);
+
 #define failf(state, ...) failf_(state, __FILE__, __LINE__, __VA_ARGS__)
 
 typedef struct {

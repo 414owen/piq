@@ -107,9 +107,9 @@ static void test_strint_u8(test_state *state) {
 static void test_i8_overflows_base10(test_state *state, char *str) {
   test_start(state, str);
 
-  bool overflowed = false;
-  parse_int8_base10(&overflowed, str, strlen(str));
-  test_assert(state, overflowed);
+  flow_type flow = INT_FITS;
+  parse_int8_base10(&flow, str, strlen(str));
+  test_assert_neq(state, flow, INT_FITS);
 
   test_end(state);
 }
@@ -117,9 +117,9 @@ static void test_i8_overflows_base10(test_state *state, char *str) {
 static void test_i8_parses_base10(test_state *state, char *str, int8_t exp) {
   test_start(state, str);
 
-  bool overflowed = false;
-  int8_t res = parse_int8_base10(&overflowed, str, strlen(str));
-  test_assert(state, !overflowed);
+  flow_type flow = INT_FITS;
+  int8_t res = parse_int8_base10(&flow, str, strlen(str));
+  test_assert_eq(state, flow, INT_FITS);
   test_assert_eq(state, res, exp);
 
   test_end(state);
@@ -128,9 +128,9 @@ static void test_i8_parses_base10(test_state *state, char *str, int8_t exp) {
 static void test_i8_overflows_base16(test_state *state, char *str) {
   test_start(state, str);
 
-  bool overflowed = false;
-  parse_int8_base16(&overflowed, str, strlen(str));
-  test_assert(state, overflowed);
+  flow_type flow = INT_FITS;
+  parse_int8_base16(&flow, str, strlen(str));
+  test_assert_neq(state, flow, INT_FITS);
 
   test_end(state);
 }
@@ -138,9 +138,9 @@ static void test_i8_overflows_base16(test_state *state, char *str) {
 static void test_i8_parses_base16(test_state *state, char *str, int8_t exp) {
   test_start(state, str);
 
-  bool overflowed = false;
-  int8_t res = parse_int8_base16(&overflowed, str, strlen(str));
-  test_assert(state, !overflowed);
+  flow_type flow = INT_FITS;
+  int8_t res = parse_int8_base16(&flow, str, strlen(str));
+  test_assert_eq(state, flow, INT_FITS);
   test_assert_eq(state, res, exp);
 
   test_end(state);
@@ -299,9 +299,9 @@ static void test_strint_u16(test_state *state) {
 static void test_i16_overflows_base10(test_state *state, char *str) {
   test_start(state, str);
 
-  bool overflowed = false;
-  parse_int16_base10(&overflowed, str, strlen(str));
-  test_assert(state, overflowed);
+  flow_type flow = INT_FITS;
+  parse_int16_base10(&flow, str, strlen(str));
+  test_assert_neq(state, flow, INT_FITS);
 
   test_end(state);
 }
@@ -309,9 +309,9 @@ static void test_i16_overflows_base10(test_state *state, char *str) {
 static void test_i16_parses_base10(test_state *state, char *str, int16_t exp) {
   test_start(state, str);
 
-  bool overflowed = false;
-  int16_t res = parse_int16_base10(&overflowed, str, strlen(str));
-  test_assert(state, !overflowed);
+  flow_type flow = INT_FITS;
+  int16_t res = parse_int16_base10(&flow, str, strlen(str));
+  test_assert_eq(state, flow, INT_FITS);
   test_assert_eq(state, res, exp);
 
   test_end(state);
@@ -320,9 +320,9 @@ static void test_i16_parses_base10(test_state *state, char *str, int16_t exp) {
 static void test_i16_overflows_base16(test_state *state, char *str) {
   test_start(state, str);
 
-  bool overflowed = false;
-  parse_int16_base16(&overflowed, str, strlen(str));
-  test_assert(state, overflowed);
+  flow_type flow = INT_FITS;
+  parse_int16_base16(&flow, str, strlen(str));
+  test_assert_neq(state, flow, INT_FITS);
 
   test_end(state);
 }
@@ -330,9 +330,9 @@ static void test_i16_overflows_base16(test_state *state, char *str) {
 static void test_i16_parses_base16(test_state *state, char *str, int16_t exp) {
   test_start(state, str);
 
-  bool overflowed = false;
-  int16_t res = parse_int16_base16(&overflowed, str, strlen(str));
-  test_assert(state, !overflowed);
+  flow_type flow = INT_FITS;
+  int16_t res = parse_int16_base16(&flow, str, strlen(str));
+  test_assert_eq(state, flow, INT_FITS);
   test_assert_eq(state, res, exp);
 
   test_end(state);
@@ -482,9 +482,9 @@ static void test_strint_u32(test_state *state) {
 static void test_i32_overflows_base10(test_state *state, char *str) {
   test_start(state, str);
 
-  bool overflowed = false;
-  parse_int32_base10(&overflowed, str, strlen(str));
-  test_assert(state, overflowed);
+  flow_type flow = INT_FITS;
+  parse_int32_base10(&flow, str, strlen(str));
+  test_assert_neq(state, flow, INT_FITS);
 
   test_end(state);
 }
@@ -492,9 +492,9 @@ static void test_i32_overflows_base10(test_state *state, char *str) {
 static void test_i32_parses_base10(test_state *state, char *str, int32_t exp) {
   test_start(state, str);
 
-  bool overflowed = false;
-  int32_t res = parse_int32_base10(&overflowed, str, strlen(str));
-  test_assert(state, !overflowed);
+  flow_type flow = INT_FITS;
+  int32_t res = parse_int32_base10(&flow, str, strlen(str));
+  test_assert_eq(state, flow, INT_FITS);
   test_assert_eq(state, res, exp);
 
   test_end(state);
@@ -503,9 +503,9 @@ static void test_i32_parses_base10(test_state *state, char *str, int32_t exp) {
 static void test_i32_overflows_base16(test_state *state, char *str) {
   test_start(state, str);
 
-  bool overflowed = false;
-  parse_int32_base16(&overflowed, str, strlen(str));
-  test_assert(state, overflowed);
+  flow_type flow = INT_FITS;
+  parse_int32_base16(&flow, str, strlen(str));
+  test_assert_neq(state, flow, INT_FITS);
 
   test_end(state);
 }
@@ -513,9 +513,9 @@ static void test_i32_overflows_base16(test_state *state, char *str) {
 static void test_i32_parses_base16(test_state *state, char *str, int32_t exp) {
   test_start(state, str);
 
-  bool overflowed = false;
-  int32_t res = parse_int32_base16(&overflowed, str, strlen(str));
-  test_assert(state, !overflowed);
+  flow_type flow = INT_FITS;
+  int32_t res = parse_int32_base16(&flow, str, strlen(str));
+  test_assert_eq(state, flow, INT_FITS);
   test_assert_eq(state, res, exp);
 
   test_end(state);
@@ -664,9 +664,9 @@ static void test_strint_u64(test_state *state) {
 static void test_i64_overflows_base10(test_state *state, char *str) {
   test_start(state, str);
 
-  bool overflowed = false;
-  parse_int64_base10(&overflowed, str, strlen(str));
-  test_assert(state, overflowed);
+  flow_type flow = INT_FITS;
+  parse_int64_base10(&flow, str, strlen(str));
+  test_assert_neq(state, flow, INT_FITS);
 
   test_end(state);
 }
@@ -674,9 +674,9 @@ static void test_i64_overflows_base10(test_state *state, char *str) {
 static void test_i64_parses_base10(test_state *state, char *str, int64_t exp) {
   test_start(state, str);
 
-  bool overflowed = false;
-  int64_t res = parse_int64_base10(&overflowed, str, strlen(str));
-  test_assert(state, !overflowed);
+  flow_type flow = INT_FITS;
+  int64_t res = parse_int64_base10(&flow, str, strlen(str));
+  test_assert_eq(state, flow, INT_FITS);
   test_assert_eq(state, res, exp);
 
   test_end(state);
@@ -685,9 +685,9 @@ static void test_i64_parses_base10(test_state *state, char *str, int64_t exp) {
 static void test_i64_overflows_base16(test_state *state, char *str) {
   test_start(state, str);
 
-  bool overflowed = false;
-  parse_int64_base16(&overflowed, str, strlen(str));
-  test_assert(state, overflowed);
+  flow_type flow = INT_FITS;
+  parse_int64_base16(&flow, str, strlen(str));
+  test_assert_neq(state, flow, INT_FITS);
 
   test_end(state);
 }
@@ -695,9 +695,9 @@ static void test_i64_overflows_base16(test_state *state, char *str) {
 static void test_i64_parses_base16(test_state *state, char *str, int64_t exp) {
   test_start(state, str);
 
-  bool overflowed = false;
-  int64_t res = parse_int64_base16(&overflowed, str, strlen(str));
-  test_assert(state, !overflowed);
+  flow_type flow = INT_FITS;
+  int64_t res = parse_int64_base16(&flow, str, strlen(str));
+  test_assert_eq(state, flow, INT_FITS);
   test_assert_eq(state, res, exp);
 
   test_end(state);
