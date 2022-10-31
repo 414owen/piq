@@ -18,6 +18,8 @@ typedef struct {
     BUILD_CALL_2,
     BUILD_CALL_3,
     BUILD_FUN_2,
+    BUILD_TUP_PAT_2,
+    BUILD_TUP_PAT_3,
     BUILD_LIST_PAT_2,
     BUILD_LIST_PAT_3,
   } tag;
@@ -112,24 +114,24 @@ ir_module build_module(parse_tree tree, type_info types) {
         build_res.pattern.ir_pattern_type = ti;
         switch (node.type) {
           case PT_UNIT: {
-            // assume the type is unit, I guess
+            build_res.pattern.ir_pattern_tag = IR_PAT_UNIT;
             break;
           }
           // wildcard binding
           case PT_LOWER_NAME:
-            // TODO introduce binding somehow
+            build_res.pattern.ir_pattern_tag = IR_PAT_PLACEHOLDER;
             build_res.pattern.ir_pattern_binding_span = node.span;
             break;
           case PT_LIST: {
             for (size_t i = 0; i < PT_LIST_SUB_AMT(node); i++) {
               action todos[] = {
                 {
-                  .tag = BUILD_PATTERN,
-                  .node_ind = PT_LIST_SUB_IND(tree.inds, node, i),
-                },
-                {
                   .tag = BUILD_LIST_PAT_2,
                   .node_ind = act.node_ind,
+                },
+                {
+                  .tag = BUILD_PATTERN,
+                  .node_ind = PT_LIST_SUB_IND(tree.inds, node, i),
                 },
               };
               VEC_APPEND_STATIC(&actions, todos);
@@ -142,11 +144,24 @@ ir_module build_module(parse_tree tree, type_info types) {
             break;
           }
           case PT_TUP:
+            build_res.pattern.ir_pattern_tag = IR_PAT_TUP;
+            action todos[] = {
+              {
+                .tag = BUILD_TUP_PAT_2,
+                .node_ind = act.node_ind,
+              },
+              {
+                .tag = BUILD_PATTERN,
+                .node_ind = PT_TUP_SUB_A(node),
+              },
+            };
             break;
           case PT_INT:
+            build_res.pattern.ir_pattern_tag = IR_PAT_INT;
             build_res.pattern.ir_pattern_int_span = node.span;
             break;
           case PT_STRING:
+            build_res.pattern.ir_pattern_tag = IR_PAT_STRING;
             build_res.pattern.ir_pattern_str_span = node.span;
             break;
           case PT_LET:
@@ -169,12 +184,31 @@ ir_module build_module(parse_tree tree, type_info types) {
         break;
       }
       case BUILD_LIST_PAT_2: {
+        build_res.pattern.ir_pattern_tag = IR_PAT_LIST;
         VEC_PUSH(&ir_patterns, build_res.pattern);
         *VEC_PEEK_PTR(ir_pattern_amts) += 1;
         break;
       }
       // Use the topmost vector of patterns
       case BUILD_LIST_PAT_3: {
+        node_ind_t pattern_amt = VEC_POP(&ir_pattern_amts);
+        ir_pattern *patterns =
+          VEC_GET_PTR(ir_patterns, ir_patterns.len - pattern_amt);
+        node_ind_t start = module.ir_patterns.len;
+        VEC_APPEND(&module.ir_patterns, pattern_amt, patterns);
+        ir_pattern pattern = {
+          .ir_pattern_type = ti,
+          .subs =
+            {
+              .start = start,
+              .amt = pattern_amt,
+            },
+        };
+        // TODO is it more efficient to assign the three fields individually?
+        build_res.pattern = pattern;
+        break;
+      }
+      case BUILD_TUP_PAT_3: {
         node_ind_t pattern_amt = VEC_POP(&ir_pattern_amts);
         ir_pattern *patterns =
           VEC_GET_PTR(ir_patterns, ir_patterns.len - pattern_amt);
@@ -250,6 +284,7 @@ ir_module build_module(parse_tree tree, type_info types) {
             break;
           }
           case PT_CONSTRUCTION: {
+            build_res.expr.ir_expr_tag = IR_EXPR_CONSTRUCTOR;
             action todo[] = {
               {
                 .tag = BUILD_EXPR_CONSTRUCTION_2,
@@ -264,9 +299,11 @@ ir_module build_module(parse_tree tree, type_info types) {
             break;
           }
           case PT_FN:
+            build_res.expr.ir_expr_tag = IR_EXPR_FN;
             UNIMPLEMENTED("build clusure fn");
             break;
           case PT_IF: {
+            build_res.expr.ir_expr_tag = IR_EXPR_IF;
             /*
             action todo[] = {
               {
@@ -386,6 +423,7 @@ ir_module build_module(parse_tree tree, type_info types) {
         break;
       }
       case BUILD_CALL_3: {
+        build_res.expr.ir_expr_tag = IR_EXPR_CALL;
         ir_expr param = build_res.expr;
         act.partial_call.ir_call_param = param;
         VEC_PUSH(&module.ir_calls, act.partial_call);
