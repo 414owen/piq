@@ -76,7 +76,18 @@ typedef struct {
   data_constructor_ind ir_data_constructor_ref_constructor_ind;
 } ir_data_constructor_ref;
 
+typedef enum {
+  IR_PAT_UNIT,
+  IR_PAT_PLACEHOLDER,
+  IR_PAT_LIST,
+  IR_PAT_TUP,
+  IR_PAT_CONSTRUCTION,
+  IR_PAT_INT,
+  IR_PAT_STRING,
+} ir_pattern_type;
+
 typedef struct {
+  ir_pattern_type ir_pattern_tag;
   ir_type_ind ir_pattern_type;
 
   union {
