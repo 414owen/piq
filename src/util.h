@@ -10,6 +10,8 @@
 #include <sys/types.h>
 #include <time.h>
 
+#include "attrs.h"
+
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define STATIC_LEN(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -69,42 +71,108 @@ typedef enum {
   GT = 1,
 } order;
 
+HEDLEY_RETURNS_NON_NULL
+MALLOC_ATTR_2(free, 1)
+void *malloc_safe(size_t bytes);
+
+NON_NULL_PARAMS
 size_t find_el(const void *haystack, size_t haystacklen, const void *needle,
                size_t needlelen);
+
+NON_NULL_PARAMS
 size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
                   const void *needle, size_t needle_els);
 
+NON_NULL_PARAMS
 void ss_init_immovable(stringstream *ss);
-stringstream *ss_init(void);
+
+HEDLEY_NON_NULL(1)
 void ss_finalize(stringstream *ss);
+
+NON_NULL_ALL
+MALLOC_ATTR_2(free, 1)
 char *ss_finalize_free(stringstream *ss);
 
-HEDLEY_NO_RETURN void unimplemented(char *str, char *file, size_t line);
+MALLOC_ATTR_2(ss_finalize_free, 1)
+HEDLEY_RETURNS_NON_NULL
+stringstream *ss_init(void);
 
+HEDLEY_NO_RETURN
+NON_NULL_PARAMS
+COLD_ATTR
+void unimplemented(char *str, char *file, size_t line);
+
+NON_NULL_PARAMS
 int timespec_subtract(struct timespec *result, struct timespec *x,
                       struct timespec *y);
+
+NON_NULL_ALL
+MALLOC_ATTR_2(free, 1)
 void *memclone(void *src, size_t bytes);
+
+HEDLEY_NON_NULL(1, 2)
+NON_NULL_PARAMS
 void memset_arbitrary(void *dest, void *el, size_t amt, size_t elsize);
+
+NON_NULL_ALL
+MALLOC_ATTR_2(free, 1)
 char *join(const size_t str_amt, const char *const *const strs,
            const char *sep);
+
+NON_NULL_PARAMS
 int vasprintf(char **, const char *restrict, va_list);
+
+NON_NULL_PARAMS
+HEDLEY_PRINTF_FORMAT(2, 3)
 int asprintf(char **, const char *restrict, ...);
+
+NON_NULL_PARAMS
 void reverse_arbitrary(void *dest, size_t amt, size_t elsize);
-HEDLEY_NO_RETURN void give_up_internal(const char *file, size_t line,
-                                       const char *err, ...);
+
+HEDLEY_NO_RETURN
+HEDLEY_PRINTF_FORMAT(3, 4)
+COLD_ATTR
+void give_up_internal(const char *file, size_t line, const char *err, ...);
+
+NON_NULL_PARAMS
 void debug_assert_internal(bool b, const char *file, size_t line);
 
+NON_NULL_ALL
+MALLOC_ATTR_2(free, 1)
 char *join_paths(const char *const *paths, size_t path_num);
+
+NON_NULL_ALL
+MALLOC_ATTR_2(free, 1)
 char *join_two_paths(const char *front, const char *back);
+
+HEDLEY_RETURNS_NON_NULL
 char *get_cache_dir(void);
+
+NON_NULL_PARAMS
+bool recurse_mkdir(char *dirname);
+
+NON_NULL_PARAMS
 int mkdirp(char *path, mode_t mode);
+
+NON_NULL_PARAMS
 int directory_exists(const char *path);
+
+NON_NULL_PARAMS
 int rm_r(char *dir);
+
+NON_NULL_PARAMS
 bool prefix(const char *pre, const char *str);
 
+NON_NULL_PARAMS
 size_t count_char(char *data, int needle, size_t len);
+
+NON_NULL_PARAMS
 size_t split_buf_size(char *data, int needle, size_t len);
+
+NON_NULL_PARAMS
 void split(char *data, int needle, char **buf, size_t buf_size);
 
 #define malloc_fill(num, el) __malloc_fill((num), sizeof(*el), (el))
+NON_NULL_ALL
+MALLOC_ATTR_2(free, 1)
 void *__malloc_fill(size_t num, size_t elemsize, void *elem);

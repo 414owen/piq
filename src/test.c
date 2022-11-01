@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <hedley.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -97,6 +98,7 @@ void test_end_internal(test_state *state) {
   }
 }
 
+HEDLEY_PRINTF_FORMAT(4, 5)
 void failf_(test_state *state, char *file, size_t line, const char *fmt, ...) {
   stringstream *ss = ss_init();
   fprintf(ss->stream, "In %s line %zu: ", file, line);

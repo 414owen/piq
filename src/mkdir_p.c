@@ -14,6 +14,7 @@
 #include "dir_exists.h"
 #include "util.h"
 
+NON_NULL_PARAMS
 static inline int platform_mkdir(char *pathname, mode_t mode) {
 #ifdef _WIN32
   // http://msdn.microsoft.com/en-us/library/2fkk4dzw.aspx
@@ -23,6 +24,7 @@ static inline int platform_mkdir(char *pathname, mode_t mode) {
 #endif
 }
 
+NON_NULL_PARAMS
 static inline bool dir_segment_exists(char *pathbuf, size_t end) {
   pathbuf[end] = '\0';
   bool res = directory_exists(pathbuf);
@@ -30,6 +32,9 @@ static inline bool dir_segment_exists(char *pathbuf, size_t end) {
   return res;
 }
 
+// TODO really don't need to use size_t here,
+// if our filenames are that long we probably have a bug
+NON_NULL_PARAMS
 int mkdirp(char *path, mode_t mode) {
 
   size_t len = strlen(path);
