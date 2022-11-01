@@ -131,7 +131,7 @@ static void test_mkdirp(test_state *state) {
 #ifndef _WIN32
   {
     char *path = strdup("/tmp/lang-c/test/folder/pls/create");
-    mkdirp(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    mkdirp(path, S_IRWXU | S_IRWXG | S_IROTH);
     if (!directory_exists(path)) {
       failf(state, "Directory didn't exist");
     }

@@ -10,10 +10,24 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "attrs.h"
 #include "consts.h"
 #include "util.h"
 
+HEDLEY_RETURNS_NON_NULL
+MALLOC_ATTR_2(free, 1)
+void *malloc_safe(size_t size) {
+  void *res = malloc(size);
+  if (res == NULL) {
+    fputs("Couldn't allocate memory", stderr);
+    exit(1);
+  }
+  return res;
+}
+
 HEDLEY_NO_RETURN
+NON_NULL_PARAMS
+COLD_ATTR
 void unimplemented(char *str, char *file, size_t line) {
   fprintf(stderr,
           "%s hasn't been implemented yet.\n"
@@ -26,14 +40,15 @@ void unimplemented(char *str, char *file, size_t line) {
   exit(1);
 }
 
-void *memclone(void *src, size_t bytes) {
-  void *dest = malloc(bytes);
-  if (dest != NULL) {
-    memcpy(dest, src, bytes);
-  }
+HEDLEY_NON_NULL(1)
+MALLOC_ATTR_2(free, 1)
+void *memclone(void *restrict src, size_t bytes) {
+  void *dest = malloc_safe(bytes);
+  memcpy(dest, src, bytes);
   return dest;
 }
 
+NON_NULL_PARAMS
 size_t find_el(const void *haystack, size_t haystacklen, const void *needle,
                size_t needlelen) {
   void *ptr = memmem(haystack, haystacklen, needle, needlelen);
@@ -41,6 +56,7 @@ size_t find_el(const void *haystack, size_t haystacklen, const void *needle,
 }
 
 // TODO(speedup) Boyer-Moore, or use memmem internally?
+NON_NULL_PARAMS
 size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
                   const void *needle, size_t needle_els) {
   if (el_amt == 0 || needle_els > el_amt)
@@ -63,6 +79,7 @@ size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
   return el_amt;
 }
 
+NON_NULL_PARAMS
 int timespec_subtract(struct timespec *result, struct timespec *x,
                       struct timespec *y) {
   /* Perform the carry for the later subtraction by updating y. */
@@ -86,12 +103,25 @@ int timespec_subtract(struct timespec *result, struct timespec *x,
   return x->tv_sec < y->tv_sec;
 }
 
+NON_NULL_PARAMS
 void ss_init_immovable(stringstream *ss) {
   ss->stream = open_memstream(&ss->string, &ss->size);
 }
 
+// Won't update copies of the stringstream that was used to `init`.
+NON_NULL_ALL
+MALLOC_ATTR_2(free, 1)
+char *ss_finalize_free(stringstream *ss) {
+  ss_finalize(ss);
+  char *res = ss->string;
+  free(ss);
+  return res;
+}
+
+MALLOC_ATTR_2(ss_finalize_free, 1)
+HEDLEY_RETURNS_NON_NULL
 stringstream *ss_init(void) {
-  stringstream *ss = malloc(sizeof(stringstream));
+  stringstream *ss = malloc_safe(sizeof(stringstream));
   if (ss == NULL)
     goto err;
   ss_init_immovable(ss);
@@ -103,19 +133,15 @@ err:
   exit(1);
 }
 
+// This is malloc-like, but it stores the thing inline, so we can't use the
+// attribute :(
+HEDLEY_NON_NULL(1)
 void ss_finalize(stringstream *ss) {
   putc(0, ss->stream);
   fclose(ss->stream);
 }
 
-// Won't update copies of the stringstream that was used to `init`.
-char *ss_finalize_free(stringstream *ss) {
-  ss_finalize(ss);
-  char *res = ss->string;
-  free(ss);
-  return res;
-}
-
+NON_NULL_PARAMS
 int vasprintf(char **buf, const char *restrict fmt, va_list rest) {
   stringstream *ss = ss_init();
   int res = vfprintf(ss->stream, fmt, rest);
@@ -123,6 +149,8 @@ int vasprintf(char **buf, const char *restrict fmt, va_list rest) {
   return res;
 }
 
+NON_NULL_PARAMS
+HEDLEY_PRINTF_FORMAT(2, 3)
 int asprintf(char **buf, const char *restrict fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
@@ -131,7 +159,10 @@ int asprintf(char **buf, const char *restrict fmt, ...) {
   return res;
 }
 
-void memset_arbitrary(void *dest, void *el, size_t amt, size_t elsize) {
+HEDLEY_NON_NULL(1, 2)
+NON_NULL_PARAMS
+void memset_arbitrary(void *restrict dest, void *restrict el, size_t amt,
+                      size_t elsize) {
   while (amt--) {
     for (size_t i = 0; i < elsize; i++) {
       *((char *)dest) = ((char *)el)[i];
@@ -140,6 +171,11 @@ void memset_arbitrary(void *dest, void *el, size_t amt, size_t elsize) {
   }
 }
 
+// TODO
+// If this is specialized on elsize, the memcpy calls will actually be
+// inlined with the __builtin_memcpy machinery
+// would the `flatten` attribute help?
+NON_NULL_PARAMS
 void reverse_arbitrary(void *dest, size_t amt, size_t elsize) {
   if (amt == 0)
     return;
@@ -157,17 +193,10 @@ void reverse_arbitrary(void *dest, size_t amt, size_t elsize) {
   stfree(tmp, elsize);
 }
 
-char *join(const size_t str_amt, const char *const *const strs,
-           const char *sep) {
-  /*
-    stringstream *ss = ss_init();
-    for (size_t i = 0; i < str_amt; i++) {
-      if (i > 0)
-        fputs(sep, ss->stream);
-      fputs(strs[i], ss->stream);
-    }
-    return ss_finalize_free(ss);
-  */
+NON_NULL_ALL
+MALLOC_ATTR_2(free, 1)
+char *join(const size_t str_amt, const char *const *restrict const strs,
+           const char *restrict sep) {
   size_t len = 0;
   size_t seplen = strlen(sep);
   for (size_t i = 0; i < str_amt; i++)
@@ -176,7 +205,7 @@ char *join(const size_t str_amt, const char *const *const strs,
     len += seplen * (str_amt - 1);
   len += 1;
 
-  char *buf = malloc(len);
+  char *buf = malloc_safe(len);
   buf[len - 1] = '\0';
 
   if (str_amt > 0) {
@@ -199,9 +228,12 @@ char *join(const size_t str_amt, const char *const *const strs,
   return buf;
 }
 
+HEDLEY_NO_RETURN
+HEDLEY_PRINTF_FORMAT(3, 4)
+COLD_ATTR
 void give_up_internal(const char *file, size_t line, const char *err, ...) {
   va_list argp;
-  va_start(argp, line);
+  va_start(argp, err);
   fprintf(stderr, "%s:%zu", file, line);
   vfprintf(stderr, err, argp);
   fputs("\nThis is a compiler bug! Giving up.\n", stderr);
@@ -219,12 +251,17 @@ static uid_t get_uid(void) {
 
 static struct passwd *pwd_cache = NULL;
 
+// doesn't need freeing
+// can return null
 static struct passwd *get_passwd(void) {
   if (pwd_cache == NULL)
     pwd_cache = getpwuid(get_uid());
   return pwd_cache;
 }
 
+// doesn't need freeing
+// can return null (presumably)
+// not cached
 static char *get_home_dir(void) {
   char *dir = getenv("HOME");
   if (dir == NULL)
@@ -232,62 +269,39 @@ static char *get_home_dir(void) {
   return dir;
 }
 
+NON_NULL_ALL
+MALLOC_ATTR_2(free, 1)
 char *join_paths(const char *const *paths, size_t path_num) {
   return join(path_num, paths, path_sep);
 }
 
+NON_NULL_ALL
+MALLOC_ATTR_2(free, 1)
 char *join_two_paths(const char *front, const char *back) {
-#define path_len 2
-  const char *const paths[path_len] = {front, back};
-  char *res = join_paths(paths, path_len);
-#undef path_len
+  const char *const paths[] = {front, back};
+  char *res = join_paths(paths, STATIC_LEN(paths));
   return res;
 }
 
-static bool forgiving_mkdir(const char *dirname) {
-  return mkdir(dirname, 0774) == 0 || errno == EEXIST;
-}
-
-// TODO change to use openat() and relative paths
-bool recurse_mkdir(char *dirname) {
-  bool ret = true;
-  const char *p = dirname;
-
-  while ((p = strchr(p, path_sep[0])) != NULL) {
-    /* Skip empty elements. Multiple separators are okay. */
-    if (p == dirname || *(p - 1) == path_sep[0]) {
-      p++;
-      continue;
-    }
-    dirname[p - dirname] = '\0';
-    if (!forgiving_mkdir(dirname)) {
-      ret = false;
-      break;
-    }
-    dirname[p - dirname] = path_sep[0];
-    p++;
-  }
-  if (!forgiving_mkdir(dirname)) {
-    ret = false;
-  }
-  return ret;
-}
+// NON_NULL_PARAMS
+// static bool forgiving_mkdir(const char *dirname) {
+//  return mkdir(dirname, 0774) == 0 || errno == EEXIST;
+// }
 
 static char *cache_dir_cache = NULL;
+HEDLEY_RETURNS_NON_NULL
 char *get_cache_dir(void) {
   if (cache_dir_cache != NULL)
     return cache_dir_cache;
   char *dir = getenv("XDG_CACHE_DIR");
   if (dir == NULL) {
     dir = get_home_dir();
-#define path_len 3
-    const char *const paths[path_len] = {dir, ".cache", program_name};
-    dir = join_paths(paths, path_len);
-#undef path_len
+    const char *const paths[] = {dir, ".cache", program_name};
+    dir = join_paths(paths, STATIC_LEN(paths));
   } else {
     dir = join_two_paths(dir, program_name);
   }
-  if (!recurse_mkdir(dir)) {
+  if (!mkdirp(dir, S_IRWXU | S_IRWXG | S_IROTH)) {
     fputs("Couldn't create cache directory. Giving up.\n", stderr);
     exit(1);
   }
@@ -295,6 +309,7 @@ char *get_cache_dir(void) {
   return dir;
 }
 
+NON_NULL_PARAMS
 void debug_assert_internal(bool b, const char *file, size_t line) {
   if (!b) {
     fprintf(stderr, "Assertion failed at %s:%zu\n", file, line);
@@ -302,10 +317,12 @@ void debug_assert_internal(bool b, const char *file, size_t line) {
   }
 }
 
+NON_NULL_PARAMS
 bool prefix(const char *restrict pre, const char *restrict str) {
   return strncmp(pre, str, strlen(pre)) == 0;
 }
 
+NON_NULL_PARAMS
 size_t count_char(char *data, int needle, size_t len) {
   size_t res = 0;
   char *cursor = data;
@@ -320,10 +337,12 @@ size_t count_char(char *data, int needle, size_t len) {
   return res;
 }
 
+NON_NULL_PARAMS
 size_t split_buf_size(char *data, int needle, size_t len) {
   return count_char(data, needle, len) + 1;
 }
 
+NON_NULL_PARAMS
 void split(char *data, int needle, char **buf, size_t buf_size) {
   for (size_t i = 0; i < buf_size; i++) {
     data = strchr(data, needle);
@@ -331,8 +350,10 @@ void split(char *data, int needle, char **buf, size_t buf_size) {
   }
 }
 
+NON_NULL_ALL
+MALLOC_ATTR_2(free, 1)
 void *__malloc_fill(size_t num, size_t elemsize, void *elem) {
-  void *res = malloc(num * elemsize);
+  void *res = malloc_safe(num * elemsize);
   memset_arbitrary(res, elem, num, elemsize);
   return res;
 }

@@ -78,6 +78,8 @@ A language that does everything right
   have a universal namespace for packages, and when one is used in source,
   its dependency is implicit.
 * Instrument stage timings
+* Add [gcc function attributes](https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html)
+* Profile guided optimization
 
 # Mistakes
 
