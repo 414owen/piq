@@ -81,10 +81,11 @@ ir_module build_module(parse_tree tree, type_info types) {
   vec_action actions;
 
   vec_ir_pattern ir_stmt = VEC_NEW;
-  vec_node_ind ir_stmt_amts = VEC_NEW;
+  // vec_node_ind ir_stmt_amts = VEC_NEW;
 
   vec_ir_pattern ir_patterns = VEC_NEW;
-  vec_node_ind ir_pattern_amts = VEC_NEW;
+  // I think we can get this from the current node
+  // vec_node_ind ir_pattern_amts = VEC_NEW;
 
   union {
     ir_expr expr;
@@ -113,15 +114,18 @@ ir_module build_module(parse_tree tree, type_info types) {
       case BUILD_PATTERN: {
         build_res.pattern.ir_pattern_type = ti;
         switch (node.type) {
+          // Done
           case PT_UNIT: {
             build_res.pattern.ir_pattern_tag = IR_PAT_UNIT;
             break;
           }
+          // Done
           // wildcard binding
           case PT_LOWER_NAME:
             build_res.pattern.ir_pattern_tag = IR_PAT_PLACEHOLDER;
             build_res.pattern.ir_pattern_binding_span = node.span;
             break;
+          // Done
           case PT_LIST: {
             for (size_t i = 0; i < PT_LIST_SUB_AMT(node); i++) {
               action todos[] = {
@@ -183,10 +187,10 @@ ir_module build_module(parse_tree tree, type_info types) {
         }
         break;
       }
+      // TODO merge these?
+      case BUILD_TUP_PAT_2:
       case BUILD_LIST_PAT_2: {
-        build_res.pattern.ir_pattern_tag = IR_PAT_LIST;
         VEC_PUSH(&ir_patterns, build_res.pattern);
-        *VEC_PEEK_PTR(ir_pattern_amts) += 1;
         break;
       }
       // Use the topmost vector of patterns
@@ -198,6 +202,7 @@ ir_module build_module(parse_tree tree, type_info types) {
         VEC_APPEND(&module.ir_patterns, pattern_amt, patterns);
         ir_pattern pattern = {
           .ir_pattern_type = ti,
+          .ir_pattern_tag = IR_PAT_LIST,
           .subs =
             {
               .start = start,
