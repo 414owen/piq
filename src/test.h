@@ -17,7 +17,7 @@
   if ((a) != (b))                                                              \
     test_fail_eq(state, #a, #b);
 
-#define test_assert_neq(state, a, b)                                            \
+#define test_assert_neq(state, a, b)                                           \
   if ((a) == (b))                                                              \
     test_fail_eq(state, #a, #b);
 

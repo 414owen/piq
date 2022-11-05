@@ -22,7 +22,8 @@ static uint8_t char_to_base16_digit(char c) {
 
 // Can be optimized by removing the noinline, but it generates a lot of code.
 static HEDLEY_NEVER_INLINE uint64_t parse_arbitrary_positive_base10(
-  bool *restrict overflow, const char *restrict str, const size_t str_len, size_t maximum) {
+  bool *restrict overflow, const char *restrict str, const size_t str_len,
+  size_t maximum) {
   uint64_t res = 0;
   uint64_t limit = maximum / 10;
   for (size_t i = 0; i < str_len; i++) {
@@ -43,7 +44,8 @@ static HEDLEY_NEVER_INLINE uint64_t parse_arbitrary_positive_base10(
 
 // Can be optimized by removing the noinline, but it generates a lot of code.
 static HEDLEY_NEVER_INLINE uint64_t parse_arbitrary_positive_base16(
-  bool *restrict overflow, const char *restrict str, const size_t str_len, size_t maximum) {
+  bool *restrict overflow, const char *restrict str, const size_t str_len,
+  size_t maximum) {
   uint64_t res = 0;
   uint64_t limit = maximum / 16;
   for (size_t i = 0; i < str_len; i++) {
@@ -64,9 +66,9 @@ static HEDLEY_NEVER_INLINE uint64_t parse_arbitrary_positive_base16(
 
 // TODO specialize to base 10 and base 16, because then we can use bitshifting
 // for base 16 and it will be faster...
-static HEDLEY_NEVER_INLINE uint64_t
-parse_arbitrary(flow_type *restrict flow, bool *restrict negative_p,
-                const char *restrict str, size_t str_len, base base, size_t minimum, size_t maximum) {
+static HEDLEY_NEVER_INLINE uint64_t parse_arbitrary(
+  flow_type *restrict flow, bool *restrict negative_p, const char *restrict str,
+  size_t str_len, base base, size_t minimum, size_t maximum) {
   bool negative = false;
   char c = str[0];
   while (c == '-' || c == '+') {
@@ -80,7 +82,7 @@ parse_arbitrary(flow_type *restrict flow, bool *restrict negative_p,
     c = str[0];
   }
   *negative_p = negative;
-  bool overflow;
+  bool overflow = false;
   uint64_t res;
   size_t limit = negative ? 0 - minimum : maximum;
   switch (base) {
@@ -122,52 +124,32 @@ uint64_t parse_uint64_base10(bool *restrict overflow, const char *restrict str,
 int8_t parse_int8_base10(flow_type *flow, const char *restrict str,
                          const size_t str_len) {
   bool negative = false;
-  int8_t res = (int8_t)parse_arbitrary(flow,
-                                       &negative,
-                                       str,
-                                       str_len,
-                                       BASE_10,
-                                       INT8_MIN,
-                                       INT8_MAX);
+  int8_t res = (int8_t)parse_arbitrary(
+    flow, &negative, str, str_len, BASE_10, INT8_MIN, INT8_MAX);
   return (negative ? -1 : 1) * res;
 }
 
 int16_t parse_int16_base10(flow_type *flow, const char *restrict str,
                            const size_t str_len) {
   bool negative = false;
-  int16_t res = (int16_t)parse_arbitrary(flow,
-                                         &negative,
-                                         str,
-                                         str_len,
-                                         BASE_10,
-                                         INT16_MIN,
-                                         INT16_MAX);
+  int16_t res = (int16_t)parse_arbitrary(
+    flow, &negative, str, str_len, BASE_10, INT16_MIN, INT16_MAX);
   return (negative ? -1 : 1) * res;
 }
 
 int32_t parse_int32_base10(flow_type *flow, const char *restrict str,
                            const size_t str_len) {
   bool negative = false;
-  int32_t res = (int32_t)parse_arbitrary(flow,
-                                         &negative,
-                                         str,
-                                         str_len,
-                                         BASE_10,
-                                         INT32_MIN,
-                                         INT32_MAX);
+  int32_t res = (int32_t)parse_arbitrary(
+    flow, &negative, str, str_len, BASE_10, INT32_MIN, INT32_MAX);
   return (negative ? -1 : 1) * res;
 }
 
 int64_t parse_int64_base10(flow_type *flow, const char *restrict str,
                            const size_t str_len) {
   bool negative = false;
-  int64_t res = (int64_t)parse_arbitrary(flow,
-                                         &negative,
-                                         str,
-                                         str_len,
-                                         BASE_10,
-                                         INT64_MIN,
-                                         INT64_MAX);
+  int64_t res = (int64_t)parse_arbitrary(
+    flow, &negative, str, str_len, BASE_10, INT64_MIN, INT64_MAX);
   return (negative ? -1 : 1) * res;
 }
 
@@ -198,51 +180,31 @@ uint64_t parse_uint64_base16(bool *restrict overflow, const char *restrict str,
 int8_t parse_int8_base16(flow_type *flow, const char *restrict str,
                          const size_t str_len) {
   bool negative = false;
-  int8_t res = (int8_t)parse_arbitrary(flow,
-                                       &negative,
-                                       str,
-                                       str_len,
-                                       BASE_16,
-                                       INT8_MIN,
-                                       INT8_MAX);
+  int8_t res = (int8_t)parse_arbitrary(
+    flow, &negative, str, str_len, BASE_16, INT8_MIN, INT8_MAX);
   return (negative ? -1 : 1) * res;
 }
 
 int16_t parse_int16_base16(flow_type *flow, const char *restrict str,
                            const size_t str_len) {
   bool negative = false;
-  int16_t res = (int16_t)parse_arbitrary(flow,
-                                         &negative,
-                                         str,
-                                         str_len,
-                                         BASE_16,
-                                         INT16_MIN,
-                                         INT16_MAX);
+  int16_t res = (int16_t)parse_arbitrary(
+    flow, &negative, str, str_len, BASE_16, INT16_MIN, INT16_MAX);
   return (negative ? -1 : 1) * res;
 }
 
 int32_t parse_int32_base16(flow_type *flow, const char *restrict str,
                            const size_t str_len) {
   bool negative = false;
-  int32_t res = (int32_t)parse_arbitrary(flow,
-                                         &negative,
-                                         str,
-                                         str_len,
-                                         BASE_16,
-                                         INT32_MIN,
-                                         INT32_MAX);
+  int32_t res = (int32_t)parse_arbitrary(
+    flow, &negative, str, str_len, BASE_16, INT32_MIN, INT32_MAX);
   return (negative ? -1 : 1) * res;
 }
 
 int64_t parse_int64_base16(flow_type *flow, const char *restrict str,
                            const size_t str_len) {
   bool negative = false;
-  int64_t res = (int64_t)parse_arbitrary(flow,
-                                         &negative,
-                                         str,
-                                         str_len,
-                                         BASE_16,
-                                         INT64_MIN,
-                                         INT64_MAX);
+  int64_t res = (int64_t)parse_arbitrary(
+    flow, &negative, str, str_len, BASE_16, INT64_MIN, INT64_MAX);
   return (negative ? -1 : 1) * res;
 }
