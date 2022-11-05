@@ -187,7 +187,6 @@ ir_module build_module(parse_tree tree, type_info types) {
         }
         break;
       }
-      // TODO merge these?
       case BUILD_TUP_PAT_2:
       case BUILD_LIST_PAT_2: {
         VEC_PUSH(&ir_patterns, build_res.pattern);
@@ -195,18 +194,16 @@ ir_module build_module(parse_tree tree, type_info types) {
       }
       // Use the topmost vector of patterns
       case BUILD_LIST_PAT_3: {
-        node_ind_t pattern_amt = VEC_POP(&ir_pattern_amts);
-        ir_pattern *patterns =
-          VEC_GET_PTR(ir_patterns, ir_patterns.len - pattern_amt);
+        ir_pattern *patterns = VEC_GET_PTR(ir_patterns, node.sub_amt);
         node_ind_t start = module.ir_patterns.len;
-        VEC_APPEND(&module.ir_patterns, pattern_amt, patterns);
+        VEC_APPEND(&module.ir_patterns, node.sub_amt, patterns);
         ir_pattern pattern = {
           .ir_pattern_type = ti,
           .ir_pattern_tag = IR_PAT_LIST,
           .subs =
             {
               .start = start,
-              .amt = pattern_amt,
+              .amt = node.sub_amt,
             },
         };
         // TODO is it more efficient to assign the three fields individually?
@@ -214,17 +211,15 @@ ir_module build_module(parse_tree tree, type_info types) {
         break;
       }
       case BUILD_TUP_PAT_3: {
-        node_ind_t pattern_amt = VEC_POP(&ir_pattern_amts);
-        ir_pattern *patterns =
-          VEC_GET_PTR(ir_patterns, ir_patterns.len - pattern_amt);
+        ir_pattern *patterns = VEC_GET_PTR(ir_patterns, node.sub_amt);
         node_ind_t start = module.ir_patterns.len;
-        VEC_APPEND(&module.ir_patterns, pattern_amt, patterns);
+        VEC_APPEND(&module.ir_patterns, node.sub_amt, patterns);
         ir_pattern pattern = {
           .ir_pattern_type = ti,
           .subs =
             {
               .start = start,
-              .amt = pattern_amt,
+              .amt = node.sub_amt,
             },
         };
         // TODO is it more efficient to assign the three fields individually?
