@@ -13,6 +13,44 @@ typedef enum {
   POP_TUP_BS,
 } print_action;
 
+parse_node_category parse_node_categories[] = {
+  [PT_ALL_EX_CALL] = PT_C_EXPRESSION,
+  [PT_ALL_EX_FN] = PT_C_EXPRESSION,
+  [PT_ALL_EX_FUN_BODY] = PT_C_EXPRESSION,
+  [PT_ALL_EX_IF] = PT_C_EXPRESSION,
+  [PT_ALL_EX_INT] = PT_C_EXPRESSION,
+  [PT_ALL_EX_LIST] = PT_C_EXPRESSION,
+  [PT_ALL_EX_LOWER_NAME] = PT_C_EXPRESSION,
+  [PT_ALL_EX_STRING] = PT_C_EXPRESSION,
+  [PT_ALL_EX_TUP] = PT_C_EXPRESSION,
+  [PT_ALL_EX_AS] = PT_C_EXPRESSION,
+  [PT_ALL_EX_UNIT] = PT_C_EXPRESSION,
+  [PT_ALL_EX_UPPER_NAME] = PT_C_EXPRESSION,
+
+  [PT_ALL_PAT_WILDCARD] = PT_C_PATTERN,
+  [PT_ALL_PAT_TUP] = PT_C_PATTERN,
+  [PT_ALL_PAT_UNIT] = PT_C_PATTERN,
+  [PT_ALL_PAT_CONSTRUCTION] = PT_C_PATTERN,
+  [PT_ALL_PAT_STRING] = PT_C_PATTERN,
+  [PT_ALL_PAT_INT] = PT_C_PATTERN,
+  [PT_ALL_PAT_LIST] = PT_C_PATTERN,
+  [PT_ALL_PAT_UPPER_NAME] = PT_C_PATTERN,
+
+  [PT_ALL_STMT_SIG] = PT_C_STATEMENT,
+  [PT_ALL_STMT_FUN] = PT_C_STATEMENT,
+  [PT_ALL_STMT_LET] = PT_C_STATEMENT,
+
+  [PT_ALL_TY_CONSTRUCTION] = PT_C_TYPE,
+  [PT_ALL_TY_LIST] = PT_C_TYPE,
+  [PT_ALL_TY_FN] = PT_C_TYPE,
+  [PT_ALL_TY_TUP] = PT_C_TYPE,
+  [PT_ALL_TY_UPPER_NAME] = PT_C_TYPE,
+  [PT_ALL_TY_UNIT] = PT_C_TYPE,
+
+  [PT_ALL_TL_SIG] = PT_C_TOPLEVEL,
+  [PT_ALL_TL_FUN] = PT_C_TOPLEVEL,
+};
+
 // the reason we have a `node.type.all` at all, and the
 // stable numbering, is so far basically because of this
 // function.
@@ -31,6 +69,8 @@ static tree_node_repr subs_type(parse_node_type type) {
     case PT_ALL_PAT_UPPER_NAME:
     case PT_ALL_PAT_INT:
     case PT_ALL_TL_SIG:
+    case PT_ALL_TY_UPPER_NAME:
+    case PT_ALL_TY_UNIT:
       res = SUBS_NONE;
       break;
     case PT_ALL_TY_LIST:
@@ -60,68 +100,63 @@ static tree_node_repr subs_type(parse_node_type type) {
   return res;
 }
 
-tree_node_repr
-
 VEC_DECL(print_action);
 
 const char *parse_node_string(parse_node_type type) {
   const char *res = NULL;
-  switch (type) {
-    case PT_LET:
+  switch (type.all) {
+    case PT_ALL_STMT_LET:
       res = "Let";
       break;
-    case PT_AS:
+    case PT_ALL_EX_AS:
       res = "Typed";
       break;
-    case PT_CALL:
+    case PT_ALL_EX_CALL:
       res = "Call";
       break;
-    case PT_CONSTRUCTION:
-      res = "Constructor";
+    case PT_ALL_PAT_CONSTRUCTION:
+      res = "Construction";
       break;
-    case PT_FN:
+    case PT_ALL_EX_FN:
       res = "Fn";
       break;
-    case PT_FN_TYPE:
+    case PT_ALL_TY_FN:
       res = "Fn type";
       break;
-    case PT_FUN_BODY:
+    case PT_ALL_EX_FUN_BODY:
       res = "Fun body";
       break;
-    case PT_FUN:
+    case PT_ALL_STMT_FUN:
       res = "Fun";
       break;
-    case PT_IF:
+    case PT_ALL_EX_IF:
       res = "If";
       break;
-    case PT_INT:
+    case PT_ALL_EX_INT:
       res = "Int";
       break;
-    case PT_LIST:
+    case PT_ALL_EX_LIST:
       res = "List";
       break;
     case PT_LIST_TYPE:
       res = "List type";
       break;
-    case PT_LOWER_NAME:
+    case PT_ALL_EX_LOWER_NAME:
       res = "Lower name";
-      break;
-    case PT_ROOT:
-      res = "Root";
       break;
     case PT_SIG:
       res = "Sig";
       break;
-    case PT_STRING:
+    case PT_ALL_EX_STRING:
       res = "String";
       break;
-    case PT_TUP:
+    case PT_ALL_EX_TUP:
       res = "Tuple";
       break;
-    case PT_UNIT:
+    case PT_ALL_EX_UNIT:
       res = "Unit";
       break;
-    case PT_UPPER_NAME:
+    case PT_ALL_EX_UPPER_NAME:
       res = "Upper name";
       break;
   }
@@ -186,7 +221,7 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
 
 static void print_node(printer_state *s, node_ind_t node_ind) {
   parse_node node = s->tree.nodes[node_ind];
-  switch (node.type) {
+  switch (node.type.all) {
     case PT_SIG: {
       print_compound(s, "(Sig ", " ", ")", node);
       break;
@@ -261,7 +296,8 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
     case PT_LIST_TYPE:
       print_compound(s, "[", ", ", "]", node);
       break;
-    case PT_STRING:
+    case PT_ALL_PAT_STRING:
+    case PT_ALL_EX_STRING:
       push_source(s, node_ind);
       break;
   }
@@ -277,8 +313,12 @@ void print_parse_tree(FILE *f, const char *restrict input, parse_tree tree) {
     .input = input,
     .out = f,
   };
+
   bs_push(&s.in_tuple, false);
-  push_node(&s, tree.root_ind);
+  for (node_ind_t i = 0; i < tree.root_subs_amt; i++) {
+    node_ind_t ind = tree.root_subs_start + i;
+    push_node(&s, tree.inds[ind]);
+  }
 
   while (s.actions.len > 0) {
     fflush(f);
