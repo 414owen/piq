@@ -193,8 +193,6 @@ static void test_types_match(test_state *state, const char *input_p,
     bool seen = false;
     for (size_t j = 0; j < pres.tree.node_amt; j++) {
       parse_node node = pres.tree.nodes[j];
-      if (node.type == PT_ROOT)
-        continue;
       if (node.span.start == span.start && node.span.end == span.end) {
         seen = true;
         if (!test_type_eq(res.types.types,

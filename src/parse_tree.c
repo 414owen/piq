@@ -13,40 +13,54 @@ typedef enum {
   POP_TUP_BS,
 } print_action;
 
-// Maybe at some point we'll need context?
-tree_node_repr subs_type(parse_node_type type) {
+// the reason we have a `node.type.all` at all, and the
+// stable numbering, is so far basically because of this
+// function.
+static tree_node_repr subs_type(parse_node_type type) {
   tree_node_repr res = SUBS_NONE;
-  switch (type) {
-    case PT_INT:
-    case PT_LOWER_NAME:
-    case PT_UPPER_NAME:
-    case PT_STRING:
-    case PT_UNIT:
+  switch (type.all) {
+    case PT_ALL_EX_INT:
+    case PT_ALL_EX_LOWER_NAME:
+    case PT_ALL_EX_UPPER_NAME:
+    case PT_ALL_EX_STRING:
+    case PT_ALL_EX_UNIT:
+    case PT_ALL_PAT_WILDCARD:
+    case PT_ALL_PAT_UNIT:
+    case PT_ALL_PAT_STRING:
+    case PT_ALL_PAT_LIST:
+    case PT_ALL_PAT_UPPER_NAME:
+    case PT_ALL_PAT_INT:
+    case PT_ALL_TL_SIG:
       res = SUBS_NONE;
       break;
-    case PT_LIST_TYPE:
+    case PT_ALL_TY_LIST:
       res = SUBS_ONE;
       break;
-    case PT_CALL:
-    case PT_AS:
-    case PT_FN:
-    case PT_FN_TYPE:
-    case PT_SIG:
-    case PT_TUP:
+    case PT_ALL_EX_CALL:
+    case PT_ALL_EX_AS:
+    case PT_ALL_EX_FN:
+    case PT_ALL_EX_TUP:
+    case PT_TY_FN:
+    case PT_TY_TUP:
+    case PT_TY_CONSTRUCTION:
+    case PT_ALL_STMT_SIG:
+    case PT_ALL_STMT_LET:
+    case PT_ALL_PAT_TUP:
+    case PT_ALL_PAT_CONSTRUCTION:
       res = SUBS_TWO;
       break;
-    case PT_CONSTRUCTION:
-    case PT_FUN:
-    case PT_FUN_BODY:
-    case PT_IF:
-    case PT_LIST:
-    case PT_ROOT:
-    case PT_LET:
+    case PT_ALL_EX_IF:
+    case PT_ALL_EX_LIST:
+    case PT_ALL_EX_FUN_BODY:
+    case PT_ALL_STMT_FUN:
+    case PT_ALL_TL_FUN:
       res = SUBS_EXTERNAL;
       break;
   }
   return res;
 }
+
+tree_node_repr
 
 VEC_DECL(print_action);
 
