@@ -388,7 +388,7 @@ static void setup_type_env(typecheck_state *state) {
   {
     for (size_t i = 0; i < state->tree.node_amt; i++) {
       parse_node node = state->tree.nodes[i];
-      switch (node.type) {
+      switch (node.type.all) {
         // TODO fill in user declared types here
         default:
           break;
@@ -467,24 +467,24 @@ static bool can_propagate_type(typecheck_state *state, parse_node from,
                                parse_node to) {
   node_ind_t a_bnd_ind;
   node_ind_t b_bnd_ind;
-  switch (to.type) {
-    case PT_LET:
+  switch (to.type.statement) {
+    case PT_STMT_LET:
       a_bnd_ind = PT_LET_BND_IND(to);
-      switch (from.type) {
-        case PT_SIG:
+      switch (from.type.statement) {
+        case PT_STMT_SIG:
           b_bnd_ind = PT_SIG_BINDING_IND(from);
           break;
         default:
           return false;
       }
       break;
-    case PT_FUN:
+    case PT_STMT_FUN:
       a_bnd_ind = PT_FUN_BINDING_IND(state->tree.inds, to);
-      switch (from.type) {
-        case PT_SIG:
+      switch (from.type.statement) {
+        case PT_STMT_SIG:
           b_bnd_ind = PT_SIG_BINDING_IND(from);
           break;
-        case PT_FUN:
+        case PT_STMT_FUN:
           b_bnd_ind = PT_FUN_BINDING_IND(state->tree.inds, from);
           break;
         default:
@@ -546,7 +546,7 @@ static void typecheck_block(typecheck_state *state, tc_node_params params,
   {
     node_ind_t sub_ind = state->tree.inds[params.node.subs_start];
     parse_node sub = state->tree.nodes[sub_ind];
-    if (sub.type == PT_SIG) {
+    if (sub.type.statement == PT_STMT_SIG) {
       push_tc_sig(state, sub_ind, sub);
     } else if (enforce_sigs) {
       tc_error err = {
@@ -562,13 +562,13 @@ static void typecheck_block(typecheck_state *state, tc_node_params params,
   for (node_ind_t sub_i = 1; sub_i < params.node.sub_amt; sub_i++) {
     node_ind_t sub_ind = state->tree.inds[params.node.subs_start + sub_i];
     parse_node sub = state->tree.nodes[sub_ind];
-    switch (sub.type) {
-      case PT_SIG: {
+    switch (sub.type.statement) {
+      case PT_STMT_SIG: {
         push_tc_sig(state, sub_ind, sub);
         break;
       }
-      case PT_LET:
-      case PT_FUN: {
+      case PT_STMT_LET:
+      case PT_STMT_FUN: {
         node_ind_t prev_ind =
           state->tree.inds[params.node.subs_start + sub_i - 1];
         parse_node prev = state->tree.nodes[prev_ind];
@@ -586,8 +586,6 @@ static void typecheck_block(typecheck_state *state, tc_node_params params,
           can_continue = false;
         }
       }
-      default:
-        break;
     }
   }
 
@@ -602,14 +600,12 @@ static void typecheck_block(typecheck_state *state, tc_node_params params,
   for (node_ind_t i = 0; i < params.node.sub_amt; i++) {
     node_ind_t sub_ind = state->tree.inds[params.node.subs_start + i];
     parse_node sub = state->tree.nodes[sub_ind];
-    switch (sub.type) {
-      case PT_SIG:
+    switch (sub.type.statement) {
+      case PT_STMT_SIG:
         break;
-      case PT_LET:
-      case PT_FUN:
+      case PT_STMT_LET:
+      case PT_STMT_FUN:
         bnd_amt++;
-        HEDLEY_FALL_THROUGH;
-      default: {
         action_tag tag = bs_data_get(sub_has_wanted, i) ? TC_NODE_MATCHES
                                                         : TC_NODE_UNAMBIGUOUS;
         tc_action action = {
@@ -1845,9 +1841,9 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         node_ind_t node_ind = node_params.node_ind;
         parse_node node = state.tree.nodes[node_ind];
 
-        switch (node.type) {
+        switch (node.type.type) {
           // tc_type
-          case PT_LIST_TYPE: {
+          case PT_TY_LIST: {
             {
               tc_action action = {
                 .tag = TC_TYPE,
@@ -1864,7 +1860,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           }
 
           // tc_type
-          case PT_TUP: {
+          case PT_TY_TUP: {
             tc_action actions[3] = {
               {.tag = TC_TYPE, .node_ind = PT_TUP_SUB_A(node)},
               {.tag = TC_TYPE, .node_ind = PT_TUP_SUB_B(node)},
@@ -1874,7 +1870,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           }
 
           // tc_type
-          case PT_FN_TYPE: {
+          case PT_TY_FN: {
             node_ind_t param_ind = PT_FN_TYPE_PARAM_IND(node);
             node_ind_t return_ind = PT_FN_TYPE_RETURN_IND(node);
             tc_action actions[] = {
@@ -1896,7 +1892,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           }
 
           // tc_type
-          case PT_UPPER_NAME: {
+          case PT_TY_UPPER_NAME: {
             binding b = {.start = node.span.start, .end = node.span.end};
             size_t ind = lookup_str_ref(
               state.input, state.type_env, state.type_is_builtin, b);
@@ -1914,16 +1910,16 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           }
 
           // tc_type
-          case PT_UNIT: {
+          case PT_TY_UNIT: {
             node_ind_t type_ind = mk_primitive_type(&state, T_UNIT);
             state.types.node_types[node_ind] = type_ind;
             break;
           }
 
           // tc_type
-          case PT_CALL: {
-            node_ind_t callee_ind = PT_CALL_CALLEE_IND(node);
-            node_ind_t param_ind = PT_CALL_PARAM_IND(node);
+          case PT_TY_CONSTRUCTION: {
+            node_ind_t callee_ind = PT_CONSTRUCTION_CALLEE_IND(node);
+            node_ind_t param_ind = PT_CONSTRUCTION_PARAM_IND(node);
             tc_action actions[] = {
               {
                 .tag = TC_TYPE,
@@ -1941,23 +1937,6 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
             push_actions(&state, STATIC_LEN(actions), actions);
             break;
           }
-
-          // tc_type
-          case PT_CONSTRUCTION:
-          case PT_FN:
-          case PT_FUN:
-          case PT_FUN_BODY:
-          case PT_IF:
-          case PT_INT:
-          case PT_LOWER_NAME:
-          case PT_ROOT:
-          case PT_STRING:
-          case PT_AS:
-          case PT_SIG:
-          case PT_LIST:
-          case PT_LET:
-            give_up("Tried creating type from unsupported node");
-            break;
         }
         break;
       }

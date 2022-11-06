@@ -282,7 +282,7 @@ tokens_res test_upto_tokens(test_state *state, const char *restrict input) {
   if (!tres.succeeded) {
     stringstream *ss = ss_init();
     format_error_ctx(ss->stream, input, tres.error_pos, tres.error_pos);
-    failf(state, "Scanning failed:\n%s", input, ss_finalize_free(ss));
+    failf(state, "Scanning failed:\n%s", ss_finalize_free(ss));
     free_tokens_res(tres);
   }
   return tres;

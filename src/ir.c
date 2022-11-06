@@ -113,7 +113,7 @@ ir_module build_module(parse_tree tree, type_info types) {
     switch (act.tag) {
       case BUILD_PATTERN: {
         build_res.pattern.ir_pattern_type = ti;
-        switch (node.type) {
+        switch (node.type.pattern) {
           // Done
           case PT_UNIT: {
             build_res.pattern.ir_pattern_tag = IR_PAT_UNIT;
