@@ -14,6 +14,8 @@
 // TODO `type` is way too overloaded here.
 // Maybe we should use `tag`?
 
+// When editing, make sure to add the category in
+// parse_tree.c.
 typedef enum {
   PT_ALL_EX_CALL = 0,
   PT_ALL_EX_FN = 1,
@@ -46,10 +48,19 @@ typedef enum {
   PT_ALL_TY_FN = 25,
   PT_ALL_TY_TUP = 26,
   PT_ALL_TY_UPPER_NAME = 27,
+  PT_ALL_TY_UNIT = 28,
 
-  PT_ALL_TL_SIG = 28,
-  PT_ALL_TL_FUN = 29,
+  PT_ALL_TL_SIG = 29,
+  PT_ALL_TL_FUN = 30,
 } parse_node_type_all;
+
+typedef enum {
+  PT_C_EXPRESSION,
+  PT_C_PATTERN,
+  PT_C_STATEMENT,
+  PT_C_TYPE,
+  PT_C_TOPLEVEL,
+} parse_node_category;
 
 typedef enum {
   PT_EX_CALL = 0,
@@ -88,11 +99,13 @@ typedef enum {
   PT_TY_LIST = 24,
   PT_TY_FN = 25,
   PT_TY_TUP = 26,
+  PT_TY_UPPER_NAME = 27,
+  PT_TY_UNIT = 28,
 } parse_node_type_type;
 
 typedef enum {
-  PT_TL_SIG = 28,
-  PT_TL_FUN = 29,
+  PT_TL_SIG = 29,
+  PT_TL_FUN = 30,
   // TODO let
 } parse_node_toplevel_type;
 
