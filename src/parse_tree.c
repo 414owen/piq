@@ -20,12 +20,13 @@ parse_node_category parse_node_categories[] = {
   [PT_ALL_EX_IF] = PT_C_EXPRESSION,
   [PT_ALL_EX_INT] = PT_C_EXPRESSION,
   [PT_ALL_EX_LIST] = PT_C_EXPRESSION,
-  [PT_ALL_EX_LOWER_NAME] = PT_C_EXPRESSION,
   [PT_ALL_EX_STRING] = PT_C_EXPRESSION,
   [PT_ALL_EX_TUP] = PT_C_EXPRESSION,
   [PT_ALL_EX_AS] = PT_C_EXPRESSION,
   [PT_ALL_EX_UNIT] = PT_C_EXPRESSION,
-  [PT_ALL_EX_UPPER_NAME] = PT_C_EXPRESSION,
+
+  [PT_ALL_MULTI_UPPER_NAME] = PT_C_NONE,
+  [PT_ALL_MULTI_LOWER_NAME] = PT_C_NONE,
 
   [PT_ALL_PAT_WILDCARD] = PT_C_PATTERN,
   [PT_ALL_PAT_TUP] = PT_C_PATTERN,
@@ -34,7 +35,6 @@ parse_node_category parse_node_categories[] = {
   [PT_ALL_PAT_STRING] = PT_C_PATTERN,
   [PT_ALL_PAT_INT] = PT_C_PATTERN,
   [PT_ALL_PAT_LIST] = PT_C_PATTERN,
-  [PT_ALL_PAT_UPPER_NAME] = PT_C_PATTERN,
 
   [PT_ALL_STMT_SIG] = PT_C_STATEMENT,
   [PT_ALL_STMT_FUN] = PT_C_STATEMENT,
@@ -44,11 +44,7 @@ parse_node_category parse_node_categories[] = {
   [PT_ALL_TY_LIST] = PT_C_TYPE,
   [PT_ALL_TY_FN] = PT_C_TYPE,
   [PT_ALL_TY_TUP] = PT_C_TYPE,
-  [PT_ALL_TY_UPPER_NAME] = PT_C_TYPE,
   [PT_ALL_TY_UNIT] = PT_C_TYPE,
-
-  [PT_ALL_TL_SIG] = PT_C_TOPLEVEL,
-  [PT_ALL_TL_FUN] = PT_C_TOPLEVEL,
 };
 
 // the reason we have a `node.type.all` at all, and the
@@ -58,18 +54,15 @@ static tree_node_repr subs_type(parse_node_type type) {
   tree_node_repr res = SUBS_NONE;
   switch (type.all) {
     case PT_ALL_EX_INT:
-    case PT_ALL_EX_LOWER_NAME:
-    case PT_ALL_EX_UPPER_NAME:
+    case PT_ALL_MULTI_LOWER_NAME:
+    case PT_ALL_MULTI_UPPER_NAME:
     case PT_ALL_EX_STRING:
     case PT_ALL_EX_UNIT:
     case PT_ALL_PAT_WILDCARD:
     case PT_ALL_PAT_UNIT:
     case PT_ALL_PAT_STRING:
     case PT_ALL_PAT_LIST:
-    case PT_ALL_PAT_UPPER_NAME:
     case PT_ALL_PAT_INT:
-    case PT_ALL_TL_SIG:
-    case PT_ALL_TY_UPPER_NAME:
     case PT_ALL_TY_UNIT:
       res = SUBS_NONE;
       break;
@@ -80,7 +73,7 @@ static tree_node_repr subs_type(parse_node_type type) {
     case PT_ALL_EX_AS:
     case PT_ALL_EX_FN:
     case PT_ALL_EX_TUP:
-    case PT_TY_FN:
+    case PT_ALL_TY_FN:
     case PT_TY_TUP:
     case PT_TY_CONSTRUCTION:
     case PT_ALL_STMT_SIG:
@@ -93,7 +86,6 @@ static tree_node_repr subs_type(parse_node_type type) {
     case PT_ALL_EX_LIST:
     case PT_ALL_EX_FUN_BODY:
     case PT_ALL_STMT_FUN:
-    case PT_ALL_TL_FUN:
       res = SUBS_EXTERNAL;
       break;
   }
@@ -105,6 +97,9 @@ VEC_DECL(print_action);
 const char *parse_node_string(parse_node_type type) {
   const char *res = NULL;
   switch (type.all) {
+    case PT_ALL_PAT_WILDCARD:
+      res = "Wildcard";
+      break;
     case PT_ALL_STMT_LET:
       res = "Let";
       break;
@@ -114,6 +109,7 @@ const char *parse_node_string(parse_node_type type) {
     case PT_ALL_EX_CALL:
       res = "Call";
       break;
+    case PT_ALL_TY_CONSTRUCTION:
     case PT_ALL_PAT_CONSTRUCTION:
       res = "Construction";
       break;
@@ -132,31 +128,38 @@ const char *parse_node_string(parse_node_type type) {
     case PT_ALL_EX_IF:
       res = "If";
       break;
+    case PT_ALL_PAT_INT:
     case PT_ALL_EX_INT:
       res = "Int";
       break;
+    case PT_ALL_PAT_LIST:
     case PT_ALL_EX_LIST:
       res = "List";
       break;
-    case PT_LIST_TYPE:
-      res = "List type";
+    case PT_ALL_TY_LIST:
+      res = "List";
       break;
-    case PT_ALL_EX_LOWER_NAME:
+    case PT_ALL_MULTI_LOWER_NAME:
       res = "Lower name";
       break;
-    case PT_SIG:
+    case PT_ALL_STMT_SIG:
       res = "Sig";
       break;
+    case PT_ALL_PAT_STRING:
     case PT_ALL_EX_STRING:
       res = "String";
       break;
+    case PT_ALL_PAT_TUP:
+    case PT_ALL_TY_TUP:
     case PT_ALL_EX_TUP:
       res = "Tuple";
       break;
+    case PT_ALL_TY_UNIT:
+    case PT_ALL_PAT_UNIT:
     case PT_ALL_EX_UNIT:
       res = "Unit";
       break;
-    case PT_ALL_EX_UPPER_NAME:
+    case PT_ALL_MULTI_UPPER_NAME:
       res = "Upper name";
       break;
   }
@@ -191,10 +194,23 @@ static void push_source(printer_state *s, node_ind_t node) {
   VEC_PUSH(&s->node_stack, node);
 }
 
+static bool is_tuple(parse_node_type t) {
+  switch (t.all) {
+    case PT_ALL_EX_TUP:
+      return true;
+    case PT_ALL_PAT_TUP:
+      return true;
+    case PT_ALL_TY_TUP:
+      return true;
+    default:
+      return false;
+  }
+}
+
 static void print_compound(printer_state *s, char *prefix, char *sep,
                            char *terminator, parse_node node) {
   fputs(prefix, s->out);
-  bs_push(&s->in_tuple, node.type == PT_TUP);
+  bs_push(&s->in_tuple, is_tuple(node.type));
   switch (subs_type(node.type)) {
     case SUBS_NONE:
       break;
@@ -222,78 +238,82 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
 static void print_node(printer_state *s, node_ind_t node_ind) {
   parse_node node = s->tree.nodes[node_ind];
   switch (node.type.all) {
-    case PT_SIG: {
+    case PT_ALL_STMT_SIG: {
       print_compound(s, "(Sig ", " ", ")", node);
       break;
     }
-    case PT_LET: {
+    case PT_ALL_STMT_LET: {
       print_compound(s, "(Let ", " ", ")", node);
       break;
     }
-    case PT_UNIT: {
+    case PT_ALL_TY_UNIT:
+    case PT_ALL_PAT_UNIT:
+    case PT_ALL_EX_UNIT: {
       fputs("()", s->out);
       break;
     }
-    case PT_ROOT:
-      for (size_t i = 0; i < node.sub_amt; i++) {
-        if (i > 0)
-          push_str(s, "\n");
-        push_node(s, s->tree.inds[node.subs_start + i]);
-      }
-      break;
-    case PT_FUN:
+    case PT_ALL_STMT_FUN:
       print_compound(s, "(Fun ", " ", ")", node);
       break;
-    case PT_FN_TYPE:
-    case PT_FN:
+    case PT_ALL_TY_FN:
+    case PT_ALL_EX_FN:
       print_compound(s, "(Fn ", " ", ")", node);
       break;
-    case PT_CONSTRUCTION: {
+    case PT_ALL_PAT_CONSTRUCTION:
+    case PT_ALL_TY_CONSTRUCTION: {
       print_compound(s, "(Construct ", " ", ")", node);
       break;
     }
-    case PT_FUN_BODY: {
+    case PT_ALL_EX_FUN_BODY: {
       print_compound(s, "(Body ", " ", ")", node);
       break;
     }
-    case PT_CALL:
+    case PT_ALL_EX_CALL:
       print_compound(s, "(Call ", " ", ")", node);
       break;
-    case PT_INT:
+    case PT_ALL_PAT_INT:
+    case PT_ALL_EX_INT:
       fprintf(s->out,
               "(Int %.*s)",
               1 + node.span.end - node.span.start,
               s->input + node.span.start);
       break;
-    case PT_UPPER_NAME:
+    case PT_ALL_MULTI_UPPER_NAME:
       fprintf(s->out,
               "(Uname %.*s)",
               1 + node.span.end - node.span.start,
               s->input + node.span.start);
       break;
-    case PT_LOWER_NAME:
+    case PT_PAT_WILDCARD:
+      fprintf(s->out,
+              "(Wildcard %.*s)",
+              1 + node.span.end - node.span.start,
+              s->input + node.span.start);
+      break;
+    case PT_EX_LOWER_NAME:
       fprintf(s->out,
               "(Lname %.*s)",
               1 + node.span.end - node.span.start,
               s->input + node.span.start);
       break;
-    case PT_IF:
+    case PT_ALL_EX_IF:
       print_compound(s, "(If ", " ", ")", node);
       break;
-    case PT_TUP:
+    case PT_ALL_PAT_TUP:
+    case PT_ALL_TY_TUP:
+    case PT_ALL_EX_TUP:
       if (bs_peek(&s->in_tuple)) {
         print_compound(s, "", ", ", "", node);
       } else {
         print_compound(s, "(", ", ", ")", node);
       }
       break;
-    case PT_AS:
+    case PT_ALL_EX_AS:
       print_compound(s, "(As ", " ", ")", node);
       break;
-    case PT_LIST:
-      print_compound(s, "[", ", ", "]", node);
-      break;
-    case PT_LIST_TYPE:
+    case PT_ALL_TY_LIST:
+    case PT_ALL_PAT_LIST:
+    case PT_ALL_EX_LIST:
       print_compound(s, "[", ", ", "]", node);
       break;
     case PT_ALL_PAT_STRING:
@@ -373,8 +393,8 @@ char *print_parse_tree_str(const char *restrict input, const parse_tree tree) {
 }
 
 void free_parse_tree(parse_tree tree) {
-  free(tree.inds);
-  free(tree.nodes);
+  free((void *)tree.inds);
+  free((void *)tree.nodes);
 }
 
 void free_parse_tree_res(parse_tree_res res) {

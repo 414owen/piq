@@ -554,8 +554,8 @@ static void cg_expr(cg_state *state) {
       break;
     }
     case PT_EX_FUN_BODY: {
-      // TODO investigate using 
-      cg_block(state, node.subs_start, node.subs_amt);
+      // TODO investigate using
+      cg_block(state, node.subs_start, PT_FUN_BODY_SUB_AMT(node));
       break;
     }
     case PT_EX_AS: {
