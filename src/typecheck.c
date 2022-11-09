@@ -56,15 +56,20 @@ typedef enum {
   TC_POP_N_VARS,
   TC_POP_VARS_TO,
 
+  // {.binding = span, .node_ind = node ind which has type}
   TC_PUSH_ENV,
 
   // terms
-  TC_NODE_MATCHES,
-  TC_NODE_MATCHES_AS_STAGE_TWO,
+  TC_PATTERN_MATCHES,
+  TC_EXPR_MATCHES,
+  TC_STMT_MATCHES,
+  TC_EXPR_MATCHES_AS_STAGE_TWO,
 
-  TC_NODE_UNAMBIGUOUS,
-  TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO,
-  TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO,
+  TC_PATTERN_UNAMBIGUOUS,
+  TC_EXPR_UNAMBIGUOUS,
+  TC_STMT_UNAMBIGUOUS,
+  TC_EXPR_UNAMBIGUOUS_FN_STAGE_TWO,
+  TC_STMT_UNAMBIGUOUS_FUN_STAGE_TWO,
 
   // types
   TC_TYPE,
@@ -75,9 +80,6 @@ typedef enum {
   // Construct a compound type from its children
   TC_RECONSTRUCT_LIST,
   TC_RECONSTRUCT_TUPLE,
-
-  TC_PATTERN_MATCHES,
-  TC_PATTERN_UNAMBIGUOUS,
 
   // {.from = node index, .to = node index}
   TC_CLONE_ACTUAL_ACTUAL,
@@ -275,9 +277,10 @@ static void break_suspicious_action(typecheck_state *state, tc_action action) {
     case TC_PATTERN_UNAMBIGUOUS:
     case TC_NODE_MATCHES:
     case TC_NODE_MATCHES_AS_STAGE_TWO:
-    case TC_NODE_UNAMBIGUOUS:
-    case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
-    case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO:
+    case TC_EXPR_UNAMBIGUOUS:
+    case TC_STMT_UNAMBIGUOUS:
+    case TC_EXPR_UNAMBIGUOUS_FN_STAGE_TWO:
+    case TC_STMT_UNAMBIGUOUS_FUN_STAGE_TWO:
     case TC_TYPE:
     case TC_TYPE_LIST_STAGE_TWO:
     case TC_TYPE_FN_STAGE_TWO:
@@ -604,10 +607,10 @@ static void typecheck_block(typecheck_state *state, tc_node_params params,
       case PT_STMT_SIG:
         break;
       case PT_STMT_LET:
-      case PT_STMT_FUN:
+      case PT_STMT_FUN: {
         bnd_amt++;
-        action_tag tag = bs_data_get(sub_has_wanted, i) ? TC_NODE_MATCHES
-                                                        : TC_NODE_UNAMBIGUOUS;
+        action_tag tag = bs_data_get(sub_has_wanted, i) ? TC_STMT_MATCHES
+                                                        : TC_STMT_UNAMBIGUOUS;
         tc_action action = {
           .tag = tag,
           .node_ind = sub_ind,
@@ -639,7 +642,7 @@ static void tc_as(typecheck_state *state, tc_node_params params) {
      .from = type_node_ind,
      .to = params.node_ind},
     {
-      .tag = TC_NODE_MATCHES,
+      .tag = TC_EXPR_MATCHES,
       .node_ind = val_node_ind,
     },
   };
@@ -651,7 +654,7 @@ static void tc_call_param_first(typecheck_state *state,
   parse_node call_node = state->tree.nodes[call_node_ind];
   node_ind_t param_ind = PT_CALL_PARAM_IND(call_node);
   tc_action actions[] = {{
-                           .tag = TC_NODE_UNAMBIGUOUS,
+                           .tag = TC_EXPR_UNAMBIGUOUS,
                            .node_ind = param_ind,
                          },
                          {
@@ -668,7 +671,7 @@ static void tc_call_callee_first(typecheck_state *state,
 
   // TODO make it a matches call to a fn type
   tc_action actions[] = {{
-                           .tag = TC_NODE_UNAMBIGUOUS,
+                           .tag = TC_EXPR_UNAMBIGUOUS,
                            .node_ind = callee_ind,
                          },
                          {
@@ -682,12 +685,12 @@ static void tc_call(typecheck_state *state, tc_node_params params) {
   node_ind_t callee_ind = PT_CALL_CALLEE_IND(params.node);
   parse_node callee = state->tree.nodes[callee_ind];
 
-  switch (callee.type) {
-    case PT_FN:
+  switch (callee.type.expression) {
+    case PT_EX_FN:
       tc_call_param_first(state, params.node_ind);
       break;
 
-    case PT_UPPER_NAME:
+    case PT_EX_UPPER_NAME:
       tc_call_callee_first(state, params.node_ind);
       break;
 
@@ -793,8 +796,8 @@ static void push_tuple_subs(typecheck_state *state, tc_node_params params,
 }
 
 static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
-  switch (params.node.type) {
-    case PT_UNIT: {
+  switch (params.node.type.pattern) {
+    case PT_PAT_UNIT: {
       if (params.wanted.tag != T_UNIT) {
         tc_error err = {
           .type = LITERAL_MISMATCH,
@@ -805,12 +808,12 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
       }
       break;
     }
-    case PT_CONSTRUCTION: {
+    case PT_PAT_CONSTRUCTION: {
       // TODO
       UNIMPLEMENTED("Typechecking constructors");
       break;
     }
-    case PT_STRING: {
+    case PT_PAT_STRING: {
       if (params.wanted.tag != T_UNIT) {
         tc_error err = {
           .type = LITERAL_MISMATCH,
@@ -822,16 +825,16 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
       break;
     }
 
-    case PT_LIST: {
+    case PT_PAT_LIST: {
       push_list_subs_match(state, params, TC_PATTERN_MATCHES);
       break;
     }
-    case PT_TUP: {
+    case PT_PAT_TUP: {
       push_tuple_subs(state, params, TC_PATTERN_MATCHES);
       break;
     }
 
-    case PT_UPPER_NAME: {
+    case PT_PAT_UPPER_NAME: {
       binding b = params.node.span;
       size_t ind = lookup_str_ref(
         state->input, state->term_env, state->term_is_builtin, b);
@@ -850,7 +853,7 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
       break;
     }
 
-    case PT_LOWER_NAME: {
+    case PT_PAT_WILDCARD: {
       tc_action action = {
         .tag = TC_PUSH_ENV,
         .binding = params.node.span,
@@ -859,23 +862,8 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
       push_action(state, action);
       break;
     }
-    case PT_INT: {
+    case PT_PAT_INT: {
       check_int_fits_type(state, params.node_ind, params.wanted_ind);
-      break;
-    }
-
-    case PT_FUN_BODY:
-    case PT_ROOT:
-    case PT_IF:
-    case PT_FN:
-    case PT_FUN:
-    case PT_LIST_TYPE:
-    case PT_FN_TYPE:
-    case PT_CALL:
-    case PT_AS:
-    case PT_SIG:
-    case PT_LET: {
-      give_up("Unexpected pattern construct");
       break;
     }
   }
@@ -883,34 +871,34 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
 
 static void tc_pattern_unambiguous(typecheck_state *state,
                                    tc_node_params params) {
-  switch (params.node.type) {
-    case PT_UNIT: {
+  switch (params.node.type.pattern) {
+    case PT_PAT_UNIT: {
       state->types.node_types[params.node_ind] =
         mk_primitive_type(state, T_UNIT);
       break;
     }
-    case PT_CONSTRUCTION: {
+    case PT_PAT_CONSTRUCTION: {
       // TODO
       UNIMPLEMENTED("Typechecking constructors");
       break;
     }
-    case PT_STRING: {
+    case PT_PAT_STRING: {
       state->types.node_types[params.node_ind] = state->string_type_ind;
       break;
     }
-    case PT_LIST: {
+    case PT_PAT_LIST: {
       push_list_subs_unambiguous(
         state, params, TC_PATTERN_MATCHES, TC_PATTERN_MATCHES);
       // Screw it, reconstruction is the same for nodes. Let's make them do it.
       tc_action action = {
-        .tag = TC_NODE_MATCHES,
+        .tag = TC_PATTERN_MATCHES,
         .node_ind = params.node_ind,
       };
       push_action(state, action);
       break;
     }
 
-    case PT_TUP: {
+    case PT_PAT_TUP: {
       // TODO extract pushing out, as with push_list_subs()
       push_tuple_subs(state, params, TC_PATTERN_UNAMBIGUOUS);
       tc_action action = {.tag = TC_RECONSTRUCT_TUPLE,
@@ -920,8 +908,8 @@ static void tc_pattern_unambiguous(typecheck_state *state,
     }
 
     // TODO This will become valid with generics
-    case PT_LOWER_NAME:
-    case PT_INT: {
+    case PT_PAT_WILDCARD:
+    case PT_PAT_INT: {
       tc_error err = {
         .type = AMBIGUOUS_TYPE,
         .pos = params.node_ind,
@@ -930,7 +918,7 @@ static void tc_pattern_unambiguous(typecheck_state *state,
       break;
     }
 
-    case PT_UPPER_NAME: {
+    case PT_PAT_UPPER_NAME: {
       binding b = params.node.span;
       size_t ind = lookup_str_ref(
         state->input, state->term_env, state->term_is_builtin, b);
@@ -946,21 +934,6 @@ static void tc_pattern_unambiguous(typecheck_state *state,
       tc_action action = {
         .tag = TC_ASSIGN_TYPE, .from = type_ind, .to = params.node_ind};
       push_action(state, action);
-      break;
-    }
-
-    case PT_FUN_BODY:
-    case PT_ROOT:
-    case PT_IF:
-    case PT_FN:
-    case PT_AS:
-    case PT_FUN:
-    case PT_LIST_TYPE:
-    case PT_FN_TYPE:
-    case PT_CALL:
-    case PT_SIG:
-    case PT_LET: {
-      give_up("Unexpected pattern construct");
       break;
     }
   }
@@ -990,7 +963,7 @@ static const char *action_str(action_tag tag) {
     MK_CASE(TC_NODE_MATCHES_AS_STAGE_TWO)
     MK_CASE(TC_NODE_UNAMBIGUOUS)
     MK_CASE(TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO)
-    MK_CASE(TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO)
+    MK_CASE(TC_STMT_UNAMBIGUOUS_FUN_STAGE_TWO)
     MK_CASE(TC_PATTERN_MATCHES)
     MK_CASE(TC_PATTERN_UNAMBIGUOUS)
     MK_CASE(TC_TYPE)
@@ -1039,11 +1012,6 @@ static typecheck_state tc_new_state(const char *restrict input,
     .input = input,
     .tree = tree,
   };
-  tc_action action = {
-    .tag = TC_NODE_UNAMBIGUOUS,
-    .node_ind = tree.root_ind,
-  };
-  VEC_PUSH(&state.stack, action);
   return state;
 }
 
@@ -1112,6 +1080,21 @@ void print_tc_errors(FILE *f, const char *restrict input, parse_tree tree,
 tc_res typecheck(const char *restrict input, parse_tree tree) {
   typecheck_state state = tc_new_state(input, tree);
   setup_type_env(&state);
+
+  for (node_ind_t i = 0; i < tree.root_subs_amt; i++) {
+    size_t ind = tree.root_subs_start + i;
+    size_t j = tree.root_subs_amt - 1 - i;
+    node_ind_t sub_ind = tree.inds[j];
+    parse_node sub = tree.nodes[sub_ind];
+    if (sub.type.top_level == PT_TL_SIG)
+      continue;
+    tc_action act = {
+      .tag = TC_STMT_UNAMBIGUOUS,
+      .node_ind = sub_ind,
+    };
+    push_action(&state, act);
+  }
+
   // resolve_types(&state);
 #ifdef DEBUG_TC
   FILE *debug_out = fopen("debug-typechecker", "a");
@@ -1173,8 +1156,8 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         case TC_NODE_MATCHES_AS_STAGE_TWO:
         case TC_PATTERN_UNAMBIGUOUS:
         case TC_PATTERN_MATCHES:
-        case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
-        case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO:
+        case TC_EXPR_UNAMBIGUOUS_FN_STAGE_TWO:
+        case TC_STMT_UNAMBIGUOUS_FUN_STAGE_TWO:
         case TC_NODE_UNAMBIGUOUS: {
           fprintf(debug_out, "Node ind: '%d'\n", action.node_ind);
           parse_node node = tree.nodes[action.node_ind];
@@ -1194,8 +1177,9 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
 
     switch (action.tag) {
       case TC_PATTERN_MATCHES:
-      case TC_NODE_MATCHES_AS_STAGE_TWO:
-      case TC_NODE_MATCHES: {
+      case TC_EXPR_MATCHES_AS_STAGE_TWO:
+      case TC_STMT_MATCHES:
+      case TC_EXPR_MATCHES: {
         node_ind_t node_ind = action.node_ind;
         tc_action a = {
           .tag = TC_CLONE_WANTED_ACTUAL, .from = node_ind, .to = node_ind};
@@ -1207,9 +1191,10 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
       case TC_TYPE_LIST_STAGE_TWO:
       case TC_TYPE_FN_STAGE_TWO:
       case TC_TYPE_CALL_STAGE_TWO:
-      case TC_NODE_UNAMBIGUOUS:
-      case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
-      case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO:
+      case TC_STMT_UNAMBIGUOUS:
+      case TC_EXPR_UNAMBIGUOUS:
+      case TC_EXPR_UNAMBIGUOUS_FN_STAGE_TWO:
+      case TC_STMT_UNAMBIGUOUS_FUN_STAGE_TWO:
       case TC_RECONSTRUCT_LIST:
       // TODO do these belong here?
       case TC_CALL_POST_PARAM:
@@ -1286,7 +1271,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           {.tag = TC_WANT_TYPE, .from = wanted_fn_type, .to = callee_ind},
           // Can't be more specific, as the current node might be wanted=unknown
           {
-            .tag = TC_NODE_MATCHES,
+            .tag = TC_EXPR_MATCHES,
             .node_ind = callee_ind,
           },
         };
@@ -1316,7 +1301,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
                .to = param_ind,
                .from = callee_param_type_ind},
               {
-                .tag = TC_NODE_MATCHES,
+                .tag = TC_EXPR_MATCHES,
                 .node_ind = param_ind,
               },
             };
@@ -1338,62 +1323,46 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
 
       // We have no wanted information, so ambiguity will error.
       // Used to assign types based on syntax.
-      case TC_NODE_UNAMBIGUOUS:
-        switch (node_params.node.type) {
+      case TC_EXPR_UNAMBIGUOUS:
+        switch (node_params.node.type.expression) {
           // node_unambiguous
-          case PT_SIG:
-          case PT_LET:
-            give_up("Unexpected non-block-level construct");
-            break;
-
-          // node_unambiguous
-          case PT_FUN_BODY:
+          case PT_EX_FUN_BODY:
             typecheck_block(&state, node_params, false);
             break;
 
           // node_unambiguous
-          case PT_ROOT:
-            typecheck_block(&state, node_params, true);
-            break;
-
-          // node_unambiguous
-          case PT_UNIT:
+          case PT_EX_UNIT:
             state.types.node_types[node_params.node_ind] =
               mk_primitive_type(&state, T_UNIT);
             break;
 
           // node_unambiguous
-          case PT_CONSTRUCTION:
-            UNIMPLEMENTED("Typechecking constructors");
-            break;
-
-          // node_unambiguous
-          case PT_STRING:
+          case PT_EX_STRING:
             state.types.node_types[node_params.node_ind] =
               state.string_type_ind;
             break;
 
           // node_unambiguous
-          case PT_LIST:
+          case PT_EX_LIST:
             push_list_subs_unambiguous(
-              &state, node_params, TC_NODE_UNAMBIGUOUS, TC_NODE_MATCHES);
+              &state, node_params, TC_EXPR_UNAMBIGUOUS, TC_EXPR_MATCHES);
             break;
 
           // node_unambiguous
-          case PT_AS:
+          case PT_EX_AS:
             tc_as(&state, node_params);
             break;
 
           // node_unambiguous
-          case PT_TUP:
-            push_tuple_subs(&state, node_params, TC_NODE_UNAMBIGUOUS);
+          case PT_EX_TUP:
+            push_tuple_subs(&state, node_params, TC_EXPR_UNAMBIGUOUS);
             tc_action action = {.tag = TC_RECONSTRUCT_TUPLE,
                                 .node_ind = node_params.node_ind};
             push_action(&state, action);
             break;
 
           // node_unambiguous
-          case PT_IF: {
+          case PT_EX_IF: {
             node_ind_t cond = PT_IF_COND_IND(state.tree.inds, node_params.node);
             node_ind_t b1 = PT_IF_A_IND(state.tree.inds, node_params.node);
             node_ind_t b2 = PT_IF_B_IND(state.tree.inds, node_params.node);
@@ -1401,16 +1370,16 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
             const tc_action actions[] = {
               {.tag = TC_WANT_TYPE, .from = state.bool_type_ind, .to = cond},
               {
-                .tag = TC_NODE_MATCHES,
+                .tag = TC_EXPR_MATCHES,
                 .node_ind = cond,
               },
               {
-                .tag = TC_NODE_UNAMBIGUOUS,
+                .tag = TC_EXPR_UNAMBIGUOUS,
                 .node_ind = b1,
               },
               {.tag = TC_CLONE_ACTUAL_WANTED, .from = b1, .to = b2},
               {
-                .tag = TC_NODE_MATCHES,
+                .tag = TC_EXPR_MATCHES,
                 .node_ind = b2,
               },
               {.tag = TC_CLONE_ACTUAL_ACTUAL,
@@ -1422,7 +1391,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           }
 
           // node_unambiguous
-          case PT_INT: {
+          case PT_EX_INT: {
             tc_error err = {
               .type = AMBIGUOUS_TYPE,
               .pos = node_params.node_ind,
@@ -1432,8 +1401,8 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           }
 
           // node_unambiguous
-          case PT_UPPER_NAME:
-          case PT_LOWER_NAME: {
+          case PT_EX_UPPER_NAME:
+          case PT_EX_LOWER_NAME: {
             binding b = node_params.node.span;
             size_t ind = lookup_str_ref(
               state.input, state.term_env, state.term_is_builtin, b);
@@ -1454,23 +1423,23 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           }
 
           // node_unambiguous
-          case PT_FN: {
+          case PT_EX_FN: {
             node_ind_t param_ind = PT_FN_PARAM_IND(node_params.node);
             node_ind_t body_ind = PT_FN_BODY_IND(node_params.node);
 
             // TODO This is wrong. Need to add node_params to scope.
             tc_action actions[] = {
               {
-                .tag = TC_NODE_UNAMBIGUOUS,
+                .tag = TC_PATTERN_UNAMBIGUOUS,
                 .node_ind = param_ind,
               },
               {
-                .tag = TC_NODE_UNAMBIGUOUS,
+                .tag = TC_EXPR_UNAMBIGUOUS,
                 .node_ind = body_ind,
               },
               {.tag = TC_POP_VARS_TO, .amt = state.term_env.len},
               {
-                .tag = TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO,
+                .tag = TC_EXPR_UNAMBIGUOUS_FN_STAGE_TWO,
                 .node_ind = node_params.node_ind,
               }};
             push_actions(&state, STATIC_LEN(actions), actions);
@@ -1478,44 +1447,13 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           }
 
           // node_unambiguous
-          case PT_FUN: {
-            node_ind_t param_ind =
-              PT_FUN_PARAM_IND(state.tree.inds, node_params.node);
-            node_ind_t body_ind =
-              PT_FUN_BODY_IND(state.tree.inds, node_params.node);
-
-            tc_action actions[] = {
-              {
-                .tag = TC_NODE_UNAMBIGUOUS,
-                .node_ind = param_ind,
-              },
-              {
-                .tag = TC_NODE_UNAMBIGUOUS,
-                .node_ind = body_ind,
-              },
-              {.tag = TC_POP_VARS_TO, .amt = state.term_env.len},
-              {
-                .tag = TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO,
-                .node_ind = node_params.node_ind,
-              }};
-            push_actions(&state, STATIC_LEN(actions), actions);
-            break;
-          }
-
-          // node_unambiguous
-          case PT_CALL:
+          case PT_EX_CALL:
             tc_call(&state, node_params);
-            break;
-
-          // node_unambiguous
-          case PT_LIST_TYPE:
-          case PT_FN_TYPE:
-            give_up("Can't typecheck term");
             break;
         }
         break;
 
-      case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO: {
+      case TC_EXPR_UNAMBIGUOUS_FN_STAGE_TWO: {
         node_ind_t param_ind = PT_FN_PARAM_IND(node_params.node);
         node_ind_t body_ind = PT_FN_BODY_IND(node_params.node);
         state.types.node_types[node_params.node_ind] =
@@ -1526,7 +1464,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         break;
       }
 
-      case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO: {
+      case TC_STMT_UNAMBIGUOUS_FUN_STAGE_TWO: {
         node_ind_t bnd_ind =
           PT_FUN_BINDING_IND(state.tree.inds, node_params.node);
         node_ind_t param_ind =
@@ -1544,29 +1482,122 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         break;
       }
 
-      case TC_NODE_MATCHES:
+      case TC_STMT_UNAMBIGUOUS:
         // Here, we're typechecking a node against 'wanted' (an explicit type
         // given to the node) Hence, we shouldn't need a combine two_stage, we
         // just assign the 'wanted' type.
-        switch (node_params.node.type) {
+        switch (node_params.node.type.statement) {
           // node_matches
-          case PT_SIG:
-          case PT_LET:
-            give_up("Unexpected non-block-level construct");
+          // node_unambiguous
+          case PT_STMT_LET: {
+            node_ind_t bnd_ind = PT_LET_BND_IND(node_params.node);
+            parse_node bnd = state.tree.nodes[bnd_ind];
+            node_ind_t val_ind = PT_LET_VAL_IND(node_params.node);
+            tc_action actions[] = {
+              {.tag = TC_EXPR_UNAMBIGUOUS, .node_ind = val_ind},
+              {
+                .tag = TC_CLONE_ACTUAL_ACTUAL,
+                .from = val_ind,
+                .to = node_params.node_ind,
+              },
+              {
+                .tag = TC_CLONE_ACTUAL_ACTUAL,
+                .from = val_ind,
+                .to = bnd_ind,
+              },
+              {
+                .tag = TC_PUSH_ENV,
+                .binding = bnd.span,
+                .node_ind = node_params.node_ind,
+              }};
             break;
+          }
+          case PT_STMT_FUN: {
+            node_ind_t param_ind =
+              PT_FUN_PARAM_IND(state.tree.inds, node_params.node);
+            node_ind_t body_ind =
+              PT_FUN_BODY_IND(state.tree.inds, node_params.node);
 
+            tc_action actions[] = {
+              {
+                .tag = TC_PATTERN_UNAMBIGUOUS,
+                .node_ind = param_ind,
+              },
+              {
+                .tag = TC_EXPR_UNAMBIGUOUS,
+                .node_ind = body_ind,
+              },
+              {.tag = TC_POP_VARS_TO, .amt = state.term_env.len},
+              {
+                .tag = TC_STMT_UNAMBIGUOUS_FUN_STAGE_TWO,
+                .node_ind = node_params.node_ind,
+              }};
+            push_actions(&state, STATIC_LEN(actions), actions);
+            break;
+          }
+        }
+        break;
+
+      case TC_STMT_MATCHES:
+        // Here, we're typechecking a node against 'wanted' (an explicit type
+        // given to the node) Hence, we shouldn't need a combine two_stage, we
+        // just assign the 'wanted' type.
+        switch (node_params.node.type.statement) {
           // node_matches
-          case PT_FUN_BODY:
+          case PT_STMT_FUN: {
+            node_ind_t bnd_ind =
+              PT_FUN_BINDING_IND(state.tree.inds, node_params.node);
+            node_ind_t param_ind =
+              PT_FUN_PARAM_IND(state.tree.inds, node_params.node);
+            node_ind_t body_ind =
+              PT_FUN_BODY_IND(state.tree.inds, node_params.node);
+
+            if (node_params.wanted.tag == T_FN) {
+              tc_action actions[] = {
+                {.tag = TC_CLONE_ACTUAL_ACTUAL,
+                 .from = node_params.node_ind,
+                 .to = bnd_ind},
+                {.tag = TC_WANT_TYPE,
+                 .from = T_FN_PARAM_IND(node_params.wanted),
+                 .to = param_ind},
+                {
+                  .tag = TC_PATTERN_MATCHES,
+                  .node_ind = param_ind,
+                },
+                {.tag = TC_WANT_TYPE,
+                 .from = T_FN_RET_IND(node_params.wanted),
+                 .to = body_ind},
+                {
+                  .tag = TC_EXPR_MATCHES,
+                  .node_ind = body_ind,
+                },
+                {.tag = TC_POP_VARS_TO, .amt = state.term_env.len},
+              };
+              push_actions(&state, STATIC_LEN(actions), actions);
+              break;
+            }
+            tc_error err = {.type = TYPE_HEAD_MISMATCH,
+                            .expected = node_params.wanted_ind,
+                            .got_type_head = T_FN,
+                            .pos = node_params.node_ind};
+            push_tc_err(&state, err);
+            break;
+          }
+        }
+        break;
+
+      case TC_EXPR_MATCHES:
+        // Here, we're typechecking a node against 'wanted' (an explicit type
+        // given to the node) Hence, we shouldn't need a combine two_stage, we
+        // just assign the 'wanted' type.
+        switch (node_params.node.type.expression) {
+          // node_matches
+          case PT_EX_FUN_BODY:
             typecheck_block(&state, node_params, false);
             break;
 
           // node_matches
-          case PT_ROOT:
-            typecheck_block(&state, node_params, true);
-            break;
-
-          // node_matches
-          case PT_UNIT:
+          case PT_EX_UNIT:
             if (node_params.wanted.tag != T_UNIT) {
               tc_error err = {
                 .type = LITERAL_MISMATCH,
@@ -1578,12 +1609,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
             break;
 
           // node_matches
-          case PT_CONSTRUCTION:
-            UNIMPLEMENTED("Typechecking constructors");
-            break;
-
-          // node_matches
-          case PT_STRING:
+          case PT_EX_STRING:
             if (node_params.wanted_ind != state.string_type_ind) {
               tc_error err = {
                 .type = LITERAL_MISMATCH,
@@ -1595,15 +1621,15 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
             break;
 
           // node_matches
-          case PT_LIST:
-            push_list_subs_match(&state, node_params, TC_NODE_MATCHES);
+          case PT_EX_LIST:
+            push_list_subs_match(&state, node_params, TC_EXPR_MATCHES);
             break;
 
           // node_matches
-          case PT_AS: {
+          case PT_EX_AS: {
             tc_as(&state, node_params);
             tc_action action = {
-              .tag = TC_NODE_MATCHES_AS_STAGE_TWO,
+              .tag = TC_EXPR_MATCHES_AS_STAGE_TWO,
               .node_ind = node_params.node_ind,
             };
             push_action(&state, action);
@@ -1611,7 +1637,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           }
 
           // node_matches
-          case PT_TUP: {
+          case PT_EX_TUP: {
             if (node_params.wanted.tag != T_TUP) {
               tc_error err = {
                 .type = TYPE_HEAD_MISMATCH,
@@ -1633,12 +1659,12 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
                                       .to = PT_TUP_SUB_B(node_params.node),
                                     }};
             push_actions(&state, STATIC_LEN(actions), actions);
-            push_tuple_subs(&state, node_params, TC_NODE_MATCHES);
+            push_tuple_subs(&state, node_params, TC_EXPR_MATCHES);
             break;
           }
 
           // node_matches
-          case PT_IF: {
+          case PT_EX_IF: {
             node_ind_t cond = PT_IF_COND_IND(state.tree.inds, node_params.node);
             node_ind_t b1 = PT_IF_A_IND(state.tree.inds, node_params.node);
             node_ind_t b2 = PT_IF_B_IND(state.tree.inds, node_params.node);
@@ -1646,20 +1672,20 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
             const tc_action actions[] = {
               {.tag = TC_WANT_TYPE, .from = state.bool_type_ind, .to = cond},
               {
-                .tag = TC_NODE_MATCHES,
+                .tag = TC_EXPR_MATCHES,
                 .node_ind = cond,
               },
               {.tag = TC_CLONE_WANTED_WANTED,
                .from = node_params.node_ind,
                .to = b1},
               {
-                .tag = TC_NODE_MATCHES,
+                .tag = TC_EXPR_MATCHES,
                 .node_ind = b1,
               },
               // second branch wanted == first branch
               {.tag = TC_CLONE_ACTUAL_WANTED, .from = b1, .to = b2},
               {
-                .tag = TC_NODE_MATCHES,
+                .tag = TC_EXPR_MATCHES,
                 .node_ind = b2,
               },
             };
@@ -1669,14 +1695,14 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           }
 
           // node_matches
-          case PT_INT:
+          case PT_EX_INT:
             check_int_fits_type(
               &state, node_params.node_ind, node_params.wanted_ind);
             break;
 
           // node_matches
-          case PT_UPPER_NAME:
-          case PT_LOWER_NAME: {
+          case PT_EX_UPPER_NAME:
+          case PT_EX_LOWER_NAME: {
             binding b = node_params.node.span;
             size_t ind = lookup_str_ref(
               state.input, state.term_env, state.term_is_builtin, b);
@@ -1702,7 +1728,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           }
 
           // node_matches
-          case PT_FN: {
+          case PT_EX_FN: {
             node_ind_t param_ind = PT_FN_PARAM_IND(node_params.node);
             node_ind_t body_ind = PT_FN_BODY_IND(node_params.node);
             if (node_params.wanted.tag == T_FN) {
@@ -1711,14 +1737,14 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
                  .from = T_FN_PARAM_IND(node_params.wanted),
                  .to = param_ind},
                 {
-                  .tag = TC_NODE_MATCHES,
+                  .tag = TC_PATTERN_MATCHES,
                   .node_ind = param_ind,
                 },
                 {.tag = TC_WANT_TYPE,
                  .from = T_FN_RET_IND(node_params.wanted),
                  .to = body_ind},
                 {
-                  .tag = TC_NODE_MATCHES,
+                  .tag = TC_EXPR_MATCHES,
                   .node_ind = body_ind,
                 },
                 {.tag = TC_POP_VARS_TO, .amt = state.term_env.len}};
@@ -1736,60 +1762,13 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           }
 
           // node_matches
-          case PT_FUN: {
-            node_ind_t bnd_ind =
-              PT_FUN_BINDING_IND(state.tree.inds, node_params.node);
-            node_ind_t param_ind =
-              PT_FUN_PARAM_IND(state.tree.inds, node_params.node);
-            node_ind_t body_ind =
-              PT_FUN_BODY_IND(state.tree.inds, node_params.node);
-
-            if (node_params.wanted.tag == T_FN) {
-              tc_action actions[] = {
-                {.tag = TC_CLONE_ACTUAL_ACTUAL,
-                 .from = node_params.node_ind,
-                 .to = bnd_ind},
-                {.tag = TC_WANT_TYPE,
-                 .from = T_FN_PARAM_IND(node_params.wanted),
-                 .to = param_ind},
-                {
-                  .tag = TC_PATTERN_MATCHES,
-                  .node_ind = param_ind,
-                },
-                {.tag = TC_WANT_TYPE,
-                 .from = T_FN_RET_IND(node_params.wanted),
-                 .to = body_ind},
-                {
-                  .tag = TC_NODE_MATCHES,
-                  .node_ind = body_ind,
-                },
-                {.tag = TC_POP_VARS_TO, .amt = state.term_env.len},
-              };
-              push_actions(&state, STATIC_LEN(actions), actions);
-              break;
-            }
-            tc_error err = {.type = TYPE_HEAD_MISMATCH,
-                            .expected = node_params.wanted_ind,
-                            .got_type_head = T_FN,
-                            .pos = node_params.node_ind};
-            push_tc_err(&state, err);
-            break;
-          }
-
-          // node_matches
-          case PT_CALL:
+          case PT_EX_CALL:
             tc_call(&state, node_params);
-            break;
-
-          // node_matches
-          case PT_LIST_TYPE:
-          case PT_FN_TYPE:
-            give_up("Type node at term-level");
             break;
         }
         break;
 
-      case TC_NODE_MATCHES_AS_STAGE_TWO: {
+      case TC_EXPR_MATCHES_AS_STAGE_TWO: {
         node_ind_t sig_ind = PT_AS_TYPE_IND(node_params.node);
         node_ind_t sig_type_ind = state.types.node_types[sig_ind];
         if (node_params.wanted_ind != sig_type_ind) {
@@ -1918,8 +1897,8 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
 
           // tc_type
           case PT_TY_CONSTRUCTION: {
-            node_ind_t callee_ind = PT_CONSTRUCTION_CALLEE_IND(node);
-            node_ind_t param_ind = PT_CONSTRUCTION_PARAM_IND(node);
+            node_ind_t callee_ind = PT_TY_CONSTRUCTION_CALLEE_IND(node);
+            node_ind_t param_ind = PT_TY_CONSTRUCTION_PARAM_IND(node);
             tc_action actions[] = {
               {
                 .tag = TC_TYPE,
@@ -2027,10 +2006,14 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
       case TC_TYPE_LIST_STAGE_TWO:
       case TC_NODE_MATCHES:
       case TC_NODE_MATCHES_AS_STAGE_TWO:
-      case TC_NODE_UNAMBIGUOUS:
-      case TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO:
-      case TC_NODE_UNAMBIGUOUS_FUN_STAGE_TWO:
+      case TC_PATTERN_UNAMBIGUOUS:
+      case TC_STMT_UNAMBIGUOUS:
+      case TC_EXPR_UNAMBIGUOUS:
+      case TC_EXPR_UNAMBIGUOUS_FN_STAGE_TWO:
+      case TC_STMT_UNAMBIGUOUS_FUN_STAGE_TWO:
       case TC_PATTERN_MATCHES:
+      case TC_STMT_MATCHES:
+      case TC_EXPR_MATCHES:
       case TC_PATTERN_UNAMBIGUOUS:
       case TC_CLONE_ACTUAL_ACTUAL:
       case TC_CLONE_WANTED_ACTUAL:
@@ -2051,7 +2034,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
     reverse_arbitrary(VEC_GET_PTR(state.stack, actions_start),
                       MAX(actions_start, state.stack.len) - actions_start,
                       sizeof(state.stack.data[0]));
-  }
+  } // end while
 
   VEC_FREE(&state.stack);
 

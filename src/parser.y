@@ -39,6 +39,7 @@
 %type int parse_node
 %type string parse_node
 %type unit parse_node
+%type upper_name parse_node
 
 %include {
 
@@ -167,10 +168,8 @@ int(RES) ::= INT(A).  {
   RES = n;
 }
 
-name ::= upper_name.
-name ::= lower_name.
-
-expr ::= name.
+expr ::= lower_name.
+expr ::= upper_name.
 
 expr(RES) ::= unit(A). {
   A.type.type = PT_EX_UNIT;
@@ -205,21 +204,23 @@ upper_name(RES) ::= UPPER_NAME(A). {
   BREAK_PARSER;
   token t = s->tokens[A];
   parse_node n = {
-    .type = PT_UPPER_NAME,
+     // works in all contexts
+    .type.all = PT_ALL_MULTI_UPPER_NAME,
     .sub_amt = 0,
     .span = {
       .start = t.start,
       .end = t.end,
     },
   };
-  RES = push_node(s, n);
+  RES = n;
 }
 
 lower_name(RES) ::= LOWER_NAME(A). {
   BREAK_PARSER;
   token t = s->tokens[A];
   parse_node n = {
-    .type = PT_LOWER_NAME,
+     // works in all contexts
+    .type.all = PT_ALL_MULTI_LOWER_NAME,
     .sub_amt = 0,
     .span = {
       .start = t.start,
@@ -285,7 +286,11 @@ compound_expr ::= fn.
 
 fn(RES) ::= FN pattern(B) fun_body(C). {
   BREAK_PARSER;
-  parse_node n = {.type = PT_FN, .sub_a = B, .sub_b = C};
+  parse_node n = {
+    .type.statement = PT_EXPR_FN,
+    .sub_a = B,
+    .sub_b = C
+  };
   RES = push_node(s, n);
 }
 
@@ -301,7 +306,11 @@ fun(RES) ::= FUN lower_name(A) pattern(B) fun_body(C). {
   VEC_PUSH(&s->inds, A);
   VEC_PUSH(&s->inds, B);
   VEC_PUSH(&s->inds, C);
-  parse_node n = {.type = PT_FUN, .subs_start = start, .sub_amt = 3};
+  parse_node n = {
+    .type.statement = PT_STMT_FUN,
+    .subs_start = start,
+    .sub_amt = 3
+  };
   RES = push_node(s, n);
 }
 
@@ -310,7 +319,7 @@ fun_body(RES) ::= block(B). {
   node_ind_t start = s->inds.len;
   VEC_CAT(&s->inds, &B);
   parse_node n = {
-    .type = PT_FUN_BODY,
+    .type.expression = PT_EX_FUN_BODY,
     .subs_start = start,
     .sub_amt = B.len,
     .span = {
@@ -380,12 +389,12 @@ pattern(RES) ::= unit(A). {
 }
 
 pattern(RES) ::= int(A). {
-  A.type = PT_PAT_INT,
+  A.type = PT_PAT_INT;
   RES = push_node(s, A);
 }
 
 pattern(RES) ::= string(A). {
-  A.type = PT_PAT_STRING,
+  A.type.pattern = PT_PAT_STRING;
   RES = push_node(s, A);
 }
 
@@ -414,7 +423,7 @@ pattern(RES) ::= OPEN_PAREN(O) pattern_in_parens(A) CLOSE_PAREN(C). {
 pattern_in_parens ::= pattern_construction.
 
 pattern_in_parens(RES) ::= pattern_tuple(A). {
-  RES = desugar_tuple(s, PT_PAT_TUP, A);
+  RES = desugar_tuple(s, PT_ALL_PAT_TUP, A);
 }
 
 pattern_construction(RES) ::= upper_name(A) patterns(B). {
@@ -504,7 +513,7 @@ type_inside_parens ::= enclosed_type.
 
 type_inside_parens(RES) ::= type_inner_tuple(A). {
   BREAK_PARSER;
-  RES = desugar_tuple(s, PT_TY_TUP, A);
+  RES = desugar_tuple(s, PT_ALL_TY_TUP, A);
 }
 
 type(RES) ::= OPEN_PAREN(O) type(A) type(B) CLOSE_PAREN(C). {
@@ -531,7 +540,7 @@ tuple(RES) ::= tuple_rec(A) COMMA expr(B). {
   BREAK_PARSER;
   // start and end get set by compound_expr
   VEC_PUSH(&A, B);
-  RES = desugar_tuple(s, PT_EX_TUP, A);
+  RES = desugar_tuple(s, PT_ALL_EX_TUP, A);
 }
 
 tuple_min(RES) ::= expr(A). {
@@ -551,7 +560,7 @@ tuple_rec ::= tuple_min.
 
 call(RES) ::= expr(A) expr(B). {
   BREAK_PARSER;
-  parse_node n = {.type = PT_CALL, .sub_a = A, .sub_b = B};
+  parse_node n = {.type.expression = PT_EX_CALL, .sub_a = A, .sub_b = B};
   RES = push_node(s, n);
 }
 

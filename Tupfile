@@ -12,6 +12,7 @@ RE2C_OPTIONS = --case-ranges
 COMMON_FLAGS = \
     -Wall \
     -Wextra \
+    -Werror=implicit-fallthrough \
     -pipe \
     -ffast-math \
     -fshort-enums \
