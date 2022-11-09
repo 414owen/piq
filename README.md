@@ -81,6 +81,7 @@ A language that does everything right
 * Add [gcc function attributes](https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html)
 * Profile guided optimization
 * Replace FUN_BODY parse node with BLOCK
+* Replace all temporary allocated vec_node_ind with a single one, and a vector of lengths
 
 # Mistakes
 
