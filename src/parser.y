@@ -287,7 +287,7 @@ compound_expr ::= fn.
 fn(RES) ::= FN pattern(B) fun_body(C). {
   BREAK_PARSER;
   parse_node n = {
-    .type.statement = PT_EXPR_FN,
+    .type.statement = PT_EX_FN,
     .sub_a = B,
     .sub_b = C
   };
@@ -296,7 +296,7 @@ fn(RES) ::= FN pattern(B) fun_body(C). {
 
 sig(RES) ::= SIG lower_name(A) type(B). {
   BREAK_PARSER;
-  parse_node n = {.type = PT_SIG, .sub_a = A, .sub_b = B};
+  parse_node n = {.type.statement = PT_STMT_SIG, .sub_a = A, .sub_b = B};
   RES = push_node(s, n);
 }
 
@@ -409,7 +409,7 @@ unit(RES) ::= UNIT(A). {
       .end = t.end,
     },
   };
-  RES = push_node(s, n);
+  RES = n;
 }
 
 pattern(RES) ::= OPEN_PAREN(O) pattern_in_parens(A) CLOSE_PAREN(C). {
