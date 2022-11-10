@@ -82,6 +82,7 @@ A language that does everything right
 * Profile guided optimization
 * Replace FUN_BODY parse node with BLOCK
 * Replace all temporary allocated vec_node_ind with a single one, and a vector of lengths
+* Unify wildcard and placeholder terminology
 
 # Mistakes
 

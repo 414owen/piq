@@ -93,11 +93,10 @@ ir_module build_module(parse_tree tree, type_info types) {
   } build_res;
 
   {
-    parse_node root = tree.nodes[tree.root_ind];
-    for (node_ind_t i = 0; i < root.sub_amt; i++) {
+    for (node_ind_t i = 0; i < tree.root_subs_amt; i++) {
       action action = {
         .tag = BUILD_TOP_LEVEL,
-        .node_ind = PT_ROOT_SUB_IND(tree.inds, root, i),
+        .node_ind = tree.inds[tree.root_subs_start + i],
       };
       VEC_PUSH(&actions, action);
     }
@@ -115,18 +114,23 @@ ir_module build_module(parse_tree tree, type_info types) {
         build_res.pattern.ir_pattern_type = ti;
         switch (node.type.pattern) {
           // Done
-          case PT_UNIT: {
+          case PT_PAT_UNIT: {
             build_res.pattern.ir_pattern_tag = IR_PAT_UNIT;
+            break;
+          }
+          case PT_PAT_UPPER_NAME: {
+            build_res.pattern.ir_pattern_tag = IR_PAT_UNIT;
+            UNIMPLEMENTED("Lowering constructors in patterns");
             break;
           }
           // Done
           // wildcard binding
-          case PT_LOWER_NAME:
+          case PT_PAT_WILDCARD:
             build_res.pattern.ir_pattern_tag = IR_PAT_PLACEHOLDER;
             build_res.pattern.ir_pattern_binding_span = node.span;
             break;
           // Done
-          case PT_LIST: {
+          case PT_PAT_LIST: {
             for (size_t i = 0; i < PT_LIST_SUB_AMT(node); i++) {
               action todos[] = {
                 {
@@ -147,8 +151,9 @@ ir_module build_module(parse_tree tree, type_info types) {
             VEC_PUSH(&actions, todos);
             break;
           }
-          case PT_TUP:
+          case PT_PAT_TUP:
             build_res.pattern.ir_pattern_tag = IR_PAT_TUP;
+            // TODO finish this
             action todos[] = {
               {
                 .tag = BUILD_TUP_PAT_2,
@@ -159,30 +164,20 @@ ir_module build_module(parse_tree tree, type_info types) {
                 .node_ind = PT_TUP_SUB_A(node),
               },
             };
+            VEC_APPEND_STATIC(&actions, todos);
+            UNIMPLEMENTED("Lowering tuples");
             break;
-          case PT_INT:
+          case PT_PAT_INT:
             build_res.pattern.ir_pattern_tag = IR_PAT_INT;
             build_res.pattern.ir_pattern_int_span = node.span;
             break;
-          case PT_STRING:
+          case PT_PAT_STRING:
             build_res.pattern.ir_pattern_tag = IR_PAT_STRING;
             build_res.pattern.ir_pattern_str_span = node.span;
             break;
-          case PT_LET:
-          case PT_AS:
-          // TODO construction
-          case PT_UPPER_NAME:
-          case PT_SIG:
-          case PT_IF:
-          case PT_LIST_TYPE:
-          case PT_ROOT:
-          case PT_FUN:
-          case PT_FN:
-          case PT_FUN_BODY:
-          case PT_FN_TYPE:
-          case PT_CONSTRUCTION:
-          case PT_CALL:
-            give_up("Unexpected pattern node");
+          case PT_ALL_PAT_CONSTRUCTION:
+            // TODO construction
+            UNIMPLEMENTED("Lowering pattern constructions");
             break;
         }
         break;
@@ -227,8 +222,8 @@ ir_module build_module(parse_tree tree, type_info types) {
         break;
       }
       case BUILD_TOP_LEVEL: {
-        switch (node.type) {
-          case PT_FUN: {
+        switch (node.type.top_level) {
+          case PT_TL_FUN: {
             action todo[] = {
               {
                 .tag = BUILD_FUN_2,
@@ -242,25 +237,8 @@ ir_module build_module(parse_tree tree, type_info types) {
             VEC_APPEND_STATIC(&actions, todo);
             break;
           }
-          case PT_UNIT:
-          case PT_LOWER_NAME:
-          case PT_TUP:
-          case PT_INT:
-          case PT_STRING:
-          case PT_LET:
-          case PT_LIST:
-          case PT_AS:
-          case PT_UPPER_NAME:
-          case PT_SIG:
-          case PT_IF:
-          case PT_LIST_TYPE:
-          case PT_ROOT:
-          case PT_FN:
-          case PT_FUN_BODY:
-          case PT_FN_TYPE:
-          case PT_CONSTRUCTION:
-          case PT_CALL:
-            give_up("Unexpected non-top-level parse node");
+          case PT_TL_SIG:
+            // I guess do nothing?
             break;
         }
         break;
@@ -268,8 +246,8 @@ ir_module build_module(parse_tree tree, type_info types) {
       // TODO get rid of this, and make BUILD_EXPR and similar groups
       case BUILD_EXPR:
         build_res.expr.ir_expr_type = ti;
-        switch (node.type) {
-          case PT_CALL: {
+        switch (node.type.expression) {
+          case PT_EX_CALL: {
             action todo[] = {
               {
                 .tag = BUILD_CALL_2,
@@ -283,27 +261,14 @@ ir_module build_module(parse_tree tree, type_info types) {
             VEC_APPEND_STATIC(&actions, todo);
             break;
           }
-          case PT_CONSTRUCTION: {
-            build_res.expr.ir_expr_tag = IR_EXPR_CONSTRUCTOR;
-            action todo[] = {
-              {
-                .tag = BUILD_EXPR_CONSTRUCTION_2,
-                .node_ind = act.node_ind,
-              },
-              {
-                .tag = BUILD_EXPR,
-                .node_ind = PT_CALL_CALLEE_IND(node),
-              },
-            };
-            VEC_APPEND_STATIC(&actions, todo);
-            break;
-          }
-          case PT_FN:
+          case PT_EX_FN:
             build_res.expr.ir_expr_tag = IR_EXPR_FN;
             UNIMPLEMENTED("build clusure fn");
             break;
-          case PT_IF: {
+          case PT_EX_IF: {
             build_res.expr.ir_expr_tag = IR_EXPR_IF;
+            // TODO
+            UNIMPLEMENTED("Lowering IFs");
             /*
             action todo[] = {
               {
@@ -327,7 +292,7 @@ ir_module build_module(parse_tree tree, type_info types) {
             */
             break;
           }
-          case PT_INT: {
+          case PT_EX_INT: {
             type t = types.types[type_ind];
             switch (t.tag) {
               case T_I8:
@@ -352,16 +317,15 @@ ir_module build_module(parse_tree tree, type_info types) {
             // build_res.expr.
             break;
           }
-          case PT_LIST:
+          case PT_EX_LIST:
             // TODO
+            UNIMPLEMENTED("Lowering lists");
             break;
-          case PT_LIST_TYPE:
+          case PT_EX_LOWER_NAME:
             // TODO
+            UNIMPLEMENTED("Lowering variables");
             break;
-          case PT_LOWER_NAME:
-            // TODO
-            break;
-          case PT_STRING:
+          case PT_EX_STRING:
             VEC_PUSH(&module.ir_strings, node.span);
             // I guess just assume the type is string
             ir_type_ind ti = {
@@ -369,25 +333,25 @@ ir_module build_module(parse_tree tree, type_info types) {
             };
             build_res.expr.ir_expr_type = ti;
             break;
-          case PT_TUP:
+          case PT_EX_TUP:
             // TODO
+            UNIMPLEMENTED("Lowering tuple");
             break;
-          case PT_AS:
+          case PT_EX_AS:
             // TODO
+            UNIMPLEMENTED("Lowering as");
             break;
-          case PT_UNIT:
+          case PT_EX_UNIT:
             // TODO
+            UNIMPLEMENTED("Lowering unit");
             break;
-          case PT_UPPER_NAME:
+          case PT_EX_UPPER_NAME:
             // TODO
+            UNIMPLEMENTED("Lowering constructor");
             break;
-          case PT_SIG:
-          case PT_LET:
-          case PT_FUN_BODY:
-          case PT_FUN:
-          case PT_FN_TYPE:
-          case PT_ROOT:
-            give_up("unexpected node in IR expr translation");
+          case PT_EX_FUN_BODY:
+            // TODO
+            UNIMPLEMENTED("Lowering fun body");
             break;
         }
         break;
@@ -432,6 +396,8 @@ ir_module build_module(parse_tree tree, type_info types) {
           .ir_expr_type = ti,
           .ir_expr_ind = module.ir_calls.len - 1,
         };
+        UNIMPLEMENTED("Lowering call");
+        break;
       }
       case BUILD_FUN_2: {
         ir_fun_case fun = {

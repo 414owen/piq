@@ -1082,8 +1082,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
   setup_type_env(&state);
 
   for (node_ind_t i = 0; i < tree.root_subs_amt; i++) {
-    size_t ind = tree.root_subs_start + i;
-    size_t j = tree.root_subs_amt - 1 - i;
+    size_t j = tree.root_subs_start + tree.root_subs_amt - 1 - i;
     node_ind_t sub_ind = tree.inds[j];
     parse_node sub = tree.nodes[sub_ind];
     if (sub.type.top_level == PT_TL_SIG)
@@ -1487,7 +1486,11 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         // given to the node) Hence, we shouldn't need a combine two_stage, we
         // just assign the 'wanted' type.
         switch (node_params.node.type.statement) {
-          // node_matches
+          case PT_STMT_SIG:
+            // TODO revisit.
+            // I think this case is unreachable?
+            UNIMPLEMENTED("typechecking signatures");
+            break;
           // node_unambiguous
           case PT_STMT_LET: {
             node_ind_t bnd_ind = PT_LET_BND_IND(node_params.node);
@@ -1509,7 +1512,9 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
                 .tag = TC_PUSH_ENV,
                 .binding = bnd.span,
                 .node_ind = node_params.node_ind,
-              }};
+              },
+            };
+            push_actions(&state, STATIC_LEN(actions), actions);
             break;
           }
           case PT_STMT_FUN: {
@@ -1543,6 +1548,38 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         // given to the node) Hence, we shouldn't need a combine two_stage, we
         // just assign the 'wanted' type.
         switch (node_params.node.type.statement) {
+          case PT_STMT_SIG:
+            // TODO revisit.
+            // I think this case is unreachable?
+            UNIMPLEMENTED("typechecking signatures");
+            break;
+          // node_matches
+          case PT_STMT_LET: {
+            node_ind_t bnd_ind = PT_LET_BND_IND(node_params.node);
+            parse_node bnd = state.tree.nodes[bnd_ind];
+            node_ind_t val_ind = PT_LET_VAL_IND(node_params.node);
+            // TODO unify this code with the unambiguous version
+            tc_action actions[] = {
+              {.tag = TC_EXPR_MATCHES, .node_ind = val_ind},
+              {
+                .tag = TC_CLONE_ACTUAL_ACTUAL,
+                .from = val_ind,
+                .to = node_params.node_ind,
+              },
+              {
+                .tag = TC_CLONE_ACTUAL_ACTUAL,
+                .from = val_ind,
+                .to = bnd_ind,
+              },
+              {
+                .tag = TC_PUSH_ENV,
+                .binding = bnd.span,
+                .node_ind = node_params.node_ind,
+              },
+            };
+            push_actions(&state, STATIC_LEN(actions), actions);
+            break;
+          }
           // node_matches
           case PT_STMT_FUN: {
             node_ind_t bnd_ind =
