@@ -274,9 +274,10 @@ static void break_suspicious_action(typecheck_state *state, tc_action action) {
         suspicious_action();
       break;
     case TC_PATTERN_MATCHES:
+    case TC_STMT_MATCHES:
+    case TC_EXPR_MATCHES:
+    case TC_EXPR_MATCHES_AS_STAGE_TWO:
     case TC_PATTERN_UNAMBIGUOUS:
-    case TC_NODE_MATCHES:
-    case TC_NODE_MATCHES_AS_STAGE_TWO:
     case TC_EXPR_UNAMBIGUOUS:
     case TC_STMT_UNAMBIGUOUS:
     case TC_EXPR_UNAMBIGUOUS_FN_STAGE_TWO:
@@ -521,33 +522,21 @@ static void push_tc_sig(typecheck_state *state, node_ind_t node_ind,
 }
 
 // enforce sigs => we're root level
-static void typecheck_block(typecheck_state *state, tc_node_params params,
-                            bool enforce_sigs) {
-  bool can_continue = true;
-
-  if (params.node.sub_amt == 0)
+static void typecheck_block_internal(
+  typecheck_state *state,
+  node_ind_t sub_amt,
+  node_ind_t subs_start,
+  bitset_data sub_has_wanted,
+  bool enforce_sigs
+) {
+  if (sub_amt == 0)
     return;
 
-  char *sub_has_wanted = stcalloc(BITNSLOTS(params.node.sub_amt), 1);
-
-  node_ind_t last_el_ind =
-    state->tree.inds[params.node.subs_start + params.node.sub_amt - 1];
-
+  bool can_continue = true;
   size_t start_action_amt = state->stack.len;
 
-  if (params.wanted_ind != state->unknown_ind) {
-    tc_action action = {.tag = TC_CLONE_WANTED_WANTED,
-                        .from = params.node_ind,
-                        .to = last_el_ind};
-    push_action(state, action);
-    bs_data_set(sub_has_wanted, params.node.sub_amt - 1, true);
-  }
-
-  if (params.node.sub_amt == 0)
-    return;
-
   {
-    node_ind_t sub_ind = state->tree.inds[params.node.subs_start];
+    node_ind_t sub_ind = state->tree.inds[subs_start];
     parse_node sub = state->tree.nodes[sub_ind];
     if (sub.type.statement == PT_STMT_SIG) {
       push_tc_sig(state, sub_ind, sub);
@@ -561,32 +550,39 @@ static void typecheck_block(typecheck_state *state, tc_node_params params,
     }
   }
 
+  node_ind_t bnd_amt = 0;
   // TODO: Should we error on extraneous sigs here?
-  for (node_ind_t sub_i = 1; sub_i < params.node.sub_amt; sub_i++) {
-    node_ind_t sub_ind = state->tree.inds[params.node.subs_start + sub_i];
+  for (node_ind_t sub_i = 1; sub_i < sub_amt; sub_i++) {
+    node_ind_t sub_ind = state->tree.inds[subs_start + sub_i];
     parse_node sub = state->tree.nodes[sub_ind];
     switch (sub.type.statement) {
       case PT_STMT_SIG: {
+        bnd_amt++;
         push_tc_sig(state, sub_ind, sub);
         break;
       }
       case PT_STMT_LET:
       case PT_STMT_FUN: {
         node_ind_t prev_ind =
-          state->tree.inds[params.node.subs_start + sub_i - 1];
+          state->tree.inds[subs_start + sub_i - 1];
         parse_node prev = state->tree.nodes[prev_ind];
         if (can_propagate_type(state, prev, sub)) {
+          // TODO this doesn't look right.
+          // We should check the previous before propagating.
           tc_action action = {
             .tag = TC_CLONE_ACTUAL_WANTED, .from = prev_ind, .to = sub_ind};
           push_action(state, action);
           bs_data_set(sub_has_wanted, sub_i, true);
-        } else if (enforce_sigs) {
-          tc_error err = {
-            .type = NEED_SIGNATURE,
-            .pos = sub_ind,
-          };
-          push_tc_err(state, err);
-          can_continue = false;
+        } else {
+          bnd_amt++;
+          if (enforce_sigs) {
+            tc_error err = {
+              .type = NEED_SIGNATURE,
+              .pos = sub_ind,
+            };
+            push_tc_err(state, err);
+            can_continue = false;
+          }
         }
       }
     }
@@ -595,20 +591,18 @@ static void typecheck_block(typecheck_state *state, tc_node_params params,
   if (!can_continue) {
     // remove actions
     state->stack.len = start_action_amt;
-    stfree(sub_has_wanted, BITNSLOTS(params.node.sub_amt));
+    stfree(sub_has_wanted, BITNSLOTS(sub_amt));
     return;
   }
 
-  node_ind_t bnd_amt = 0;
-  for (node_ind_t i = 0; i < params.node.sub_amt; i++) {
-    node_ind_t sub_ind = state->tree.inds[params.node.subs_start + i];
+  for (node_ind_t i = 0; i < sub_amt; i++) {
+    node_ind_t sub_ind = state->tree.inds[subs_start + i];
     parse_node sub = state->tree.nodes[sub_ind];
     switch (sub.type.statement) {
       case PT_STMT_SIG:
         break;
       case PT_STMT_LET:
       case PT_STMT_FUN: {
-        bnd_amt++;
         action_tag tag = bs_data_get(sub_has_wanted, i) ? TC_STMT_MATCHES
                                                         : TC_STMT_UNAMBIGUOUS;
         tc_action action = {
@@ -618,15 +612,61 @@ static void typecheck_block(typecheck_state *state, tc_node_params params,
         push_action(state, action);
         break;
       }
+      default: {
+        action_tag tag = bs_data_get(sub_has_wanted, i) ? TC_EXPR_MATCHES
+                                                        : TC_EXPR_UNAMBIGUOUS;
+        tc_action action = {
+          .tag = tag,
+          .node_ind = sub_ind,
+        };
+        push_action(state, action);
+        break;
+      }
     }
   }
-  tc_action actions[] = {{.tag = TC_POP_N_VARS, .amt = bnd_amt},
-                         {.tag = TC_CLONE_ACTUAL_ACTUAL,
-                          .from = last_el_ind,
-                          .to = params.node_ind}};
-  push_actions(state, STATIC_LEN(actions), actions);
+  tc_action action = {.tag = TC_POP_N_VARS, .amt = bnd_amt};
+  push_action(state, action);
+}
 
-  stfree(sub_has_wanted, BITNSLOTS(params.node.sub_amt));
+static void typecheck_block_node(typecheck_state *state, tc_node_params params,
+                            bool enforce_sigs) {
+
+  const node_ind_t sub_amt = params.node.sub_amt;
+  const node_ind_t subs_start = params.node.subs_start;
+
+  // TODO this can be stored in state, and cached to prevent further allocations
+  char *sub_has_wanted = stcalloc(BITNSLOTS(sub_amt), 1);
+
+  node_ind_t last_el_ind =
+    state->tree.inds[subs_start + sub_amt - 1];
+
+  if (params.wanted_ind != state->unknown_ind) {
+    tc_action action = {.tag = TC_CLONE_WANTED_WANTED,
+                        .from = params.node_ind,
+                        .to = last_el_ind,
+    };
+    push_action(state, action);
+    bs_data_set(sub_has_wanted, sub_amt - 1, true);
+  }
+
+  typecheck_block_internal(state, sub_amt, subs_start, sub_has_wanted, enforce_sigs);
+
+  tc_action action =  {.tag = TC_CLONE_ACTUAL_ACTUAL,
+                          .from = last_el_ind,
+                          .to = params.node_ind,
+  };
+  push_action(state, action);
+
+  stfree(sub_has_wanted, BITNSLOTS(sub_amt));
+}
+
+static void typecheck_root(typecheck_state *state) {
+  const node_ind_t sub_amt = state->tree.root_subs_amt;
+  const node_ind_t subs_start = state->tree.root_subs_start;
+  // TODO this can be stored in state, and cached to prevent further allocations
+  char *sub_has_wanted = stcalloc(BITNSLOTS(sub_amt), 1);
+  typecheck_block_internal(state, sub_amt, subs_start, sub_has_wanted, true);
+  stfree(sub_has_wanted, BITNSLOTS(sub_amt));
 }
 
 static void tc_as(typecheck_state *state, tc_node_params params) {
@@ -953,19 +993,23 @@ static tc_node_params mk_tc_node_params(typecheck_state *state,
 static const char *action_str(action_tag tag) {
   static const char *res;
   switch (tag) {
+
 #define MK_CASE(e)                                                             \
   case (e):                                                                    \
     res = #e;                                                                  \
     break;
+
     MK_CASE(TC_POP_N_VARS)
     MK_CASE(TC_POP_VARS_TO)
-    MK_CASE(TC_NODE_MATCHES)
-    MK_CASE(TC_NODE_MATCHES_AS_STAGE_TWO)
-    MK_CASE(TC_NODE_UNAMBIGUOUS)
-    MK_CASE(TC_NODE_UNAMBIGUOUS_FN_STAGE_TWO)
+    MK_CASE(TC_EXPR_MATCHES)
+    MK_CASE(TC_STMT_MATCHES)
+    MK_CASE(TC_EXPR_MATCHES_AS_STAGE_TWO)
+    MK_CASE(TC_PATTERN_UNAMBIGUOUS)
+    MK_CASE(TC_EXPR_UNAMBIGUOUS)
+    MK_CASE(TC_STMT_UNAMBIGUOUS)
+    MK_CASE(TC_EXPR_UNAMBIGUOUS_FN_STAGE_TWO)
     MK_CASE(TC_STMT_UNAMBIGUOUS_FUN_STAGE_TWO)
     MK_CASE(TC_PATTERN_MATCHES)
-    MK_CASE(TC_PATTERN_UNAMBIGUOUS)
     MK_CASE(TC_TYPE)
     MK_CASE(TC_TYPE_LIST_STAGE_TWO)
     MK_CASE(TC_TYPE_CALL_STAGE_TWO)
@@ -1081,18 +1125,8 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
   typecheck_state state = tc_new_state(input, tree);
   setup_type_env(&state);
 
-  for (node_ind_t i = 0; i < tree.root_subs_amt; i++) {
-    size_t j = tree.root_subs_start + tree.root_subs_amt - 1 - i;
-    node_ind_t sub_ind = tree.inds[j];
-    parse_node sub = tree.nodes[sub_ind];
-    if (sub.type.top_level == PT_TL_SIG)
-      continue;
-    tc_action act = {
-      .tag = TC_STMT_UNAMBIGUOUS,
-      .node_ind = sub_ind,
-    };
-    push_action(&state, act);
-  }
+  typecheck_root(&state);
+  reverse_arbitrary(VEC_GET_PTR(state.stack, 0), state.stack.len, sizeof(state.stack.data[0]));
 
   // resolve_types(&state);
 #ifdef DEBUG_TC
@@ -1119,7 +1153,9 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           fprintf(debug_out, "Keeping %d vars\n", action.amt);
           break;
         case TC_WANT_TYPE: {
+          fprintf(debug_out, "Node ind: '%d'\n", action.node_ind);
           parse_node node = tree.nodes[action.to];
+          fprintf(debug_out, "Node: '%s'\n", parse_node_string(node.type));
           format_error_ctx(debug_out, input, node.span.start, node.span.end);
           putc('\n', debug_out);
           break;
@@ -1151,13 +1187,15 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         case TC_TYPE_LIST_STAGE_TWO:
         case TC_RECONSTRUCT_LIST:
         case TC_RECONSTRUCT_TUPLE:
-        case TC_NODE_MATCHES:
-        case TC_NODE_MATCHES_AS_STAGE_TWO:
-        case TC_PATTERN_UNAMBIGUOUS:
         case TC_PATTERN_MATCHES:
+        case TC_STMT_MATCHES:
+        case TC_EXPR_MATCHES:
+        case TC_EXPR_MATCHES_AS_STAGE_TWO:
         case TC_EXPR_UNAMBIGUOUS_FN_STAGE_TWO:
         case TC_STMT_UNAMBIGUOUS_FUN_STAGE_TWO:
-        case TC_NODE_UNAMBIGUOUS: {
+        case TC_STMT_UNAMBIGUOUS:
+        case TC_PATTERN_UNAMBIGUOUS:
+        case TC_EXPR_UNAMBIGUOUS: {
           fprintf(debug_out, "Node ind: '%d'\n", action.node_ind);
           parse_node node = tree.nodes[action.node_ind];
           fprintf(debug_out, "Node: '%s'\n", parse_node_string(node.type));
@@ -1326,7 +1364,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         switch (node_params.node.type.expression) {
           // node_unambiguous
           case PT_EX_FUN_BODY:
-            typecheck_block(&state, node_params, false);
+            typecheck_block_node(&state, node_params, false);
             break;
 
           // node_unambiguous
@@ -1620,6 +1658,19 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
             push_tc_err(&state, err);
             break;
           }
+          // This is dealt with on the block level
+          /*
+          default: {
+            // TODO does this work?
+            // We've techincally dealt with all the options in this enum...
+            tc_action act = {
+              .tag = TC_EXPR_MATCHES,
+              .node_ind = node_params.node_ind,
+            };
+            push_action(&state, act);
+            break;
+          }
+          */
         }
         break;
 
@@ -1630,7 +1681,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         switch (node_params.node.type.expression) {
           // node_matches
           case PT_EX_FUN_BODY:
-            typecheck_block(&state, node_params, false);
+            typecheck_block_node(&state, node_params, false);
             break;
 
           // node_matches
@@ -2017,10 +2068,10 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         tc_action b = VEC_POP(&state.stack);
         size_t err_diff = state.errors.len - action.amt;
         if (err_diff == 0) {
-          VEC_PUSH(&state.stack, a);
+          push_action(&state, a);
         } else {
           VEC_POP_N(&state.errors, err_diff);
-          VEC_PUSH(&state.stack, b);
+          push_action(&state, b);
         }
         break;
       }
@@ -2041,17 +2092,15 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         break;
       case TC_TYPE:
       case TC_TYPE_LIST_STAGE_TWO:
-      case TC_NODE_MATCHES:
-      case TC_NODE_MATCHES_AS_STAGE_TWO:
+      case TC_PATTERN_MATCHES:
+      case TC_STMT_MATCHES:
+      case TC_EXPR_MATCHES:
+      case TC_EXPR_MATCHES_AS_STAGE_TWO:
       case TC_PATTERN_UNAMBIGUOUS:
       case TC_STMT_UNAMBIGUOUS:
       case TC_EXPR_UNAMBIGUOUS:
       case TC_EXPR_UNAMBIGUOUS_FN_STAGE_TWO:
       case TC_STMT_UNAMBIGUOUS_FUN_STAGE_TWO:
-      case TC_PATTERN_MATCHES:
-      case TC_STMT_MATCHES:
-      case TC_EXPR_MATCHES:
-      case TC_PATTERN_UNAMBIGUOUS:
       case TC_CLONE_ACTUAL_ACTUAL:
       case TC_CLONE_WANTED_ACTUAL:
       case TC_ASSIGN_TYPE:

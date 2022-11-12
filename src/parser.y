@@ -39,7 +39,6 @@
 %type int parse_node
 %type string parse_node
 %type unit parse_node
-%type upper_name parse_node
 
 %include {
 
@@ -122,7 +121,9 @@ block(RES) ::= block(A) stmt(B). {
   RES = A;
 }
 
-stmt ::= expr.
+stmt(RES) ::= expr(A). {
+  RES = A;
+}
 
 stmt(RES) ::= OPEN_PAREN(O) block_in_parens(A) CLOSE_PAREN(C). {
   BREAK_PARSER;
@@ -133,8 +134,12 @@ stmt(RES) ::= OPEN_PAREN(O) block_in_parens(A) CLOSE_PAREN(C). {
   RES = A;
 }
 
-block_in_parens ::= let.
-block_in_parens ::= sig.
+block_in_parens(RES) ::= let(A). {
+  RES = A;
+}
+block_in_parens(RES) ::= sig(A). {
+  RES = A;
+}
 
 let(RES) ::= LET lower_name(A) expr(B). {
   BREAK_PARSER;
@@ -155,8 +160,12 @@ toplevel(RES) ::= OPEN_PAREN(O) toplevel_under(A) CLOSE_PAREN(C). {
   RES = A;
 }
 
-toplevel_under ::= fun.
-toplevel_under ::= sig.
+toplevel_under(RES) ::= fun(A). {
+  RES = A;
+}
+toplevel_under(RES) ::= sig(A). {
+  RES = A;
+}
 
 // Don't use directly. Wrap.
 int(RES) ::= INT(A).  { 
@@ -172,8 +181,12 @@ int(RES) ::= INT(A).  {
   RES = n;
 }
 
-expr ::= lower_name.
-expr ::= upper_name.
+expr(RES) ::= lower_name(A). {
+  RES = A;
+}
+expr(RES) ::= upper_name(A). {
+  RES = A;
+}
 
 expr(RES) ::= unit(A). {
   A.type.expression = PT_EX_UNIT;
@@ -216,7 +229,7 @@ upper_name(RES) ::= UPPER_NAME(A). {
       .end = t.end,
     },
   };
-  RES = n;
+  RES = push_node(s, n);
 }
 
 lower_name(RES) ::= LOWER_NAME(A). {
@@ -274,17 +287,29 @@ expr(RES) ::= OPEN_PAREN(A) compound_expr(B) CLOSE_PAREN(C). {
   RES = B;
 }
 
-compound_expr ::= if.
+compound_expr(RES) ::= if(A). {
+  RES = A;
+}
 
-compound_expr ::= fun.
+compound_expr(RES) ::= fun(A). {
+  RES = A;
+}
 
-compound_expr ::= tuple.
+compound_expr(RES) ::= tuple(A). {
+  RES = A;
+}
 
-compound_expr ::= call.
+compound_expr(RES) ::= call(A). {
+  RES = A;
+}
 
-compound_expr ::= typed.
+compound_expr(RES) ::= typed(A). {
+  RES = A;
+}
 
-compound_expr ::= fn.
+compound_expr(RES) ::= fn(A). {
+  RES = A;
+}
 
 // compound_expr ::= expr.
 
@@ -349,7 +374,9 @@ pattern_tuple(RES) ::= pattern_tuple(A) COMMA pattern(B). {
   RES = A;
 }
 
-pattern_tuple ::= pattern_tuple_min.
+pattern_tuple(RES) ::= pattern_tuple_min(A). {
+  RES = A;
+}
 
 pattern_list(RES) ::= . {
   BREAK_PARSER;
@@ -370,7 +397,9 @@ pattern_list_rec(RES) ::= pattern(A). {
   RES = res;
 }
 
-pattern_list ::= pattern_list_rec.
+pattern_list(RES) ::= pattern_list_rec(A). {
+  RES = A;
+}
 
 patterns(RES) ::= pattern(A). {
   BREAK_PARSER;
@@ -385,7 +414,9 @@ patterns(RES) ::= patterns(A) pattern(B). {
   RES = A;
 }
 
-pattern ::= lower_name.
+pattern(RES) ::= lower_name(A). {
+  RES = A;
+}
 
 pattern(RES) ::= unit(A). {
   A.type.pattern = PT_PAT_UNIT;
@@ -424,7 +455,9 @@ pattern(RES) ::= OPEN_PAREN(O) pattern_in_parens(A) CLOSE_PAREN(C). {
   RES = A;
 }
 
-pattern_in_parens ::= pattern_construction.
+pattern_in_parens(RES) ::= pattern_construction(A). {
+  RES = A;
+}
 
 pattern_in_parens(RES) ::= pattern_tuple(A). {
   RES = desugar_tuple(s, PT_ALL_PAT_TUP, A);
@@ -461,7 +494,9 @@ pattern(RES) ::= OPEN_BRACKET(O) pattern_list(A) CLOSE_BRACKET(C). {
   RES = push_node(s, n);
 }
 
-type ::= upper_name.
+type(RES) ::= upper_name(A). {
+  RES = A;
+}
 
 type(RES) ::= unit(A). {
   A.type.type = PT_TY_UNIT;
@@ -475,20 +510,16 @@ type(RES) ::= OPEN_PAREN(A) type_inside_parens(B) CLOSE_PAREN(D). {
   RES = B;
 }
 
-type(RES) ::= OPEN_BRACKET(O) enclosed_type(A) CLOSE_BRACKET(C). {
+type_inside_parens(RES) ::= fn_type(A). {
+  RES = A;
+}
+type_inside_parens(RES) ::= type_inner_tuple(A). {
   BREAK_PARSER;
-  parse_node n = {
-    .type.type = PT_TY_LIST,
-    .sub_a = A,
-    .span = {
-      .start = s->tokens[O].start,
-      .end = s->tokens[C].start,
-    },
-  };
-  RES = push_node(s, n);
+  RES = desugar_tuple(s, PT_ALL_TY_TUP, A);
 }
 
-enclosed_type(RES) ::= FN_TYPE type(A) type(B). {
+
+fn_type(RES) ::= FN_TYPE type(A) type(B). {
   BREAK_PARSER;
   parse_node n = {
     .type.type = PT_TY_FN,
@@ -498,26 +529,19 @@ enclosed_type(RES) ::= FN_TYPE type(A) type(B). {
   RES = push_node(s, n);
 }
 
-enclosed_type ::= type.
-
-type_inner_tuple(RES) ::= enclosed_type(A) COMMA enclosed_type(B). {
+type_inner_tuple(RES) ::= type(A) COMMA type(B). {
+  BREAK_PARSER;
   vec_node_ind res = VEC_NEW;
   VEC_PUSH(&res, A);
   VEC_PUSH(&res, B);
   RES = res;
 }
 
-type_inner_tuple(RES) ::= type_inner_tuple(A) COMMA enclosed_type(B). {
+type_inner_tuple(RES) ::= type_inner_tuple(A) COMMA type(B). {
+  BREAK_PARSER;
   vec_node_ind res = VEC_NEW;
   VEC_PUSH(&A, B);
   RES = A;
-}
-
-type_inside_parens ::= enclosed_type.
-
-type_inside_parens(RES) ::= type_inner_tuple(A). {
-  BREAK_PARSER;
-  RES = desugar_tuple(s, PT_ALL_TY_TUP, A);
 }
 
 type(RES) ::= OPEN_PAREN(O) type(A) type(B) CLOSE_PAREN(C). {
@@ -560,7 +584,9 @@ tuple_rec(RES) ::= tuple_rec(A) COMMA expr(B). {
   RES = A;
 }
 
-tuple_rec ::= tuple_min.
+tuple_rec(RES) ::= tuple_min(A). {
+  RES = A;
+}
 
 call(RES) ::= expr(A) expr(B). {
   BREAK_PARSER;
@@ -622,7 +648,7 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
 
     // The generated tuples will have their end set to the end
     // of the last syntactic element. Best we can do.
-    buf_ind_t inner_end = VEC_GET(s->nodes, elems.len - 1).span.end;
+    buf_ind_t inner_end = VEC_GET(s->nodes, VEC_GET(elems, elems.len - 1)).span.end;
 
     for (node_ind_t i = 0; i < elems.len - 2; i++) {
       node_ind_t sub_a_ind = VEC_GET(elems, i);

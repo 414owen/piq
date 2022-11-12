@@ -83,6 +83,7 @@ A language that does everything right
 * Replace FUN_BODY parse node with BLOCK
 * Replace all temporary allocated vec_node_ind with a single one, and a vector of lengths
 * Unify wildcard and placeholder terminology
+* Add all EXPR parse tree enums to STMT, as all expressions are valid statements.
 
 # Mistakes
 
