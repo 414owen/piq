@@ -138,7 +138,11 @@ block_in_parens ::= sig.
 
 let(RES) ::= LET lower_name(A) expr(B). {
   BREAK_PARSER;
-  parse_node n = {.type = PT_STMT_LET, .sub_a = A, .sub_b = B};
+  parse_node n = {
+    .type.statement = PT_STMT_LET,
+    .sub_a = A,
+    .sub_b = B
+  };
   RES = push_node(s, n);
 }
 
@@ -172,17 +176,17 @@ expr ::= lower_name.
 expr ::= upper_name.
 
 expr(RES) ::= unit(A). {
-  A.type.type = PT_EX_UNIT;
+  A.type.expression = PT_EX_UNIT;
   RES = push_node(s, A);
 }
 
 expr(RES) ::= string(A). {
-  A.type = PT_EX_STRING,
+  A.type.expression = PT_EX_STRING,
   RES = push_node(s, A);
 }
 
 expr(RES) ::= int(A). {
-  A.type = PT_EX_INT,
+  A.type.expression = PT_EX_INT,
   RES = push_node(s, A);
 }
 
@@ -197,7 +201,7 @@ string(RES) ::= STRING(A). {
       .end = t.end,
     },
   };
-  RES = push_node(s, n);
+  RES = n;
 }
 
 upper_name(RES) ::= UPPER_NAME(A). {
@@ -230,7 +234,7 @@ lower_name(RES) ::= LOWER_NAME(A). {
   RES = push_node(s, n);
 }
 
-expr(RES) ::= OPEN_BRACKET(A) list_contents(B) CLOSE_BRACKET(C). {
+expr(RES) ::= OPEN_BRACKET(A) expr_list_contents(B) CLOSE_BRACKET(C). {
   BREAK_PARSER;
   token a = s->tokens[A];
   VEC_DATA_PTR(&s->nodes)[B].span.start = a.start;
@@ -239,12 +243,12 @@ expr(RES) ::= OPEN_BRACKET(A) list_contents(B) CLOSE_BRACKET(C). {
   RES = B;
 }
 
-list_contents(RES) ::= commaexprs(C). {
+expr_list_contents(RES) ::= commaexprs(C). {
   BREAK_PARSER;
   node_ind_t subs_start = s->inds.len;
   VEC_CAT(&s->inds, &C);
   parse_node n = {
-    .type = PT_LIST,
+    .type.expression = PT_EX_LIST,
     .subs_start = subs_start,
     .sub_amt = C.len,
   };
@@ -252,10 +256,10 @@ list_contents(RES) ::= commaexprs(C). {
   RES = push_node(s, n);
 }
 
-list_contents(RES) ::= . {
+expr_list_contents(RES) ::= . {
   BREAK_PARSER;
   parse_node n = {
-    .type = PT_LIST,
+    .type.expression = PT_EX_LIST,
     .subs_start = 0,
     .sub_amt = 0,
   };
@@ -287,7 +291,7 @@ compound_expr ::= fn.
 fn(RES) ::= FN pattern(B) fun_body(C). {
   BREAK_PARSER;
   parse_node n = {
-    .type.statement = PT_EX_FN,
+    .type.expression = PT_EX_FN,
     .sub_a = B,
     .sub_b = C
   };
@@ -384,12 +388,12 @@ patterns(RES) ::= patterns(A) pattern(B). {
 pattern ::= lower_name.
 
 pattern(RES) ::= unit(A). {
-  A.type.type = PT_PAT_UNIT;
+  A.type.pattern = PT_PAT_UNIT;
   RES = push_node(s, A);
 }
 
 pattern(RES) ::= int(A). {
-  A.type = PT_PAT_INT;
+  A.type.pattern = PT_PAT_INT;
   RES = push_node(s, A);
 }
 
