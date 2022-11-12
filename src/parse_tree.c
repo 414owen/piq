@@ -336,8 +336,11 @@ void print_parse_tree(FILE *f, const char *restrict input, parse_tree tree) {
 
   bs_push(&s.in_tuple, false);
   for (node_ind_t i = 0; i < tree.root_subs_amt; i++) {
-    node_ind_t ind = tree.root_subs_start + i;
+    node_ind_t ind = tree.root_subs_start + tree.root_subs_amt - 1 - i;
     push_node(&s, tree.inds[ind]);
+    if (i != tree.root_subs_amt - 1) {
+      push_str(&s, "\n");
+    }
   }
 
   while (s.actions.len > 0) {
