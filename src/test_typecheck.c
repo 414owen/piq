@@ -342,12 +342,11 @@ static void test_typecheck_succeeds(test_state *state) {
   }
 
   {
-    const char *input = 
-                          "(sig a (Fn () [U8]))\n"
-                          "(fun a () "
-                          "  (sig b (Fn () ()))"
-                          "  (fun b a ())"
-                          "  [2])";
+    const char *input = "(sig a (Fn () [U8]))\n"
+                        "(fun a () "
+                        "  (sig b (Fn () ()))"
+                        "  (fun b a ())"
+                        "  [2])";
     test_start(state, "Param shadows binding");
     test_types_match(state, input, NULL, 0);
     test_end(state);
