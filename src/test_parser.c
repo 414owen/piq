@@ -303,7 +303,7 @@ static void test_fn_succeeds(test_state *state) {
   {
     test_start(state, "One arg");
     test_parser_succeeds_on_form(
-      state, "(fn a 1)", expect_string("(Fn (Lname a) (Body (Int 1)))"));
+      state, "(fn a 1)", expect_string("(Fn (Wildcard a) (Body (Int 1)))"));
     test_end(state);
   }
 
@@ -312,7 +312,7 @@ static void test_fn_succeeds(test_state *state) {
     test_parser_succeeds_on_form(
       state,
       "(fn (ab, cd) 1)",
-      expect_string("(Fn ((Lname ab), (Lname cd)) (Body (Int 1)))"));
+      expect_string("(Fn ((Wildcard ab), (Wildcard cd)) (Body (Int 1)))"));
     test_end(state);
   }
 

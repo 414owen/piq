@@ -561,8 +561,8 @@ static void typecheck_block_internal(
         push_tc_sig(state, sub_ind, sub);
         break;
       }
-      case PT_STMT_LET:
-      case PT_STMT_FUN: {
+      case PT_STMT_FUN:
+      case PT_STMT_LET: {
         node_ind_t prev_ind =
           state->tree.inds[subs_start + sub_i - 1];
         parse_node prev = state->tree.nodes[prev_ind];
@@ -584,6 +584,7 @@ static void typecheck_block_internal(
             can_continue = false;
           }
         }
+        break;
       }
     }
   }
