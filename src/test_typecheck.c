@@ -341,6 +341,18 @@ static void test_typecheck_succeeds(test_state *state) {
     test_end(state);
   }
 
+  {
+    const char *input = 
+                          "(sig a (Fn () [U8]))\n"
+                          "(fun a () "
+                          "  (sig b (Fn () ()))"
+                          "  (fun b a ())"
+                          "  [2])";
+    test_start(state, "Param shadows binding");
+    test_types_match(state, input, NULL, 0);
+    test_end(state);
+  }
+
   test_group_end(state);
 }
 
@@ -427,18 +439,6 @@ static void test_errors(test_state *state) {
                           "(fun a () →321←)",
                           errors,
                           STATIC_LEN(errors));
-    test_end(state);
-  }
-
-  {
-    test_start(state, "Param shadows binding");
-    test_typecheck_errors(state,
-                          "(sig a (Fn () [U8]))\n"
-                          "(fun a () "
-                          "(sig b (Fn () ()))"
-                          "(fun b a a))",
-                          NULL,
-                          0);
     test_end(state);
   }
 

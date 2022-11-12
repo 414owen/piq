@@ -39,6 +39,7 @@
 %type int parse_node
 %type string parse_node
 %type unit parse_node
+%type lower_name_node parse_node
 
 %include {
 
@@ -184,6 +185,7 @@ int(RES) ::= INT(A).  {
 expr(RES) ::= lower_name(A). {
   RES = A;
 }
+
 expr(RES) ::= upper_name(A). {
   RES = A;
 }
@@ -232,7 +234,7 @@ upper_name(RES) ::= UPPER_NAME(A). {
   RES = push_node(s, n);
 }
 
-lower_name(RES) ::= LOWER_NAME(A). {
+lower_name_node(RES) ::= LOWER_NAME(A). {
   BREAK_PARSER;
   token t = s->tokens[A];
   parse_node n = {
@@ -244,7 +246,12 @@ lower_name(RES) ::= LOWER_NAME(A). {
       .end = t.end,
     },
   };
-  RES = push_node(s, n);
+  RES = n;
+}
+
+lower_name(RES) ::= lower_name_node(A). {
+  BREAK_PARSER;
+  RES = push_node(s, A);
 }
 
 expr(RES) ::= OPEN_BRACKET(A) expr_list_contents(B) CLOSE_BRACKET(C). {
@@ -414,8 +421,9 @@ patterns(RES) ::= patterns(A) pattern(B). {
   RES = A;
 }
 
-pattern(RES) ::= lower_name(A). {
-  RES = A;
+pattern(RES) ::= lower_name_node(A). {
+  A.type.pattern = PT_PAT_WILDCARD;
+  RES = push_node(s, A);
 }
 
 pattern(RES) ::= unit(A). {
