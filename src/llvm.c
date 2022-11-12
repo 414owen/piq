@@ -567,13 +567,12 @@ static void cg_stmt(cg_state *state) {
       break;
     default:
       // expressions are statements :(
-      // TODO this is really inefficient. We should probably extract out the cases into
-      // functions, and inline the calls.
+      // TODO this is really inefficient. We should probably extract out the
+      // cases into functions, and inline the calls.
       push_expr_act(state, ind, STAGE_ONE);
       break;
   }
 }
-
 
 static void cg_block(cg_state *state, node_ind_t start, node_ind_t amt) {
   size_t last = start + amt - 1;

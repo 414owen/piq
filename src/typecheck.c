@@ -522,13 +522,10 @@ static void push_tc_sig(typecheck_state *state, node_ind_t node_ind,
 }
 
 // enforce sigs => we're root level
-static void typecheck_block_internal(
-  typecheck_state *state,
-  node_ind_t sub_amt,
-  node_ind_t subs_start,
-  bitset_data sub_has_wanted,
-  bool enforce_sigs
-) {
+static void typecheck_block_internal(typecheck_state *state, node_ind_t sub_amt,
+                                     node_ind_t subs_start,
+                                     bitset_data sub_has_wanted,
+                                     bool enforce_sigs) {
   if (sub_amt == 0)
     return;
 
@@ -563,8 +560,7 @@ static void typecheck_block_internal(
       }
       case PT_STMT_FUN:
       case PT_STMT_LET: {
-        node_ind_t prev_ind =
-          state->tree.inds[subs_start + sub_i - 1];
+        node_ind_t prev_ind = state->tree.inds[subs_start + sub_i - 1];
         parse_node prev = state->tree.nodes[prev_ind];
         if (can_propagate_type(state, prev, sub)) {
           // TODO this doesn't look right.
@@ -630,7 +626,7 @@ static void typecheck_block_internal(
 }
 
 static void typecheck_block_node(typecheck_state *state, tc_node_params params,
-                            bool enforce_sigs) {
+                                 bool enforce_sigs) {
 
   const node_ind_t sub_amt = params.node.sub_amt;
   const node_ind_t subs_start = params.node.subs_start;
@@ -638,23 +634,25 @@ static void typecheck_block_node(typecheck_state *state, tc_node_params params,
   // TODO this can be stored in state, and cached to prevent further allocations
   char *sub_has_wanted = stcalloc(BITNSLOTS(sub_amt), 1);
 
-  node_ind_t last_el_ind =
-    state->tree.inds[subs_start + sub_amt - 1];
+  node_ind_t last_el_ind = state->tree.inds[subs_start + sub_amt - 1];
 
   if (params.wanted_ind != state->unknown_ind) {
-    tc_action action = {.tag = TC_CLONE_WANTED_WANTED,
-                        .from = params.node_ind,
-                        .to = last_el_ind,
+    tc_action action = {
+      .tag = TC_CLONE_WANTED_WANTED,
+      .from = params.node_ind,
+      .to = last_el_ind,
     };
     push_action(state, action);
     bs_data_set(sub_has_wanted, sub_amt - 1, true);
   }
 
-  typecheck_block_internal(state, sub_amt, subs_start, sub_has_wanted, enforce_sigs);
+  typecheck_block_internal(
+    state, sub_amt, subs_start, sub_has_wanted, enforce_sigs);
 
-  tc_action action =  {.tag = TC_CLONE_ACTUAL_ACTUAL,
-                          .from = last_el_ind,
-                          .to = params.node_ind,
+  tc_action action = {
+    .tag = TC_CLONE_ACTUAL_ACTUAL,
+    .from = last_el_ind,
+    .to = params.node_ind,
   };
   push_action(state, action);
 
@@ -1127,7 +1125,8 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
   setup_type_env(&state);
 
   typecheck_root(&state);
-  reverse_arbitrary(VEC_GET_PTR(state.stack, 0), state.stack.len, sizeof(state.stack.data[0]));
+  reverse_arbitrary(
+    VEC_GET_PTR(state.stack, 0), state.stack.len, sizeof(state.stack.data[0]));
 
   // resolve_types(&state);
 #ifdef DEBUG_TC
@@ -1659,19 +1658,19 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
             push_tc_err(&state, err);
             break;
           }
-          // This is dealt with on the block level
-          /*
-          default: {
-            // TODO does this work?
-            // We've techincally dealt with all the options in this enum...
-            tc_action act = {
-              .tag = TC_EXPR_MATCHES,
-              .node_ind = node_params.node_ind,
-            };
-            push_action(&state, act);
-            break;
-          }
-          */
+            // This is dealt with on the block level
+            /*
+            default: {
+              // TODO does this work?
+              // We've techincally dealt with all the options in this enum...
+              tc_action act = {
+                .tag = TC_EXPR_MATCHES,
+                .node_ind = node_params.node_ind,
+              };
+              push_action(&state, act);
+              break;
+            }
+            */
         }
         break;
 
