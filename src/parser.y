@@ -498,12 +498,33 @@ type(RES) ::= upper_name(A). {
   RES = A;
 }
 
+type(RES) ::= OPEN_BRACKET(O) type_inside_brackets(B) CLOSE_BRACKET(C). {
+  BREAK_PARSER;
+  parse_node n = {
+    .type.pattern = PT_TY_LIST,
+    .sub_a = B,
+    .span = {
+      .start = s->tokens[O].start,
+      .end = s->tokens[C].start,
+    },
+  };
+  RES = push_node(s, n);
+}
+
+type_inside_brackets(RES) ::= type_inside_parens(A). {
+  RES = A;
+}
+
+type_inside_brackets(RES) ::= type(A). {
+  RES = A;
+}
+
 type(RES) ::= unit(A). {
   A.type.type = PT_TY_UNIT;
   RES = push_node(s, A);
 }
 
-type(RES) ::= OPEN_PAREN(A) type_inside_parens(B) CLOSE_PAREN(D). {
+type(RES) ::= OPEN_PAREN(A) type_inside_parens_or_tuple(B) CLOSE_PAREN(D). {
   BREAK_PARSER;
   VEC_GET_PTR(s->nodes, B)->span.start = s->tokens[A].start;
   VEC_GET_PTR(s->nodes, B)->span.end = s->tokens[D].end;
@@ -513,11 +534,26 @@ type(RES) ::= OPEN_PAREN(A) type_inside_parens(B) CLOSE_PAREN(D). {
 type_inside_parens(RES) ::= fn_type(A). {
   RES = A;
 }
-type_inside_parens(RES) ::= type_inner_tuple(A). {
+
+type_inside_parens_or_tuple(RES) ::= type_inner_tuple(A). {
   BREAK_PARSER;
   RES = desugar_tuple(s, PT_ALL_TY_TUP, A);
 }
 
+type_inside_parens_or_tuple(RES) ::= type_inside_parens(A). {
+  RES = A;
+}
+
+// TODO multi param types
+type_inside_parens(RES) ::= type(A) type(B). {
+  BREAK_PARSER;
+  parse_node n = {
+    .type.type = PT_TY_CONSTRUCTION,
+    .sub_a = A,
+    .sub_b = B,
+  };
+  RES = push_node(s, n);
+}
 
 fn_type(RES) ::= FN_TYPE type(A) type(B). {
   BREAK_PARSER;
@@ -542,20 +578,6 @@ type_inner_tuple(RES) ::= type_inner_tuple(A) COMMA type(B). {
   vec_node_ind res = VEC_NEW;
   VEC_PUSH(&A, B);
   RES = A;
-}
-
-type(RES) ::= OPEN_PAREN(O) type(A) type(B) CLOSE_PAREN(C). {
-  BREAK_PARSER;
-  parse_node n = {
-    .type.type = PT_TY_CONSTRUCTION,
-    .sub_a = A,
-    .sub_b = B,
-    .span = {
-      .start = s->tokens[O].start,
-      .end = s->tokens[C].end,
-    },
-  };
-  RES = push_node(s, n);
 }
 
 typed(RES) ::= AS type(A) expr(B). {
