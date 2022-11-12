@@ -123,6 +123,7 @@
             [
               clang-tools
               clang-tools.clang
+              lldb
               lcov
               valgrind
               watchexec

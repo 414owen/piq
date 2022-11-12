@@ -394,7 +394,7 @@ ir_module build_module(parse_tree tree, type_info types) {
         ir_expr e = {
           .ir_expr_tag = IR_EXPR_CALL,
           .ir_expr_type = ti,
-          .ir_expr_ind = module.ir_calls.len - 1,
+          .ir_expr_ind.n = module.ir_calls.len - 1,
         };
         UNIMPLEMENTED("Lowering call");
         break;

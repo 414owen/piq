@@ -76,6 +76,8 @@ void test_start_internal(test_state *state, const char *name) {
   assert(state->path.len > 0);
   print_depth_indent(state);
   fputs(name, stdout);
+  // we want to know what test is being run when we crash
+  fflush(stdout);
   state->current_name = name;
   state->current_failed = false;
   state->in_test = true;
