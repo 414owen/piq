@@ -81,29 +81,37 @@ size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
   return el_amt;
 }
 
-NON_NULL_PARAMS
-int timespec_subtract(struct timespec *result, struct timespec x,
-                      struct timespec y) {
-  /* Perform the carry for the later subtraction by updating y. */
+static struct timespec timespec_subtract_internal(const struct timespec x, const struct timespec y) {
+  struct timespec result = {
+    .tv_sec = x.tv_sec - y.tv_sec,
+    .tv_nsec = x.tv_nsec - y.tv_nsec,
+  };
   if (x.tv_nsec < y.tv_nsec) {
-    int nsec = (y.tv_nsec - x.tv_nsec) / 1e9 + 1;
-    y.tv_nsec -= 1e9 * nsec;
-    y.tv_sec += nsec;
+    result.tv_sec -= 1L;
+    result.tv_nsec += 1e9L;
   }
-  if (x.tv_nsec - y.tv_nsec > 1e9) {
-    int nsec = (x.tv_nsec - y.tv_nsec) / 1e9;
-    y.tv_nsec += 1e9 * nsec;
-    y.tv_sec -= nsec;
+  return result;
+}
+
+static bool timespec_gt(const struct timespec x, const struct timespec y) {
+  return x.tv_sec > y.tv_sec || (x.tv_sec == y.tv_sec && x.tv_nsec > y.tv_nsec);
+}
+
+bool timespec_negative(const struct timespec ts) {
+  struct timespec zero = {0};
+  return timespec_gt(zero, ts);
+}
+
+struct timespec timespec_subtract(const struct timespec x, const struct timespec y) {
+  struct timespec result;
+  if (timespec_gt(x, y)) {
+    return timespec_subtract_internal(x, y);
+  } else {
+    struct timespec res = timespec_subtract_internal(y, x);
+    res.tv_sec *= -1;
+    res.tv_nsec *= -1;
+    return res;
   }
-
-  /* Compute the time remaining to wait.
-     tv_usec is certainly positive. */
-  result->tv_sec = x.tv_sec - y.tv_sec;
-  result->tv_nsec = x.tv_nsec - y.tv_nsec;
-
-  /* Return 1 if result is negative. */
-  return x.tv_sec < y.tv_sec ||
-    (x.tv_sec == y.tv_sec && x.tv_nsec < y.tv_nsec);
 }
 
 NON_NULL_PARAMS
