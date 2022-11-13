@@ -180,6 +180,8 @@ void initialize_util(void);
 // platform-dependent
 struct timespec get_monotonic_time(void);
 
+struct timespec time_since_monotonic(const struct timespec start);
+
 #ifdef PREDEF_OS_WINDOWS
 #include "platform/windows/mkdir.h"
 #endif

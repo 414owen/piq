@@ -67,10 +67,9 @@ static void test_llvm_produces(test_state *state, const char *input,
       .data = input,
     };
 
-    LLVMModuleRef module =
-      gen_module(test_file.path, test_file, tree, tc.types, ctx.llvm_ctx);
+    llvm_res res = gen_module(test_file.path, test_file, tree, tc.types, ctx.llvm_ctx);
     LLVMOrcThreadSafeModuleRef tsm =
-      LLVMOrcCreateNewThreadSafeModule(module, ctx.orc_ctx);
+      LLVMOrcCreateNewThreadSafeModule(res.module, ctx.orc_ctx);
     LLVMOrcLLJITAddLLVMIRModule(ctx.jit, ctx.dylib, tsm);
     LLVMOrcJITTargetAddress entry_addr;
     {
@@ -88,7 +87,7 @@ static void test_llvm_produces(test_state *state, const char *input,
             "Jit function returned wrong result. Expected: %d, Got: %d.\n%s",
             expected,
             got,
-            LLVMPrintModuleToString(module));
+            LLVMPrintModuleToString(res.module));
     }
     free_parse_tree(tree);
     free_tc_res(tc);

@@ -117,6 +117,11 @@ struct timespec timespec_subtract(const struct timespec x,
   }
 }
 
+struct timespec time_since_monotonic(const struct timespec start) {
+  struct timespec end = get_monotonic_time();
+  return timespec_subtract(end, start);
+}
+
 NON_NULL_PARAMS
 void ss_init_immovable(stringstream *ss) {
   ss->stream = open_memstream(&ss->string, &ss->size);

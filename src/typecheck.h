@@ -1,5 +1,6 @@
 #pragma once
 
+#include "defs.h"
 #include "parse_tree.h"
 #include "vec.h"
 #include "types.h"
@@ -57,6 +58,9 @@ typedef struct {
   tc_error *errors;
   node_ind_t error_amt;
   type_info types;
+#ifdef TIME_TYPECHECK
+  struct timespec time_taken;
+#endif
 } tc_res;
 
 void print_tc_errors(FILE *, const char *input, parse_tree, tc_res);
