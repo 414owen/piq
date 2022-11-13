@@ -207,7 +207,7 @@ void write_test_results(test_state *state) {
   vec_string class_path = VEC_NEW;
 
   struct timespec elapsed;
-  timespec_subtract(&elapsed, &state->end_time, &state->start_time);
+  timespec_subtract(&elapsed, state->end_time, state->start_time);
 
   fprintf(f,
           "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"

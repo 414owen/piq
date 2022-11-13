@@ -103,8 +103,8 @@ COLD_ATTR
 void unimplemented(char *str, char *file, size_t line);
 
 NON_NULL_PARAMS
-int timespec_subtract(struct timespec *result, struct timespec *x,
-                      struct timespec *y);
+int timespec_subtract(struct timespec *result, struct timespec x,
+                      struct timespec y);
 
 NON_NULL_ALL
 MALLOC_ATTR_2(free, 1)
