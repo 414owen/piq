@@ -2,7 +2,9 @@
 #include <stdlib.h>
 
 #include "ir.h"
+#include "vec.h"
 #include "test.h"
+#include "tests.h"
 
 typedef struct {
   const char *name;

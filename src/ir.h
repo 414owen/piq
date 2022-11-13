@@ -2,6 +2,7 @@
 
 #include "binding.h"
 #include "bitset.h"
+#include "parse_tree.h"
 #include "slice.h"
 #include "span.h"
 #include "types.h"

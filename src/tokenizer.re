@@ -6,6 +6,7 @@
 
 #include "consts.h"
 #include "defs.h"
+#include "parser.h"
 #include "source.h"
 #include "term.h"
 #include "token.h"

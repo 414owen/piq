@@ -1,4 +1,5 @@
 #include "test.h"
+#include "tests.h"
 #include "vec.h"
 
 static const char *str = "hi";

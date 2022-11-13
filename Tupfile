@@ -28,7 +28,6 @@ common_objs += bitset.o
 common_objs += consts.o
 common_objs += diagnostic.o
 common_objs += dir_exists.o
-# common_objs += ir.o
 common_objs += mkdir_p.o
 common_objs += parser.o
 common_objs += parse_tree.o
@@ -41,6 +40,7 @@ common_objs += util.o
 common_objs += vec.o
 common_objs += llvm.o
 common_objs += llvm_shim.o
+common_objs += args.o
 
 test_objs += run_tests.o
 test_objs += test_bitset.o
@@ -51,16 +51,51 @@ test_objs += test_parser.o
 test_objs += test_scanner.o
 test_objs += test_strint.o
 test_objs += test_typecheck.o
+test_objs += test_upto.o
 test_objs += test_utils.o
 test_objs += test_vec.o
-test_objs += args.o
 
 LDFLAGS = `pkg-config --libs "readline"`
 LDFLAGS += `llvm-config --cxxflags --ldflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
 
+COMPILE_C_FAST = "$CC -O2 $(CFLAGS) -c -o %o %f"
+COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f 
+
 : src/tokenizer.re |> re2c $(RE2C_OPTIONS) -o %o %f |> src/tokenizer.c
 : src/parser.y |> ./scripts/gen-parser.sh |> src/parser.c src/parser.h
-: foreach src/*.c | src/parser.h |> $CC $(CFLAGS) -c -o %o %f |> %B.o
-: foreach src/*.cpp |> $CXX $(CXXFLAGS) -c -o %o %f |> %B.o
+
+: src/parser.c     | src/parser.h |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/parse_tree.c | src/parser.h |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/repl.c       | src/parser.h |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/tokenizer.c  | src/parser.h |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/bitset.c      |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/consts.c      |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/diagnostic.c  |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/dir_exists.c  |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/mkdir_p.c     |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/scope.c       |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/strint.c      |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/typecheck.c   |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/type.c        |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/util.c        |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/vec.c         |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/llvm.c        |> $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/llvm_shim.cpp |> $CXX -O2 $(CXXFLAGS) -c -o %o %f |> %B.o
+
+: src/test_llvm.c      | src/parser.h |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_parser.c    | src/parser.h |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_typecheck.c | src/parser.h |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_scanner.c   | src/parser.h |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/run_tests.c    |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_bitset.c  |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test.c         |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_ir.c      |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_strint.c  |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_utils.c   |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_vec.c     |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_upto.c    |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/args.c         |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/main.c         |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+
 : $(common_objs) main.o |> $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> main
 : $(common_objs) $(test_objs) |> $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> test

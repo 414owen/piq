@@ -3,7 +3,10 @@
 
 #include "diagnostic.h"
 #include "parse_tree.h"
+#include "parser.h"
 #include "test.h"
+#include "test_upto.h"
+#include "tests.h"
 #include "vec.h"
 
 // TODO use test_typecheck's span strategy

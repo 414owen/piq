@@ -3,6 +3,7 @@
 
 #include "strint.h"
 #include "test.h"
+#include "tests.h"
 
 static void test_u8_overflows_base10(test_state *state, char *str) {
   test_start(state, str);

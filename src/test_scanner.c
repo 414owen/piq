@@ -2,7 +2,10 @@
 
 #include "consts.h"
 #include "diagnostic.h"
+#include "parser.h"
 #include "test.h"
+#include "tests.h"
+#include "test_upto.h"
 #include "token.h"
 
 static source_file test_file(const char *restrict input) {

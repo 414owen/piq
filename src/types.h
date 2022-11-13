@@ -3,7 +3,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "parse_tree.h"
+#include "ast_meta.h"
+#include "consts.h"
 #include "vec.h"
 
 typedef enum __attribute__((packed)) {

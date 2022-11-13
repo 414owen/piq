@@ -5,6 +5,7 @@
 
 #include "diagnostic.h"
 #include "test.h"
+#include "tests.h"
 #include "token.h"
 #include "util.h"
 
