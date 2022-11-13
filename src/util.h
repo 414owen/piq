@@ -1,7 +1,7 @@
 #pragma once
 
-#define POSIX_C_SOURCE 199309L
 #include <hedley.h>
+#include <predef/predef.h>
 #include <alloca.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -149,9 +149,6 @@ HEDLEY_RETURNS_NON_NULL
 char *get_cache_dir(void);
 
 NON_NULL_PARAMS
-bool recurse_mkdir(char *dirname);
-
-NON_NULL_PARAMS
 int mkdirp(char *path, mode_t mode);
 
 NON_NULL_PARAMS
@@ -176,3 +173,12 @@ void split(char *data, int needle, char **buf, size_t buf_size);
 NON_NULL_ALL
 MALLOC_ATTR_2(free, 1)
 void *__malloc_fill(size_t num, size_t elemsize, void *elem);
+
+void initialize_util(void);
+
+// platform-dependent
+struct timespec get_monotonic_time(void);
+
+#ifdef PREDEF_OS_WINDOWS
+  #include "platform/windows/mkdir.h"
+#endif
