@@ -4,25 +4,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#else
-#include <sys/stat.h>
-#endif
-
+#include "mkdir.h"
 #include "consts.h"
 #include "dir_exists.h"
 #include "util.h"
-
-NON_NULL_PARAMS
-static inline int platform_mkdir(char *pathname, mode_t mode) {
-#ifdef _WIN32
-  // http://msdn.microsoft.com/en-us/library/2fkk4dzw.aspx
-  return _mkdir(pathname);
-#else
-  return mkdir(pathname, mode);
-#endif
-}
 
 NON_NULL_PARAMS
 static inline bool dir_segment_exists(char *pathbuf, size_t end) {
@@ -75,7 +60,7 @@ int mkdirp(char *path, mode_t mode) {
   while (last_created_parent < sep_amt) {
     size_t boundary = seps[last_created_parent++];
     path[boundary] = '\0';
-    int rc = platform_mkdir(path, mode);
+    int rc = mkdir(path, mode);
     if (rc != 0 && errno != EEXIST)
       return -1;
     path[boundary] = path_sep[0];

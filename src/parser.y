@@ -711,6 +711,7 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
   }
 
   static parse_tree_res parse_internal(token *tokens, size_t token_amt, bool get_expected) {
+    struct timespec start = get_monotonic_time();
     yyParser xp;
     ParseInit(&xp);
     state state = {

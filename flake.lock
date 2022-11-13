@@ -48,11 +48,28 @@
         "type": "github"
       }
     },
+    "predef-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1441903980,
+        "narHash": "sha256-e3In7l8/EmSBCKmLWM0zOfh8fF/8PydZOxeLBb0g038=",
+        "owner": "natefoo",
+        "repo": "predef",
+        "rev": "eb6c42a829b53763bd2da209799bf98f5723211d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "natefoo",
+        "repo": "predef",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
         "hedley-src": "hedley-src",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "predef-src": "predef-src"
       }
     }
   },

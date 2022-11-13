@@ -8,9 +8,19 @@
       url = "github:nemequ/hedley/v15";
       flake = false;
     };
+    predef-src = {
+      url = "github:natefoo/predef";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, hedley-src, flake-utils }:
+  outputs =
+    { self
+    , nixpkgs
+    , hedley-src
+    , predef-src
+    , flake-utils
+    }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; overlays = [ (import ./nix/overlays.nix) ]; };
@@ -26,6 +36,17 @@
           installPhase = ''
             mkdir -p $out/include
             mv hedley.h $out/include
+          '';
+        };
+
+        predef = stdenv.mkDerivation {
+          name = "predef";
+          version = "1.0.0";
+          src = predef-src;
+          dontBuild = true;
+          installPhase = ''
+            mkdir -p $out/include
+            mv predef $out/include
           '';
         };
 
@@ -47,6 +68,7 @@
           buildInputs = with pkgs; [
             llvmPackages_14.libllvm
             hedley
+            predef
           ];
 
           CFLAGS = "-O2 -s -flto";

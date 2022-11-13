@@ -113,6 +113,19 @@ static void test_timespec_subtract(test_state *state) {
   test_group_end(state);
 }
 
+static void test_monotonic_time(test_state *state) {
+  struct timespec x;
+  struct timespec y;
+  {
+    test_start(state, "subsequent calls lead to greater times");
+    x = get_monotonic_time();
+    y = get_monotonic_time();
+    test_assert(state, y.tv_sec >= x.tv_sec);
+    test_assert(state, y.tv_sec > x.tv_sec || y.tv_nsec > x.tv_nsec);
+    test_end(state);
+  }
+}
+
 static void test_asprintf(test_state *state) {
   test_start(state, "asprintf");
   char *res;
@@ -128,7 +141,6 @@ static void test_asprintf(test_state *state) {
 static void test_mkdirp(test_state *state) {
   test_group_start(state, "mkdir -p");
 
-#ifndef _WIN32
   {
     char *path = strdup("/tmp/lang-c/test/folder/pls/create");
     mkdirp(path, S_IRWXU | S_IRWXG | S_IROTH);
@@ -138,7 +150,6 @@ static void test_mkdirp(test_state *state) {
     rm_r("/tmp/lang-c");
     free(path);
   }
-#endif
 
   test_group_end(state);
 }
@@ -149,6 +160,7 @@ void test_utils(test_state *state) {
   test_memclone(state);
   test_asprintf(state);
   test_timespec_subtract(state);
+  test_monotonic_time(state);
   test_mkdirp(state);
   test_group_end(state);
 }

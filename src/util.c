@@ -1,6 +1,6 @@
-#define _GNU_SOURCE
 #include <alloca.h>
 #include <errno.h>
+#include <predef/predef.h>
 #include <pwd.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -13,6 +13,8 @@
 #include "attrs.h"
 #include "consts.h"
 #include "util.h"
+
+void *memmem(const void *haystack, size_t haystack_len, const void *needle, size_t needle_len);
 
 HEDLEY_RETURNS_NON_NULL
 MALLOC_ATTR_2(free, 1)
@@ -356,4 +358,18 @@ void *__malloc_fill(size_t num, size_t elemsize, void *elem) {
   void *res = malloc_safe(num * elemsize);
   memset_arbitrary(res, elem, num, elemsize);
   return res;
+}
+
+#ifdef PREDEF_OS_WINDOWS
+  #include "platform/windows/util.c"
+  #include "platform/windows/rm_r.c"
+#elif defined(PREDEF_STANDARD_POSIX_2001)
+  #include "platform/posix/util.c"
+  #include "platform/posix/rm_r.c"
+#endif
+
+void initialise_util(void) {
+#ifdef PREDEF_OS_WINDOWS
+  initialise_util_windows();
+#endif
 }
