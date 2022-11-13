@@ -2,6 +2,7 @@
 
 #include "bitset.h"
 #include "test.h"
+#include "tests.h"
 #include "vec.h"
 
 void test_bitset(test_state *state) {

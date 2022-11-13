@@ -8,9 +8,9 @@
 
 #include "diagnostic.h"
 #include "llvm.h"
-#include "parse_tree.h"
 #include "test.h"
-#include "typecheck.h"
+#include "tests.h"
+#include "test_upto.h"
 #include "util.h"
 
 typedef struct {

@@ -5,6 +5,8 @@
 #include "diagnostic.h"
 #include "parse_tree.h"
 #include "test.h"
+#include "tests.h"
+#include "test_upto.h"
 #include "typecheck.h"
 #include "util.h"
 

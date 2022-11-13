@@ -3,6 +3,7 @@
 
 #include "args.h"
 #include "repl.h"
+#include "util.h"
 
 typedef enum {
   COMMAND_NONE,
@@ -10,14 +11,14 @@ typedef enum {
   COMMAND_COMPILE
 } subcommand_tag;
 
-int main(int argc, char **argv) {
+int main(const int argc, const char **argv) {
   argument args[] = {
     {
       .tag = ARG_SUBCOMMAND,
       .long_name = "repl",
       .description = "filter tests by name. Matches on <group>.<group>.<test>",
-      .subcommand_value = 
-    }
+      .subcommand_value = COMMAND_REPL,
+    },
   };
   
   argument_bag bag = {

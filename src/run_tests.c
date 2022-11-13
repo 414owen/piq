@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "test.h"
+#include "tests.h"
 #include "args.h"
 
 static void run_tests(test_config conf) {

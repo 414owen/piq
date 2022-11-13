@@ -5,7 +5,6 @@
 
 #include "ast_meta.h"
 #include "consts.h"
-#include "parser.h"
 #include "span.h"
 #include "token.h"
 #include "vec.h"
@@ -193,7 +192,6 @@ typedef struct {
 
 VEC_DECL(parse_node);
 VEC_DECL_CUSTOM(node_ind_t, vec_node_ind);
-VEC_DECL(token_type);
 
 typedef struct {
   const parse_node *nodes;

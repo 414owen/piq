@@ -7,9 +7,10 @@
 #include "consts.h"
 #include "source.h"
 #include "vec.h"
-#include "parser.h"
 
 typedef unsigned char token_type;
+
+VEC_DECL(token_type);
 
 typedef struct {
   token_type type;
