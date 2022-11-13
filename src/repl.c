@@ -49,7 +49,7 @@ end_a:
   free_tokens_res(tres);
 }
 
-int repl(int argc, char **argv) {
+int repl(void) {
   puts("Entering multiline REPL. Press <enter> twice to evaluate.");
   char *hist_file_path = join_two_paths(get_cache_dir(), "repl_history");
   fclose(fopen(hist_file_path, "a"));

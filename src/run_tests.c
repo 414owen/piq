@@ -83,12 +83,17 @@ int main(int argc, const char **argv) {
     },
   };
   
-  argument_bag bag = {
+  argument_bag root  = {
     .amt = STATIC_LEN(args),
     .args = args,
   };
 
-  parse_args(&bag, argc, argv);
+  program_args pa = {
+    .root = &root,
+    .preamble = "Lang tests v1.0.0\n",
+  };
+
+  parse_args(pa, argc, argv);
 
   for (int i = 0; i < times; i++) {
     run_tests(conf);

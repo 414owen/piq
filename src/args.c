@@ -13,6 +13,7 @@ typedef struct {
   const char **restrict argv;
   int arg_cursor;
   int argc;
+  program_args program_args;
   argument_bag *arguments;
   vec_string subcommands;
 } parse_state;
@@ -27,8 +28,14 @@ static char *type_strs[] = {
   [ARG_INT] = "INT",
 };
 
-void print_help(parse_state *state) {
+static void print_help(parse_state *state) {
+  puts(state->program_args.preamble);
   printf("Usage: %s", state->argv[0]);
+  unsigned num_subcommands = 0;
+  for (unsigned i = 0; i < state->arguments->amt; i++) {
+    argument a = state->arguments->args[i];
+    // TODO
+  }
   for (unsigned i = 0; i < state->subcommands.len; i++) {
     printf(" %s", VEC_GET(state->subcommands, i));
   }
@@ -138,7 +145,7 @@ static void parse_long(parse_state *restrict state,
   unknown_arg(state, arg_str);
 }
 
-void parse_short(parse_state *state, const char *restrict arg_str) {
+static void parse_short(parse_state *state, const char *restrict arg_str) {
   size_t arg_str_len = strlen(arg_str);
   int cursor = state->arg_cursor;
   if (strchr(arg_str, 'h')) {
@@ -212,7 +219,7 @@ void parse_short(parse_state *state, const char *restrict arg_str) {
   state->arg_cursor = cursor + 1;
 }
 
-void parse_noprefix(parse_state *state, const char *restrict arg_str) {
+static void parse_noprefix(parse_state *state, const char *restrict arg_str) {
   bool subcommand_taken = false;
   for (unsigned i = 0; i < state->arguments->amt; i++) {
     argument a = state->arguments->args[i];
@@ -221,6 +228,8 @@ void parse_noprefix(parse_state *state, const char *restrict arg_str) {
     }
     if (strcmp(arg_str, a.subcommand_name) == 0) {
       subcommand_taken = true;
+      state->arg_cursor++;
+      VEC_PUSH(&state->subcommands, a.subcommand_name);
       state->arguments->subcommand_chosen = a.subcommand_value;
       argument_bag *tmp = state->arguments;
       state->arguments = &a.subs;
@@ -232,12 +241,13 @@ void parse_noprefix(parse_state *state, const char *restrict arg_str) {
   if (!subcommand_taken) {
     fprintf(stderr, "Unknown subcommand: %s\n", arg_str);
     print_help(state);
+    exit(1);
   }
   // TODO support positional args here
 }
 
 // recursive, but should be fine
-void preprocess_and_validate_args(argument_bag bag) {
+static void preprocess_and_validate_args(argument_bag bag) {
   for (unsigned i = 0; i < bag.amt; i++) {
     argument a = bag.args[i];
     switch (a.tag) {
@@ -288,12 +298,13 @@ static void parse_args_rec(parse_state *state) {
   }
 }
 
-void parse_args(argument_bag *bag, int argc, const char **restrict argv) {
-  preprocess_and_validate_args(*bag);
+void parse_args(program_args program_args, int argc, const char **restrict argv) {
+  preprocess_and_validate_args(*program_args.root);
   parse_state state = {
     // assume the first parameter is the program name
     .arg_cursor = 1,
-    .arguments = bag,
+    .program_args = program_args,
+    .arguments = program_args.root,
     .argc = argc,
     .argv = argv,
   };

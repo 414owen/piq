@@ -44,4 +44,9 @@ struct argument {
   };
 };
 
-void parse_args(argument_bag *bag, int argc, const char **argv);
+typedef struct {
+  argument_bag *root;
+  const char *preamble;
+} program_args;
+
+void parse_args(program_args args, int argc, const char **argv);
