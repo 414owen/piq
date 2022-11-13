@@ -509,7 +509,7 @@ type(RES) ::= upper_name(A). {
 type(RES) ::= OPEN_BRACKET(O) type_inside_brackets(B) CLOSE_BRACKET(C). {
   BREAK_PARSER;
   parse_node n = {
-    .type.pattern = PT_TY_LIST,
+    .type.type = PT_TY_LIST,
     .sub_a = B,
     .span = {
       .start = s->tokens[O].start,
