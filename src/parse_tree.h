@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdio.h>
+#include <time.h>
 
 #include "ast_meta.h"
 #include "consts.h"
@@ -213,6 +214,7 @@ typedef struct {
   // };
   bool succeeded;
   // };
+  struct timespec time_taken;
 } parse_tree_res;
 
 parse_tree_res parse(token *tokens, size_t token_amt);

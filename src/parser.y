@@ -44,6 +44,7 @@
 %include {
 
   #include <assert.h>
+  #include <time.h>
 
   #include "parse_tree.h"
   #include "token.h"
@@ -711,7 +712,6 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
   }
 
   static parse_tree_res parse_internal(token *tokens, size_t token_amt, bool get_expected) {
-    struct timespec start = get_monotonic_time();
     yyParser xp;
     ParseInit(&xp);
     state state = {
@@ -727,11 +727,18 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
       .expected_amt = 0,
       .expected = NULL,
     };
-    for (; state.pos < token_amt; state.pos++) {
-      Parse(&xp, tokens[state.pos].type, state.pos, &state);
+
+    struct timespec time_taken;
+    {
+      struct timespec start = get_monotonic_time();
+      for (; state.pos < token_amt; state.pos++) {
+        Parse(&xp, tokens[state.pos].type, state.pos, &state);
+      }
+      Parse(&xp, 0, 0, &state);
+      ParseFinalize(&xp);
+      struct timespec end = get_monotonic_time();
+      time_taken = timespec_subtract(end, start);
     }
-    Parse(&xp, 0, 0, &state);
-    ParseFinalize(&xp);
 
     parse_tree_res res =  {
       .succeeded = state.succeeded,
@@ -743,6 +750,7 @@ if(RES) ::= IF expr(A) expr(B) expr(C). {
       .error_pos = state.error_pos,
       .expected_amt = state.expected_amt,
       .expected = state.expected,
+      .time_taken = time_taken,
     };
     if (res.succeeded) {
       res.tree.nodes = VEC_FINALIZE(&state.nodes);
