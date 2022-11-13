@@ -35,7 +35,7 @@
 #if ((defined(__GNUC__) || defined(__clang__)))
 
 #define stalloc(bytes)                                                         \
-  (((bytes) > MAX_STACK_ALLOC) ? malloc(bytes) : alloca(bytes))
+  (((bytes) > MAX_STACK_ALLOC) ? malloc_safe(bytes) : alloca(bytes))
 
 #define stcalloc(n, size)                                                      \
   (((n) * (size) > MAX_STACK_ALLOC)                                            \
