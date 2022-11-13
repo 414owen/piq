@@ -71,7 +71,7 @@ static void test_timespec_subtract(test_state *state) {
     timespec_get(&x, TIME_UTC);
     y = x;
     x.tv_sec++;
-    int neg = timespec_subtract(&res, &x, &y);
+    int neg = timespec_subtract(&res, x, y);
     test_assert_eq(state, neg, 0);
     test_assert_eq(state, res.tv_sec, 1);
     test_end(state);
@@ -82,7 +82,7 @@ static void test_timespec_subtract(test_state *state) {
     timespec_get(&x, TIME_UTC);
     y = x;
     x.tv_sec++;
-    int neg = timespec_subtract(&res, &y, &x);
+    int neg = timespec_subtract(&res, y, x);
     test_assert_eq(state, neg, 1);
     test_assert_eq(state, res.tv_sec, -1);
     test_end(state);
@@ -93,7 +93,7 @@ static void test_timespec_subtract(test_state *state) {
     timespec_get(&x, TIME_UTC);
     y = x;
     x.tv_nsec++;
-    int neg = timespec_subtract(&res, &y, &x);
+    int neg = timespec_subtract(&res, y, x);
     test_assert_eq(state, neg, 1);
     test_assert_eq(state, res.tv_sec, -1);
     test_end(state);
@@ -104,7 +104,7 @@ static void test_timespec_subtract(test_state *state) {
     timespec_get(&x, TIME_UTC);
     y = x;
     x.tv_nsec = 1 + 1000000000 + y.tv_nsec;
-    int neg = timespec_subtract(&res, &x, &y);
+    int neg = timespec_subtract(&res, x, y);
     test_assert_eq(state, neg, 0);
     test_assert_eq(state, res.tv_sec, 1);
     test_end(state);
