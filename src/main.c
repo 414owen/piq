@@ -11,6 +11,8 @@ typedef enum {
   COMMAND_COMPILE
 } subcommand_tag;
 
+const char *preamble = "Lang v0.1.0 pre-alpha\n";
+
 int main(const int argc, const char **argv) {
   argument args[] = {
     {
@@ -21,11 +23,17 @@ int main(const int argc, const char **argv) {
     },
   };
   
-  argument_bag bag = {
+  argument_bag root = {
     .amt = STATIC_LEN(args),
     .args = args,
+    .subcommand_chosen = COMMAND_NONE,
+  };
+  
+  program_args pa = {
+    .root = &root,
+    .preamble = preamble,
   };
 
-  parse_args(&bag, argc, argv);
-
+  parse_args(pa, argc, argv);
+  printf("%d\n", root.subcommand_chosen);
 }

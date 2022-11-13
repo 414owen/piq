@@ -22,3 +22,4 @@ build-aux
 result
 .struct.debug.c
 perf.data*
+main
