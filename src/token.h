@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <time.h>
 
 #include "consts.h"
 #include "source.h"
@@ -28,6 +29,9 @@ typedef struct {
   size_t token_amt;
   buf_ind_t error_pos;
   bool succeeded;
+#ifdef TIME_TOKENIZATION
+  struct timespec time_taken;
+#endif
 } tokens_res;
 
 token_res scan(source_file file, buf_ind_t pos);

@@ -679,17 +679,24 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
   destroy_cg_state(&state);
 }
 
-LLVMModuleRef gen_module(char *module_name, source_file source, parse_tree tree,
+llvm_res gen_module(char *module_name, source_file source, parse_tree tree,
                          type_info types, LLVMContextRef ctx) {
-  LLVMModuleRef mod = LLVMModuleCreateWithNameInContext(module_name, ctx);
-  cg_llvm_module(ctx, mod, source, tree, types);
-  return mod;
+#ifdef TIME_CODEGEN
+  struct timespec start = get_monotonic_time();
+#endif
+  llvm_res res = {
+    .module = LLVMModuleCreateWithNameInContext(module_name, ctx),
+  };
+  cg_llvm_module(ctx, res.module, source, tree, types);
+#ifdef TIME_CODEGEN
+  res.time_taken = get_monotonic_time();
+#endif
+  return res;
 }
 
 void gen_and_print_module(source_file source, parse_tree tree, type_info types,
                           FILE *out_f) {
   LLVMContextRef ctx = LLVMContextCreate();
-  LLVMModuleRef mod = gen_module("my_module", source, tree, types, ctx);
-  cg_llvm_module(ctx, mod, source, tree, types);
-  fputs(LLVMPrintModuleToString(mod), out_f);
+  llvm_res res = gen_module("my_module", source, tree, types, ctx);
+  fputs(LLVMPrintModuleToString(res.module), out_f);
 }

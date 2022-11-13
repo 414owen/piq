@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "consts.h"
+#include "defs.h"
 #include "source.h"
 #include "term.h"
 #include "token.h"
@@ -78,6 +79,9 @@ token_res scan(source_file file, buf_ind_t start) {
 }
 
 tokens_res scan_all(source_file file) {
+#ifdef TIME_TOKENIZER
+  struct timespec start = get_monotonic_time();
+#endif
   buf_ind_t ind = 0;
   vec_token tokens = VEC_NEW;
   tokens_res res = { .succeeded = true };
@@ -88,16 +92,20 @@ tokens_res scan_all(source_file file) {
       VEC_FREE(&tokens);
       res.succeeded = false;
       res.error_pos = tres.tok.start;
-      return res;
+      break;
     }
     VEC_PUSH(&tokens, tres.tok);
     if (tres.tok.type == TK_EOF) {
       res.token_amt = tokens.len;
       res.tokens = VEC_FINALIZE(&tokens);
-      return res;
+      break;
     }
     ind = tres.tok.end + 1;
   }
+#ifdef TIME_TOKENIZER
+  res.time_taken = time_since_monotonic(start);
+#endif
+  return res;
 }
 
 void free_tokens_res(tokens_res res) {

@@ -1121,6 +1121,9 @@ void print_tc_errors(FILE *f, const char *restrict input, parse_tree tree,
 }
 
 tc_res typecheck(const char *restrict input, parse_tree tree) {
+#ifdef TIME_TYPECHECK
+  struct timespec start = get_monotonic_time();
+#endif
   typecheck_state state = tc_new_state(input, tree);
   setup_type_env(&state);
 
@@ -2145,6 +2148,9 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
                   .node_types = state.types.node_types,
                   .type_inds = VEC_FINALIZE(&state.types.type_inds),
                 }};
+#ifdef TIME_TYPECHECK
+  res.time_taken = time_since_monotonic(start);
+#endif
   return res;
 }
 
