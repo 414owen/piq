@@ -48,7 +48,7 @@ end_a:
   free_tokens_res(tres);
 }
 
-int main(void) {
+int repl(int argc, char **argv) {
   puts("Entering multiline REPL. Press <enter> twice to evaluate.");
   char *hist_file_path = join_two_paths(get_cache_dir(), "repl_history");
   fclose(fopen(hist_file_path, "a"));
@@ -85,4 +85,5 @@ int main(void) {
 
   VEC_FREE(&multiline_input);
   free(hist_file_path);
+  return 0;
 }

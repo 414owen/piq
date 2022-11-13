@@ -81,8 +81,13 @@ int main(int argc, const char **argv) {
       .description = "filter tests by name. Matches on <group>.<group>.<test>",
     },
   };
+  
+  argument_bag bag = {
+    .amt = STATIC_LEN(args),
+    .args = args,
+  };
 
-  parse_args(args, STATIC_LEN(args), argc, argv);
+  parse_args(&bag, argc, argv);
 
   for (int i = 0; i < times; i++) {
     run_tests(conf);

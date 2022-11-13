@@ -62,5 +62,5 @@ LDFLAGS += `llvm-config --cxxflags --ldflags --libs core executionengine mcjit e
 : src/parser.y |> ./scripts/gen-parser.sh |> src/parser.c src/parser.h
 : foreach src/*.c | src/parser.h |> $CC $(CFLAGS) -c -o %o %f |> %B.o
 : foreach src/*.cpp |> $CXX $(CXXFLAGS) -c -o %o %f |> %B.o
-: $(common_objs) repl.o |> $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> repl
+: $(common_objs) main.o |> $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> main
 : $(common_objs) $(test_objs) |> $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> test

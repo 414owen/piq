@@ -84,6 +84,7 @@ A language that does everything right
 * Replace all temporary allocated vec_node_ind with a single one, and a vector of lengths
 * Unify wildcard and placeholder terminology
 * Add all EXPR parse tree enums to STMT, as all expressions are valid statements.
+* Optimize some units (eg arg parsing) for size, others for speed
 
 # Mistakes
 
