@@ -104,7 +104,8 @@ void unimplemented(char *str, char *file, size_t line);
 
 bool timespec_negative(const struct timespec ts);
 
-struct timespec timespec_subtract(const struct timespec x, const struct timespec y);
+struct timespec timespec_subtract(const struct timespec x,
+                                  const struct timespec y);
 
 NON_NULL_ALL
 MALLOC_ATTR_2(free, 1)
@@ -180,5 +181,5 @@ void initialize_util(void);
 struct timespec get_monotonic_time(void);
 
 #ifdef PREDEF_OS_WINDOWS
-  #include "platform/windows/mkdir.h"
+#include "platform/windows/mkdir.h"
 #endif

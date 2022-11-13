@@ -14,7 +14,8 @@
 #include "consts.h"
 #include "util.h"
 
-void *memmem(const void *haystack, size_t haystack_len, const void *needle, size_t needle_len);
+void *memmem(const void *haystack, size_t haystack_len, const void *needle,
+             size_t needle_len);
 
 HEDLEY_RETURNS_NON_NULL
 MALLOC_ATTR_2(free, 1)
@@ -81,7 +82,8 @@ size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
   return el_amt;
 }
 
-static struct timespec timespec_subtract_internal(const struct timespec x, const struct timespec y) {
+static struct timespec timespec_subtract_internal(const struct timespec x,
+                                                  const struct timespec y) {
   struct timespec result = {
     .tv_sec = x.tv_sec - y.tv_sec,
     .tv_nsec = x.tv_nsec - y.tv_nsec,
@@ -102,7 +104,8 @@ bool timespec_negative(const struct timespec ts) {
   return timespec_gt(zero, ts);
 }
 
-struct timespec timespec_subtract(const struct timespec x, const struct timespec y) {
+struct timespec timespec_subtract(const struct timespec x,
+                                  const struct timespec y) {
   struct timespec result;
   if (timespec_gt(x, y)) {
     return timespec_subtract_internal(x, y);
@@ -370,11 +373,11 @@ void *__malloc_fill(size_t num, size_t elemsize, void *elem) {
 }
 
 #ifdef PREDEF_OS_WINDOWS
-  #include "platform/windows/util.c"
-  #include "platform/windows/rm_r.c"
+#include "platform/windows/util.c"
+#include "platform/windows/rm_r.c"
 #elif defined(PREDEF_STANDARD_POSIX_2001)
-  #include "platform/posix/util.c"
-  #include "platform/posix/rm_r.c"
+#include "platform/posix/util.c"
+#include "platform/posix/rm_r.c"
 #endif
 
 void initialise_util(void) {
