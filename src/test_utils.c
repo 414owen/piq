@@ -71,9 +71,10 @@ static void test_timespec_subtract(test_state *state) {
     timespec_get(&x, TIME_UTC);
     y = x;
     x.tv_sec++;
-    int neg = timespec_subtract(&res, x, y);
-    test_assert_eq(state, neg, 0);
+    res = timespec_subtract(x, y);
+    test_assert(state, !timespec_negative(res));
     test_assert_eq(state, res.tv_sec, 1);
+    test_assert_eq(state, res.tv_nsec, 0);
     test_end(state);
   }
 
@@ -82,9 +83,10 @@ static void test_timespec_subtract(test_state *state) {
     timespec_get(&x, TIME_UTC);
     y = x;
     x.tv_sec++;
-    int neg = timespec_subtract(&res, y, x);
-    test_assert_eq(state, neg, 1);
+    res = timespec_subtract(y, x);
+    test_assert(state, timespec_negative(res));
     test_assert_eq(state, res.tv_sec, -1);
+    test_assert_eq(state, res.tv_nsec, 0);
     test_end(state);
   }
 
@@ -93,20 +95,10 @@ static void test_timespec_subtract(test_state *state) {
     timespec_get(&x, TIME_UTC);
     y = x;
     x.tv_nsec++;
-    int neg = timespec_subtract(&res, y, x);
-    test_assert_eq(state, neg, 1);
-    test_assert_eq(state, res.tv_sec, -1);
-    test_end(state);
-  }
-
-  {
-    test_start(state, "overflows nsecs");
-    timespec_get(&x, TIME_UTC);
-    y = x;
-    x.tv_nsec = 1 + 1000000000 + y.tv_nsec;
-    int neg = timespec_subtract(&res, x, y);
-    test_assert_eq(state, neg, 0);
-    test_assert_eq(state, res.tv_sec, 1);
+    res = timespec_subtract(y, x);
+    test_assert(state, timespec_negative(res));
+    test_assert_eq(state, res.tv_sec, 0);
+    test_assert_eq(state, res.tv_nsec, -1);
     test_end(state);
   }
 
