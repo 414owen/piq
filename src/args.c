@@ -11,11 +11,13 @@
 
 typedef struct {
   const char **restrict argv;
-  const argument *restrict args;
   int arg_cursor;
   int argc;
-  int argument_amt;
+  argument_bag *arguments;
+  vec_string subcommands;
 } parse_state;
+
+static void parse_args_rec(parse_state *state);
 
 static bool valid_short_flag(char c) { return c >= 'a' && c <= 'z'; }
 
@@ -26,18 +28,22 @@ static char *type_strs[] = {
 };
 
 void print_help(parse_state *state) {
-  printf("Usage: %s\n", state->argv[0]);
-  int max_long_len = 0;
-  for (int i = 0; i < state->argument_amt; i++) {
-    argument a = state->args[i];
+  printf("Usage: %s", state->argv[0]);
+  for (unsigned i = 0; i < state->subcommands.len; i++) {
+    printf(" %s", VEC_GET(state->subcommands, i));
+  }
+  putc('\n', stdout);
+  unsigned max_long_len = 0;
+  for (unsigned i = 0; i < state->arguments->amt; i++) {
+    argument a = state->arguments->args[i];
     max_long_len = MAX(max_long_len, a.long_len);
   }
   int max_type_len = 0;
   for (size_t i = 0; i < STATIC_LEN(type_strs); i++) {
     max_type_len = MAX(max_type_len, (int)strlen(type_strs[i]));
   }
-  for (int i = 0; i < state->argument_amt; i++) {
-    argument a = state->args[i];
+  for (unsigned i = 0; i < state->arguments->amt; i++) {
+    argument a = state->arguments->args[i];
     char *type_str = type_strs[a.tag];
     printf("  -%c%*s--%s%*s  %s\n",
            a.short_name,
@@ -78,23 +84,29 @@ static void assign_data(argument a, const char *str) {
       break;
     case ARG_FLAG:
       break;
+    case ARG_SUBCOMMAND:
+      //TODO?
+      break;
   }
 }
 
 static void parse_long(parse_state *restrict state,
-                       const char *restrict arg_str, int arg_str_len) {
+                       const char *restrict arg_str) {
+  size_t arg_str_len = strlen(arg_str);
   if (strcmp(arg_str, "help") == 0) {
     print_help(state);
     exit(0);
   }
-  for (int i = 0; i < state->argument_amt; i++) {
-    argument a = state->args[i];
+  for (unsigned i = 0; i < state->arguments->amt; i++) {
+    argument a = state->arguments->args[i];
     // TODO --arg=val form
     bool prefix_matches = arg_str_len >= a.long_len &&
                           strncmp(arg_str, a.long_name, a.long_len) == 0;
     bool matches = prefix_matches && arg_str_len == a.long_len;
     bool matched = false;
     switch (a.tag) {
+      case ARG_SUBCOMMAND:
+        break;
       case ARG_FLAG:
         if (matches) {
           *a.flag_data = true;
@@ -126,8 +138,8 @@ static void parse_long(parse_state *restrict state,
   unknown_arg(state, arg_str);
 }
 
-void parse_short(parse_state *state, const char *restrict arg_str,
-                 size_t arg_str_len) {
+void parse_short(parse_state *state, const char *restrict arg_str) {
+  size_t arg_str_len = strlen(arg_str);
   int cursor = state->arg_cursor;
   if (strchr(arg_str, 'h')) {
     print_help(state);
@@ -142,13 +154,15 @@ void parse_short(parse_state *state, const char *restrict arg_str,
   for (size_t i = 0; i < arg_str_len; i++) {
     char c = arg_str[i];
     bool matched = false;
-    for (int i = 0; !matched && i < state->argument_amt; i++) {
-      argument a = state->args[i];
+    for (unsigned j = 0; !matched && j < state->arguments->amt; j++) {
+      argument a = state->arguments->args[j];
       matched |= c == a.short_name;
       // if (matched) {
       //   printf("Matched: %s\n", a.long_name);
       // }
       switch (a.tag) {
+        case ARG_SUBCOMMAND:
+          break;
         case ARG_FLAG:
           if (matched) {
             *a.flag_data = true;
@@ -191,54 +205,97 @@ void parse_short(parse_state *state, const char *restrict arg_str,
     }
     fputc('\n', stderr);
     print_help(state);
+    VEC_FREE(&unmatched)
     exit(1);
   }
+    VEC_FREE(&unmatched)
   state->arg_cursor = cursor + 1;
 }
 
-void parse_args(argument *restrict args, int argument_amt, int argc,
-                const char **restrict argv) {
-
-  // preprocess
-  for (int i = 0; i < argument_amt; i++) {
-    args[i].long_len = strlen(args[i].long_name);
+void parse_noprefix(parse_state *state, const char *restrict arg_str) {
+  bool subcommand_taken = false;
+  for (unsigned i = 0; i < state->arguments->amt; i++) {
+    argument a = state->arguments->args[i];
+    if (a.tag != ARG_SUBCOMMAND) {
+      break;
+    }
+    if (strcmp(arg_str, a.subcommand_name) == 0) {
+      subcommand_taken = true;
+      state->arguments->subcommand_chosen = a.subcommand_value;
+      argument_bag *tmp = state->arguments;
+      state->arguments = &a.subs;
+      parse_args_rec(state);
+      state->arguments = tmp;
+      break;
+    }
   }
+  if (!subcommand_taken) {
+    fprintf(stderr, "Unknown subcommand: %s\n", arg_str);
+    print_help(state);
+  }
+  // TODO support positional args here
+}
 
+// recursive, but should be fine
+void preprocess_and_validate_args(argument_bag bag) {
+  for (unsigned i = 0; i < bag.amt; i++) {
+    argument a = bag.args[i];
+    switch (a.tag) {
+      case ARG_FLAG:
+      case ARG_STRING:
+      case ARG_INT:
+        assert(a.short_name == 0 || valid_short_flag(a.short_name));
+        bag.args[i].long_len = strlen(a.long_name);
+        break;
+      case ARG_SUBCOMMAND:
+        preprocess_and_validate_args(a.subs);
+        break;
+    }
+  }
+}
+
+typedef enum {
+  PREFIX_LONG,
+  PREFIX_SHORT,
+  PREFIX_NONE,
+} prefix_type;
+
+static void parse_args_rec(parse_state *state) {
+  while (state->arg_cursor < state->argc) {
+    const char *arg_str = state->argv[state->arg_cursor];
+    prefix_type prefix_type = PREFIX_NONE;
+
+    if (arg_str[0] == '-') {
+      prefix_type = PREFIX_SHORT;
+      arg_str++;
+      if (arg_str[0] == '-') {
+        prefix_type = PREFIX_LONG;
+        arg_str++;
+      }
+    }
+
+    switch (prefix_type) {
+      case PREFIX_LONG:
+        parse_long(state, arg_str);
+        break;
+      case PREFIX_SHORT:
+        parse_short(state, arg_str);
+        break;
+      case PREFIX_NONE:
+        parse_noprefix(state, arg_str);
+        break;
+    }
+  }
+}
+
+void parse_args(argument_bag *bag, int argc, const char **restrict argv) {
+  preprocess_and_validate_args(*bag);
   parse_state state = {
     // assume the first parameter is the program name
     .arg_cursor = 1,
-    .args = args,
-    .argument_amt = argument_amt,
+    .arguments = bag,
     .argc = argc,
     .argv = argv,
   };
-
-  for (int i = 0; i < argument_amt; i++) {
-    argument a = args[i];
-    assert(a.short_name == 0 || valid_short_flag(a.short_name));
-  }
-
-  while (state.arg_cursor < argc) {
-    const char *arg_str = argv[state.arg_cursor];
-    bool is_long = false;
-
-    if (arg_str[0] == '-') {
-      arg_str++;
-      if (arg_str[0] == '-') {
-        arg_str++;
-        is_long = true;
-      }
-    } else {
-      printf("Malformed argument, try adding prefixed dashes: %s\n",
-             argv[state.arg_cursor]);
-      print_help(&state);
-      exit(1);
-    }
-
-    if (is_long) {
-      parse_long(&state, arg_str, strlen(arg_str));
-    } else {
-      parse_short(&state, arg_str, strlen(arg_str));
-    }
-  }
+  parse_args_rec(&state);
 }
