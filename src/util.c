@@ -291,7 +291,8 @@ static char *get_home_dir(void) {
 NON_NULL_ALL
 MALLOC_ATTR_2(free, 1)
 char *join_paths(const char *const *paths, size_t path_num) {
-  return join(path_num, paths, path_sep);
+  char path_sep_str[2] = {path_sep, '\0'};
+  return join(path_num, paths, path_sep_str);
 }
 
 NON_NULL_ALL
