@@ -48,7 +48,7 @@ static void print_argument(argument a, int max_long_len, int max_type_len) {
          a.description);
 }
 
-static void print_help(parse_state *state) {
+static void print_help_internal(parse_state *state) {
   puts(state->program_args.preamble);
   unsigned num_subcommands = 0;
 
@@ -117,7 +117,7 @@ HEDLEY_NO_RETURN
 static void unknown_arg(parse_state *restrict state,
                         const char *restrict arg_str) {
   fprintf(stderr, "Unknown argument: '%s'.\n", arg_str);
-  print_help(state);
+  print_help_internal(state);
   exit(1);
 }
 
@@ -126,7 +126,7 @@ static void expected_argument(parse_state *restrict state,
                               const char *restrict arg_name) {
   fprintf(
     stderr, "Argument '%s' expected a value, but none given.\n", arg_name);
-  print_help(state);
+  print_help_internal(state);
   exit(1);
 }
 
@@ -151,7 +151,7 @@ static void parse_long(parse_state *restrict state,
                        const char *restrict arg_str) {
   size_t arg_str_len = strlen(arg_str);
   if (strcmp(arg_str, "help") == 0) {
-    print_help(state);
+    print_help_internal(state);
     exit(0);
   }
   for (unsigned i = 0; i < state->arguments->amt; i++) {
@@ -199,7 +199,7 @@ static void parse_short(parse_state *state, const char *restrict arg_str) {
   size_t arg_str_len = strlen(arg_str);
   int cursor = state->arg_cursor;
   if (strchr(arg_str, 'h')) {
-    print_help(state);
+    print_help_internal(state);
     exit(0);
   }
 
@@ -234,7 +234,7 @@ static void parse_short(parse_state *state, const char *restrict arg_str) {
                       "Short argument '%c' takes a parameter, so can't be used "
                       "with other short arguments.\n",
                       a.short_name);
-              print_help(state);
+              print_help_internal(state);
               exit(1);
             }
             if (cursor == state->argc - 1) {
@@ -261,7 +261,7 @@ static void parse_short(parse_state *state, const char *restrict arg_str) {
       fprintf(stderr, ", '%c'", VEC_GET(unmatched, i));
     }
     fputc('\n', stderr);
-    print_help(state);
+    print_help_internal(state);
     VEC_FREE(&unmatched)
     exit(1);
   }
@@ -290,7 +290,7 @@ static void parse_noprefix(parse_state *state, const char *restrict arg_str) {
   }
   if (!subcommand_taken) {
     fprintf(stderr, "Unknown subcommand: %s\n", arg_str);
-    print_help(state);
+    print_help_internal(state);
     exit(1);
   }
   // TODO support positional args here
@@ -348,15 +348,27 @@ static void parse_args_rec(parse_state *state) {
   }
 }
 
-void parse_args(program_args program_args, int argc, const char **restrict argv) {
-  preprocess_and_validate_args(*program_args.root);
-  parse_state state = {
+static parse_state new_state(program_args program_args, int argc, const char **restrict argv) {
+  parse_state res = {
     // assume the first parameter is the program name
     .arg_cursor = 1,
     .program_args = program_args,
     .arguments = program_args.root,
     .argc = argc,
     .argv = argv,
+    .subcommands = VEC_NEW
   };
+  return res;
+}
+
+void print_help(program_args program_args, int argc, const char **restrict argv) {
+  parse_state state = new_state(program_args, argc, argv);
+  print_help_internal(&state);
+}
+
+void parse_args(program_args program_args, int argc, const char **restrict argv) {
+  preprocess_and_validate_args(*program_args.root);
+  parse_state state = new_state(program_args, argc, argv);
   parse_args_rec(&state);
+  VEC_FREE(&state.subcommands);
 }

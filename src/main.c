@@ -18,7 +18,7 @@ int main(const int argc, const char **argv) {
     {
       .tag = ARG_SUBCOMMAND,
       .long_name = "repl",
-      .description = "filter tests by name. Matches on <group>.<group>.<test>",
+      .description = "launch the Read Evaluate Print Loop",
       .subcommand_value = COMMAND_REPL,
     },
   };
@@ -35,5 +35,12 @@ int main(const int argc, const char **argv) {
   };
 
   parse_args(pa, argc, argv);
-  printf("%d\n", root.subcommand_chosen);
+  switch (root.subcommand_chosen) {
+    case COMMAND_NONE:
+      print_help(pa, argc, argv);
+      break;
+    case COMMAND_REPL:
+      repl();
+      break;
+  }
 }
