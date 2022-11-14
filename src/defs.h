@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef TIME_ALL
 #ifndef TIME_TOKENIZER
 #define TIME_TOKENIZER
