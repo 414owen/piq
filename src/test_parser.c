@@ -513,6 +513,20 @@ static void test_parser_succeeds_root(test_state *state) {
   }
 }
 
+static void test_parser_succeeds_statements(test_state *state) {
+  test_group_start(state, "statements");
+  {
+    test_start(state, "Let");
+
+    expected_output out = {.tag = STRING,
+                           .str = "(Fun (Lname a) () (Body (Let (Lname b)) ()))"};
+    test_parser_succeeds_on(state, "(fun a () (let b ()) ())", out);
+
+    test_end(state);
+  }
+  test_group_end(state);
+}
+
 static void test_parser_succeeds(test_state *state) {
   test_group_start(state, "Succeeds");
 
@@ -520,6 +534,7 @@ static void test_parser_succeeds(test_state *state) {
   test_parser_succeeds_compound(state);
   test_parser_succeeds_kitchen_sink(state);
   test_parser_succeeds_root(state);
+  test_parser_succeeds_statements(state);
   test_parser_succeeds_type(state);
   if (!state->config.lite) {
     test_parser_robustness(state);
