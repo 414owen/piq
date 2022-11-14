@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef PREDEF_OS_WINDOWS
 #include "platform/windows/mkdir.h"
 #else
