@@ -55,6 +55,9 @@ test_objs += test_upto.o
 test_objs += test_utils.o
 test_objs += test_vec.o
 
+main_objs += main.o
+main_objs += repl.o
+
 LDFLAGS = `pkg-config --libs "libeditline"`
 LDFLAGS += `llvm-config --cxxflags --ldflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
 
@@ -97,5 +100,5 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/args.c         |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/main.c         |> $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 
-: $(common_objs) main.o |> $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> main
+: $(common_objs) $(main_objs) |> $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> main
 : $(common_objs) $(test_objs) |> $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> test

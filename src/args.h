@@ -50,3 +50,4 @@ typedef struct {
 } program_args;
 
 void parse_args(program_args args, int argc, const char **argv);
+void print_help(program_args program_args, int argc, const char **argv);
