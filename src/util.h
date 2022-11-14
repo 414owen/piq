@@ -150,7 +150,7 @@ HEDLEY_RETURNS_NON_NULL
 char *get_cache_dir(void);
 
 NON_NULL_PARAMS
-int mkdirp(char *path, mode_t mode);
+bool mkdirp(char *path, mode_t mode);
 
 NON_NULL_PARAMS
 int directory_exists(const char *path);

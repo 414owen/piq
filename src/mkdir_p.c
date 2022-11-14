@@ -13,20 +13,21 @@ NON_NULL_PARAMS
 static inline bool dir_segment_exists(char *pathbuf, size_t end) {
   pathbuf[end] = '\0';
   bool res = directory_exists(pathbuf);
-  pathbuf[end] = path_sep[0];
+  pathbuf[end] = path_sep;
   return res;
 }
 
 // TODO really don't need to use size_t here,
 // if our filenames are that long we probably have a bug
 NON_NULL_PARAMS
-int mkdirp(char *path, mode_t mode) {
+bool mkdirp(char *path, mode_t mode) {
 
   size_t len = strlen(path);
-  size_t sep_amt = path[len - 1] == path_sep[0] ? 0 : 1;
+  bool ends_in_sep = path[len - 1] == path_sep;
+  size_t sep_amt = ends_in_sep ? 0 : 1;
 
   for (size_t i = 0; i < len; i++) {
-    if (path[i] == path_sep[0])
+    if (path[i] == path_sep)
       sep_amt++;
   }
 
@@ -35,11 +36,12 @@ int mkdirp(char *path, mode_t mode) {
   {
     size_t sep_ind = 0;
     for (size_t i = 0; i < len; i++) {
-      if (path[i] == path_sep[0])
+      if (path[i] == path_sep)
         seps[sep_ind++] = i;
     }
-    if (path_sep[len - 1] != path_sep[0])
-      seps[sep_ind] = len - 1;
+    if (!ends_in_sep) {
+      seps[sep_ind] = len;
+    }
   }
 
   size_t last_created_parent = 0;
@@ -62,10 +64,10 @@ int mkdirp(char *path, mode_t mode) {
     path[boundary] = '\0';
     int rc = mkdir(path, mode);
     if (rc != 0 && errno != EEXIST)
-      return -1;
-    path[boundary] = path_sep[0];
+      return false;
+    path[boundary] = path_sep;
   }
 
   stfree(seps, sep_amt * sizeof(size_t));
-  return 0;
+  return true;
 }

@@ -9,4 +9,4 @@
 typedef uint32_t buf_ind_t;
 typedef uint32_t node_ind_t;
 extern const char *const program_name;
-extern const char *const path_sep;
+extern const char path_sep;
