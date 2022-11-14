@@ -28,39 +28,89 @@ static char *type_strs[] = {
   [ARG_INT] = "INT",
 };
 
+const static argument help_arg = {
+  .tag = ARG_FLAG,
+  .short_name = 'h',
+  .long_name = "help",
+  .long_len = 4,
+  .description = "list available commands and arguments",
+};
+
+static void print_argument(argument a, int max_long_len, int max_type_len) {
+  char *type_str = type_strs[a.tag];
+  printf("  -%c%*s--%s%*s  %s\n",
+         a.short_name,
+         2 + max_long_len - a.long_len,
+         "",
+         a.long_name,
+         2 + max_type_len,
+         type_str,
+         a.description);
+}
+
 static void print_help(parse_state *state) {
   puts(state->program_args.preamble);
-  printf("Usage: %s", state->argv[0]);
   unsigned num_subcommands = 0;
+
   for (unsigned i = 0; i < state->arguments->amt; i++) {
     argument a = state->arguments->args[i];
-    // TODO
+    switch (a.tag) {
+      case ARG_SUBCOMMAND:
+        num_subcommands++;
+        break;
+      default:
+        break;
+    }
   }
+
+  printf("Usage: %s", state->argv[0]);
   for (unsigned i = 0; i < state->subcommands.len; i++) {
     printf(" %s", VEC_GET(state->subcommands, i));
   }
-  putc('\n', stdout);
-  unsigned max_long_len = 0;
+
+  fputs(" [options]", stdout);
+  if (num_subcommands > 0) {
+    fputs(" <subcommand>", stdout);
+    fputs(" [options]", stdout);
+  }
+
+  puts("\n");
+  unsigned max_long_len = help_arg.long_len;
   for (unsigned i = 0; i < state->arguments->amt; i++) {
     argument a = state->arguments->args[i];
     max_long_len = MAX(max_long_len, a.long_len);
   }
+
   int max_type_len = 0;
   for (size_t i = 0; i < STATIC_LEN(type_strs); i++) {
     max_type_len = MAX(max_type_len, (int)strlen(type_strs[i]));
   }
+
+  if (num_subcommands > 0) {
+    puts("subcommands:");
+    for (unsigned i = 0; i < state->arguments->amt; i++) {
+      argument a = state->arguments->args[i];
+      if (a.tag == ARG_SUBCOMMAND) {
+        printf("%*s %*s %s\n",
+               8 + max_long_len,
+               a.subcommand_name,
+               2 + max_type_len,
+               "",
+               a.description);
+      }
+    }
+    putc('\n', stdout);
+  }
+
+  puts("options:");
   for (unsigned i = 0; i < state->arguments->amt; i++) {
     argument a = state->arguments->args[i];
-    char *type_str = type_strs[a.tag];
-    printf("  -%c%*s--%s%*s  %s\n",
-           a.short_name,
-           6 + max_long_len - a.long_len,
-           "",
-           a.long_name,
-           2 + max_type_len,
-           type_str,
-           a.description);
+    if (a.tag == ARG_SUBCOMMAND) {
+      continue;
+    }
+    print_argument(a, max_long_len, max_type_len);
   }
+  print_argument(help_arg, max_long_len, max_type_len);
 }
 
 HEDLEY_NO_RETURN
@@ -251,14 +301,14 @@ static void preprocess_and_validate_args(argument_bag bag) {
   for (unsigned i = 0; i < bag.amt; i++) {
     argument a = bag.args[i];
     switch (a.tag) {
+      case ARG_SUBCOMMAND:
+        preprocess_and_validate_args(a.subs);
+        HEDLEY_FALL_THROUGH;
       case ARG_FLAG:
       case ARG_STRING:
       case ARG_INT:
         assert(a.short_name == 0 || valid_short_flag(a.short_name));
         bag.args[i].long_len = strlen(a.long_name);
-        break;
-      case ARG_SUBCOMMAND:
-        preprocess_and_validate_args(a.subs);
         break;
     }
   }

@@ -24,12 +24,12 @@ struct argument {
   // flag, string, int
   struct {
     // when zero, argument has no short name
-    char short_name;
+    const char short_name;
     union {
-      char *long_name;
-      char *subcommand_name;
+      const char *long_name;
+      const char *subcommand_name;
     };
-    char *description;
+    const char *description;
     union {
       bool *flag_data;
       const char **string_data;
