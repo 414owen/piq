@@ -1069,7 +1069,7 @@ static void print_tc_error(FILE *f, tc_res res, const char *restrict input,
       fputs("Wrong number of tuple elements", f);
       break;
     case NEED_SIGNATURE:
-      fputs("Top level needs signature", f);
+      fputs("Top level statement needs signature", f);
       break;
     case INT_LARGER_THAN_MAX:
       fputs("Int doesn't fit into type", f);

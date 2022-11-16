@@ -21,9 +21,8 @@ static void reply(char *input, FILE *out) {
 
   parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (!pres.succeeded) {
-    printf("Parsing failed.\n");
     token error_token = tres.tokens[pres.error_pos];
-    format_error_ctx(stdout, input, error_token.start, error_token.end);
+    print_parse_tree_error(stdout, input, tres.tokens, pres);
     putc('\n', stdout);
     goto end_b;
   }
