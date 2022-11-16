@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "ast_meta.h"
+#include "diagnostic.h"
 #include "bitset.h"
 #include "parse_tree.h"
 #include "util.h"
@@ -406,4 +407,21 @@ void free_parse_tree_res(parse_tree_res res) {
   } else {
     free(res.expected);
   }
+}
+
+void print_parse_tree_error(FILE *f, const char *restrict input, const token *restrict tokens, const parse_tree_res pres) {
+  fputs("Parsing failed:\n", f);
+  token t = tokens[pres.error_pos];
+  format_error_ctx(f, input, t.start, t.end);
+  fputs("\nExpected one of: ", f);
+  print_tokens(f, pres.expected, pres.expected_amt);
+}
+
+MALLOC_ATTR_2(free, 1)
+char *print_parse_tree_error_string(const char *restrict input, const token *restrict tokens, const parse_tree_res pres) {
+  stringstream ss;
+  ss_init_immovable(&ss);
+  print_parse_tree_error(ss.stream, input, tokens, pres);
+  ss_finalize(&ss);
+  return ss.string;
 }

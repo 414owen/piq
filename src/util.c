@@ -154,6 +154,7 @@ err:
 
 // This is malloc-like, but it stores the thing inline, so we can't use the
 // attribute :(
+// TODO call by value?
 HEDLEY_NON_NULL(1)
 void ss_finalize(stringstream *ss) {
   putc(0, ss->stream);
