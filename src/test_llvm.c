@@ -124,6 +124,14 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
 
+  test_start(state, "Can use let bindings");
+  {
+    const char *input = "(sig a (Fn () ()))\n"
+                        "(fun a () (let b ()) b)";
+    test_llvm_produces(state, input, 3);
+  }
+  test_end(state);
+
   /*
   test_start(state, "Two fns and a call");
   {

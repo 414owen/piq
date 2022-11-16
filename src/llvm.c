@@ -513,7 +513,21 @@ static void cg_stmt(cg_state *state) {
   stage stage = pop_stage(&state->act_stage);
   switch (node.type.statement) {
     case PT_STMT_LET:
-      // TODO
+      switch (stage) {
+        case STAGE_ONE:
+          push_stmt_act(state, ind, STAGE_TWO);
+          push_expr_act(state, PT_LET_VAL_IND(node), STAGE_ONE);
+          break;
+        case STAGE_TWO: {
+          debug_assert(ind != state->env_bnds.len);
+          node_ind_t binding_ind = PT_LET_BND_IND(node);
+          parse_node binding = state->parse_tree.nodes[binding_ind];
+          VEC_PUSH(&state->env_bnds, binding.span);
+          LLVMValueRef val = VEC_POP(&state->val_stack);
+          VEC_PUSH(&state->env_vals, val);
+          break;
+        }
+      }
       break;
     case PT_STMT_SIG:
       break;
