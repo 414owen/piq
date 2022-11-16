@@ -142,7 +142,7 @@ static void assign_data(argument a, const char *str) {
     case ARG_FLAG:
       break;
     case ARG_SUBCOMMAND:
-      //TODO?
+      // TODO?
       break;
   }
 }
@@ -265,7 +265,7 @@ static void parse_short(parse_state *state, const char *restrict arg_str) {
     VEC_FREE(&unmatched)
     exit(1);
   }
-    VEC_FREE(&unmatched)
+  VEC_FREE(&unmatched)
   state->arg_cursor = cursor + 1;
 }
 
@@ -348,7 +348,8 @@ static void parse_args_rec(parse_state *state) {
   }
 }
 
-static parse_state new_state(program_args program_args, int argc, const char **restrict argv) {
+static parse_state new_state(program_args program_args, int argc,
+                             const char **restrict argv) {
   parse_state res = {
     // assume the first parameter is the program name
     .arg_cursor = 1,
@@ -356,17 +357,19 @@ static parse_state new_state(program_args program_args, int argc, const char **r
     .arguments = program_args.root,
     .argc = argc,
     .argv = argv,
-    .subcommands = VEC_NEW
+    .subcommands = VEC_NEW,
   };
   return res;
 }
 
-void print_help(program_args program_args, int argc, const char **restrict argv) {
+void print_help(program_args program_args, int argc,
+                const char **restrict argv) {
   parse_state state = new_state(program_args, argc, argv);
   print_help_internal(&state);
 }
 
-void parse_args(program_args program_args, int argc, const char **restrict argv) {
+void parse_args(program_args program_args, int argc,
+                const char **restrict argv) {
   preprocess_and_validate_args(*program_args.root);
   parse_state state = new_state(program_args, argc, argv);
   parse_args_rec(&state);

@@ -50,4 +50,3 @@ tc_res test_upto_typecheck(test_state *state, const char *restrict input,
   }
   return tc;
 }
-

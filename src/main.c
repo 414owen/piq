@@ -5,11 +5,7 @@
 #include "repl.h"
 #include "util.h"
 
-typedef enum {
-  COMMAND_NONE,
-  COMMAND_REPL,
-  COMMAND_COMPILE
-} subcommand_tag;
+typedef enum { COMMAND_NONE, COMMAND_REPL, COMMAND_COMPILE } subcommand_tag;
 
 const char *preamble = "Lang v0.1.0 pre-alpha\n";
 
@@ -22,13 +18,13 @@ int main(const int argc, const char **argv) {
       .subcommand_value = COMMAND_REPL,
     },
   };
-  
+
   argument_bag root = {
     .amt = STATIC_LEN(args),
     .args = args,
     .subcommand_chosen = COMMAND_NONE,
   };
-  
+
   program_args pa = {
     .root = &root,
     .preamble = preamble,
