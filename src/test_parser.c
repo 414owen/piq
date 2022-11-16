@@ -506,7 +506,7 @@ static void test_parser_succeeds_statements(test_state *state) {
     test_start(state, "Let");
 
     expected_output out = {.tag = STRING,
-                           .str = "(Fun (Lname a) () (Body (Let (Lname b)) ()))"};
+                           .str = "(Fun (Lname a) () (Body (Let (Lname b) ()) ()))"};
     test_parser_succeeds_on(state, "(fun a () (let b ()) ())", out);
 
     test_end(state);
