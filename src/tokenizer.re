@@ -61,6 +61,7 @@ token_res scan(source_file file, buf_ind_t start) {
   "fn"    { return mk_token(TK_FN, start, pos - 1);             }
   "fun"   { return mk_token(TK_FUN, start, pos - 1);            }
   "sig"   { return mk_token(TK_SIG, start, pos - 1);            }
+  "let"   { return mk_token(TK_LET, start, pos - 1);            }
   "as"    { return mk_token(TK_AS, start, pos - 1);             }
   lower_ident { return mk_token(TK_LOWER_NAME, start, pos - 1); }
   upper_ident { return mk_token(TK_UPPER_NAME, start, pos - 1); }
