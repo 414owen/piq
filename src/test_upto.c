@@ -17,13 +17,9 @@ parse_tree_res test_upto_parse_tree(test_state *state,
   }
   parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (!pres.succeeded) {
-    stringstream *ss = ss_init();
-    token t = tres.tokens[pres.error_pos];
-    format_error_ctx(ss->stream, input, t.start, t.end);
-    char *error = ss_finalize_free(ss);
+    char *error = print_parse_tree_error_string(input, tres.tokens, pres);
     failf(state, "Parsing failed:\n%s", error);
     free(error);
-    free_parse_tree_res(pres);
   }
   free_tokens_res(tres);
   return pres;

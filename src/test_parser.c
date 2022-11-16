@@ -57,8 +57,6 @@ static void test_parser_succeeds_on_form(test_state *state, char *input,
   }
 }
 
-extern char *yyTokenName[];
-
 static void test_parser_fails_on(test_state *state, char *input, buf_ind_t pos,
                                  node_ind_t expected_amt,
                                  const token_type *expected) {
@@ -94,20 +92,9 @@ static void test_parser_fails_on(test_state *state, char *input, buf_ind_t pos,
   }
 
   if (!expected_tokens_match) {
-    const char **a = stalloc(sizeof(char *) * expected_amt);
-    for (size_t i = 0; i < expected_amt; i++) {
-      a[i] = yyTokenName[expected[i]];
-    }
-    char *as = join(expected_amt, a, ", ");
-    const char **b = stalloc(sizeof(char *) * pres.expected_amt);
-    for (size_t i = 0; i < pres.expected_amt; i++) {
-      b[i] = yyTokenName[pres.expected[i]];
-    }
-    char *bs = join(pres.expected_amt, b, ", ");
-    failf(state, "Expected token mismatch.\nExpected: [%s]\nGot: [%s]", as, bs);
-
-    stfree(b, sizeof(char *) * pres.expected_amt);
-    stfree(a, sizeof(char *) * expected_amt);
+    char *as = print_tokens_str(expected, expected_amt);
+    char *bs = print_tokens_str(pres.expected, pres.expected_amt);
+    failf(state, "Expected token mismatch.\nExpected: %s\nGot: %s", as, bs);
     free(as);
     free(bs);
   }

@@ -13,18 +13,6 @@ static source_file test_file(const char *restrict input) {
   return file;
 }
 
-extern char *yyTokenName[];
-
-static char *print_tokens(size_t token_amt, const token_type *restrict tokens) {
-  stringstream *ss = ss_init();
-  fputc('[', ss->stream);
-  for (size_t i = 0; i < token_amt; i++) {
-    fputs(yyTokenName[tokens[i]], ss->stream);
-  }
-  fputc(']', ss->stream);
-  return ss_finalize_free(ss);
-}
-
 static void test_scanner_tokens(test_state *restrict state,
                                 char *restrict input, size_t token_amt,
                                 const token_type *restrict tokens) {
@@ -38,13 +26,13 @@ static void test_scanner_tokens(test_state *restrict state,
       }
     }
     if (!tokens_match) {
-      char *exp = print_tokens(token_amt, tokens);
+      char *exp = print_tokens_str(tokens, token_amt);
       size_t token_type_bytes = sizeof(token_type) * tres.token_amt;
       token_type *got_tokens = stalloc(token_type_bytes);
       for (size_t i = 0; i < tres.token_amt; i++) {
         got_tokens[i] = tres.tokens[i].type;
       }
-      char *got = print_tokens(tres.token_amt, got_tokens);
+      char *got = print_tokens_str(got_tokens, tres.token_amt);
       failf(state, "Token mismatch: Expected %s, got %s", exp, got);
       stfree(got_tokens, token_type_bytes);
       free(exp);
