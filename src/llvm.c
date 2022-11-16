@@ -694,7 +694,7 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
 }
 
 llvm_res gen_module(char *module_name, source_file source, parse_tree tree,
-                         type_info types, LLVMContextRef ctx) {
+                    type_info types, LLVMContextRef ctx) {
 #ifdef TIME_CODEGEN
   struct timespec start = get_monotonic_time();
 #endif

@@ -82,8 +82,8 @@ int main(int argc, const char **argv) {
       .description = "filter tests by name. Matches on <group>.<group>.<test>",
     },
   };
-  
-  argument_bag root  = {
+
+  argument_bag root = {
     .amt = STATIC_LEN(args),
     .args = args,
   };

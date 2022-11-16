@@ -67,7 +67,8 @@ static void test_llvm_produces(test_state *state, const char *input,
       .data = input,
     };
 
-    llvm_res res = gen_module(test_file.path, test_file, tree, tc.types, ctx.llvm_ctx);
+    llvm_res res =
+      gen_module(test_file.path, test_file, tree, tc.types, ctx.llvm_ctx);
     LLVMOrcThreadSafeModuleRef tsm =
       LLVMOrcCreateNewThreadSafeModule(res.module, ctx.orc_ctx);
     LLVMOrcLLJITAddLLVMIRModule(ctx.jit, ctx.dylib, tsm);

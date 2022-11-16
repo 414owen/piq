@@ -409,7 +409,9 @@ void free_parse_tree_res(parse_tree_res res) {
   }
 }
 
-void print_parse_tree_error(FILE *f, const char *restrict input, const token *restrict tokens, const parse_tree_res pres) {
+void print_parse_tree_error(FILE *f, const char *restrict input,
+                            const token *restrict tokens,
+                            const parse_tree_res pres) {
   fputs("Parsing failed:\n", f);
   token t = tokens[pres.error_pos];
   format_error_ctx(f, input, t.start, t.end);
@@ -418,7 +420,9 @@ void print_parse_tree_error(FILE *f, const char *restrict input, const token *re
 }
 
 MALLOC_ATTR_2(free, 1)
-char *print_parse_tree_error_string(const char *restrict input, const token *restrict tokens, const parse_tree_res pres) {
+char *print_parse_tree_error_string(const char *restrict input,
+                                    const token *restrict tokens,
+                                    const parse_tree_res pres) {
   stringstream ss;
   ss_init_immovable(&ss);
   print_parse_tree_error(ss.stream, input, tokens, pres);

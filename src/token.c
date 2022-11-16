@@ -5,11 +5,10 @@
 
 extern char *yyTokenName[];
 
-void print_token(FILE *f, token_type t) {
-  fputs(yyTokenName[t], f);
-}
+void print_token(FILE *f, token_type t) { fputs(yyTokenName[t], f); }
 
-void print_tokens(FILE *f, const token_type *restrict tokens, unsigned token_amt) {
+void print_tokens(FILE *f, const token_type *restrict tokens,
+                  unsigned token_amt) {
   fputc('[', f);
   for (unsigned i = 0; i < token_amt; i++) {
     if (i > 0) {
