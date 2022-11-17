@@ -54,12 +54,12 @@ static void jit_dispose(jit_ctx *ctx) {
   LLVMOrcDisposeThreadSafeContext(ctx->orc_ctx);
 }
 
-static void test_llvm_produces(test_state *state, const char *input,
-                               int32_t expected) {
-  jit_ctx ctx = jit_llvm_init();
+static void *get_entry_fn(test_state *state, jit_ctx ctx, const char *input) {
   parse_tree tree;
   bool success = false;
   tc_res tc = test_upto_typecheck(state, input, &success, &tree);
+
+  LLVMOrcJITTargetAddress entry_addr = (LLVMOrcJITTargetAddress)NULL;
 
   if (success) {
     source_file test_file = {
@@ -72,7 +72,6 @@ static void test_llvm_produces(test_state *state, const char *input,
     LLVMOrcThreadSafeModuleRef tsm =
       LLVMOrcCreateNewThreadSafeModule(res.module, ctx.orc_ctx);
     LLVMOrcLLJITAddLLVMIRModule(ctx.jit, ctx.dylib, tsm);
-    LLVMOrcJITTargetAddress entry_addr;
     {
       LLVMErrorRef error = LLVMOrcLLJITLookup(ctx.jit, &entry_addr, "test");
       if (error != LLVMErrorSuccess) {
@@ -81,18 +80,49 @@ static void test_llvm_produces(test_state *state, const char *input,
       }
     }
 
-    int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
-    int32_t got = entry();
-    if (got != expected) {
-      failf(state,
-            "Jit function returned wrong result. Expected: %d, Got: %d.\n%s",
-            expected,
-            got,
-            LLVMPrintModuleToString(res.module));
-    }
     free_parse_tree(tree);
     free_tc_res(tc);
   }
+  return (void *)entry_addr;
+}
+
+static void ensure_int_result_matches(test_state *state, int32_t expected,
+                                      int32_t got) {
+  if (got != expected) {
+    failf(state,
+          "Jit function returned wrong result. Expected: %d, Got: %d.\n",
+          expected,
+          got);
+  }
+}
+
+static void test_llvm_code_produces_int(test_state *state,
+                                        const char *restrict input,
+                                        int32_t expected) {
+  jit_ctx ctx = jit_llvm_init();
+  void *entry_addr = get_entry_fn(state, ctx, input);
+  int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
+  int32_t got = entry();
+  ensure_int_result_matches(state, expected, got);
+  jit_dispose(&ctx);
+}
+
+static void test_llvm_code_maps_int(test_state *state,
+                                    const char *restrict input,
+                                    int32_t input_param, int32_t expected) {
+  jit_ctx ctx = jit_llvm_init();
+  void *entry_addr = get_entry_fn(state, ctx, input);
+  int32_t (*entry)(int32_t) = (int32_t(*)(int32_t))entry_addr;
+  int32_t got = entry(input_param);
+  ensure_int_result_matches(state, expected, got);
+  jit_dispose(&ctx);
+}
+
+static void test_llvm_code_runs(test_state *state, const char *restrict input) {
+  jit_ctx ctx = jit_llvm_init();
+  void *entry_addr = get_entry_fn(state, ctx, input);
+  int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
+  int32_t got = entry();
   jit_dispose(&ctx);
 }
 
@@ -112,7 +142,7 @@ void test_llvm(test_state *state) {
     const char *input = "(sig test (Fn () I32))\n"
                         "(fun test () 2)";
 
-    test_llvm_produces(state, input, 2);
+    test_llvm_code_produces_int(state, input, 2);
   }
   test_end(state);
 
@@ -121,7 +151,16 @@ void test_llvm(test_state *state) {
     const char *input = "(sig test (Fn () I32))\n"
                         "(fun test () (as U8 4) 3)";
 
-    test_llvm_produces(state, input, 3);
+    test_llvm_code_produces_int(state, input, 3);
+  }
+  test_end(state);
+
+  test_start(state, "Can use parameter");
+  {
+    const char *input = "(sig test (Fn () ()))\n"
+                        "(fun test a a)";
+
+    test_llvm_code_runs(state, input);
   }
   test_end(state);
 
@@ -129,7 +168,7 @@ void test_llvm(test_state *state) {
   {
     const char *input = "(sig a (Fn () ()))\n"
                         "(fun a () (let b ()) b)";
-    test_llvm_produces(state, input, 3);
+    test_llvm_code_produces_int(state, input, 3);
   }
   test_end(state);
 
@@ -141,7 +180,7 @@ void test_llvm(test_state *state) {
                         "(sig a (Fn () ()))\n"
                         "(fun a () ())";
 
-    test_llvm_produces(state, input, 2);
+    test_llvm_code_produces_int(state, input, 2);
   }
   test_end(state);
   */
