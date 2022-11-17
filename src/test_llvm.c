@@ -59,7 +59,7 @@ static void *get_entry_fn(test_state *state, jit_ctx ctx, const char *input) {
   bool success = false;
   tc_res tc = test_upto_typecheck(state, input, &success, &tree);
 
-  LLVMOrcJITTargetAddress entry_addr = (LLVMOrcJITTargetAddress)NULL;
+  LLVMOrcJITTargetAddress entry_addr = (LLVMOrcJITTargetAddress) NULL;
 
   if (success) {
     source_file test_file = {
@@ -83,22 +83,19 @@ static void *get_entry_fn(test_state *state, jit_ctx ctx, const char *input) {
     free_parse_tree(tree);
     free_tc_res(tc);
   }
-  return (void *)entry_addr;
+  return (void*) entry_addr;
 }
 
-static void ensure_int_result_matches(test_state *state, int32_t expected,
-                                      int32_t got) {
+static void ensure_int_result_matches(test_state *state, int32_t expected, int32_t got) {
   if (got != expected) {
     failf(state,
-          "Jit function returned wrong result. Expected: %d, Got: %d.\n",
-          expected,
-          got);
+      "Jit function returned wrong result. Expected: %d, Got: %d.\n",
+      expected,
+      got);
   }
 }
 
-static void test_llvm_code_produces_int(test_state *state,
-                                        const char *restrict input,
-                                        int32_t expected) {
+static void test_llvm_code_produces_int(test_state *state, const char *restrict input, int32_t expected) {
   jit_ctx ctx = jit_llvm_init();
   void *entry_addr = get_entry_fn(state, ctx, input);
   int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
@@ -107,9 +104,7 @@ static void test_llvm_code_produces_int(test_state *state,
   jit_dispose(&ctx);
 }
 
-static void test_llvm_code_maps_int(test_state *state,
-                                    const char *restrict input,
-                                    int32_t input_param, int32_t expected) {
+static void test_llvm_code_maps_int(test_state *state, const char *restrict input, int32_t input_param, int32_t expected) {
   jit_ctx ctx = jit_llvm_init();
   void *entry_addr = get_entry_fn(state, ctx, input);
   int32_t (*entry)(int32_t) = (int32_t(*)(int32_t))entry_addr;
@@ -155,12 +150,17 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
 
-  test_start(state, "Can use parameter");
+  test_start(state, "Can return parameter");
   {
     const char *input = "(sig test (Fn () ()))\n"
                         "(fun test a a)";
-
     test_llvm_code_runs(state, input);
+  }
+  {
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a a)";
+    test_llvm_code_maps_int(state, input, 1, 1);
+    test_llvm_code_maps_int(state, input, 2, 2);
   }
   test_end(state);
 

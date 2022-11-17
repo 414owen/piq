@@ -92,14 +92,17 @@ typedef struct {
   LLVMModuleRef module;
 
   vec_cg_action actions;
+
+  // action vals
   bitset act_stage;
   vec_node_ind act_nodes;
   vec_u32 act_sizes;
   vec_llvm_value act_vals;
-
   vec_llvm_function act_fns;
+
   vec_string strs;
 
+  // returning vals
   vec_llvm_value val_stack;
   vec_llvm_block block_stack;
   vec_llvm_function function_stack;
@@ -110,8 +113,6 @@ typedef struct {
   vec_str_ref env_bnds;
   vec_llvm_value env_vals;
   bitset env_is_builtin;
-  // TODO do we need this?
-  vec_node_ind env_nodes;
 
   source_file source;
   parse_tree parse_tree;
@@ -119,6 +120,15 @@ typedef struct {
 } cg_state;
 
 static void cg_block(cg_state *state, node_ind_t start, node_ind_t amt);
+
+static void push_env(cg_state *state, binding bnd, llvm_value val) {
+  str_ref str = {
+    .binding = bnd
+  };
+  VEC_PUSH(&state->env_bnds, str);
+  VEC_PUSH(&state->env_vals, val);
+  bs_push(&state->env_is_builtin, false);
+}
 
 static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
                              source_file source, parse_tree tree,
@@ -144,7 +154,6 @@ static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
     .env_bnds = VEC_NEW,
     .env_vals = VEC_NEW,
     .env_is_builtin = bs_new(),
-    .env_nodes = VEC_NEW,
 
     .source = source,
     .parse_tree = tree,
@@ -166,7 +175,6 @@ static void destroy_cg_state(cg_state *state) {
   VEC_FREE(&state->act_vals);
   VEC_FREE(&state->block_stack);
   VEC_FREE(&state->env_bnds);
-  VEC_FREE(&state->env_nodes);
   VEC_FREE(&state->env_vals);
   VEC_FREE(&state->function_stack);
   VEC_FREE(&state->strs);
@@ -196,8 +204,9 @@ static void push_stmt_act(cg_state *state, node_ind_t node_ind, stage stage) {
   VEC_PUSH(&state->act_nodes, node_ind);
 }
 
-static void push_pattern_act(cg_state *state, node_ind_t node_ind) {
+static void push_pattern_act(cg_state *state, node_ind_t node_ind, llvm_value val) {
   push_action(state, CG_PATTERN);
+  VEC_PUSH(&state->val_stack, val);
   VEC_PUSH(&state->act_nodes, node_ind);
 }
 
@@ -391,7 +400,8 @@ static void cg_expr(cg_state *state) {
         state->source.data, state->env_bnds, state->env_is_builtin, b);
       // missing refs are caught in typecheck phase
       debug_assert(ind != state->env_bnds.len);
-      VEC_PUSH(&state->val_stack, VEC_GET(state->env_vals, ind));
+      llvm_value val = VEC_GET(state->env_vals, ind);
+      VEC_PUSH(&state->val_stack, val);
       break;
     }
     case PT_EX_INT: {
@@ -522,9 +532,9 @@ static void cg_stmt(cg_state *state) {
           debug_assert(ind != state->env_bnds.len);
           node_ind_t binding_ind = PT_LET_BND_IND(node);
           parse_node binding = state->parse_tree.nodes[binding_ind];
-          VEC_PUSH(&state->env_bnds, binding.span);
           LLVMValueRef val = VEC_POP(&state->val_stack);
-          VEC_PUSH(&state->env_vals, val);
+          push_env(state, binding.span, val);
+          VEC_PUSH(&state->env_bnds, binding.span);
           break;
         }
       }
@@ -557,15 +567,14 @@ static void cg_stmt(cg_state *state) {
 
           push_stmt_act(state, ind, STAGE_TWO);
 
-          node_ind_t param_ind = PT_FUN_PARAM_IND(state->parse_tree.inds, node);
-          push_pattern_act(state, param_ind);
-          LLVMValueRef arg = LLVMGetParam(fn, 0);
-          VEC_PUSH(&state->act_vals, arg);
-
           push_action(state, CG_GEN_BLOCK);
           VEC_PUSH(&state->strs, EMPTY_STR);
           VEC_PUSH(&state->act_nodes,
                    PT_FUN_BODY_IND(state->parse_tree.inds, node));
+
+          node_ind_t param_ind = PT_FUN_PARAM_IND(state->parse_tree.inds, node);
+          LLVMValueRef arg = LLVMGetParam(fn, 0);
+          push_pattern_act(state, param_ind, arg);
           break;
         }
         case STAGE_TWO: {
@@ -612,11 +621,23 @@ static void cg_pattern(cg_state *state) {
 
   switch (node.type.pattern) {
     case PT_PAT_TUP: {
+      llvm_value val = VEC_POP(&state->act_vals);
+
+      LLVMTypeRef type = construct_type(state, state->types.node_types[ind]);
+
+      llvm_value left_val = LLVMStructGetTypeAtIndex(type, 0);
+      llvm_value right_val = LLVMStructGetTypeAtIndex(type, 0);
+
       node_ind_t sub_a = PT_TUP_SUB_A(node);
       node_ind_t sub_b = PT_TUP_SUB_B(node);
 
-      push_pattern_act(state, sub_a);
-      push_pattern_act(state, sub_b);
+      push_pattern_act(state, sub_a, left_val);
+      push_pattern_act(state, sub_b, right_val);
+      break;
+    }
+    case PT_PAT_WILDCARD: {
+      llvm_value val = VEC_POP(&state->val_stack);
+      push_env(state, node.span, val);
       break;
     }
     case PT_PAT_UNIT:
@@ -626,8 +647,6 @@ static void cg_pattern(cg_state *state) {
     case PT_PAT_LIST:
     case PT_PAT_INT:
     case PT_PAT_STRING:
-    case PT_PAT_WILDCARD:
-      // TODO implement this
       break;
   }
 }
@@ -679,7 +698,6 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
         u32 pop_amt = state.env_bnds.len - pop_to;
 
         VEC_POP_N(&state.env_bnds.len, pop_amt);
-        VEC_POP_N(&state.env_nodes.len, pop_amt);
         VEC_POP_N(&state.env_vals.len, pop_amt);
         bs_pop_n(&state.env_is_builtin, pop_amt);
         break;
