@@ -34,6 +34,7 @@ void bs_grow(bitset *bs, size_t bits) {
 }
 
 bool bs_data_get(bitset_data data, size_t ind) {
+  debug_assert(data != NULL);
   return BITTEST(data, ind) > 0;
 }
 
