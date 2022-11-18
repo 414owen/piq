@@ -58,6 +58,8 @@ static void *get_entry_fn(test_state *state, jit_ctx ctx, const char *input) {
   parse_tree tree;
   bool success = false;
   tc_res tc = test_upto_typecheck(state, input, &success, &tree);
+  
+  if (tc.error_amt > 0) return NULL;
 
   LLVMOrcJITTargetAddress entry_addr = (LLVMOrcJITTargetAddress) NULL;
 
@@ -99,8 +101,10 @@ static void test_llvm_code_produces_int(test_state *state, const char *restrict 
   jit_ctx ctx = jit_llvm_init();
   void *entry_addr = get_entry_fn(state, ctx, input);
   int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
-  int32_t got = entry();
-  ensure_int_result_matches(state, expected, got);
+  if (entry) {
+    int32_t got = entry();
+    ensure_int_result_matches(state, expected, got);
+  }
   jit_dispose(&ctx);
 }
 
@@ -108,8 +112,10 @@ static void test_llvm_code_maps_int(test_state *state, const char *restrict inpu
   jit_ctx ctx = jit_llvm_init();
   void *entry_addr = get_entry_fn(state, ctx, input);
   int32_t (*entry)(int32_t) = (int32_t(*)(int32_t))entry_addr;
-  int32_t got = entry(input_param);
-  ensure_int_result_matches(state, expected, got);
+  if (entry) {
+    int32_t got = entry(input_param);
+    ensure_int_result_matches(state, expected, got);
+  }
   jit_dispose(&ctx);
 }
 
@@ -117,7 +123,9 @@ static void test_llvm_code_runs(test_state *state, const char *restrict input) {
   jit_ctx ctx = jit_llvm_init();
   void *entry_addr = get_entry_fn(state, ctx, input);
   int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
-  int32_t got = entry();
+  if (entry) {
+    int32_t got = entry();
+  }
   jit_dispose(&ctx);
 }
 
@@ -171,8 +179,8 @@ void test_llvm(test_state *state) {
     test_llvm_code_runs(state, input);
   }
   {
-    const char *input = "(sig test (Fn () I32\n"
-                        "(fun test () (let b 3) b";
+    const char *input = "(sig test (Fn () I32))\n"
+                        "(fun test () (let b 3) b)";
     test_llvm_code_produces_int(state, input, 3);
   }
   test_end(state);
