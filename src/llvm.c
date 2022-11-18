@@ -20,7 +20,7 @@ TODO: benchmark:
 
 */
 
-static const char *EMPTY_STR = "entry";
+static const char *ENTRY_STR = "entry";
 static const char *THEN_STR = "then";
 static const char *ELSE_STR = "else";
 
@@ -99,8 +99,7 @@ typedef struct {
   vec_u32 act_sizes;
   vec_llvm_value act_vals;
   vec_llvm_function act_fns;
-
-  vec_string strs;
+  vec_string act_strings;
 
   // returning vals
   vec_llvm_value val_stack;
@@ -144,7 +143,7 @@ static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
     .act_sizes = VEC_NEW,
 
     .act_fns = VEC_NEW,
-    .strs = VEC_NEW,
+    .act_strings = VEC_NEW,
 
     .val_stack = VEC_NEW,
     .block_stack = VEC_NEW,
@@ -177,7 +176,7 @@ static void destroy_cg_state(cg_state *state) {
   VEC_FREE(&state->env_bnds);
   VEC_FREE(&state->env_vals);
   VEC_FREE(&state->function_stack);
-  VEC_FREE(&state->strs);
+  VEC_FREE(&state->act_strings);
   VEC_FREE(&state->val_stack);
 }
 
@@ -207,6 +206,12 @@ static void push_stmt_act(cg_state *state, node_ind_t node_ind, stage stage) {
 static void push_pattern_act(cg_state *state, node_ind_t node_ind, llvm_value val) {
   push_action(state, CG_PATTERN);
   VEC_PUSH(&state->val_stack, val);
+  VEC_PUSH(&state->act_nodes, node_ind);
+}
+
+static void push_gen_block(cg_state *state, node_ind_t node_ind, const char *restrict str) {
+  push_action(state, CG_GEN_BLOCK);
+  VEC_PUSH(&state->act_strings, str);
   VEC_PUSH(&state->act_nodes, node_ind);
 }
 
@@ -392,10 +397,7 @@ static void cg_expr(cg_state *state) {
     }
     case PT_EX_LOWER_NAME:
     case PT_EX_UPPER_NAME: {
-      binding b = {
-        .start = node.span.start,
-        .end = node.span.end,
-      };
+      binding b = node.span;
       node_ind_t ind = lookup_str_ref(
         state->source.data, state->env_bnds, state->env_is_builtin, b);
       // missing refs are caught in typecheck phase
@@ -415,25 +417,22 @@ static void cg_expr(cg_state *state) {
     }
     case PT_EX_IF: {
       switch (stage) {
-        case STAGE_ONE:
+        case STAGE_ONE: {
           push_expr_act(state, ind, STAGE_TWO);
 
           // cond
-          push_expr_act(
-            state, PT_IF_COND_IND(state->parse_tree.inds, node), STAGE_ONE);
+          node_ind_t cond_ind = PT_IF_COND_IND(state->parse_tree.inds, node);
+          push_expr_act(state, cond_ind, STAGE_ONE);
 
           // then
-          VEC_PUSH(&state->strs, THEN_STR);
-          push_action(state, CG_GEN_BLOCK);
-          VEC_PUSH(&state->act_nodes,
-                   PT_IF_A_IND(state->parse_tree.inds, node));
+          node_ind_t a_node = PT_IF_A_IND(state->parse_tree.inds, node);
+          push_gen_block(state, a_node, THEN_STR);
 
           // else
-          VEC_PUSH(&state->strs, ELSE_STR);
-          push_action(state, CG_GEN_BLOCK);
-          VEC_PUSH(&state->act_nodes,
-                   PT_IF_B_IND(state->parse_tree.inds, node));
+          node_ind_t b_node = PT_IF_B_IND(state->parse_tree.inds, node);
+          push_gen_block(state, b_node, ELSE_STR);
           break;
+        }
         case STAGE_TWO: {
           LLVMValueRef cond = VEC_POP(&state->val_stack);
           LLVMValueRef then_val = VEC_POP(&state->val_stack);
@@ -534,7 +533,6 @@ static void cg_stmt(cg_state *state) {
           parse_node binding = state->parse_tree.nodes[binding_ind];
           LLVMValueRef val = VEC_POP(&state->val_stack);
           push_env(state, binding.span, val);
-          VEC_PUSH(&state->env_bnds, binding.span);
           break;
         }
       }
@@ -567,10 +565,8 @@ static void cg_stmt(cg_state *state) {
 
           push_stmt_act(state, ind, STAGE_TWO);
 
-          push_action(state, CG_GEN_BLOCK);
-          VEC_PUSH(&state->strs, EMPTY_STR);
-          VEC_PUSH(&state->act_nodes,
-                   PT_FUN_BODY_IND(state->parse_tree.inds, node));
+          node_ind_t body_ind = PT_FUN_BODY_IND(state->parse_tree.inds, node);
+          push_gen_block(state, body_ind, ENTRY_STR);
 
           node_ind_t param_ind = PT_FUN_PARAM_IND(state->parse_tree.inds, node);
           LLVMValueRef arg = LLVMGetParam(fn, 0);
@@ -678,8 +674,11 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
         cg_stmt(&state);
         break;
       }
+      // uses:
+      // * act_string
+      // * node_ind (passes on to expr)
       case CG_GEN_BLOCK: {
-        const char *name = VEC_POP(&state.strs);
+        const char *name = VEC_POP(&state.act_strings);
         LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(
           state.context, VEC_PEEK(state.function_stack), name);
         LLVMPositionBuilderAtEnd(state.builder, block);
