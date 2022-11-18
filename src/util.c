@@ -217,35 +217,20 @@ NON_NULL_ALL
 MALLOC_ATTR_2(free, 1)
 char *join(const size_t str_amt, const char *const *restrict const strs,
            const char *restrict sep) {
-  size_t len = 0;
-  size_t seplen = strlen(sep);
-  for (size_t i = 0; i < str_amt; i++)
-    len += strlen(strs[i]);
-  if (str_amt >= 2)
-    len += seplen * (str_amt - 1);
-  len += 1;
 
-  char *buf = malloc_safe(len);
-  buf[len - 1] = '\0';
+  // Why even call me?
+  if (str_amt == 0) return calloc(1, 1);
 
-  if (str_amt > 0) {
-    size_t ind = 0;
-    {
-      const char *s = strs[0];
-      size_t slen = strlen(s);
-      memcpy(&buf[ind], s, slen);
-      ind += slen;
-    }
-    for (size_t i = 1; i < str_amt; i++) {
-      const char *s = strs[i];
-      size_t slen = strlen(s);
-      memcpy(&buf[ind], sep, seplen);
-      ind += seplen;
-      memcpy(&buf[ind], s, slen);
-      ind += slen;
-    }
+  stringstream ss;
+  ss_init_immovable(&ss);
+
+  fputs(strs[0], ss.stream);
+  for (size_t i = 1; i < str_amt; i++) {
+    fputs(sep, ss.stream);
+    fputs(strs[i], ss.stream);
   }
-  return buf;
+  ss_finalize(&ss);
+  return ss.string;
 }
 
 HEDLEY_NO_RETURN
@@ -291,7 +276,7 @@ static char *get_home_dir(void) {
 
 NON_NULL_ALL
 MALLOC_ATTR_2(free, 1)
-char *join_paths(const char *const *paths, size_t path_num) {
+char *join_paths(const char *const *restrict paths, size_t path_num) {
   char path_sep_str[2] = {path_sep, '\0'};
   return join(path_num, paths, path_sep_str);
 }
@@ -299,7 +284,7 @@ char *join_paths(const char *const *paths, size_t path_num) {
 NON_NULL_ALL
 MALLOC_ATTR_2(free, 1)
 char *join_two_paths(const char *front, const char *back) {
-  const char *const paths[] = {front, back};
+  const char *const paths[2] = {front, back};
   char *res = join_paths(paths, STATIC_LEN(paths));
   return res;
 }
