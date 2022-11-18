@@ -170,6 +170,11 @@ void test_llvm(test_state *state) {
                         "(fun test () (let b ()) ())";
     test_llvm_code_runs(state, input);
   }
+  {
+    const char *input = "(sig test (Fn () I32\n"
+                        "(fun test () (let b 3) b";
+    test_llvm_code_produces_int(state, input, 3);
+  }
   test_end(state);
 
   /*
