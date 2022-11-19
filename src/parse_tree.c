@@ -37,9 +37,9 @@ parse_node_category parse_node_categories[] = {
   [PT_ALL_PAT_INT] = PT_C_PATTERN,
   [PT_ALL_PAT_LIST] = PT_C_PATTERN,
 
-  [PT_ALL_STMT_SIG] = PT_C_STATEMENT,
-  [PT_ALL_STMT_FUN] = PT_C_STATEMENT,
-  [PT_ALL_STMT_LET] = PT_C_STATEMENT,
+  [PT_ALL_STATEMENT_SIG] = PT_C_STATEMENT,
+  [PT_ALL_STATEMENT_FUN] = PT_C_STATEMENT,
+  [PT_ALL_STATEMENT_LET] = PT_C_STATEMENT,
 
   [PT_ALL_TY_CONSTRUCTION] = PT_C_TYPE,
   [PT_ALL_TY_LIST] = PT_C_TYPE,
@@ -77,8 +77,8 @@ static tree_node_repr subs_type(parse_node_type type) {
     case PT_ALL_TY_FN:
     case PT_TY_TUP:
     case PT_TY_CONSTRUCTION:
-    case PT_ALL_STMT_SIG:
-    case PT_ALL_STMT_LET:
+    case PT_ALL_STATEMENT_SIG:
+    case PT_ALL_STATEMENT_LET:
     case PT_ALL_PAT_TUP:
     case PT_ALL_PAT_CONSTRUCTION:
       res = SUBS_TWO;
@@ -86,7 +86,7 @@ static tree_node_repr subs_type(parse_node_type type) {
     case PT_ALL_EX_IF:
     case PT_ALL_EX_LIST:
     case PT_ALL_EX_FUN_BODY:
-    case PT_ALL_STMT_FUN:
+    case PT_ALL_STATEMENT_FUN:
       res = SUBS_EXTERNAL;
       break;
   }
@@ -101,7 +101,7 @@ const char *parse_node_string(parse_node_type type) {
     case PT_ALL_PAT_WILDCARD:
       res = "Wildcard";
       break;
-    case PT_ALL_STMT_LET:
+    case PT_ALL_STATEMENT_LET:
       res = "Let";
       break;
     case PT_ALL_EX_AS:
@@ -123,7 +123,7 @@ const char *parse_node_string(parse_node_type type) {
     case PT_ALL_EX_FUN_BODY:
       res = "Fun body";
       break;
-    case PT_ALL_STMT_FUN:
+    case PT_ALL_STATEMENT_FUN:
       res = "Fun";
       break;
     case PT_ALL_EX_IF:
@@ -143,7 +143,7 @@ const char *parse_node_string(parse_node_type type) {
     case PT_ALL_MULTI_LOWER_NAME:
       res = "Lower name";
       break;
-    case PT_ALL_STMT_SIG:
+    case PT_ALL_STATEMENT_SIG:
       res = "Sig";
       break;
     case PT_ALL_PAT_STRING:
@@ -239,11 +239,11 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
 static void print_node(printer_state *s, node_ind_t node_ind) {
   parse_node node = s->tree.nodes[node_ind];
   switch (node.type.all) {
-    case PT_ALL_STMT_SIG: {
+    case PT_ALL_STATEMENT_SIG: {
       print_compound(s, "(Sig ", " ", ")", node);
       break;
     }
-    case PT_ALL_STMT_LET: {
+    case PT_ALL_STATEMENT_LET: {
       print_compound(s, "(Let ", " ", ")", node);
       break;
     }
@@ -253,7 +253,7 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       fputs("()", s->out);
       break;
     }
-    case PT_ALL_STMT_FUN:
+    case PT_ALL_STATEMENT_FUN:
       print_compound(s, "(Fun ", " ", ")", node);
       break;
     case PT_ALL_TY_FN:
