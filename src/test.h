@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <time.h>
 
+#include "defs.h"
 #include "token.h"
 #include "vec.h"
 
@@ -45,6 +46,20 @@ typedef enum {
 VEC_DECL(test_action);
 
 typedef struct {
+#ifdef TIME_TOKENIZER
+  struct timespec total_tokenization_time;
+  struct timespec total_tokens;
+  struct timespec sum_file_lengths;
+#endif
+#ifdef TIME_PARSER
+  struct timespec total_parser_time;
+#endif
+#ifdef TIME_TYPECHECK
+  struct timespec total_typecheck_time;
+#endif
+#ifdef TIME_CODEGEN
+  struct timespec total_codegen_time;
+#endif
   test_config config;
   vec_string path;
   uint32_t tests_passed;

@@ -69,6 +69,7 @@
             llvmPackages_14.libllvm
             hedley
             predef
+            xxHash
           ];
 
           CFLAGS = "-O2 -s -flto";
@@ -143,8 +144,8 @@
           buildInputs = with pkgs; lib.concatLists [
             (if stdenv.isLinux then [cgdb] else [])
             [
-              clang-tools
-              clang-tools.clang
+              clang-tools_14
+              clang-tools_14.clang
               lldb
               lcov
               valgrind

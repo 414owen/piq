@@ -1,6 +1,7 @@
 #include <stdbool.h>
 
 #include "consts.h"
+#include "defs.h"
 #include "diagnostic.h"
 #include "parser.h"
 #include "test.h"
@@ -19,6 +20,9 @@ static void test_scanner_tokens(test_state *restrict state,
   tokens_res tres = test_upto_tokens(state, input);
 
   if (tres.succeeded) {
+#ifdef TIME_TOKENIZATION
+    state->total_tokenization_time += tres.time_taken;
+#endif
     bool tokens_match = tres.token_amt == token_amt + 1;
     if (tokens_match) {
       for (size_t i = 0; i < token_amt; i++) {
@@ -39,6 +43,8 @@ static void test_scanner_tokens(test_state *restrict state,
       free(got);
     }
     free(tres.tokens);
+  } else {
+    failf(state, "Expected scanner to succeed");
   }
 }
 
