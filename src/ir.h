@@ -46,7 +46,7 @@ typedef struct {
 
 typedef struct {
   node_ind_t n;
-} ir_expr_ind;
+} ir_expression_ind;
 
 typedef struct {
   node_ind_t n;
@@ -111,8 +111,8 @@ VEC_DECL(ir_pattern);
 
 typedef struct {
   ir_pattern ir_fn_param;
-  node_ind_t ir_fn_body_stmts_start;
-  node_ind_t ir_fn_body_stmts_amt;
+  node_ind_t ir_fn_body_statements_start;
+  node_ind_t ir_fn_body_statements_amt;
   node_ind_t ir_fn_type_ind;
 } ir_fn;
 
@@ -120,43 +120,43 @@ VEC_DECL(ir_fn);
 
 typedef struct {
   ir_pattern ir_fun_param;
-  node_ind_t ir_fun_body_stmts_start;
-  node_ind_t ir_fun_body_stmts_amt;
+  node_ind_t ir_fun_body_statements_start;
+  node_ind_t ir_fun_body_statements_amt;
 } ir_fun_case;
 
 VEC_DECL(ir_fun_case);
 
 // Yes, this is needed, you can't reconstruct this from the *type* information
 typedef enum {
-  IR_EXPR_TUP,
-  IR_EXPR_CALL,
-  IR_EXPR_FN,
-  IR_EXPR_IF,
-  IR_EXPR_INT,
-  IR_EXPR_CONSTRUCTOR,
-} ir_expr_type;
+  IR_EXPRESSION_TUP,
+  IR_EXPRESSION_CALL,
+  IR_EXPRESSION_FN,
+  IR_EXPRESSION_IF,
+  IR_EXPRESSION_INT,
+  IR_EXPRESSION_CONSTRUCTOR,
+} ir_expression_type;
 
 typedef struct {
-  ir_expr_type ir_expr_tag;
-  ir_type_ind ir_expr_type;
+  ir_expression_type ir_expression_tag;
+  ir_type_ind ir_expression_type;
   union {
-    uint8_t ir_expr_u8;
-    int8_t ir_expr_i8;
-    uint16_t ir_expr_u16;
-    int16_t ir_expr_i16;
-    uint32_t ir_expr_u32;
-    int32_t ir_expr_i32;
+    uint8_t ir_expression_u8;
+    int8_t ir_expression_i8;
+    uint16_t ir_expression_u16;
+    int16_t ir_expression_i16;
+    uint32_t ir_expression_u32;
+    int32_t ir_expression_i32;
     // tuples, strings, lists, {i,u}64, calls
-    ir_expr_ind ir_expr_ind;
+    ir_expression_ind ir_expression_ind;
   };
-} ir_expr;
+} ir_expression;
 
-VEC_DECL(ir_expr);
+VEC_DECL(ir_expression);
 
 typedef struct {
   ir_type_ind ir_tup_type_ind;
-  ir_expr ir_tup_expr_a;
-  ir_expr ir_tup_expr_b;
+  ir_expression ir_tup_expression_a;
+  ir_expression ir_tup_expression_b;
 } ir_tup;
 
 VEC_DECL(ir_tup);
@@ -171,19 +171,19 @@ typedef struct {
 } ir_root;
 
 typedef struct {
-  // don't need type, it's in the expr
+  // don't need type, it's in the expression
   // ir_type_ind ir_call_type_ind;
-  ir_expr ir_call_callee;
-  ir_expr ir_call_param;
+  ir_expression ir_call_callee;
+  ir_expression ir_call_param;
 } ir_call;
 
 VEC_DECL(ir_call);
 
 typedef struct {
-  // not needed, provided by ir_expr
+  // not needed, provided by ir_expression
   // ir_type_ind ir_data_construction_type_ind;
   ir_data_constructor_ref ir_data_construction_callee_ref;
-  ir_expr ir_data_construction_param;
+  ir_expression ir_data_construction_param;
 } ir_data_construction;
 
 VEC_DECL(ir_data_construction);
@@ -198,17 +198,17 @@ VEC_DECL(ir_fn_type);
 
 typedef struct {
   ir_type_ind ir_if_type_ind;
-  ir_expr ir_if_cond_expr;
-  ir_expr ir_if_then_expr;
-  ir_expr ir_if_else_expr;
+  ir_expression ir_if_cond_expression;
+  ir_expression ir_if_then_expression;
+  ir_expression ir_if_else_expression;
 } ir_if;
 
 VEC_DECL(ir_if);
 
 typedef struct {
   ir_type_ind ir_list_type_ind;
-  ir_expr_ind ir_list_exprs_start;
-  ir_expr_ind ir_list_expr_amt;
+  ir_expression_ind ir_list_exressions_start;
+  ir_expression_ind ir_list_expression_amt;
 } ir_list;
 
 VEC_DECL(ir_list);
@@ -220,14 +220,14 @@ typedef struct {
 
 VEC_DECL(ir_list_type);
 
-// TODO: inline into expr?
+// TODO: inline into expression?
 typedef span ir_string;
 
 VEC_DECL(ir_string);
 
 typedef struct {
   ir_type_ind ir_as_type_ind;
-  ir_expr ir_as_expr_ind;
+  ir_expression ir_as_expression_ind;
 } ir_as;
 
 VEC_DECL(ir_as);
@@ -238,7 +238,7 @@ typedef struct {
 
 typedef struct {
   // TODO
-  ir_expr_ind ir_upper_name;
+  ir_expression_ind ir_upper_name;
 } ir_upper_name;
 
 typedef struct {
@@ -246,11 +246,11 @@ typedef struct {
 
 typedef struct {
   binding ir_let_binding;
-  ir_expr ir_let_expr;
+  ir_expression ir_let_expression;
   ir_type_ind ir_let_type_ind;
 } ir_let;
 
-VEC_DECL(ir_expr_type);
+VEC_DECL(ir_expression_type);
 
 typedef struct {
   binding b;

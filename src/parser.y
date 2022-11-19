@@ -22,7 +22,7 @@
   LET
   .
 
-%type commaexprs vec_node_ind
+%type commaexressions vec_node_ind
 %type param node_ind_tup
 %type pattern_list vec_node_ind
 %type pattern_list_rec vec_node_ind
@@ -111,24 +111,24 @@ toplevels(RES) ::= toplevels(A) toplevel(B) . {
   RES = A;
 }
 
-block(RES) ::= stmt(A). {
+block(RES) ::= statement(A). {
   BREAK_PARSER;
   vec_node_ind res = VEC_NEW;
   VEC_PUSH(&res, A);
   RES = res;
 }
 
-block(RES) ::= block(A) stmt(B). {
+block(RES) ::= block(A) statement(B). {
   BREAK_PARSER;
   VEC_PUSH(&A, B);
   RES = A;
 }
 
-stmt(RES) ::= expr(A). {
+statement(RES) ::= expression(A). {
   RES = A;
 }
 
-stmt(RES) ::= OPEN_PAREN(O) block_in_parens(A) CLOSE_PAREN(C). {
+statement(RES) ::= OPEN_PAREN(O) block_in_parens(A) CLOSE_PAREN(C). {
   BREAK_PARSER;
   token t = s->tokens[O];
   VEC_DATA_PTR(&s->nodes)[A].span.start = t.start;
@@ -144,10 +144,10 @@ block_in_parens(RES) ::= sig(A). {
   RES = A;
 }
 
-let(RES) ::= LET lower_name(A) expr(B). {
+let(RES) ::= LET lower_name(A) expression(B). {
   BREAK_PARSER;
   parse_node n = {
-    .type.statement = PT_STMT_LET,
+    .type.statement = PT_STATEMENT_LET,
     .sub_a = A,
     .sub_b = B
   };
@@ -184,25 +184,25 @@ int(RES) ::= INT(A).  {
   RES = n;
 }
 
-expr(RES) ::= lower_name(A). {
+expression(RES) ::= lower_name(A). {
   RES = A;
 }
 
-expr(RES) ::= upper_name(A). {
+expression(RES) ::= upper_name(A). {
   RES = A;
 }
 
-expr(RES) ::= unit(A). {
+expression(RES) ::= unit(A). {
   A.type.expression = PT_EX_UNIT;
   RES = push_node(s, A);
 }
 
-expr(RES) ::= string(A). {
+expression(RES) ::= string(A). {
   A.type.expression = PT_EX_STRING,
   RES = push_node(s, A);
 }
 
-expr(RES) ::= int(A). {
+expression(RES) ::= int(A). {
   A.type.expression = PT_EX_INT,
   RES = push_node(s, A);
 }
@@ -256,7 +256,7 @@ lower_name(RES) ::= lower_name_node(A). {
   RES = push_node(s, A);
 }
 
-expr(RES) ::= OPEN_BRACKET(A) expr_list_contents(B) CLOSE_BRACKET(C). {
+expression(RES) ::= OPEN_BRACKET(A) expression_list_contents(B) CLOSE_BRACKET(C). {
   BREAK_PARSER;
   token a = s->tokens[A];
   VEC_DATA_PTR(&s->nodes)[B].span.start = a.start;
@@ -265,7 +265,7 @@ expr(RES) ::= OPEN_BRACKET(A) expr_list_contents(B) CLOSE_BRACKET(C). {
   RES = B;
 }
 
-expr_list_contents(RES) ::= commaexprs(C). {
+expression_list_contents(RES) ::= commaexressions(C). {
   BREAK_PARSER;
   node_ind_t subs_start = s->inds.len;
   VEC_CAT(&s->inds, &C);
@@ -278,7 +278,7 @@ expr_list_contents(RES) ::= commaexprs(C). {
   RES = push_node(s, n);
 }
 
-expr_list_contents(RES) ::= . {
+expression_list_contents(RES) ::= . {
   BREAK_PARSER;
   parse_node n = {
     .type.expression = PT_EX_LIST,
@@ -288,7 +288,7 @@ expr_list_contents(RES) ::= . {
   RES = push_node(s, n);
 }
 
-expr(RES) ::= OPEN_PAREN(A) compound_expr(B) CLOSE_PAREN(C). {
+expression(RES) ::= OPEN_PAREN(A) compound_expression(B) CLOSE_PAREN(C). {
   BREAK_PARSER;
   parse_node *node = VEC_GET_PTR(s->nodes, B);
   node->span.start = s->tokens[A].start;
@@ -296,31 +296,31 @@ expr(RES) ::= OPEN_PAREN(A) compound_expr(B) CLOSE_PAREN(C). {
   RES = B;
 }
 
-compound_expr(RES) ::= if(A). {
+compound_expression(RES) ::= if(A). {
   RES = A;
 }
 
-compound_expr(RES) ::= fun(A). {
+compound_expression(RES) ::= fun(A). {
   RES = A;
 }
 
-compound_expr(RES) ::= tuple(A). {
+compound_expression(RES) ::= tuple(A). {
   RES = A;
 }
 
-compound_expr(RES) ::= call(A). {
+compound_expression(RES) ::= call(A). {
   RES = A;
 }
 
-compound_expr(RES) ::= typed(A). {
+compound_expression(RES) ::= typed(A). {
   RES = A;
 }
 
-compound_expr(RES) ::= fn(A). {
+compound_expression(RES) ::= fn(A). {
   RES = A;
 }
 
-// compound_expr ::= expr.
+// compound_expression ::= expression.
 
 fn(RES) ::= FN pattern(B) fun_body(C). {
   BREAK_PARSER;
@@ -334,7 +334,7 @@ fn(RES) ::= FN pattern(B) fun_body(C). {
 
 sig(RES) ::= SIG lower_name(A) type(B). {
   BREAK_PARSER;
-  parse_node n = {.type.statement = PT_STMT_SIG, .sub_a = A, .sub_b = B};
+  parse_node n = {.type.statement = PT_STATEMENT_SIG, .sub_a = A, .sub_b = B};
   RES = push_node(s, n);
 }
 
@@ -345,7 +345,7 @@ fun(RES) ::= FUN lower_name(A) pattern(B) fun_body(C). {
   VEC_PUSH(&s->inds, B);
   VEC_PUSH(&s->inds, C);
   parse_node n = {
-    .type.statement = PT_STMT_FUN,
+    .type.statement = PT_STATEMENT_FUN,
     .subs_start = start,
     .sub_amt = 3
   };
@@ -590,27 +590,27 @@ type_inner_tuple(RES) ::= type_inner_tuple(A) COMMA type(B). {
   RES = A;
 }
 
-typed(RES) ::= AS type(A) expr(B). {
+typed(RES) ::= AS type(A) expression(B). {
   BREAK_PARSER;
   parse_node n = {.type.expression = PT_EX_AS, .sub_a = A, .sub_b = B};
   RES = push_node(s, n);
 }
 
-tuple(RES) ::= tuple_rec(A) COMMA expr(B). {
+tuple(RES) ::= tuple_rec(A) COMMA expression(B). {
   BREAK_PARSER;
-  // start and end get set by compound_expr
+  // start and end get set by compound_expression
   VEC_PUSH(&A, B);
   RES = desugar_tuple(s, PT_ALL_EX_TUP, A);
 }
 
-tuple_min(RES) ::= expr(A). {
+tuple_min(RES) ::= expression(A). {
   BREAK_PARSER;
   vec_node_ind res = VEC_NEW;
   VEC_PUSH(&res, A);
   RES = res;
 }
 
-tuple_rec(RES) ::= tuple_rec(A) COMMA expr(B). {
+tuple_rec(RES) ::= tuple_rec(A) COMMA expression(B). {
   BREAK_PARSER;
   VEC_PUSH(&A, B);
   RES = A;
@@ -620,26 +620,26 @@ tuple_rec(RES) ::= tuple_min(A). {
   RES = A;
 }
 
-call(RES) ::= expr(A) expr(B). {
+call(RES) ::= expression(A) expression(B). {
   BREAK_PARSER;
   parse_node n = {.type.expression = PT_EX_CALL, .sub_a = A, .sub_b = B};
   RES = push_node(s, n);
 }
 
-commaexprs(RES) ::= expr(A). {
+commaexressions(RES) ::= expression(A). {
   BREAK_PARSER;
   vec_node_ind res = VEC_NEW;
   VEC_PUSH(&res, A);
   RES = res;
 }
 
-commaexprs(RES) ::= commaexprs(A) COMMA expr(B). {
+commaexressions(RES) ::= commaexressions(A) COMMA expression(B). {
   BREAK_PARSER;
   VEC_PUSH(&A, B);
   RES = A;
 }
 
-if(RES) ::= IF expr(A) expr(B) expr(C). {
+if(RES) ::= IF expression(A) expression(B) expression(C). {
   BREAK_PARSER;
   node_ind_t start = s->inds.len;
   VEC_PUSH(&s->inds, A);

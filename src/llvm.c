@@ -50,7 +50,7 @@ typedef enum {
 
   // INPUTS: node
   // OUTPUTS: val
-  CG_STMT,
+  CG_STATEMENT,
 
   // INPUTS: node, val
   // OUTPUTS: edits the environment
@@ -191,14 +191,14 @@ static stage pop_stage(bitset *bs) {
 
 static void push_stage(bitset *bs, stage s) { bs_push(bs, s == STAGE_TWO); }
 
-static void push_expr_act(cg_state *state, node_ind_t node_ind, stage stage) {
+static void push_expression_act(cg_state *state, node_ind_t node_ind, stage stage) {
   push_action(state, CG_EXPR);
   push_stage(&state->act_stage, stage);
   VEC_PUSH(&state->act_nodes, node_ind);
 }
 
-static void push_stmt_act(cg_state *state, node_ind_t node_ind, stage stage) {
-  push_action(state, CG_STMT);
+static void push_statement_act(cg_state *state, node_ind_t node_ind, stage stage) {
+  push_action(state, CG_STATEMENT);
   push_stage(&state->act_stage, stage);
   VEC_PUSH(&state->act_nodes, node_ind);
 }
@@ -369,7 +369,7 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
   return llvm_types[root_type_ind];
 }
 
-static void cg_expr(cg_state *state) {
+static void cg_expression(cg_state *state) {
   node_ind_t ind = VEC_POP(&state->act_nodes);
   parse_node node = state->parse_tree.nodes[ind];
   stage stage = pop_stage(&state->act_stage);
@@ -378,10 +378,10 @@ static void cg_expr(cg_state *state) {
       node_ind_t callee_ind = PT_CALL_CALLEE_IND(node);
       switch (stage) {
         case STAGE_ONE: {
-          push_expr_act(state, ind, STAGE_TWO);
+          push_expression_act(state, ind, STAGE_TWO);
           // These will be in the same order on the value (out) stack
-          push_expr_act(state, PT_CALL_CALLEE_IND(node), STAGE_ONE);
-          push_expr_act(state, PT_CALL_PARAM_IND(node), STAGE_ONE);
+          push_expression_act(state, PT_CALL_CALLEE_IND(node), STAGE_ONE);
+          push_expression_act(state, PT_CALL_PARAM_IND(node), STAGE_ONE);
           break;
         }
         case STAGE_TWO: {
@@ -418,11 +418,11 @@ static void cg_expr(cg_state *state) {
     case PT_EX_IF: {
       switch (stage) {
         case STAGE_ONE: {
-          push_expr_act(state, ind, STAGE_TWO);
+          push_expression_act(state, ind, STAGE_TWO);
 
           // cond
           node_ind_t cond_ind = PT_IF_COND_IND(state->parse_tree.inds, node);
-          push_expr_act(state, cond_ind, STAGE_ONE);
+          push_expression_act(state, cond_ind, STAGE_ONE);
 
           // then
           node_ind_t a_node = PT_IF_A_IND(state->parse_tree.inds, node);
@@ -465,10 +465,10 @@ static void cg_expr(cg_state *state) {
     case PT_EX_TUP: {
       switch (stage) {
         case STAGE_ONE:
-          push_expr_act(state, ind, STAGE_TWO);
+          push_expression_act(state, ind, STAGE_TWO);
           for (size_t i = 0; i < node.sub_amt / 2; i++) {
             node_ind_t sub_ind = state->parse_tree.inds[node.subs_start + i];
-            push_expr_act(state, sub_ind, STAGE_ONE);
+            push_expression_act(state, sub_ind, STAGE_ONE);
           }
           break;
         case STAGE_TWO: {
@@ -496,7 +496,7 @@ static void cg_expr(cg_state *state) {
       break;
     }
     case PT_EX_AS: {
-      push_expr_act(state, PT_AS_VAL_IND(node), STAGE_ONE);
+      push_expression_act(state, PT_AS_VAL_IND(node), STAGE_ONE);
       break;
     }
     case PT_EX_UNIT: {
@@ -516,16 +516,16 @@ static void cg_expr(cg_state *state) {
   }
 }
 
-static void cg_stmt(cg_state *state) {
+static void cg_statement(cg_state *state) {
   node_ind_t ind = VEC_POP(&state->act_nodes);
   parse_node node = state->parse_tree.nodes[ind];
   stage stage = pop_stage(&state->act_stage);
   switch (node.type.statement) {
-    case PT_STMT_LET:
+    case PT_STATEMENT_LET:
       switch (stage) {
         case STAGE_ONE:
-          push_stmt_act(state, ind, STAGE_TWO);
-          push_expr_act(state, PT_LET_VAL_IND(node), STAGE_ONE);
+          push_statement_act(state, ind, STAGE_TWO);
+          push_expression_act(state, PT_LET_VAL_IND(node), STAGE_ONE);
           break;
         case STAGE_TWO: {
           debug_assert(ind != state->env_bnds.len);
@@ -537,9 +537,9 @@ static void cg_stmt(cg_state *state) {
         }
       }
       break;
-    case PT_STMT_SIG:
+    case PT_STATEMENT_SIG:
       break;
-    case PT_STMT_FUN:
+    case PT_STATEMENT_FUN:
       switch (stage) {
         case STAGE_ONE: {
           LLVMTypeRef fn_type =
@@ -563,7 +563,7 @@ static void cg_stmt(cg_state *state) {
           push_action(state, CG_POP_ENV_TO);
           VEC_PUSH(&state->act_sizes, env_amt);
 
-          push_stmt_act(state, ind, STAGE_TWO);
+          push_statement_act(state, ind, STAGE_TWO);
 
           node_ind_t body_ind = PT_FUN_BODY_IND(state->parse_tree.inds, node);
           push_gen_block(state, body_ind, ENTRY_STR);
@@ -588,7 +588,7 @@ static void cg_stmt(cg_state *state) {
       // expressions are statements :(
       // TODO this is really inefficient. We should probably extract out the
       // cases into functions, and inline the calls.
-      push_expr_act(state, ind, STAGE_ONE);
+      push_expression_act(state, ind, STAGE_ONE);
       break;
   }
 }
@@ -599,9 +599,9 @@ static void cg_block(cg_state *state, node_ind_t start, node_ind_t amt) {
     size_t j = last - i;
     node_ind_t sub_ind = state->parse_tree.inds[j];
     parse_node sub = state->parse_tree.nodes[sub_ind];
-    if (sub.type.statement == PT_STMT_SIG)
+    if (sub.type.statement == PT_STATEMENT_SIG)
       continue;
-    push_stmt_act(state, sub_ind, STAGE_ONE);
+    push_statement_act(state, sub_ind, STAGE_ONE);
   }
 }
 
@@ -666,17 +666,17 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
     switch (action) {
       case CG_EXPR: {
         debug_assert(state.act_stage.len > 0);
-        cg_expr(&state);
+        cg_expression(&state);
         break;
       }
-      case CG_STMT: {
+      case CG_STATEMENT: {
         debug_assert(state.act_stage.len > 0);
-        cg_stmt(&state);
+        cg_statement(&state);
         break;
       }
       // uses:
       // * act_string
-      // * node_ind (passes on to expr)
+      // * node_ind (passes on to expression)
       case CG_GEN_BLOCK: {
         const char *name = VEC_POP(&state.act_strings);
         LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(

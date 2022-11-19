@@ -14,7 +14,7 @@ typedef struct {
     BUILD_PATTERN,
     BUILD_TOP_LEVEL,
     BUILD_EXPR,
-    BUILD_EXPR_CONSTRUCTION_2,
+    BUILD_EXPRESSION_CONSTRUCTION_2,
     BUILD_CALL_2,
     BUILD_CALL_3,
     BUILD_FUN_2,
@@ -32,9 +32,9 @@ typedef struct {
 VEC_DECL(action);
 
 typedef struct {
-  ir_expr a;
-  ir_expr b;
-} two_exprs;
+  ir_expression a;
+  ir_expression b;
+} two_exressions;
 
 typedef union {
   ir_fun_group ir_fun_groups;
@@ -80,15 +80,15 @@ ir_module build_module(parse_tree tree, type_info types) {
   ir_module module = new_module();
   vec_action actions;
 
-  vec_ir_pattern ir_stmt = VEC_NEW;
-  // vec_node_ind ir_stmt_amts = VEC_NEW;
+  vec_ir_pattern ir_statement = VEC_NEW;
+  // vec_node_ind ir_statement_amts = VEC_NEW;
 
   vec_ir_pattern ir_patterns = VEC_NEW;
   // I think we can get this from the current node
   // vec_node_ind ir_pattern_amts = VEC_NEW;
 
   union {
-    ir_expr expr;
+    ir_expression expression;
     ir_pattern pattern;
   } build_res;
 
@@ -245,7 +245,7 @@ ir_module build_module(parse_tree tree, type_info types) {
       }
       // TODO get rid of this, and make BUILD_EXPR and similar groups
       case BUILD_EXPR:
-        build_res.expr.ir_expr_type = ti;
+        build_res.expression.ir_expression_type = ti;
         switch (node.type.expression) {
           case PT_EX_CALL: {
             action todo[] = {
@@ -262,17 +262,17 @@ ir_module build_module(parse_tree tree, type_info types) {
             break;
           }
           case PT_EX_FN:
-            build_res.expr.ir_expr_tag = IR_EXPR_FN;
+            build_res.expression.ir_expression_tag = IR_EXPRESSION_FN;
             UNIMPLEMENTED("build clusure fn");
             break;
           case PT_EX_IF: {
-            build_res.expr.ir_expr_tag = IR_EXPR_IF;
+            build_res.expression.ir_expression_tag = IR_EXPRESSION_IF;
             // TODO
             UNIMPLEMENTED("Lowering IFs");
             /*
             action todo[] = {
               {
-                .tag = BUILD_IF_EXPR_2,
+                .tag = BUILD_IF_EXPRESSION_2,
                 .node_ind = act.node_ind,
               },
               {
@@ -280,7 +280,7 @@ ir_module build_module(parse_tree tree, type_info types) {
                 .node_ind = node.sub_a,
               },
               {
-                .tag = BUILD_IF_EXPR_2,
+                .tag = BUILD_IF_EXPRESSION_2,
                 .node_ind = act.node_ind,
               },
               {
@@ -296,7 +296,7 @@ ir_module build_module(parse_tree tree, type_info types) {
             type t = types.types[type_ind];
             switch (t.tag) {
               case T_I8:
-                // build_res.expr.ir_expr_i8 =
+                // build_res.expression.ir_expression_i8 =
                 break;
               case T_UNKNOWN:
               case T_UNIT:
@@ -314,7 +314,7 @@ ir_module build_module(parse_tree tree, type_info types) {
               case T_CALL:
                 break;
             }
-            // build_res.expr.
+            // build_res.expression.
             break;
           }
           case PT_EX_LIST:
@@ -331,7 +331,7 @@ ir_module build_module(parse_tree tree, type_info types) {
             ir_type_ind ti = {
               .n = type_ind,
             };
-            build_res.expr.ir_expr_type = ti;
+            build_res.expression.ir_expression_type = ti;
             break;
           case PT_EX_TUP:
             // TODO
@@ -355,20 +355,20 @@ ir_module build_module(parse_tree tree, type_info types) {
             break;
         }
         break;
-      case BUILD_EXPR_CONSTRUCTION_2: {
+      case BUILD_EXPRESSION_CONSTRUCTION_2: {
         ir_data_construction construction = {
-          .ir_data_construction_param = build_res.expr,
+          .ir_data_construction_param = build_res.expression,
         };
         VEC_PUSH(&module.ir_data_constructions, construction);
-        ir_expr expr = {
-          .ir_expr_tag = IR_EXPR_CONSTRUCTOR,
-          .ir_expr_type = ti,
+        ir_expression expression = {
+          .ir_expression_tag = IR_EXPRESSION_CONSTRUCTOR,
+          .ir_expression_type = ti,
         };
-        build_res.expr = expr;
+        build_res.expression = expression;
         break;
       }
       case BUILD_CALL_2: {
-        ir_expr callee = build_res.expr;
+        ir_expression callee = build_res.expression;
         ir_call call = {
           .ir_call_callee = callee,
         };
@@ -387,14 +387,14 @@ ir_module build_module(parse_tree tree, type_info types) {
         break;
       }
       case BUILD_CALL_3: {
-        build_res.expr.ir_expr_tag = IR_EXPR_CALL;
-        ir_expr param = build_res.expr;
+        build_res.expression.ir_expression_tag = IR_EXPRESSION_CALL;
+        ir_expression param = build_res.expression;
         act.partial_call.ir_call_param = param;
         VEC_PUSH(&module.ir_calls, act.partial_call);
-        ir_expr e = {
-          .ir_expr_tag = IR_EXPR_CALL,
-          .ir_expr_type = ti,
-          .ir_expr_ind.n = module.ir_calls.len - 1,
+        ir_expression e = {
+          .ir_expression_tag = IR_EXPRESSION_CALL,
+          .ir_expression_type = ti,
+          .ir_expression_ind.n = module.ir_calls.len - 1,
         };
         UNIMPLEMENTED("Lowering call");
         break;
@@ -402,8 +402,8 @@ ir_module build_module(parse_tree tree, type_info types) {
       case BUILD_FUN_2: {
         ir_fun_case fun = {
           .ir_fun_param = build_res.pattern,
-          // TODO with a vec_stmt like the patterns
-          //.ir_fun_body_stmts_start =
+          // TODO with a vec_statement like the patterns
+          //.ir_fun_body_statements_start =
         };
         break;
       }

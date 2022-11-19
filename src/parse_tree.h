@@ -54,9 +54,9 @@ typedef enum {
   PT_ALL_PAT_LIST = 18,
 
   // sig and fun two are also top levels
-  PT_ALL_STMT_SIG = 20,
-  PT_ALL_STMT_FUN = 21,
-  PT_ALL_STMT_LET = 22,
+  PT_ALL_STATEMENT_SIG = 20,
+  PT_ALL_STATEMENT_FUN = 21,
+  PT_ALL_STATEMENT_LET = 22,
 
   PT_ALL_TY_CONSTRUCTION = 23,
   PT_ALL_TY_LIST = 24,
@@ -78,7 +78,7 @@ typedef enum {
   PT_EX_AS = PT_ALL_EX_AS,
   PT_EX_UNIT = PT_ALL_EX_UNIT,
   PT_EX_UPPER_NAME = PT_ALL_MULTI_UPPER_NAME,
-} parse_node_expr_type;
+} parse_node_expression_type;
 
 typedef enum {
   PT_PAT_WILDCARD = PT_ALL_PAT_WILDCARD,
@@ -92,9 +92,9 @@ typedef enum {
 } parse_node_pattern_type;
 
 typedef enum {
-  PT_STMT_SIG = PT_ALL_STMT_SIG,
-  PT_STMT_FUN = PT_ALL_STMT_FUN,
-  PT_STMT_LET = PT_ALL_STMT_LET,
+  PT_STATEMENT_SIG = PT_ALL_STATEMENT_SIG,
+  PT_STATEMENT_FUN = PT_ALL_STATEMENT_FUN,
+  PT_STATEMENT_LET = PT_ALL_STATEMENT_LET,
 } parse_node_statement_type;
 
 typedef enum {
@@ -107,8 +107,8 @@ typedef enum {
 } parse_node_type_type;
 
 typedef enum {
-  PT_TL_SIG = PT_STMT_SIG,
-  PT_TL_FUN = PT_STMT_FUN,
+  PT_TL_SIG = PT_STATEMENT_SIG,
+  PT_TL_FUN = PT_STATEMENT_FUN,
   // TODO let
 } parse_node_toplevel_type;
 
@@ -117,7 +117,7 @@ typedef union {
   parse_node_toplevel_type top_level;
   parse_node_statement_type statement;
   parse_node_type_type type;
-  parse_node_expr_type expression;
+  parse_node_expression_type expression;
   parse_node_pattern_type pattern;
 } parse_node_type;
 
