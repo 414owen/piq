@@ -106,3 +106,19 @@ $ nix develop
 $ tup
 $ ./repl
 ```
+
+# Without nix
+
+## Requirements
+
+* A C/C++ compiler
+
+### Headers
+
+* [hedley](https://github.com/nemequ/hedley)
+* [predef](https://github.com/natefoo/predef)
+
+### Libraries
+
+* [xxHash](https://cyan4973.github.io/xxHash)
+* [libllvm](https://llvm.org/)
