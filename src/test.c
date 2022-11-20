@@ -126,19 +126,19 @@ const struct timespec zero = {
 test_state test_state_new(test_config config) {
   test_state res = {
 #ifdef TIME_TOKENIZER
-  .total_bytes_tokenized = 0,
-  .total_tokenization_time = zero,
-  .total_tokens = 0,
+    .total_bytes_tokenized = 0,
+    .total_tokenization_time = zero,
+    .total_tokens = 0,
 #endif
 #ifdef TIME_PARSER
-  .total_parser_time = zero,
-  .total_tokens_parsed = 0,
+    .total_parser_time = zero,
+    .total_tokens_parsed = 0,
 #endif
 #ifdef TIME_TYPECHECK
-  .total_typecheck_time = zero,
+    .total_typecheck_time = zero,
 #endif
 #ifdef TIME_CODEGEN
-  .total_codegen_time = zero,
+    .total_codegen_time = zero,
 #endif
 
     .config = config,

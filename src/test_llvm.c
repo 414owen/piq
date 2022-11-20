@@ -58,10 +58,11 @@ static void *get_entry_fn(test_state *state, jit_ctx ctx, const char *input) {
   parse_tree tree;
   bool success = false;
   tc_res tc = test_upto_typecheck(state, input, &success, &tree);
-  
-  if (tc.error_amt > 0) return NULL;
 
-  LLVMOrcJITTargetAddress entry_addr = (LLVMOrcJITTargetAddress) NULL;
+  if (tc.error_amt > 0)
+    return NULL;
+
+  LLVMOrcJITTargetAddress entry_addr = (LLVMOrcJITTargetAddress)NULL;
 
   if (success) {
     source_file test_file = {
@@ -85,19 +86,22 @@ static void *get_entry_fn(test_state *state, jit_ctx ctx, const char *input) {
     free_parse_tree(tree);
     free_tc_res(tc);
   }
-  return (void*) entry_addr;
+  return (void *)entry_addr;
 }
 
-static void ensure_int_result_matches(test_state *state, int32_t expected, int32_t got) {
+static void ensure_int_result_matches(test_state *state, int32_t expected,
+                                      int32_t got) {
   if (got != expected) {
     failf(state,
-      "Jit function returned wrong result. Expected: %d, Got: %d.\n",
-      expected,
-      got);
+          "Jit function returned wrong result. Expected: %d, Got: %d.\n",
+          expected,
+          got);
   }
 }
 
-static void test_llvm_code_produces_int(test_state *state, const char *restrict input, int32_t expected) {
+static void test_llvm_code_produces_int(test_state *state,
+                                        const char *restrict input,
+                                        int32_t expected) {
   jit_ctx ctx = jit_llvm_init();
   void *entry_addr = get_entry_fn(state, ctx, input);
   int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
@@ -108,7 +112,9 @@ static void test_llvm_code_produces_int(test_state *state, const char *restrict 
   jit_dispose(&ctx);
 }
 
-static void test_llvm_code_maps_int(test_state *state, const char *restrict input, int32_t input_param, int32_t expected) {
+static void test_llvm_code_maps_int(test_state *state,
+                                    const char *restrict input,
+                                    int32_t input_param, int32_t expected) {
   jit_ctx ctx = jit_llvm_init();
   void *entry_addr = get_entry_fn(state, ctx, input);
   int32_t (*entry)(int32_t) = (int32_t(*)(int32_t))entry_addr;

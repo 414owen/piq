@@ -209,19 +209,22 @@ static void test_if_failures(test_state *state) {
 
   {
     test_start(state, "Empty");
-    test_parser_fails_on_form(state, "(if)", 2, expression_start_amt, expression_start);
+    test_parser_fails_on_form(
+      state, "(if)", 2, expression_start_amt, expression_start);
     test_end(state);
   }
 
   {
     test_start(state, "One form");
-    test_parser_fails_on_form(state, "(if 1)", 3, expression_start_amt, expression_start);
+    test_parser_fails_on_form(
+      state, "(if 1)", 3, expression_start_amt, expression_start);
     test_end(state);
   }
 
   {
     test_start(state, "Two form");
-    test_parser_fails_on_form(state, "(if 1 2)", 4, expression_start_amt, expression_start);
+    test_parser_fails_on_form(
+      state, "(if 1 2)", 4, expression_start_amt, expression_start);
     test_end(state);
   }
 
@@ -257,7 +260,8 @@ static void test_fn_failures(test_state *state) {
 
   {
     test_start(state, "Without body");
-    test_parser_fails_on_form(state, "(fn ())", 3, expression_start_amt, expression_start);
+    test_parser_fails_on_form(
+      state, "(fn ())", 3, expression_start_amt, expression_start);
     test_end(state);
   }
 
@@ -276,8 +280,11 @@ static void test_call_failures(test_state *state) {
 
   {
     test_start(state, "No params");
-    test_parser_fails_on_form(
-      state, "(a)", 2, STATIC_LEN(comma_or_expression_start), comma_or_expression_start);
+    test_parser_fails_on_form(state,
+                              "(a)",
+                              2,
+                              STATIC_LEN(comma_or_expression_start),
+                              comma_or_expression_start);
     test_end(state);
   }
 
@@ -418,20 +425,23 @@ static void test_mismatched_parens(test_state *state) {
 
   {
     test_start(state, "Three open");
-    test_parser_fails_on_form(state, "((( ", 3, inside_expression_amt, inside_expression);
+    test_parser_fails_on_form(
+      state, "((( ", 3, inside_expression_amt, inside_expression);
     test_end(state);
   }
 
   {
     {
       test_start(state, "Single close");
-      test_parser_fails_on_form(state, ")", 0, expression_start_amt, expression_start);
+      test_parser_fails_on_form(
+        state, ")", 0, expression_start_amt, expression_start);
       test_end(state);
     }
 
     {
       test_start(state, "Three close");
-      test_parser_fails_on_form(state, ")))", 0, expression_start_amt, expression_start);
+      test_parser_fails_on_form(
+        state, ")))", 0, expression_start_amt, expression_start);
       test_end(state);
     }
   }

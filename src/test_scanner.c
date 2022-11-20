@@ -57,7 +57,7 @@ static void test_scanner_fails(test_state *restrict state, char *restrict input,
     failf(state, "Expected to see a tokenizer error for input: %s", input);
     return;
   }
-  if (tres.error_pos!= err_pos) {
+  if (tres.error_pos != err_pos) {
     failf(state,
           "Wrong tokenizer error position.\n"
           "Expected: %" PRBI "\n"

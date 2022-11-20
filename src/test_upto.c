@@ -5,39 +5,55 @@
 
 #ifdef TIME_TOKENIZER
 // TODO use pre-known file sizes for non-tests
-void add_scanner_timings_internal(test_state *state, const char *restrict input, tokens_res tres) {
+void add_scanner_timings_internal(test_state *state, const char *restrict input,
+                                  tokens_res tres) {
   if (tres.succeeded) {
     state->total_bytes_tokenized += strlen(input);
   } else {
     state->total_bytes_tokenized += tres.error_pos;
   }
-  state->total_tokenization_time = timespec_add(state->total_tokenization_time, tres.time_taken);
+  state->total_tokenization_time =
+    timespec_add(state->total_tokenization_time, tres.time_taken);
   state->total_tokens += tres.token_amt;
 }
 #endif
 
 #ifdef TIME_PARSER
-void add_parser_timings_internal(test_state *state, tokens_res tres, parse_tree_res pres) {
+void add_parser_timings_internal(test_state *state, tokens_res tres,
+                                 parse_tree_res pres) {
   if (pres.succeeded) {
     state->total_tokens_parsed += tres.token_amt;
   } else {
     state->total_tokens_parsed += pres.error_pos;
   }
-  state->total_parser_time = timespec_add(state->total_parser_time, pres.time_taken);
+  state->total_parser_time =
+    timespec_add(state->total_parser_time, pres.time_taken);
   state->total_parse_nodes_produced += pres.tree.node_amt;
+}
+#endif
+
+#ifdef TIME_TYPECHECK
+void add_typecheck_timings_internal(test_state *state, parse_tree tree,
+                                    tc_res tc_res) {
+  if (tc_res.succeeded) {
+    state->total_tokens_parsed += tres.token_amt;
+  } else {
+    state->total_tokens_parsed += tc_res.error_pos;
+  }
+  state->total_typecheck_time =
+    timespec_add(state->total_typecheck_time, tc_res.time_taken);
+  state->total_parse_nodes_produced += tc_res.tree.node_amt;
 }
 #endif
 
 /*
 #ifdef TIME_TYPECHECK
-void add_typecheck_timings_internal(test_state *state, tokens_res tres, parse_tree_res pres) {
-  if (pres.succeeded) {
-    state->total_tokens_parsed += tres.token_amt;
-  } else {
-    state->total_tokens_parsed += pres.error_pos;
+void add_typecheck_timings_internal(test_state *state, tokens_res tres,
+parse_tree_res pres) { if (pres.succeeded) { state->total_tokens_parsed +=
+tres.token_amt; } else { state->total_tokens_parsed += pres.error_pos;
   }
-  state->total_parser_time = timespec_add(state->total_parser_time, pres.time_taken);
-  state->total_parse_nodes_produced += pres.tree.node_amt;
+  state->total_parser_time = timespec_add(state->total_parser_time,
+pres.time_taken); state->total_parse_nodes_produced += pres.tree.node_amt;
 }
 #endif
 */
