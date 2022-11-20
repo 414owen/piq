@@ -59,7 +59,7 @@ static void print_timespan_nanos(FILE *f, uint64_t ns) {
   };
   uint64_t before = ns / 1000;
   uint64_t after = ns % 1000;
-  for (int i = 0; i < STATIC_LEN(time_suffixes); i++) {
+  for (unsigned i = 0; i < STATIC_LEN(time_suffixes); i++) {
     if (before < 1000) {
       fprintf(
         f, "%" PRIu64 ".%03" PRIu64 "%ss", before, after, time_suffixes[i]);
@@ -84,6 +84,11 @@ static void run_tests(test_state *state) {
   test_typecheck(state);
   test_ir(state);
   test_llvm(state);
+}
+
+HEDLEY_NEVER_INLINE
+static void newline(FILE *f) {
+  putc('\n', f);
 }
 
 int main(int argc, const char **argv) {
@@ -155,67 +160,137 @@ int main(int argc, const char **argv) {
          state.tests_run);
 
 #ifdef TIME_ANY
-  puts("\n------------");
-  puts("--- Timings:");
-  puts("------------\n");
+  vec_string timing_blocks = VEC_NEW;
+
+  puts("\n--- Timings:\n");
 #endif
 
 #ifdef TIME_TOKENIZER
-  fputs("Total bytes tokenized: ", stdout);
-  print_byte_amount(stdout, state.total_bytes_tokenized);
-  puts("");
+  if (state.total_bytes_tokenized > 0) {
+    stringstream timing_ss;
+    ss_init_immovable(&timing_ss);
+    fputs("Total bytes tokenized: ", timing_ss.stream);
+    print_byte_amount(timing_ss.stream, state.total_bytes_tokenized);
+    newline(timing_ss.stream);
 
-  fputs("Total tokens produced: ", stdout);
-  print_amount(stdout, state.total_tokens);
-  puts("");
+    fputs("Total tokens produced: ", timing_ss.stream);
+    print_amount(timing_ss.stream, state.total_tokens);
+    newline(timing_ss.stream);
 
-  fputs("Time spent tokenizing: ", stdout);
-  print_timespan_timespec(stdout, state.total_tokenization_time);
-  puts("");
+    fputs("Time spent tokenizing: ", timing_ss.stream);
+    print_timespan_timespec(timing_ss.stream, state.total_tokenization_time);
+    newline(timing_ss.stream);
 
-  {
-    fputs("Tokenization time per token produced: ", stdout);
-    double nanos_per_token =
-      timespec_to_nanos(state.total_tokenization_time) / state.total_tokens;
-    print_timespan_nanos(stdout, nanos_per_token);
-    puts("");
-  }
-  {
-    fputs("Tokenization time per byte: ", stdout);
-    double nanos_per_byte = timespec_to_nanos(state.total_tokenization_time) /
-                            state.total_bytes_tokenized;
-    print_timespan_nanos(stdout, nanos_per_byte);
-    puts("");
+    {
+      fputs("Tokenization time per token produced: ", timing_ss.stream);
+      double nanos_per_token =
+        timespec_to_nanos(state.total_tokenization_time) / state.total_tokens;
+      print_timespan_nanos(timing_ss.stream, nanos_per_token);
+      newline(timing_ss.stream);
+    }
+    {
+      fputs("Tokenization time per byte: ", timing_ss.stream);
+      double nanos_per_byte = timespec_to_nanos(state.total_tokenization_time) /
+                              state.total_bytes_tokenized;
+      print_timespan_nanos(timing_ss.stream, nanos_per_byte);
+    }
+    ss_finalize(&timing_ss);
+    VEC_PUSH(&timing_blocks, timing_ss.string);
   }
 #endif
 
 #ifdef TIME_PARSER
-  fputs("Time spent parsing: ", stdout);
-  print_timespan_timespec(stdout, state.total_parser_time);
-  puts("");
+  if (state.total_parse_nodes_produced > 0) {
+    stringstream timing_ss;
+    ss_init_immovable(&timing_ss);
+    fputs("Time spent parsing: ", timing_ss.stream);
+    print_timespan_timespec(timing_ss.stream, state.total_parser_time);
+    newline(timing_ss.stream);
 
-  fputs("Total tokens parsed: ", stdout);
-  print_amount(stdout, state.total_tokens_parsed);
-  puts("");
+    fputs("Total tokens parsed: ", timing_ss.stream);
+    print_amount(timing_ss.stream, state.total_tokens_parsed);
+    newline(timing_ss.stream);
 
-  fputs("Total parse nodes produced: ", stdout);
-  print_amount(stdout, state.total_parse_nodes_produced);
-  puts("");
+    fputs("Total parse nodes produced: ", timing_ss.stream);
+    print_amount(timing_ss.stream, state.total_parse_nodes_produced);
+    newline(timing_ss.stream);
 
-  {
-    fputs("Parse time per token: ", stdout);
-    double nanos_per_token =
-      timespec_to_nanos(state.total_parser_time) / state.total_tokens_parsed;
-    print_timespan_nanos(stdout, nanos_per_token);
-    puts("");
+    fprintf(timing_ss.stream, "Parse nodes produced per token: %.3f\n",
+      (double) state.total_parse_nodes_produced / (double) state.total_tokens_parsed);
+
+    {
+      fputs("Parse time per token: ", timing_ss.stream);
+      double nanos_per_token =
+        timespec_to_nanos(state.total_parser_time) / state.total_tokens_parsed;
+      print_timespan_nanos(timing_ss.stream, nanos_per_token);
+      newline(timing_ss.stream);
+    }
+    {
+      fputs("Parse time per parse node produced: ", timing_ss.stream);
+      double nanos_per_token = timespec_to_nanos(state.total_parser_time) /
+                               state.total_parse_nodes_produced;
+      print_timespan_nanos(timing_ss.stream, nanos_per_token);
+    }
+    ss_finalize(&timing_ss);
+    VEC_PUSH(&timing_blocks, timing_ss.string);
   }
-  {
-    fputs("Parse time per parse node produced: ", stdout);
-    double nanos_per_token = timespec_to_nanos(state.total_parser_time) /
-                             state.total_parse_nodes_produced;
-    print_timespan_nanos(stdout, nanos_per_token);
-    puts("");
+#endif
+
+#ifdef TIME_TYPECHECK
+  if (state.total_parse_nodes_typechecked > 0) {
+    stringstream timing_ss;
+    ss_init_immovable(&timing_ss);
+    fputs("Time spent typechecking: ", timing_ss.stream);
+    print_timespan_timespec(timing_ss.stream, state.total_typecheck_time);
+    newline(timing_ss.stream);
+
+    fputs("Total parse nodes typechecked: ", timing_ss.stream);
+    print_amount(timing_ss.stream, state.total_parse_nodes_typechecked);
+    newline(timing_ss.stream);
+
+    {
+      fputs("Typecheck time per parse node: ", timing_ss.stream);
+      double nanos_per_token =
+        timespec_to_nanos(state.total_typecheck_time) / state.total_parse_nodes_typechecked;
+      print_timespan_nanos(timing_ss.stream, nanos_per_token);
+    }
+    ss_finalize(&timing_ss);
+    VEC_PUSH(&timing_blocks, timing_ss.string);
   }
+#endif
+
+#ifdef TIME_CODEGEN
+  if (state.total_parse_nodes_codegened > 0) {
+    stringstream timing_ss;
+    ss_init_immovable(&timing_ss);
+    fputs("Time spent in codegen: ", timing_ss.stream);
+    print_timespan_timespec(timing_ss.stream, state.total_codegen_time);
+    newline(timing_ss.stream);
+
+    fputs("Total parse nodes codegened: ", timing_ss.stream);
+    print_amount(timing_ss.stream, state.total_parse_nodes_codegened);
+    newline(timing_ss.stream);
+
+    {
+      fputs("Codegen time per parse node: ", timing_ss.stream);
+      double nanos_per_token =
+        timespec_to_nanos(state.total_codegen_time) / state.total_parse_nodes_codegened;
+      print_timespan_nanos(timing_ss.stream, nanos_per_token);
+    }
+    ss_finalize(&timing_ss);
+    VEC_PUSH(&timing_blocks, timing_ss.string);
+  }
+#endif
+
+#ifdef TIME_ANY
+  for (unsigned i = 0; i < timing_blocks.len; i++) {
+    if (i > 0) {
+      newline(stdout);
+    }
+    puts(VEC_GET(timing_blocks, i));
+    free(VEC_GET(timing_blocks, i));
+  }
+  VEC_FREE(&timing_blocks);
 #endif
 
   if (conf.junit) {

@@ -58,9 +58,11 @@ typedef struct {
 #endif
 #ifdef TIME_TYPECHECK
   struct timespec total_typecheck_time;
+  uint64_t total_parse_nodes_typechecked;
 #endif
 #ifdef TIME_CODEGEN
   struct timespec total_codegen_time;
+  uint64_t total_parse_nodes_codegened;
 #endif
   test_config config;
   vec_string path;

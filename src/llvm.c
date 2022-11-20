@@ -712,7 +712,7 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
   destroy_cg_state(&state);
 }
 
-llvm_res gen_module(char *module_name, source_file source, parse_tree tree,
+llvm_res gen_module(const char *module_name, source_file source, parse_tree tree,
                     type_info types, LLVMContextRef ctx) {
 #ifdef TIME_CODEGEN
   struct timespec start = get_monotonic_time();
@@ -722,7 +722,7 @@ llvm_res gen_module(char *module_name, source_file source, parse_tree tree,
   };
   cg_llvm_module(ctx, res.module, source, tree, types);
 #ifdef TIME_CODEGEN
-  res.time_taken = get_monotonic_time();
+  res.time_taken = time_since_monotonic(start);
 #endif
   return res;
 }
