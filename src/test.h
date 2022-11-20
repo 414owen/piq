@@ -69,8 +69,9 @@ typedef struct {
   struct timespec start_time;
   struct timespec end_time;
   const char *current_name;
-  bool current_failed;
-  bool in_test;
+  u8 print_streaming : 1;
+  u8 current_failed : 1;
+  u8 in_test : 1;
   vec_failure failures;
   vec_test_action actions;
   vec_string strs;

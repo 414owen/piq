@@ -95,19 +95,77 @@ static void print_timespec(FILE *f, struct timespec ts) {
   }
 }
 
-static void run_tests(test_config conf) {
+static void run_tests(test_state *state) {
+  test_vec(state);
+  test_bitset(state);
+  test_strint(state);
+  test_utils(state);
+  test_scanner(state);
+  test_parser(state);
+  test_typecheck(state);
+  test_ir(state);
+  test_llvm(state);
+}
+
+int main(int argc, const char **argv) {
+  test_config conf = {
+    .junit = false,
+    .lite = false,
+    .filter_str = NULL,
+  };
+
+  int times = 1;
+
+  argument args[] = {
+    {
+      .tag = ARG_FLAG,
+      .long_name = "lite",
+      .short_name = 'l',
+      .flag_data = &conf.lite,
+      .description = "Turn off stress tests",
+    },
+    {.tag = ARG_FLAG,
+     .long_name = "junit",
+     .short_name = 'j',
+     .flag_data = &conf.junit,
+     .description = "Create JUnit compatible test-results.xml file"},
+    {
+      .tag = ARG_INT,
+      .long_name = "times",
+      .short_name = 't',
+      .int_data = &times,
+      .description = "Run the test suite more than once (for benchmarking)",
+    },
+    {
+      .tag = ARG_STRING,
+      .long_name = "match",
+      .short_name = 'm',
+      .string_data = &conf.filter_str,
+      .description = "filter tests by name. Matches on <group>.<group>.<test>",
+    },
+  };
+
+  argument_bag root = {
+    .amt = STATIC_LEN(args),
+    .args = args,
+  };
+
+  program_args pa = {
+    .root = &root,
+    .preamble = "Lang tests v1.0.0\n",
+  };
+
+  parse_args(pa, argc, argv);
 
   test_state state = test_state_new(conf);
+  state.print_streaming = false;
 
-  test_vec(&state);
-  test_bitset(&state);
-  test_strint(&state);
-  test_utils(&state);
-  test_scanner(&state);
-  test_parser(&state);
-  test_typecheck(&state);
-  test_ir(&state);
-  test_llvm(&state);
+  for (int i = 0; i < times; i++) {
+    if (i == times - 1) {
+      state.print_streaming = true;
+    }
+    run_tests(&state);
+  }
 
   test_state_finalize(&state);
 
@@ -191,59 +249,4 @@ static void run_tests(test_config conf) {
 
   VEC_FREE(&state.failures);
   VEC_FREE(&state.path);
-}
-
-int main(int argc, const char **argv) {
-  test_config conf = {
-    .junit = false,
-    .lite = false,
-    .filter_str = NULL,
-  };
-
-  int times = 1;
-
-  argument args[] = {
-    {
-      .tag = ARG_FLAG,
-      .long_name = "lite",
-      .short_name = 'l',
-      .flag_data = &conf.lite,
-      .description = "Turn off stress tests",
-    },
-    {.tag = ARG_FLAG,
-     .long_name = "junit",
-     .short_name = 'j',
-     .flag_data = &conf.junit,
-     .description = "Create JUnit compatible test-results.xml file"},
-    {
-      .tag = ARG_INT,
-      .long_name = "times",
-      .short_name = 't',
-      .int_data = &times,
-      .description = "Run the test suite more than once (for benchmarking)",
-    },
-    {
-      .tag = ARG_STRING,
-      .long_name = "match",
-      .short_name = 'm',
-      .string_data = &conf.filter_str,
-      .description = "filter tests by name. Matches on <group>.<group>.<test>",
-    },
-  };
-
-  argument_bag root = {
-    .amt = STATIC_LEN(args),
-    .args = args,
-  };
-
-  program_args pa = {
-    .root = &root,
-    .preamble = "Lang tests v1.0.0\n",
-  };
-
-  parse_args(pa, argc, argv);
-
-  for (int i = 0; i < times; i++) {
-    run_tests(conf);
-  }
 }
