@@ -42,57 +42,32 @@ static void print_amount(FILE *f, uint64_t amt) {
   free(ss.string);
 }
 
-static double timespec_to_seconds(struct timespec s) {
-  double res = 0;
-  res += s.tv_sec;
-  res += s.tv_nsec / 1e9;
-  return res;
+static uint64_t timespec_to_nanos(struct timespec ts) {
+  return (uint64_t) ts.tv_nsec + (uint64_t) ts.tv_sec * 1e9;
 }
 
-static double timespec_to_millis(struct timespec s) {
-  double res = 0;
-  res += s.tv_sec * 1e3;
-  res += s.tv_nsec / 1e6;
-  return res;
-}
-
-static double timespec_to_micros(struct timespec s) {
-  double res = 0;
-  res += s.tv_sec * 1e6;
-  res += s.tv_nsec / 1e3;
-  return res;
-}
-
-static void print_nanos(FILE *f, long unsigned ns) {
-  fprintf(f, "%luns", ns);
-}
-
-static void print_seconds(FILE *f, double s) {
-  fprintf(f, "%.3fs", s);
-}
-
-static void print_millis(FILE *f, double ms) {
-  fprintf(f, "%.3fms", ms);
-}
-
-static void print_micros(FILE *f, double micros) {
-  if (micros < 1) {
-    print_nanos(f, (long unsigned) (micros * 1000));
-  } else {
-    fprintf(f, "%.3fµs", micros);
+static void print_timespan_nanos(FILE *f, uint64_t ns) {
+  if (ns < 1000) {
+    fprintf(f, "%luns", ns);
+    return;
+  }
+  static const char *time_suffixes[] = {
+    "µ", "m", "", 
+  };
+  uint64_t before = ns / 1000;
+  uint64_t after = ns % 1000;
+  for (int i = 0; i < STATIC_LEN(time_suffixes); i++) {
+    if (before < 1000) {
+      fprintf(f, "%" PRIu64 ".%03" PRIu64 "%ss", before, after, time_suffixes[i]);
+      return;
+    }
+    after = before % 1000;
+    before /= 1000;
   }
 }
 
-static void print_timespec(FILE *f, struct timespec ts) {
-  if (ts.tv_sec > 0) {
-    print_seconds(f, timespec_to_seconds(ts));
-  } else if (ts.tv_nsec > 1e6) {
-    print_millis(f, timespec_to_millis(ts));
-  } else if (ts.tv_nsec > 1e3) {
-    print_micros(f, timespec_to_micros(ts));
-  } else {
-    print_nanos(f, ts.tv_nsec);
-  }
+static void print_timespan_timespec(FILE *f, struct timespec ts) {
+  print_timespan_nanos(f, timespec_to_nanos(ts));
 }
 
 static void run_tests(test_state *state) {
@@ -191,26 +166,26 @@ int main(int argc, const char **argv) {
   puts("");
 
   fputs("Time spent tokenizing: ", stdout);
-  print_timespec(stdout, state.total_tokenization_time);
+  print_timespan_timespec(stdout, state.total_tokenization_time);
   puts("");
 
   {
     fputs("Tokenization time per token produced: ", stdout);
-    double micros_per_token = timespec_to_micros(state.total_tokenization_time) / state.total_tokens;
-    print_micros(stdout, micros_per_token);
+    double nanos_per_token = timespec_to_nanos(state.total_tokenization_time) / state.total_tokens;
+    print_timespan_nanos(stdout, nanos_per_token);
     puts("");
   }
   {
     fputs("Tokenization time per byte: ", stdout);
-    double millis_per_byte = timespec_to_micros(state.total_tokenization_time) / state.total_bytes_tokenized;
-    print_micros(stdout, millis_per_byte);
+    double nanos_per_byte = timespec_to_nanos(state.total_tokenization_time) / state.total_bytes_tokenized;
+    print_timespan_nanos(stdout, nanos_per_byte);
     puts("");
   }
 #endif
 
 #ifdef TIME_PARSER
   fputs("Time spent parsing: ", stdout);
-  print_timespec(stdout, state.total_parser_time);
+  print_timespan_timespec(stdout, state.total_parser_time);
   puts("");
 
   fputs("Total tokens parsed: ", stdout);
@@ -223,14 +198,14 @@ int main(int argc, const char **argv) {
 
   {
     fputs("Parse time per token: ", stdout);
-    double micros_per_token = timespec_to_micros(state.total_parser_time) / state.total_tokens_parsed;
-    print_micros(stdout, micros_per_token);
+    double nanos_per_token = timespec_to_nanos(state.total_parser_time) / state.total_tokens_parsed;
+    print_timespan_nanos(stdout, nanos_per_token);
     puts("");
   }
   {
     fputs("Parse time per parse node produced: ", stdout);
-    double micros_per_token = timespec_to_micros(state.total_parser_time) / state.total_parse_nodes_produced;
-    print_micros(stdout, micros_per_token);
+    double nanos_per_token = timespec_to_nanos(state.total_parser_time) / state.total_parse_nodes_produced;
+    print_timespan_nanos(stdout, nanos_per_token);
     puts("");
   }
 #endif
