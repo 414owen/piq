@@ -72,6 +72,9 @@ static void *get_entry_fn(test_state *state, jit_ctx ctx, const char *input) {
 
     llvm_res res =
       gen_module(test_file.path, test_file, tree, tc.types, ctx.llvm_ctx);
+
+    add_codegen_timings(state, tree, res);
+
     LLVMOrcThreadSafeModuleRef tsm =
       LLVMOrcCreateNewThreadSafeModule(res.module, ctx.orc_ctx);
     LLVMOrcLLJITAddLLVMIRModule(ctx.jit, ctx.dylib, tsm);
@@ -141,6 +144,39 @@ static void init() {
   LLVMInitializeNativeAsmPrinter();
 }
 
+static void test_robustness(test_state *state) {
+  test_group_start(state, "Robustness");
+
+  test_start(state, "Nested calls");
+  {
+    stringstream source_file;
+    ss_init_immovable(&source_file);
+    static const size_t depth = 10;
+    const char *preamble = "(sig sndpar (Fn (I32, I32) I32))\n"
+                           "(fun sndpar (a, b) b)\n"
+                           "\n"
+                           "(sig test (Fn () I32))\n"
+                           "(fun test () ";
+    fputs(preamble, source_file.stream);
+    for (size_t i = 0; i < depth; i++) {
+      fputs("(sndpar (1, ", source_file.stream);
+    }
+    putc('2', source_file.stream);
+    for (size_t i = 0; i < depth; i++) {
+      fputs("))", source_file.stream);
+    }
+    putc(')', source_file.stream);
+    ss_finalize(&source_file);
+
+    test_llvm_code_produces_int(state, source_file.string, 2);
+
+    free(source_file.string);
+  }
+  test_end(state);
+
+  test_group_end(state);
+}
+
 void test_llvm(test_state *state) {
   init();
 
@@ -203,6 +239,8 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
   */
+
+  // test_robustness(state);
 
   test_group_end(state);
 }

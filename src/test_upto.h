@@ -4,6 +4,7 @@
 #include "parse_tree.h"
 #include "test.h"
 #include "typecheck.h"
+#include "llvm.h"
 
 #define pass                                                                   \
   do {                                                                         \
@@ -27,12 +28,19 @@
 #define add_typecheck_timings(...) pass
 #endif
 
+#ifdef TIME_CODEGEN
+#define add_codegen_timings(...) add_codegen_timings_internal(__VA_ARGS__)
+#else
+#define add_codegen_timings(...) pass
+#endif
+
 void add_scanner_timings_internal(test_state *state, const char *restrict input,
                                   tokens_res tres);
 void add_parser_timings_internal(test_state *state, tokens_res tres,
                                  parse_tree_res pres);
-void add_typecheck_timings_internal(test_state *state, parse_tree_res pres,
+void add_typecheck_timings_internal(test_state *state, parse_tree tree,
                                     tc_res tc_res);
+void add_codegen_timings_internal(test_state *state, parse_tree tree, llvm_res llres);
 
 tokens_res test_upto_tokens(test_state *state, const char *input);
 parse_tree_res test_upto_parse_tree(test_state *state, const char *input);

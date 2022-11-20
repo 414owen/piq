@@ -35,14 +35,15 @@ void add_parser_timings_internal(test_state *state, tokens_res tres,
 #ifdef TIME_TYPECHECK
 void add_typecheck_timings_internal(test_state *state, parse_tree tree,
                                     tc_res tc_res) {
-  if (tc_res.succeeded) {
-    state->total_tokens_parsed += tres.token_amt;
-  } else {
-    state->total_tokens_parsed += tc_res.error_pos;
-  }
-  state->total_typecheck_time =
-    timespec_add(state->total_typecheck_time, tc_res.time_taken);
-  state->total_parse_nodes_produced += tc_res.tree.node_amt;
+  state->total_typecheck_time = timespec_add(state->total_typecheck_time, tc_res.time_taken);
+  state->total_parse_nodes_typechecked += tree.node_amt;
+}
+#endif
+
+#ifdef TIME_CODEGEN
+void add_codegen_timings_internal(test_state *state, parse_tree tree, llvm_res llres) {
+  state->total_codegen_time = timespec_add(state->total_codegen_time, llres.time_taken);
+  state->total_parse_nodes_codegened += tree.node_amt;
 }
 #endif
 
@@ -105,7 +106,10 @@ parse_tree_res test_upto_parse_tree(test_state *state,
 tc_res test_upto_typecheck(test_state *state, const char *restrict input,
                            bool *success, parse_tree *tree) {
   parse_tree_res tree_res = test_upto_parse_tree(state, input);
-  tc_res tc;
+  tc_res tc = {
+    .errors = NULL,
+    .error_amt = 0,
+  };
   if (tree_res.succeeded) {
     tc = typecheck(input, tree_res.tree);
     if (tc.error_amt > 0) {

@@ -180,6 +180,8 @@ static void test_types_match(test_state *state, const char *input_p,
 
   tc_res res = typecheck(input, pres.tree);
 
+  add_typecheck_timings(state, pres.tree, res);
+
   if (res.error_amt > 0) {
     stringstream *ss = ss_init();
     fprintf(
@@ -232,6 +234,8 @@ static void test_typecheck_errors(test_state *state, const char *input_p,
   }
 
   tc_res res = typecheck(input, pres.tree);
+
+  add_typecheck_timings(state, pres.tree, res);
 
   if (!all_errors_match(pres.tree, res, exps, spans, cases)) {
     stringstream *ss = ss_init();
@@ -351,6 +355,21 @@ static void test_typecheck_succeeds(test_state *state) {
                         "  [2])";
     test_start(state, "Param shadows binding");
     test_types_match(state, input, NULL, 0);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Uses global");
+    const char *input = "(sig sndpar (Fn (I16, I32) I32))\n"
+                           "(fun sndpar (a, b) b)\n"
+                           "\n"
+                           "(sig test (Fn () I32))\n"
+                           "(fun test () (sndpar (→1←, →2←)))";
+    test_type types[] = {
+      i16,
+      i32,
+    };
+    test_types_match(state, input, types, STATIC_LEN(types));
     test_end(state);
   }
 
