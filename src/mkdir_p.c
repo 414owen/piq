@@ -11,9 +11,11 @@
 
 NON_NULL_PARAMS
 static inline bool dir_segment_exists(char *pathbuf, size_t end) {
+  // can be path separator or null terminator
+  char prev = pathbuf[end];
   pathbuf[end] = '\0';
   bool res = directory_exists(pathbuf);
-  pathbuf[end] = path_sep;
+  pathbuf[end] = prev;
   return res;
 }
 

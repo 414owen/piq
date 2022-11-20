@@ -133,7 +133,7 @@ static void test_asprintf(test_state *state) {
 }
 
 static void test_mkdirp(test_state *state) {
-  test_group_start(state, "mkdir -p");
+  test_start(state, "mkdir -p");
 
   {
     char *path = strdup("/tmp/lang-c/test/folder/pls/create");
@@ -145,7 +145,7 @@ static void test_mkdirp(test_state *state) {
     free(path);
   }
 
-  test_group_end(state);
+  test_end(state);
 }
 
 void test_utils(test_state *state) {
