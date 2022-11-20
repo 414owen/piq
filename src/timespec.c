@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <time.h>
 
-#define NSEC_PER_SEC 1000000000
+#define NSEC_PER_SEC 1e9
 
 /* timespec_normalise, timespec_add, timespec_subtract functions taken from
  * https://github.com/solemnwarning/timespec/blob/master/timespec.c
