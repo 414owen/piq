@@ -95,11 +95,12 @@ static void test_timespec_subtract(test_state *state) {
     test_start(state, "carries nsec");
     timespec_get(&x, TIME_UTC);
     y = x;
-    x.tv_nsec++;
-    res = timespec_subtract(y, x);
+    y.tv_nsec++;
+    res = timespec_subtract(x, y);
     test_assert(state, timespec_negative(res));
-    test_assert_eq(state, res.tv_sec, 0);
-    test_assert_eq(state, res.tv_nsec, -1);
+    // negative nanoseconds is invalid according to POSIX
+    test_assert_eq(state, res.tv_sec, -1);
+    test_assert_eq(state, res.tv_nsec, 1e9 - 1);
     test_end(state);
   }
 

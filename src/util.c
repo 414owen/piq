@@ -81,42 +81,6 @@ size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
   }
   return el_amt;
 }
-
-static struct timespec timespec_subtract_internal(const struct timespec x,
-                                                  const struct timespec y) {
-  struct timespec result = {
-    .tv_sec = x.tv_sec - y.tv_sec,
-    .tv_nsec = x.tv_nsec - y.tv_nsec,
-  };
-  if (x.tv_nsec < y.tv_nsec) {
-    result.tv_sec -= 1L;
-    result.tv_nsec += 1e9L;
-  }
-  return result;
-}
-
-static bool timespec_gt(const struct timespec x, const struct timespec y) {
-  return x.tv_sec > y.tv_sec || (x.tv_sec == y.tv_sec && x.tv_nsec > y.tv_nsec);
-}
-
-bool timespec_negative(const struct timespec ts) {
-  struct timespec zero = {0};
-  return timespec_gt(zero, ts);
-}
-
-struct timespec timespec_subtract(const struct timespec x,
-                                  const struct timespec y) {
-  struct timespec result;
-  if (timespec_gt(x, y)) {
-    return timespec_subtract_internal(x, y);
-  } else {
-    struct timespec res = timespec_subtract_internal(y, x);
-    res.tv_sec *= -1;
-    res.tv_nsec *= -1;
-    return res;
-  }
-}
-
 struct timespec time_since_monotonic(const struct timespec start) {
   struct timespec end = get_monotonic_time();
   return timespec_subtract(end, start);

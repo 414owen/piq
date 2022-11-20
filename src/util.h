@@ -102,10 +102,13 @@ NON_NULL_PARAMS
 COLD_ATTR
 void unimplemented(char *str, char *file, size_t line);
 
-bool timespec_negative(const struct timespec ts);
+bool timespec_negative(struct timespec a);
 
 struct timespec timespec_subtract(const struct timespec x,
                                   const struct timespec y);
+
+struct timespec timespec_add(const struct timespec x,
+                             const struct timespec y);
 
 NON_NULL_ALL
 MALLOC_ATTR_2(free, 1)
