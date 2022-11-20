@@ -1,6 +1,7 @@
 #include <alloca.h>
 #include <string.h>
 
+#include "defs.h"
 #include "diagnostic.h"
 #include "parse_tree.h"
 #include "parser.h"
@@ -66,6 +67,9 @@ static void test_parser_fails_on(test_state *state, char *input, buf_ind_t pos,
     return;
 
   parse_tree_res pres = parse(tres.tokens, tres.token_amt);
+
+  add_parser_timings(state, tres, pres);
+
   if (pres.succeeded) {
     char *parse_tree_str = print_parse_tree_str(input, pres.tree);
     failf(state,

@@ -19,10 +19,9 @@ static void test_scanner_tokens(test_state *restrict state,
                                 const token_type *restrict tokens) {
   tokens_res tres = test_upto_tokens(state, input);
 
+  add_scanner_timings(state, input, tres);
+
   if (tres.succeeded) {
-#ifdef TIME_TOKENIZATION
-    state->total_tokenization_time += tres.time_taken;
-#endif
     bool tokens_match = tres.token_amt == token_amt + 1;
     if (tokens_match) {
       for (size_t i = 0; i < token_amt; i++) {
@@ -48,30 +47,24 @@ static void test_scanner_tokens(test_state *restrict state,
   }
 }
 
-static void test_scanner_fails(test_state *restrict state, char *restrict buf,
+static void test_scanner_fails(test_state *restrict state, char *restrict input,
                                buf_ind_t err_pos) {
-  buf_ind_t ind = 0;
-  bool seen_failure = true;
-  for (;;) {
-    token_res t = scan(test_file(buf), ind);
-    if (t.succeeded) {
-      if (t.tok.type == TK_EOF)
-        break;
-      ind = t.tok.end + 1;
-      continue;
-    }
-    seen_failure = true;
-    if (t.tok.start != err_pos)
-      failf(state,
-            "Wrong tokenizer error position.\n"
-            "Expected: %" PRBI "\n"
-            "Got: %" PRBI,
-            t.tok.start,
-            err_pos);
+  tokens_res tres = scan_all(test_file(input));
+
+  add_scanner_timings(state, input, tres);
+
+  if (tres.succeeded) {
+    failf(state, "Expected to see a tokenizer error for input: %s", input);
     return;
   }
-  if (!seen_failure)
-    failf(state, "Expected to see a tokenizer error for input: %s", buf);
+  if (tres.error_pos!= err_pos) {
+    failf(state,
+          "Wrong tokenizer error position.\n"
+          "Expected: %" PRBI "\n"
+          "Got: %" PRBI,
+          err_pos,
+          tres.error_pos);
+  }
 }
 
 static void test_scanner_accepts(test_state *restrict state) {

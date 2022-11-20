@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <time.h>
 
+#include "defs.h"
 #include "consts.h"
 #include "source.h"
 #include "vec.h"
@@ -30,7 +31,7 @@ typedef struct {
   size_t token_amt;
   buf_ind_t error_pos;
   bool succeeded;
-#ifdef TIME_TOKENIZATION
+#ifdef TIME_TOKENIZER
   struct timespec time_taken;
 #endif
 } tokens_res;

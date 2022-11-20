@@ -198,20 +198,16 @@ typedef struct {
   const node_ind_t *inds;
   node_ind_t root_subs_start;
   node_ind_t root_subs_amt;
+  // this is set even if parsing errored, for benchmarking
   node_ind_t node_amt;
 } parse_tree;
 
 typedef struct {
-  // TODO restore union when I figure out how to disable lemon's error recovery
-  // union {
   parse_tree tree;
-  // struct {
   token_type *expected;
   node_ind_t error_pos;
   uint8_t expected_amt;
-  // };
   bool succeeded;
-  // };
   struct timespec time_taken;
 } parse_tree_res;
 

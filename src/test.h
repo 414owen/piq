@@ -47,12 +47,14 @@ VEC_DECL(test_action);
 
 typedef struct {
 #ifdef TIME_TOKENIZER
+  uint64_t total_bytes_tokenized;
   struct timespec total_tokenization_time;
-  struct timespec total_tokens;
-  struct timespec sum_file_lengths;
+  uint64_t total_tokens;
 #endif
 #ifdef TIME_PARSER
   struct timespec total_parser_time;
+  uint64_t total_tokens_parsed;
+  uint64_t total_parse_nodes_produced;
 #endif
 #ifdef TIME_TYPECHECK
   struct timespec total_typecheck_time;

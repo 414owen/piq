@@ -112,8 +112,29 @@ void failf_(test_state *state, char *file, size_t line, const char *fmt, ...) {
   fail_with(state, err);
 }
 
+const struct timespec zero = {
+  .tv_sec = 0,
+  .tv_nsec = 0,
+};
+
 test_state test_state_new(test_config config) {
   test_state res = {
+#ifdef TIME_TOKENIZER
+  .total_bytes_tokenized = 0,
+  .total_tokenization_time = zero,
+  .total_tokens = 0,
+#endif
+#ifdef TIME_PARSER
+  .total_parser_time = zero,
+  .total_tokens_parsed = 0,
+#endif
+#ifdef TIME_TYPECHECK
+  .total_typecheck_time = zero,
+#endif
+#ifdef TIME_CODEGEN
+  .total_codegen_time = zero,
+#endif
+
     .config = config,
     .path = VEC_NEW,
     .tests_passed = 0,
@@ -274,18 +295,6 @@ void write_test_results(test_state *state) {
   fflush(f);
   VEC_FREE(&aggs);
   VEC_FREE(&class_path);
-}
-
-tokens_res test_upto_tokens(test_state *state, const char *restrict input) {
-  source_file test_file = {.path = "parser-test", .data = input};
-  tokens_res tres = scan_all(test_file);
-  if (!tres.succeeded) {
-    stringstream *ss = ss_init();
-    format_error_ctx(ss->stream, input, tres.error_pos, tres.error_pos);
-    failf(state, "Scanning failed:\n%s", ss_finalize_free(ss));
-    free_tokens_res(tres);
-  }
-  return tres;
 }
 
 bool test_matches(const test_state *restrict state,

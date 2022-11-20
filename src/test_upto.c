@@ -1,10 +1,67 @@
+#include "defs.h"
 #include "diagnostic.h"
 #include "test.h"
 #include "test_upto.h"
 
+#ifdef TIME_TOKENIZER
+// TODO use pre-known file sizes for non-tests
+void add_scanner_timings_internal(test_state *state, const char *restrict input, tokens_res tres) {
+  if (tres.succeeded) {
+    state->total_bytes_tokenized += strlen(input);
+  } else {
+    state->total_bytes_tokenized += tres.error_pos;
+  }
+  state->total_tokenization_time = timespec_add(state->total_tokenization_time, tres.time_taken);
+  state->total_tokens += tres.token_amt;
+}
+#endif
+
+#ifdef TIME_PARSER
+void add_parser_timings_internal(test_state *state, tokens_res tres, parse_tree_res pres) {
+  if (pres.succeeded) {
+    state->total_tokens_parsed += tres.token_amt;
+  } else {
+    state->total_tokens_parsed += pres.error_pos;
+  }
+  state->total_parser_time = timespec_add(state->total_parser_time, pres.time_taken);
+  state->total_parse_nodes_produced += pres.tree.node_amt;
+}
+#endif
+
+/*
+#ifdef TIME_TYPECHECK
+void add_typecheck_timings_internal(test_state *state, tokens_res tres, parse_tree_res pres) {
+  if (pres.succeeded) {
+    state->total_tokens_parsed += tres.token_amt;
+  } else {
+    state->total_tokens_parsed += pres.error_pos;
+  }
+  state->total_parser_time = timespec_add(state->total_parser_time, pres.time_taken);
+  state->total_parse_nodes_produced += pres.tree.node_amt;
+}
+#endif
+*/
+
+tokens_res test_upto_tokens(test_state *state, const char *restrict input) {
+  source_file test_file = {.path = "parser-test", .data = input};
+  tokens_res tres = scan_all(test_file);
+
+  add_scanner_timings(state, input, tres);
+
+  if (!tres.succeeded) {
+    stringstream *ss = ss_init();
+    format_error_ctx(ss->stream, input, tres.error_pos, tres.error_pos);
+    failf(state, "Scanning failed:\n%s", ss_finalize_free(ss));
+    free_tokens_res(tres);
+  }
+
+  return tres;
+}
+
 parse_tree_res test_upto_parse_tree(test_state *state,
                                     const char *restrict input) {
   tokens_res tres = test_upto_tokens(state, input);
+  add_scanner_timings(state, input, tres);
   if (!tres.succeeded) {
     parse_tree_res res = {
       .succeeded = false,
@@ -15,7 +72,11 @@ parse_tree_res test_upto_parse_tree(test_state *state,
     free_tokens_res(tres);
     return res;
   }
+
   parse_tree_res pres = parse(tres.tokens, tres.token_amt);
+
+  add_parser_timings(state, tres, pres);
+
   if (!pres.succeeded) {
     char *error = print_parse_tree_error_string(input, tres.tokens, pres);
     failf(state, "Parsing failed:\n%s", error);
