@@ -23,3 +23,5 @@ result
 .struct.debug.c
 perf.data*
 main
+.cache/
+compile_commands.json
