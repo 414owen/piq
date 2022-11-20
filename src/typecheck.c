@@ -11,6 +11,7 @@
 #include "parse_tree.h"
 #include "scope.h"
 #include "source.h"
+#include "term.h"
 #include "typecheck.h"
 #include "types.h"
 #include "util.h"
@@ -70,6 +71,9 @@ typedef enum {
   TC_STATEMENT_UNAMBIGUOUS,
   TC_EXPRESSION_UNAMBIGUOUS_FN_STAGE_TWO,
   TC_STATEMENT_UNAMBIGUOUS_FUN_STAGE_TWO,
+
+  // TODO remove this when we remove TC_RECOVER
+  TC_PASS,
 
   // types
   TC_TYPE,
@@ -318,7 +322,10 @@ static void break_suspicious_action(typecheck_state *state, tc_action action) {
       if (state->stack.len < 2)
         suspicious_action();
       break;
+    case TC_PASS:
+      break;
     case TC_PUSH_ENV:
+      // TODO
       break;
   }
 }
@@ -731,20 +738,30 @@ static void tc_call(typecheck_state *state, tc_node_params params) {
       tc_call_param_first(state, params.node_ind);
       break;
 
+    case PT_EX_LOWER_NAME:
     case PT_EX_UPPER_NAME:
       tc_call_callee_first(state, params.node_ind);
       break;
 
     default: {
-      tc_action actions[] = {{.tag = TC_RECOVER, .amt = state->errors.len},
+      tc_action actions[] = {
                              {
                                .tag = TC_CALL_PARAM_FIRST,
                                .node_ind = params.node_ind,
                              },
                              {
+                               .tag = TC_RECOVER,
+                               .amt = state->errors.len,
+                             },
+                             {
+                               .tag = TC_PASS,
+                               .amt = state->errors.len,
+                             },
+                             {
                                .tag = TC_CALL_CALLEE_FIRST,
                                .node_ind = params.node_ind,
-                             }};
+                             },
+      };
       push_actions(state, STATIC_LEN(actions), actions);
       break;
     }
@@ -867,10 +884,53 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
     }
 
     case PT_PAT_LIST: {
+      // TODO factor this error stuff out
+      if (params.wanted.tag != T_LIST) {
+        tc_error err = {
+          .type = TYPE_HEAD_MISMATCH,
+          .pos = params.node_ind,
+          .expected = params.wanted_ind,
+          .got_type_head = T_TUP,
+        };
+        push_tc_err(state, err);
+        break;
+      }
+      for (node_ind_t i = 0; i < PT_LIST_SUB_IND(state->tree.inds, params.node, i); i++) {
+        tc_action action = {
+          .tag = TC_WANT_TYPE,
+          .from = T_LIST_SUB_IND(params.wanted),
+          .to = PT_LIST_SUB_IND(state->tree.inds, params.node, i),
+        };
+        VEC_PUSH(&state->stack, action);
+      }
       push_list_subs_match(state, params, TC_PATTERN_MATCHES);
       break;
     }
+
     case PT_PAT_TUP: {
+      if (params.wanted.tag != T_TUP) {
+        tc_error err = {
+          .type = TYPE_HEAD_MISMATCH,
+          .pos = params.node_ind,
+          .expected = params.wanted_ind,
+          .got_type_head = T_TUP,
+        };
+        push_tc_err(state, err);
+        break;
+      }
+      tc_action actions[] = {
+        {
+          .tag = TC_WANT_TYPE,
+          .from = T_TUP_SUB_A(params.wanted),
+          .to = PT_TUP_SUB_A(params.node),
+        },
+        {
+          .tag = TC_WANT_TYPE,
+          .from = T_TUP_SUB_B(params.wanted),
+          .to = PT_TUP_SUB_B(params.node),
+        },
+      };
+      VEC_APPEND_STATIC(&state->stack, actions);
       push_tuple_subs(state, params, TC_PATTERN_MATCHES);
       break;
     }
@@ -1327,7 +1387,7 @@ static void tc_expression_matches(typecheck_state *state,
         push_tc_err(state, err);
         break;
       }
-      tc_action actions[4] = {{
+      tc_action actions[] = {{
                                 .tag = TC_WANT_TYPE,
                                 .from = T_TUP_SUB_A(node_params.wanted),
                                 .to = PT_TUP_SUB_A(node_params.node),
@@ -1464,6 +1524,7 @@ static const char *action_str(action_tag tag) {
     res = #e;                                                                  \
     break;
 
+    MK_CASE(TC_PASS)
     MK_CASE(TC_POP_N_VARS)
     MK_CASE(TC_POP_VARS_TO)
     MK_CASE(TC_EXPRESSION_MATCHES)
@@ -1684,6 +1745,22 @@ static inline void tc_type(typecheck_state *state, tc_node_params node_params) {
   }
 }
 
+static void print_popped_env(FILE *debug_out, const char *input, vec_str_ref refs, bitset is_builtin, node_ind_t start) {
+  node_ind_t len = refs.len;
+  for (node_ind_t i = 0; i < len; i++) {
+    str_ref b = VEC_GET(refs, i);
+    if (i > 0) {
+      fputs(", ", debug_out);
+    }
+    if (bs_get(is_builtin, i)) {
+      puts(b.builtin);
+    } else {
+      fprintf(debug_out, "%s%.*s" RESET, i >= start ? RED : RESET, b.binding.end - b.binding.start + 1, &input[b.binding.start]);
+    }
+  }
+  putc('\n', debug_out);
+}
+
 tc_res typecheck(const char *restrict input, parse_tree tree) {
 #ifdef TIME_TYPECHECK
   struct timespec start = get_monotonic_time();
@@ -1713,12 +1790,16 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
       first_debug = false;
       fprintf(debug_out, "Action: '%s'\n", action_str(action.tag));
       switch (action.tag) {
-        case TC_POP_N_VARS:
-          fprintf(debug_out, "Popping %d vars\n", action.amt);
+        case TC_POP_N_VARS: {
+          fprintf(debug_out, "Popping %d vars. Stack:\n", action.amt);
+          print_popped_env(debug_out, input, state.term_env, state.term_is_builtin, state.term_env.len - action.amt);
           break;
-        case TC_POP_VARS_TO:
-          fprintf(debug_out, "Keeping %d vars\n", action.amt);
+        }
+        case TC_POP_VARS_TO: {
+          fprintf(debug_out, "Keeping %d vars. Stack:\n", action.amt);
+          print_popped_env(debug_out, input, state.term_env, state.term_is_builtin, action.amt);
           break;
+        }
         case TC_WANT_TYPE: {
           fprintf(debug_out, "Node ind: '%d'\n", action.node_ind);
           parse_node node = tree.nodes[action.to];
@@ -1736,10 +1817,27 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
                   "From: '%d' '%s'\n",
                   action.from,
                   parse_node_string(from_node.type));
+          if (action.to == action.from) {
+            fputs("To: the same node ^\n", debug_out);
+          }
           format_error_ctx(
             debug_out, input, from_node.span.start, from_node.span.end);
           putc('\n', debug_out);
 
+          if (action.to != action.from) {
+            parse_node to_node = tree.nodes[action.to];
+            fprintf(debug_out,
+                    "To: '%d' '%s'\n",
+                    action.to,
+                    parse_node_string(to_node.type));
+            format_error_ctx(
+              debug_out, input, to_node.span.start, to_node.span.end);
+            putc('\n', debug_out);
+          }
+          break;
+        }
+        case TC_ASSIGN_TYPE: {
+          // TODO deduplicate with above
           parse_node to_node = tree.nodes[action.to];
           fprintf(debug_out,
                   "To: '%d' '%s'\n",
@@ -1767,6 +1865,15 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           parse_node node = tree.nodes[action.node_ind];
           fprintf(debug_out, "Node: '%s'\n", parse_node_string(node.type));
           format_error_ctx(debug_out, input, node.span.start, node.span.end);
+          putc('\n', debug_out);
+          break;
+        }
+        case TC_PUSH_ENV: {
+          binding b = action.binding;
+          fprintf(debug_out, "Binding: '%.*s'\n", b.end - b.start + 1, &input[b.start]);
+          node_ind_t type_ind = state.types.node_types[action.node_ind];
+          fputs("Type: ", debug_out);
+          print_type(debug_out, VEC_DATA_PTR(&state.types.types), type_ind);
           putc('\n', debug_out);
           break;
         }
@@ -1819,10 +1926,13 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
       case TC_WANT_TYPE:
       case TC_ASSIGN_TYPE:
       case TC_RECOVER:
+      case TC_PASS:
         break;
     }
 
     switch (action.tag) {
+      case TC_PASS:
+        break;
 
       case TC_CLONE_ACTUAL_ACTUAL:
         state.types.node_types[action.to] = state.types.node_types[action.from];
@@ -1890,7 +2000,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         type callee_type = VEC_GET(state.types.types, callee_type_ind);
         switch (callee_type.tag) {
           case T_FN: {
-            node_ind_t callee_param_type_ind = T_FN_RET_IND(callee_type);
+            node_ind_t callee_param_type_ind = T_FN_PARAM_IND(callee_type);
             node_ind_t callee_ret_type_ind = T_FN_RET_IND(callee_type);
             if (callee_ret_type_ind != node_params.wanted_ind) {
               tc_error err = {.type = TYPE_MISMATCH,
@@ -1903,11 +2013,17 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
             tc_action actions[] = {
               {.tag = TC_WANT_TYPE,
                .to = param_ind,
-               .from = callee_param_type_ind},
+               .from = callee_param_type_ind,
+              },
               {
                 .tag = TC_EXPRESSION_MATCHES,
                 .node_ind = param_ind,
               },
+              {
+                .tag = TC_ASSIGN_TYPE,
+                .to = node_params.node_ind,
+                .from = callee_ret_type_ind,
+              }
             };
             push_actions(&state, STATIC_LEN(actions), actions);
             break;
@@ -2117,9 +2233,16 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
       case TC_EXPRESSION_UNAMBIGUOUS:
       case TC_EXPRESSION_UNAMBIGUOUS_FN_STAGE_TWO:
       case TC_STATEMENT_UNAMBIGUOUS_FUN_STAGE_TWO:
+      case TC_RECONSTRUCT_TUPLE:
+      case TC_TYPE_FN_STAGE_TWO:
       case TC_CLONE_ACTUAL_ACTUAL:
-      case TC_CLONE_WANTED_ACTUAL:
       case TC_ASSIGN_TYPE:
+        fputs("Type: ", debug_out);
+        print_type(debug_out,
+                   VEC_DATA_PTR(&state.types.types),
+                   action.from);
+        break;
+      case TC_CLONE_WANTED_ACTUAL:
         fputs("Result: ", debug_out);
         print_type(debug_out,
                    VEC_DATA_PTR(&state.types.types),
