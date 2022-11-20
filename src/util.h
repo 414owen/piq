@@ -161,13 +161,10 @@ NON_NULL_PARAMS
 int rm_r(char *dir);
 
 NON_NULL_PARAMS
-bool prefix(const char *pre, const char *str);
+bool prefix(const char *restrict pre, const char *restrict str);
 
 NON_NULL_PARAMS
-size_t count_char(char *data, int needle, size_t len);
-
-NON_NULL_PARAMS
-size_t split_buf_size(char *data, int needle, size_t len);
+size_t count_char_occurences(const char *restrict data, char needle);
 
 NON_NULL_PARAMS
 void split(char *data, int needle, char **buf, size_t buf_size);

@@ -55,6 +55,7 @@ test_objs += test.o
 test_objs += test_ir.o
 test_objs += test_llvm.o
 test_objs += test_parser.o
+test_objs += test_diagnostics.o
 test_objs += test_scanner.o
 test_objs += test_strint.o
 test_objs += test_typecheck.o
@@ -96,18 +97,19 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/test_parser.c    | src/parser.h |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_typecheck.c | src/parser.h |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_scanner.c   | src/parser.h |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/run_tests.c    |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/test_bitset.c  |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/test.c         |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/test_ir.c      |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/test_strint.c  |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/test_utils.c   |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/test_vec.c     |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/test_upto.c    |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/timespec.c     |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/token.c        |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/args.c         |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/main.c         |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/run_tests.c        |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_bitset.c      |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test.c             |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_diagnostics.c |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_ir.c          |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_strint.c      |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_utils.c       |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_vec.c         |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_upto.c        |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/timespec.c         |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/token.c            |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/args.c             |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/main.c             |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 
 : $(common_objs) $(main_objs) |> ^j^ $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> main
 : $(common_objs) $(test_objs) |> ^j^ $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> test

@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <assert.h>
 
+#include "consts.h"
 #include "util.h"
 
 typedef uint8_t u8;
@@ -213,3 +214,4 @@ VEC_DECL(string);
 VEC_DECL(u8);
 VEC_DECL(u32);
 VEC_DECL(char);
+VEC_DECL_CUSTOM(buf_ind_t, vec_buf_ind);
