@@ -600,8 +600,9 @@ static void typecheck_block_internal(typecheck_state *state, node_ind_t sub_amt,
         break;
       case PT_STATEMENT_LET:
       case PT_STATEMENT_FUN: {
-        action_tag tag = bs_data_get(sub_has_wanted, i) ? TC_STATEMENT_MATCHES
-                                                        : TC_STATEMENT_UNAMBIGUOUS;
+        action_tag tag = bs_data_get(sub_has_wanted, i)
+                           ? TC_STATEMENT_MATCHES
+                           : TC_STATEMENT_UNAMBIGUOUS;
         tc_action action = {
           .tag = tag,
           .node_ind = sub_ind,
@@ -610,8 +611,9 @@ static void typecheck_block_internal(typecheck_state *state, node_ind_t sub_amt,
         break;
       }
       default: {
-        action_tag tag = bs_data_get(sub_has_wanted, i) ? TC_EXPRESSION_MATCHES
-                                                        : TC_EXPRESSION_UNAMBIGUOUS;
+        action_tag tag = bs_data_get(sub_has_wanted, i)
+                           ? TC_EXPRESSION_MATCHES
+                           : TC_EXPRESSION_UNAMBIGUOUS;
         tc_action action = {
           .tag = tag,
           .node_ind = sub_ind,
@@ -908,8 +910,8 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
   }
 }
 
-
-static void tc_statement_unambiguous(typecheck_state *state, tc_node_params node_params) {
+static void tc_statement_unambiguous(typecheck_state *state,
+                                     tc_node_params node_params) {
   // Here, we're typechecking a node against 'wanted' (an explicit type
   // given to the node) Hence, we shouldn't need a combine two_stage, we
   // just assign the 'wanted' type.
@@ -948,8 +950,7 @@ static void tc_statement_unambiguous(typecheck_state *state, tc_node_params node
     case PT_STATEMENT_FUN: {
       node_ind_t param_ind =
         PT_FUN_PARAM_IND(state->tree.inds, node_params.node);
-      node_ind_t body_ind =
-        PT_FUN_BODY_IND(state->tree.inds, node_params.node);
+      node_ind_t body_ind = PT_FUN_BODY_IND(state->tree.inds, node_params.node);
 
       tc_action actions[] = {
         {
@@ -971,7 +972,8 @@ static void tc_statement_unambiguous(typecheck_state *state, tc_node_params node
   }
 }
 
-static void tc_statement_matches(typecheck_state *state, tc_node_params node_params) {
+static void tc_statement_matches(typecheck_state *state,
+                                 tc_node_params node_params) {
   // Here, we're typechecking a node against 'wanted' (an explicit type
   // given to the node) Hence, we shouldn't need a combine two_stage, we
   // just assign the 'wanted' type.
@@ -1014,8 +1016,7 @@ static void tc_statement_matches(typecheck_state *state, tc_node_params node_par
         PT_FUN_BINDING_IND(state->tree.inds, node_params.node);
       node_ind_t param_ind =
         PT_FUN_PARAM_IND(state->tree.inds, node_params.node);
-      node_ind_t body_ind =
-        PT_FUN_BODY_IND(state->tree.inds, node_params.node);
+      node_ind_t body_ind = PT_FUN_BODY_IND(state->tree.inds, node_params.node);
 
       if (node_params.wanted.tag == T_FN) {
         tc_action actions[] = {
@@ -1134,7 +1135,8 @@ static void tc_pattern_unambiguous(typecheck_state *state,
   }
 }
 
-static void tc_expression_unambiguous(typecheck_state *state, tc_node_params node_params) {
+static void tc_expression_unambiguous(typecheck_state *state,
+                                      tc_node_params node_params) {
   switch (node_params.node.type.expression) {
     // node_unambiguous
     case PT_EX_FUN_BODY:
@@ -1149,8 +1151,7 @@ static void tc_expression_unambiguous(typecheck_state *state, tc_node_params nod
 
     // node_unambiguous
     case PT_EX_STRING:
-      state->types.node_types[node_params.node_ind] =
-        state->string_type_ind;
+      state->types.node_types[node_params.node_ind] = state->string_type_ind;
       break;
 
     // node_unambiguous
@@ -1226,9 +1227,8 @@ static void tc_expression_unambiguous(typecheck_state *state, tc_node_params nod
         break;
       }
       node_ind_t type_ind = VEC_GET(state->term_type_inds, ind);
-      tc_action action = {.tag = TC_ASSIGN_TYPE,
-                          .from = type_ind,
-                          .to = node_params.node_ind};
+      tc_action action = {
+        .tag = TC_ASSIGN_TYPE, .from = type_ind, .to = node_params.node_ind};
       push_action(state, action);
       break;
     }
@@ -1264,7 +1264,8 @@ static void tc_expression_unambiguous(typecheck_state *state, tc_node_params nod
   }
 }
 
-static void tc_expression_matches(typecheck_state *state, tc_node_params node_params) {
+static void tc_expression_matches(typecheck_state *state,
+                                  tc_node_params node_params) {
   // Here, we're typechecking a node against 'wanted' (an explicit type
   // given to the node) Hence, we shouldn't need a combine two_stage, we
   // just assign the 'wanted' type.
@@ -1353,9 +1354,7 @@ static void tc_expression_matches(typecheck_state *state, tc_node_params node_pa
           .tag = TC_EXPRESSION_MATCHES,
           .node_ind = cond,
         },
-        {.tag = TC_CLONE_WANTED_WANTED,
-         .from = node_params.node_ind,
-         .to = b1},
+        {.tag = TC_CLONE_WANTED_WANTED, .from = node_params.node_ind, .to = b1},
         {
           .tag = TC_EXPRESSION_MATCHES,
           .node_ind = b1,
@@ -1374,8 +1373,7 @@ static void tc_expression_matches(typecheck_state *state, tc_node_params node_pa
 
     // node_matches
     case PT_EX_INT:
-      check_int_fits_type(
-        state, node_params.node_ind, node_params.wanted_ind);
+      check_int_fits_type(state, node_params.node_ind, node_params.wanted_ind);
       break;
 
     // node_matches

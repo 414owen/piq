@@ -121,9 +121,7 @@ typedef struct {
 static void cg_block(cg_state *state, node_ind_t start, node_ind_t amt);
 
 static void push_env(cg_state *state, binding bnd, llvm_value val) {
-  str_ref str = {
-    .binding = bnd
-  };
+  str_ref str = {.binding = bnd};
   VEC_PUSH(&state->env_bnds, str);
   VEC_PUSH(&state->env_vals, val);
   bs_push(&state->env_is_builtin, false);
@@ -191,25 +189,29 @@ static stage pop_stage(bitset *bs) {
 
 static void push_stage(bitset *bs, stage s) { bs_push(bs, s == STAGE_TWO); }
 
-static void push_expression_act(cg_state *state, node_ind_t node_ind, stage stage) {
+static void push_expression_act(cg_state *state, node_ind_t node_ind,
+                                stage stage) {
   push_action(state, CG_EXPR);
   push_stage(&state->act_stage, stage);
   VEC_PUSH(&state->act_nodes, node_ind);
 }
 
-static void push_statement_act(cg_state *state, node_ind_t node_ind, stage stage) {
+static void push_statement_act(cg_state *state, node_ind_t node_ind,
+                               stage stage) {
   push_action(state, CG_STATEMENT);
   push_stage(&state->act_stage, stage);
   VEC_PUSH(&state->act_nodes, node_ind);
 }
 
-static void push_pattern_act(cg_state *state, node_ind_t node_ind, llvm_value val) {
+static void push_pattern_act(cg_state *state, node_ind_t node_ind,
+                             llvm_value val) {
   push_action(state, CG_PATTERN);
   VEC_PUSH(&state->val_stack, val);
   VEC_PUSH(&state->act_nodes, node_ind);
 }
 
-static void push_gen_block(cg_state *state, node_ind_t node_ind, const char *restrict str) {
+static void push_gen_block(cg_state *state, node_ind_t node_ind,
+                           const char *restrict str) {
   push_action(state, CG_GEN_BLOCK);
   VEC_PUSH(&state->act_strings, str);
   VEC_PUSH(&state->act_nodes, node_ind);

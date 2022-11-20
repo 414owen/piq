@@ -183,7 +183,8 @@ char *join(const size_t str_amt, const char *const *restrict const strs,
            const char *restrict sep) {
 
   // Why even call me?
-  if (str_amt == 0) return calloc(1, 1);
+  if (str_amt == 0)
+    return calloc(1, 1);
 
   stringstream ss;
   ss_init_immovable(&ss);

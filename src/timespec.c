@@ -27,66 +27,59 @@
  * 2) If tv_nsec is negative, decrement tv_sec and roll tv_nsec up to represent
  *    the same value attainable by ADDING nanoseconds to tv_sec.
  */
-static struct timespec timespec_normalise(struct timespec ts)
-{
-	while(ts.tv_nsec >= NSEC_PER_SEC)
-	{
-		++(ts.tv_sec);
-		ts.tv_nsec -= NSEC_PER_SEC;
-	}
-	
-	while(ts.tv_nsec <= -NSEC_PER_SEC)
-	{
-		--(ts.tv_sec);
-		ts.tv_nsec += NSEC_PER_SEC;
-	}
-	
-	if(ts.tv_nsec < 0)
-	{
-		/* Negative nanoseconds isn't valid according to POSIX.
-		 * Decrement tv_sec and roll tv_nsec over.
-		*/
-		
-		--(ts.tv_sec);
-		ts.tv_nsec = (NSEC_PER_SEC + ts.tv_nsec);
-	}
-	
-	return ts;
-}
+static struct timespec timespec_normalise(struct timespec ts) {
+  while (ts.tv_nsec >= NSEC_PER_SEC) {
+    ++(ts.tv_sec);
+    ts.tv_nsec -= NSEC_PER_SEC;
+  }
 
+  while (ts.tv_nsec <= -NSEC_PER_SEC) {
+    --(ts.tv_sec);
+    ts.tv_nsec += NSEC_PER_SEC;
+  }
+
+  if (ts.tv_nsec < 0) {
+    /* Negative nanoseconds isn't valid according to POSIX.
+     * Decrement tv_sec and roll tv_nsec over.
+     */
+
+    --(ts.tv_sec);
+    ts.tv_nsec = (NSEC_PER_SEC + ts.tv_nsec);
+  }
+
+  return ts;
+}
 
 /* struct timespec timespec_add(struct timespec ts1, struct timespec ts2)
  *  Returns the result of adding two timespec structures.
  */
-struct timespec timespec_add(struct timespec ts1, struct timespec ts2)
-{
-	/* Normalise inputs to prevent tv_nsec rollover if whole-second values
-	 * are packed in it.
-	*/
-	ts1 = timespec_normalise(ts1);
-	ts2 = timespec_normalise(ts2);
-	
-	ts1.tv_sec  += ts2.tv_sec;
-	ts1.tv_nsec += ts2.tv_nsec;
-	
-	return timespec_normalise(ts1);
+struct timespec timespec_add(struct timespec ts1, struct timespec ts2) {
+  /* Normalise inputs to prevent tv_nsec rollover if whole-second values
+   * are packed in it.
+   */
+  ts1 = timespec_normalise(ts1);
+  ts2 = timespec_normalise(ts2);
+
+  ts1.tv_sec += ts2.tv_sec;
+  ts1.tv_nsec += ts2.tv_nsec;
+
+  return timespec_normalise(ts1);
 }
 
 /* struct timespec timespec_sub(struct timespec ts1, struct timespec ts2)
  * Returns the result of subtracting ts2 from ts1.
  */
-struct timespec timespec_subtract(struct timespec ts1, struct timespec ts2)
-{
-	/* Normalise inputs to prevent tv_nsec rollover if whole-second values
-	 * are packed in it.
-	*/
-	ts1 = timespec_normalise(ts1);
-	ts2 = timespec_normalise(ts2);
-	
-	ts1.tv_sec  -= ts2.tv_sec;
-	ts1.tv_nsec -= ts2.tv_nsec;
-	
-	return timespec_normalise(ts1);
+struct timespec timespec_subtract(struct timespec ts1, struct timespec ts2) {
+  /* Normalise inputs to prevent tv_nsec rollover if whole-second values
+   * are packed in it.
+   */
+  ts1 = timespec_normalise(ts1);
+  ts2 = timespec_normalise(ts2);
+
+  ts1.tv_sec -= ts2.tv_sec;
+  ts1.tv_nsec -= ts2.tv_nsec;
+
+  return timespec_normalise(ts1);
 }
 
 bool timespec_negative(struct timespec a) {

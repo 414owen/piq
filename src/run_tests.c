@@ -13,16 +13,17 @@ const long mega = 1e6;
 
 // TODO move to utils, if we need it again
 static void print_byte_amount(FILE *f, uint64_t bytes) {
-	unsigned long i = 0;
-	double dblBytes = bytes;
+  unsigned long i = 0;
+  double dblBytes = bytes;
 
-	if (bytes > 1024) {
-		for (i = 0; (bytes / 1024) > 0 && i < STATIC_LEN(byte_suffixes) - 1; i++, bytes /= 1024) {
-			dblBytes = bytes / 1024.0;
+  if (bytes > 1024) {
+    for (i = 0; (bytes / 1024) > 0 && i < STATIC_LEN(byte_suffixes) - 1;
+         i++, bytes /= 1024) {
+      dblBytes = bytes / 1024.0;
     }
-	}
+  }
 
-	fprintf(f, "%.02lf %s", dblBytes, byte_suffixes[i]);
+  fprintf(f, "%.02lf %s", dblBytes, byte_suffixes[i]);
 }
 
 const char *qualtity_suffixes[] = {"", "thousand", "million", "billion"};
@@ -43,7 +44,7 @@ static void print_amount(FILE *f, uint64_t amt) {
 }
 
 static uint64_t timespec_to_nanos(struct timespec ts) {
-  return (uint64_t) ts.tv_nsec + (uint64_t) ts.tv_sec * 1e9;
+  return (uint64_t)ts.tv_nsec + (uint64_t)ts.tv_sec * 1e9;
 }
 
 static void print_timespan_nanos(FILE *f, uint64_t ns) {
@@ -52,13 +53,16 @@ static void print_timespan_nanos(FILE *f, uint64_t ns) {
     return;
   }
   static const char *time_suffixes[] = {
-    "µ", "m", "", 
+    "µ",
+    "m",
+    "",
   };
   uint64_t before = ns / 1000;
   uint64_t after = ns % 1000;
   for (int i = 0; i < STATIC_LEN(time_suffixes); i++) {
     if (before < 1000) {
-      fprintf(f, "%" PRIu64 ".%03" PRIu64 "%ss", before, after, time_suffixes[i]);
+      fprintf(
+        f, "%" PRIu64 ".%03" PRIu64 "%ss", before, after, time_suffixes[i]);
       return;
     }
     after = before % 1000;
@@ -171,13 +175,15 @@ int main(int argc, const char **argv) {
 
   {
     fputs("Tokenization time per token produced: ", stdout);
-    double nanos_per_token = timespec_to_nanos(state.total_tokenization_time) / state.total_tokens;
+    double nanos_per_token =
+      timespec_to_nanos(state.total_tokenization_time) / state.total_tokens;
     print_timespan_nanos(stdout, nanos_per_token);
     puts("");
   }
   {
     fputs("Tokenization time per byte: ", stdout);
-    double nanos_per_byte = timespec_to_nanos(state.total_tokenization_time) / state.total_bytes_tokenized;
+    double nanos_per_byte = timespec_to_nanos(state.total_tokenization_time) /
+                            state.total_bytes_tokenized;
     print_timespan_nanos(stdout, nanos_per_byte);
     puts("");
   }
@@ -198,13 +204,15 @@ int main(int argc, const char **argv) {
 
   {
     fputs("Parse time per token: ", stdout);
-    double nanos_per_token = timespec_to_nanos(state.total_parser_time) / state.total_tokens_parsed;
+    double nanos_per_token =
+      timespec_to_nanos(state.total_parser_time) / state.total_tokens_parsed;
     print_timespan_nanos(stdout, nanos_per_token);
     puts("");
   }
   {
     fputs("Parse time per parse node produced: ", stdout);
-    double nanos_per_token = timespec_to_nanos(state.total_parser_time) / state.total_parse_nodes_produced;
+    double nanos_per_token = timespec_to_nanos(state.total_parser_time) /
+                             state.total_parse_nodes_produced;
     print_timespan_nanos(stdout, nanos_per_token);
     puts("");
   }
