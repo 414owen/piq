@@ -1,8 +1,8 @@
 {
-  description = "A very basic flake";
+  description = "Lang - A programming language";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-22.05";
+    nixpkgs.url = "github:414owen/nixpkgs/os/lang-c-environment";
     flake-utils.url = "github:numtide/flake-utils";
     hedley-src = {
       url = "github:nemequ/hedley/v15";
@@ -74,6 +74,11 @@
 
           CFLAGS = "-O2 -s -flto";
 
+          buildPhase = ''
+            . ./scripts/environment.sh
+            tup
+          '';
+
           installPhase = ''
             mkdir -p $out/bin
             ${if test
@@ -144,8 +149,9 @@
           buildInputs = with pkgs; lib.concatLists [
             (if stdenv.isLinux then [cgdb] else [])
             [
-              clang-tools_14
-              clang-tools_14.clang
+              clang-tools
+              clang-tools.clang
+              bear
               lldb
               lcov
               valgrind
@@ -157,6 +163,11 @@
 
           CFLAGS = "-O0 -DDEBUG -g -ggdb";
           CPATH = pkgs.lib.makeSearchPathOutput "dev" "include" packages.${packageName}.buildInputs;
+
+          shellHook = ''
+            source ${./scripts/environment.sh}
+            tup compiledb
+          '';
         };
       });
 }
