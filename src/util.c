@@ -294,23 +294,14 @@ bool prefix(const char *restrict pre, const char *restrict str) {
 }
 
 NON_NULL_PARAMS
-size_t count_char(char *data, int needle, size_t len) {
+size_t count_char_occurences(const char *data, char needle) {
   size_t res = 0;
-  char *cursor = data;
-  data += len;
-  while (true) {
-    cursor = strchr(cursor, needle);
-    if (cursor && cursor < data)
-      res += 1;
-    else
-      break;
+  char c = *data++;
+  while (c != '\0') {
+    if (c == needle) res += 1;
+    c = *data++;
   }
   return res;
-}
-
-NON_NULL_PARAMS
-size_t split_buf_size(char *data, int needle, size_t len) {
-  return count_char(data, needle, len) + 1;
 }
 
 NON_NULL_PARAMS

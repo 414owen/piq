@@ -79,6 +79,7 @@ static void run_tests(test_state *state) {
   test_bitset(state);
   test_strint(state);
   test_utils(state);
+  test_diagnostics(state);
   test_scanner(state);
   test_parser(state);
   test_typecheck(state);

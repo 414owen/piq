@@ -11,3 +11,4 @@ void test_typecheck(test_state *state);
 void test_llvm(test_state *state);
 void test_ir(test_state *state);
 void test_strint(test_state *state);
+void test_diagnostics(test_state *state);
