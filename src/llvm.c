@@ -486,7 +486,7 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
           LLVMValueRef param = VEC_POP(&state->val_stack);
           LLVMTypeRef fn_type =
             construct_type(state, state->types.node_types[callee_ind]);
-          LLVMValueRef res = LLVMBuildCall2(state->builder, fn_type, callee, &param, 1, "call");
+          LLVMValueRef res = LLVMBuildCall2(state->builder, fn_type, callee, &param, 1, "call-res");
           VEC_PUSH(&state->val_stack, res);
           break;
         }
