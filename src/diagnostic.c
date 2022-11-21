@@ -44,8 +44,10 @@ void format_error_ctx(FILE *f, const char *restrict input, buf_ind_t start,
   }
 
   fputs(RED "/---\n| " RESET, f);
-  buf_ind_t context_start = line_starts.data[MAX(ind_of_line_starting_before_start - ERROR_LINES_CTX, 0)];
-  
+  buf_ind_t context_start =
+    line_starts
+      .data[MAX(ind_of_line_starting_before_start - ERROR_LINES_CTX, 0)];
+
   print_state state = S_BEFORE;
   buf_ind_t nls_after = 0;
   for (buf_ind_t i = context_start; i < len; i++) {

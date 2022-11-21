@@ -90,8 +90,7 @@ typedef struct {
 #ifdef DEBUG
 void debug_vec_get(vec_void *vec, VEC_LEN_T ind);
 #define VEC_GET(vec, i)                                                        \
-    (debug_vec_get((vec_void *)(&vec), (size_t)(i)), \
-    VEC_GET_DIRECT(vec, (i)))
+  (debug_vec_get((vec_void *)(&vec), (size_t)(i)), VEC_GET_DIRECT(vec, (i)))
 #else
 #define VEC_GET(vec, i) VEC_GET_DIRECT(vec, i)
 #endif

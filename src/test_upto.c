@@ -35,14 +35,17 @@ void add_parser_timings_internal(test_state *state, tokens_res tres,
 #ifdef TIME_TYPECHECK
 void add_typecheck_timings_internal(test_state *state, parse_tree tree,
                                     tc_res tc_res) {
-  state->total_typecheck_time = timespec_add(state->total_typecheck_time, tc_res.time_taken);
+  state->total_typecheck_time =
+    timespec_add(state->total_typecheck_time, tc_res.time_taken);
   state->total_parse_nodes_typechecked += tree.node_amt;
 }
 #endif
 
 #ifdef TIME_CODEGEN
-void add_codegen_timings_internal(test_state *state, parse_tree tree, llvm_res llres) {
-  state->total_codegen_time = timespec_add(state->total_codegen_time, llres.time_taken);
+void add_codegen_timings_internal(test_state *state, parse_tree tree,
+                                  llvm_res llres) {
+  state->total_codegen_time =
+    timespec_add(state->total_codegen_time, llres.time_taken);
   state->total_parse_nodes_codegened += tree.node_amt;
 }
 #endif

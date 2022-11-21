@@ -298,7 +298,8 @@ size_t count_char_occurences(const char *data, char needle) {
   size_t res = 0;
   char c = *data++;
   while (c != '\0') {
-    if (c == needle) res += 1;
+    if (c == needle)
+      res += 1;
     c = *data++;
   }
   return res;

@@ -745,22 +745,22 @@ static void tc_call(typecheck_state *state, tc_node_params params) {
 
     default: {
       tc_action actions[] = {
-                             {
-                               .tag = TC_CALL_PARAM_FIRST,
-                               .node_ind = params.node_ind,
-                             },
-                             {
-                               .tag = TC_RECOVER,
-                               .amt = state->errors.len,
-                             },
-                             {
-                               .tag = TC_PASS,
-                               .amt = state->errors.len,
-                             },
-                             {
-                               .tag = TC_CALL_CALLEE_FIRST,
-                               .node_ind = params.node_ind,
-                             },
+        {
+          .tag = TC_CALL_PARAM_FIRST,
+          .node_ind = params.node_ind,
+        },
+        {
+          .tag = TC_RECOVER,
+          .amt = state->errors.len,
+        },
+        {
+          .tag = TC_PASS,
+          .amt = state->errors.len,
+        },
+        {
+          .tag = TC_CALL_CALLEE_FIRST,
+          .node_ind = params.node_ind,
+        },
       };
       push_actions(state, STATIC_LEN(actions), actions);
       break;
@@ -895,7 +895,9 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
         push_tc_err(state, err);
         break;
       }
-      for (node_ind_t i = 0; i < PT_LIST_SUB_IND(state->tree.inds, params.node, i); i++) {
+      for (node_ind_t i = 0;
+           i < PT_LIST_SUB_IND(state->tree.inds, params.node, i);
+           i++) {
         tc_action action = {
           .tag = TC_WANT_TYPE,
           .from = T_LIST_SUB_IND(params.wanted),
@@ -1388,15 +1390,15 @@ static void tc_expression_matches(typecheck_state *state,
         break;
       }
       tc_action actions[] = {{
-                                .tag = TC_WANT_TYPE,
-                                .from = T_TUP_SUB_A(node_params.wanted),
-                                .to = PT_TUP_SUB_A(node_params.node),
-                              },
-                              {
-                                .tag = TC_WANT_TYPE,
-                                .from = T_TUP_SUB_B(node_params.wanted),
-                                .to = PT_TUP_SUB_B(node_params.node),
-                              }};
+                               .tag = TC_WANT_TYPE,
+                               .from = T_TUP_SUB_A(node_params.wanted),
+                               .to = PT_TUP_SUB_A(node_params.node),
+                             },
+                             {
+                               .tag = TC_WANT_TYPE,
+                               .from = T_TUP_SUB_B(node_params.wanted),
+                               .to = PT_TUP_SUB_B(node_params.node),
+                             }};
       push_actions(state, STATIC_LEN(actions), actions);
       push_tuple_subs(state, node_params, TC_EXPRESSION_MATCHES);
       break;
@@ -1745,7 +1747,9 @@ static inline void tc_type(typecheck_state *state, tc_node_params node_params) {
   }
 }
 
-static void print_popped_env(FILE *debug_out, const char *input, vec_str_ref refs, bitset is_builtin, node_ind_t start) {
+static void print_popped_env(FILE *debug_out, const char *input,
+                             vec_str_ref refs, bitset is_builtin,
+                             node_ind_t start) {
   node_ind_t len = refs.len;
   for (node_ind_t i = 0; i < len; i++) {
     str_ref b = VEC_GET(refs, i);
@@ -1755,7 +1759,11 @@ static void print_popped_env(FILE *debug_out, const char *input, vec_str_ref ref
     if (bs_get(is_builtin, i)) {
       puts(b.builtin);
     } else {
-      fprintf(debug_out, "%s%.*s" RESET, i >= start ? RED : RESET, b.binding.end - b.binding.start + 1, &input[b.binding.start]);
+      fprintf(debug_out,
+              "%s%.*s" RESET,
+              i >= start ? RED : RESET,
+              b.binding.end - b.binding.start + 1,
+              &input[b.binding.start]);
     }
   }
   putc('\n', debug_out);
@@ -1792,12 +1800,20 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
       switch (action.tag) {
         case TC_POP_N_VARS: {
           fprintf(debug_out, "Popping %d vars. Stack:\n", action.amt);
-          print_popped_env(debug_out, input, state.term_env, state.term_is_builtin, state.term_env.len - action.amt);
+          print_popped_env(debug_out,
+                           input,
+                           state.term_env,
+                           state.term_is_builtin,
+                           state.term_env.len - action.amt);
           break;
         }
         case TC_POP_VARS_TO: {
           fprintf(debug_out, "Keeping %d vars. Stack:\n", action.amt);
-          print_popped_env(debug_out, input, state.term_env, state.term_is_builtin, action.amt);
+          print_popped_env(debug_out,
+                           input,
+                           state.term_env,
+                           state.term_is_builtin,
+                           action.amt);
           break;
         }
         case TC_WANT_TYPE: {
@@ -1870,7 +1886,10 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         }
         case TC_PUSH_ENV: {
           binding b = action.binding;
-          fprintf(debug_out, "Binding: '%.*s'\n", b.end - b.start + 1, &input[b.start]);
+          fprintf(debug_out,
+                  "Binding: '%.*s'\n",
+                  b.end - b.start + 1,
+                  &input[b.start]);
           node_ind_t type_ind = state.types.node_types[action.node_ind];
           fputs("Type: ", debug_out);
           print_type(debug_out, VEC_DATA_PTR(&state.types.types), type_ind);
@@ -2010,21 +2029,20 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
               push_tc_err(&state, err);
               break;
             }
-            tc_action actions[] = {
-              {.tag = TC_WANT_TYPE,
-               .to = param_ind,
-               .from = callee_param_type_ind,
-              },
-              {
-                .tag = TC_EXPRESSION_MATCHES,
-                .node_ind = param_ind,
-              },
-              {
-                .tag = TC_ASSIGN_TYPE,
-                .to = node_params.node_ind,
-                .from = callee_ret_type_ind,
-              }
-            };
+            tc_action actions[] = {{
+                                     .tag = TC_WANT_TYPE,
+                                     .to = param_ind,
+                                     .from = callee_param_type_ind,
+                                   },
+                                   {
+                                     .tag = TC_EXPRESSION_MATCHES,
+                                     .node_ind = param_ind,
+                                   },
+                                   {
+                                     .tag = TC_ASSIGN_TYPE,
+                                     .to = node_params.node_ind,
+                                     .from = callee_ret_type_ind,
+                                   }};
             push_actions(&state, STATIC_LEN(actions), actions);
             break;
           }
@@ -2238,9 +2256,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
       case TC_CLONE_ACTUAL_ACTUAL:
       case TC_ASSIGN_TYPE:
         fputs("Type: ", debug_out);
-        print_type(debug_out,
-                   VEC_DATA_PTR(&state.types.types),
-                   action.from);
+        print_type(debug_out, VEC_DATA_PTR(&state.types.types), action.from);
         break;
       case TC_CLONE_WANTED_ACTUAL:
         fputs("Result: ", debug_out);
