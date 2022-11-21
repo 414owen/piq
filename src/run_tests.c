@@ -265,11 +265,15 @@ int main(int argc, const char **argv) {
   if (state.total_parse_nodes_codegened > 0) {
     stringstream timing_ss;
     ss_init_immovable(&timing_ss);
-    fputs("Time spent in codegen: ", timing_ss.stream);
+    fputs("Time spent building LLVM IR: ", timing_ss.stream);
+    print_timespan_timespec(timing_ss.stream, state.total_llvm_ir_generation_time);
+
+    newline(timing_ss.stream);
+    fputs("Time spent performing codegen: ", timing_ss.stream);
     print_timespan_timespec(timing_ss.stream, state.total_codegen_time);
     newline(timing_ss.stream);
 
-    fputs("Total parse nodes codegened: ", timing_ss.stream);
+    fputs("Total parse nodes turned into IR: ", timing_ss.stream);
     print_amount(timing_ss.stream, state.total_parse_nodes_codegened);
     newline(timing_ss.stream);
 

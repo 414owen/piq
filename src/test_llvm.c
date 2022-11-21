@@ -78,19 +78,20 @@ static void *get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
 
     ctx->module_str = LLVMPrintModuleToString(res.module);
 
+    struct timespec start = get_monotonic_time();
     LLVMOrcThreadSafeModuleRef tsm =
       LLVMOrcCreateNewThreadSafeModule(res.module, ctx->orc_ctx);
     LLVMOrcLLJITAddLLVMIRModule(ctx->jit, ctx->dylib, tsm);
-    {
-      LLVMErrorRef error = LLVMOrcLLJITLookup(ctx->jit, &entry_addr, "test");
-      if (error != LLVMErrorSuccess) {
-        char *msg = LLVMGetErrorMessage(error);
-        failf(state,
-              "LLVMLLJITLookup failed:\n%s\nIn module:\n%s",
-              msg,
-              ctx->module_str);
-        LLVMDisposeErrorMessage(msg);
-      }
+    LLVMErrorRef error = LLVMOrcLLJITLookup(ctx->jit, &entry_addr, "test");
+    struct timespec time_taken = time_since_monotonic(start);
+    state->total_codegen_time = timespec_add(state->total_codegen_time, time_taken);
+    if (error != LLVMErrorSuccess) {
+      char *msg = LLVMGetErrorMessage(error);
+      failf(state,
+            "LLVMLLJITLookup failed:\n%s\nIn module:\n%s",
+            msg,
+            ctx->module_str);
+      LLVMDisposeErrorMessage(msg);
     }
 
     free_parse_tree(tree);

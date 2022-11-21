@@ -61,6 +61,7 @@ typedef struct {
   uint64_t total_parse_nodes_typechecked;
 #endif
 #ifdef TIME_CODEGEN
+  struct timespec total_llvm_ir_generation_time;
   struct timespec total_codegen_time;
   uint64_t total_parse_nodes_codegened;
 #endif

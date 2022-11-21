@@ -140,6 +140,7 @@ test_state test_state_new(test_config config) {
     .total_parse_nodes_typechecked = 0,
 #endif
 #ifdef TIME_CODEGEN
+    .total_llvm_ir_generation_time = zero,
     .total_codegen_time = zero,
     .total_parse_nodes_codegened = 0,
 #endif
