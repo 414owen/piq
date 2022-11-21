@@ -91,4 +91,5 @@ void format_error_ctx(FILE *f, const char *restrict input, buf_ind_t start,
     }
   }
   fputs("\n" RED "\\---" RESET, f);
+  VEC_FREE(&line_starts);
 }

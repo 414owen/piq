@@ -82,7 +82,11 @@ static void *get_entry_fn(test_state *state, jit_ctx ctx, const char *input) {
       LLVMErrorRef error = LLVMOrcLLJITLookup(ctx.jit, &entry_addr, "test");
       if (error != LLVMErrorSuccess) {
         char *msg = LLVMGetErrorMessage(error);
-        give_up("LLVMLLJITLookup failed: %s", msg);
+        failf(state, "LLVMLLJITLookup failed:\n%s\nIn module:\n", msg);
+        // char *module_str = LLVMPrintModuleToString(res.module);
+        // failf(state, "LLVMLLJITLookup failed:\n%s\nIn module:\n%s", msg, module_str);
+        // LLVMDisposeMessage(module_str);
+        LLVMDisposeErrorMessage(msg);
       }
     }
 
@@ -240,7 +244,7 @@ void test_llvm(test_state *state) {
   test_end(state);
   */
 
-  // test_robustness(state);
+  test_robustness(state);
 
   test_group_end(state);
 }
