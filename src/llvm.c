@@ -72,11 +72,15 @@ typedef enum {
 
   // INPUTS: node, str
   // OUTPUTS: block, val
-  CG_GEN_BLOCK,
+  CG_GEN_BASIC_BLOCK,
 
   // INPUTS: size
-  // OUTPUTS: none
+  // OUTPUTS: edited environment
   CG_POP_ENV_TO,
+
+  // INPUTS: none
+  // OUTPUTS: edited environment
+  CG_IGNORE_VALUE,
 
   // TODO rename to generate_function_body?
   // INPUTS: node_ind, fun
@@ -122,9 +126,6 @@ typedef struct {
   llvm_function fn;
 } cg_fun_stage_two_params;
 
-typedef struct {
-} cg_fun_stage_three_params;
-
 // We used to have multiple vectors for actions (one per parameter type), but it
 // was an absolute nightmare. This way wastes some space, but because its size
 // is proportional to the depth of the program construct, I think it's okay.
@@ -137,7 +138,6 @@ typedef struct {
     cg_block_params block_params;
     cg_pop_env_to_params pop_env_to_params;
     cg_fun_stage_two_params fun_stage_two_params;
-    cg_fun_stage_three_params fun_stage_three_params;
   };
 } cg_action;
 
@@ -220,6 +220,13 @@ static void push_action(cg_state *state, cg_action action) {
   VEC_PUSH(&state->actions, action);
 }
 
+static void push_act_ignore_value(cg_state *state) {
+  cg_action act = {
+    .tag = CG_IGNORE_VALUE,
+  };
+  push_action(state, act);
+}
+
 static void push_act_fn_two(cg_state *state, llvm_value fn, node_ind_t ind) {
   debug_assert(ind < state->parse_tree.node_amt);
   cg_fun_stage_two_params params = {
@@ -233,15 +240,9 @@ static void push_act_fn_two(cg_state *state, llvm_value fn, node_ind_t ind) {
   push_action(state, act);
 }
 
-static void push_act_fn_three(cg_state *state, llvm_value fn, node_ind_t ind) {
-  debug_assert(ind < state->parse_tree.node_amt);
-  cg_fun_stage_two_params params = {
-    .fn = fn,
-    .node_ind = ind,
-  };
+static void push_act_fn_three(cg_state *state) {
   cg_action act = {
     .tag = CG_FUN_STAGE_THREE,
-    .fun_stage_two_params = params,
   };
   push_action(state, act);
 }
@@ -310,7 +311,7 @@ static void push_gen_block(cg_state *state, node_ind_t node_ind,
     .fn = fn,
   };
   cg_action act = {
-    .tag = CG_GEN_BLOCK,
+    .tag = CG_GEN_BASIC_BLOCK,
     .block_params = params,
   };
   push_action(state, act);
@@ -490,7 +491,8 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
           LLVMValueRef param = VEC_POP(&state->val_stack);
           LLVMTypeRef fn_type =
             construct_type(state, state->types.node_types[callee_ind]);
-          LLVMBuildCall2(state->builder, fn_type, callee, &param, 1, "call");
+          LLVMValueRef res = LLVMBuildCall2(state->builder, fn_type, callee, &param, 1, "call");
+          VEC_PUSH(&state->val_stack, res);
           break;
         }
       }
@@ -592,7 +594,8 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
       break;
     }
     case PT_EX_FUN_BODY: {
-      cg_block(state, node.subs_start, PT_FUN_BODY_SUB_AMT(node));
+      // TODO return value
+      cg_block(state, PT_FUN_BODY_SUBS_START(node), PT_FUN_BODY_SUB_AMT(node));
       break;
     }
     case PT_EX_AS: {
@@ -638,13 +641,13 @@ static llvm_function cg_emit_empty_fn(cg_state *state, node_ind_t ind, parse_nod
 }
 
 // generate the body, and schedule cleanup
-static void cg_function_stage_two_internal(cg_state *state, llvm_function fn, node_ind_t ind, parse_node node) {
+static void cg_function_stage_two_internal(cg_state *state, llvm_function fn, parse_node node) {
   VEC_PUSH(&state->function_stack, fn);
 
   u32 env_amt = state->env_bnds.len;
   push_act_pop_env_to(state, env_amt);
 
-  push_act_fn_three(state, fn, ind);
+  push_act_fn_three(state);
 
   node_ind_t body_ind = PT_FUN_BODY_IND(state->parse_tree.inds, node);
   push_gen_block(state, body_ind, fn, ENTRY_STR);
@@ -658,7 +661,7 @@ static void cg_function_stage_two(cg_state *state, cg_fun_stage_two_params param
   node_ind_t ind = params.node_ind;
   parse_node node = state->parse_tree.nodes[ind];
   llvm_function fn = params.fn;
-  cg_function_stage_two_internal(state, fn, ind, node);
+  cg_function_stage_two_internal(state, fn, node);
 }
 
 static void cg_statement(cg_state *state, cg_statement_params params) {
@@ -687,19 +690,20 @@ static void cg_statement(cg_state *state, cg_statement_params params) {
     // TODO support recursive?
     case PT_STATEMENT_FUN: {
       llvm_function fn = cg_emit_empty_fn(state, ind, node);
-      cg_function_stage_two_internal(state, fn, ind, node);
+      cg_function_stage_two_internal(state, fn, node);
       break;
     }
     default:
       // expressions are statements :(
       // TODO this is really inefficient. We should probably extract out the
       // cases into functions, and inline the calls.
+      push_act_ignore_value(state);
       push_expression_act(state, ind, STAGE_ONE);
       break;
   }
 }
 
-static void cg_function_stage_three(cg_state *state, cg_fun_stage_three_params params) {
+static void cg_function_stage_three(cg_state *state) {
   LLVMValueRef ret = VEC_POP(&state->val_stack);
   VEC_POP(&state->block_stack);
   LLVMBuildRet(state->builder, ret);
@@ -708,12 +712,16 @@ static void cg_function_stage_three(cg_state *state, cg_fun_stage_three_params p
                            VEC_PEEK(state->block_stack));
 }
 
+// expression, last result is returned
 static void cg_block(cg_state *state, node_ind_t start, node_ind_t amt) {
-  // TODO queue popping environment?
+  if (amt == 0) {
+    give_up("Block expression expected at least one element");
+  }
   size_t last = start + amt - 1;
-  for (size_t i = 0; i < amt; i++) {
-    size_t j = last - i;
-    node_ind_t sub_ind = state->parse_tree.inds[j];
+  node_ind_t result_ind = state->parse_tree.inds[last];
+  push_expression_act(state, result_ind, STAGE_ONE);
+  for (size_t i = last; i > start; i--) {
+    node_ind_t sub_ind = state->parse_tree.inds[i];
     parse_node sub = state->parse_tree.nodes[sub_ind];
     if (sub.type.statement == PT_STATEMENT_SIG)
       continue;
@@ -789,7 +797,7 @@ static void cg_pattern(cg_state *state, cg_pattern_params params) {
   }
 }
 
-static void cg_gen_block(cg_state *state, cg_block_params params) {
+static void cg_gen_basic_block(cg_state *state, cg_block_params params) {
   const char *name = params.name;
   llvm_function fn = params.fn;
   LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(state->context, fn, name);
@@ -835,11 +843,14 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
       // uses:
       // * act_string
       // * node_ind (passes on to expression)
-      case CG_GEN_BLOCK:
-        cg_gen_block(&state, action.block_params);
+      case CG_GEN_BASIC_BLOCK:
+        cg_gen_basic_block(&state, action.block_params);
         break;
       case CG_POP_ENV_TO:
         cg_pop_env_to(&state, action.pop_env_to_params);
+        break;
+      case CG_IGNORE_VALUE:
+        VEC_POP(&state.val_stack);
         break;
       case CG_PATTERN:
         cg_pattern(&state, action.pattern_params);
@@ -850,7 +861,7 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
         break;
       // cleanup
       case CG_FUN_STAGE_THREE:
-        cg_function_stage_three(&state, action.fun_stage_three_params);
+        cg_function_stage_three(&state);
         break;
     }
   }
