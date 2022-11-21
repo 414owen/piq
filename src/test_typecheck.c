@@ -361,10 +361,10 @@ static void test_typecheck_succeeds(test_state *state) {
   {
     test_start(state, "Uses global");
     const char *input = "(sig sndpar (Fn (I16, I32) I32))\n"
-                           "(fun sndpar (a, b) b)\n"
-                           "\n"
-                           "(sig test (Fn () I32))\n"
-                           "(fun test () (sndpar (→1←, →2←)))";
+                        "(fun sndpar (a, b) b)\n"
+                        "\n"
+                        "(sig test (Fn () I32))\n"
+                        "(fun test () (sndpar (→1←, →2←)))";
     test_type types[] = {
       i16,
       i32,

@@ -72,7 +72,8 @@ static void *get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
       .data = input,
     };
 
-    llvm_res res = gen_module(test_file.path, test_file, tree, tc.types, ctx->llvm_ctx);
+    llvm_res res =
+      gen_module(test_file.path, test_file, tree, tc.types, ctx->llvm_ctx);
     add_codegen_timings(state, tree, res);
 
     ctx->module_str = LLVMPrintModuleToString(res.module);
@@ -84,7 +85,10 @@ static void *get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
       LLVMErrorRef error = LLVMOrcLLJITLookup(ctx->jit, &entry_addr, "test");
       if (error != LLVMErrorSuccess) {
         char *msg = LLVMGetErrorMessage(error);
-        failf(state, "LLVMLLJITLookup failed:\n%s\nIn module:\n%s", msg, ctx->module_str);
+        failf(state,
+              "LLVMLLJITLookup failed:\n%s\nIn module:\n%s",
+              msg,
+              ctx->module_str);
         LLVMDisposeErrorMessage(msg);
       }
     }
@@ -95,14 +99,15 @@ static void *get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
   return (void *)entry_addr;
 }
 
-static void ensure_int_result_matches(test_state *state, jit_ctx ctx, int32_t expected,
-                                      int32_t got) {
+static void ensure_int_result_matches(test_state *state, jit_ctx ctx,
+                                      int32_t expected, int32_t got) {
   if (got != expected) {
-    failf(state,
-          "Jit function returned wrong result. Expected: %d, Got: %d.\nModule:%s\n",
-          expected,
-          got,
-          ctx.module_str);
+    failf(
+      state,
+      "Jit function returned wrong result. Expected: %d, Got: %d.\nModule:%s\n",
+      expected,
+      got,
+      ctx.module_str);
   }
 }
 

@@ -88,9 +88,7 @@ static void run_tests(test_state *state) {
 }
 
 HEDLEY_NEVER_INLINE
-static void newline(FILE *f) {
-  putc('\n', f);
-}
+static void newline(FILE *f) { putc('\n', f); }
 
 int main(int argc, const char **argv) {
   test_config conf = {
@@ -217,8 +215,10 @@ int main(int argc, const char **argv) {
     print_amount(timing_ss.stream, state.total_parse_nodes_produced);
     newline(timing_ss.stream);
 
-    fprintf(timing_ss.stream, "Parse nodes produced per token: %.3f\n",
-      (double) state.total_parse_nodes_produced / (double) state.total_tokens_parsed);
+    fprintf(timing_ss.stream,
+            "Parse nodes produced per token: %.3f\n",
+            (double)state.total_parse_nodes_produced /
+              (double)state.total_tokens_parsed);
 
     {
       fputs("Parse time per token: ", timing_ss.stream);
@@ -252,8 +252,8 @@ int main(int argc, const char **argv) {
 
     {
       fputs("Typecheck time per parse node: ", timing_ss.stream);
-      double nanos_per_token =
-        timespec_to_nanos(state.total_typecheck_time) / state.total_parse_nodes_typechecked;
+      double nanos_per_token = timespec_to_nanos(state.total_typecheck_time) /
+                               state.total_parse_nodes_typechecked;
       print_timespan_nanos(timing_ss.stream, nanos_per_token);
     }
     ss_finalize(&timing_ss);
@@ -275,8 +275,8 @@ int main(int argc, const char **argv) {
 
     {
       fputs("Codegen time per parse node: ", timing_ss.stream);
-      double nanos_per_token =
-        timespec_to_nanos(state.total_codegen_time) / state.total_parse_nodes_codegened;
+      double nanos_per_token = timespec_to_nanos(state.total_codegen_time) /
+                               state.total_parse_nodes_codegened;
       print_timespan_nanos(timing_ss.stream, nanos_per_token);
     }
     ss_finalize(&timing_ss);
