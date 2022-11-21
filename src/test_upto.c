@@ -44,8 +44,8 @@ void add_typecheck_timings_internal(test_state *state, parse_tree tree,
 #ifdef TIME_CODEGEN
 void add_codegen_timings_internal(test_state *state, parse_tree tree,
                                   llvm_res llres) {
-  state->total_codegen_time =
-    timespec_add(state->total_codegen_time, llres.time_taken);
+  state->total_llvm_ir_generation_time =
+    timespec_add(state->total_llvm_ir_generation_time, llres.time_taken);
   state->total_parse_nodes_codegened += tree.node_amt;
 }
 #endif
