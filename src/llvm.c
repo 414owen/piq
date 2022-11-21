@@ -112,7 +112,6 @@ typedef struct {
 } cg_pattern_params;
 
 typedef struct {
-  node_ind_t node_ind;
   const char *restrict name;
   llvm_function fn;
 } cg_block_params;
@@ -301,12 +300,8 @@ static void push_pattern_act(cg_state *state, node_ind_t node_ind,
   push_action(state, act);
 }
 
-static void push_gen_block(cg_state *state, node_ind_t node_ind,
-                           llvm_function fn,
-                           const char *restrict str) {
-  debug_assert(node_ind < state->parse_tree.node_amt);
+static void push_gen_basic_block(cg_state *state, llvm_function fn, const char *restrict str) {
   cg_block_params params = {
-    .node_ind = node_ind,
     .name = str,
     .fn = fn,
   };
@@ -529,11 +524,13 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
 
           // then
           node_ind_t a_node = PT_IF_A_IND(state->parse_tree.inds, node);
-          push_gen_block(state, a_node, VEC_PEEK(state->function_stack), THEN_STR);
+          push_expression_act(state, a_node, STAGE_TWO);
+          push_gen_basic_block(state, VEC_PEEK(state->function_stack), THEN_STR);
 
           // else
           node_ind_t b_node = PT_IF_B_IND(state->parse_tree.inds, node);
-          push_gen_block(state, b_node, VEC_PEEK(state->function_stack), ELSE_STR);
+          push_expression_act(state, b_node, STAGE_TWO);
+          push_gen_basic_block(state, VEC_PEEK(state->function_stack), ELSE_STR);
           break;
         }
         case STAGE_TWO: {
@@ -587,7 +584,9 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
 
           LLVMBuildStore(state->builder, left_val, left_ptr);
           LLVMBuildStore(state->builder, right_val, right_ptr);
-          VEC_PUSH(&state->val_stack, allocated);
+
+          LLVMValueRef res = LLVMBuildLoad2(state->builder, tup_type, allocated, "tup-ex");
+          VEC_PUSH(&state->val_stack, res);
           break;
         }
       }
@@ -640,8 +639,16 @@ static llvm_function cg_emit_empty_fn(cg_state *state, node_ind_t ind, parse_nod
   return fn;
 }
 
+static void cg_gen_basic_block(cg_state *state, cg_block_params params) {
+  const char *name = params.name;
+  llvm_function fn = params.fn;
+  LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(state->context, fn, name);
+  LLVMPositionBuilderAtEnd(state->builder, block);
+  VEC_PUSH(&state->block_stack, block);
+}
+
 // generate the body, and schedule cleanup
-static void cg_function_stage_two_internal(cg_state *state, llvm_function fn, parse_node node) {
+static void cg_function_stage_two_internal(cg_state *state, node_ind_t node_ind, llvm_function fn, parse_node node) {
   VEC_PUSH(&state->function_stack, fn);
 
   u32 env_amt = state->env_bnds.len;
@@ -650,18 +657,20 @@ static void cg_function_stage_two_internal(cg_state *state, llvm_function fn, pa
   push_act_fn_three(state);
 
   node_ind_t body_ind = PT_FUN_BODY_IND(state->parse_tree.inds, node);
-  push_gen_block(state, body_ind, fn, ENTRY_STR);
+  push_expression_act(state, body_ind, STAGE_ONE);
 
-  node_ind_t param_ind = PT_FUN_PARAM_IND(state->parse_tree.inds, node);
   LLVMValueRef arg = LLVMGetParam(fn, 0);
+  node_ind_t param_ind = PT_FUN_PARAM_IND(state->parse_tree.inds, node);
   push_pattern_act(state, param_ind, arg);
+
+  push_gen_basic_block(state, fn, ENTRY_STR);
 }
 
 static void cg_function_stage_two(cg_state *state, cg_fun_stage_two_params params) {
   node_ind_t ind = params.node_ind;
   parse_node node = state->parse_tree.nodes[ind];
   llvm_function fn = params.fn;
-  cg_function_stage_two_internal(state, fn, node);
+  cg_function_stage_two_internal(state, ind, fn, node);
 }
 
 static void cg_statement(cg_state *state, cg_statement_params params) {
@@ -690,7 +699,7 @@ static void cg_statement(cg_state *state, cg_statement_params params) {
     // TODO support recursive?
     case PT_STATEMENT_FUN: {
       llvm_function fn = cg_emit_empty_fn(state, ind, node);
-      cg_function_stage_two_internal(state, fn, node);
+      cg_function_stage_two_internal(state, params.node_ind, fn, node);
       break;
     }
     default:
@@ -770,9 +779,9 @@ static void cg_pattern(cg_state *state, cg_pattern_params params) {
   switch (node.type.pattern) {
     case PT_PAT_TUP: {
 
-      LLVMTypeRef type = construct_type(state, state->types.node_types[ind]);
-      llvm_value left_val = LLVMBuildStructGEP2(state->builder, type, val, 0, "tuple-left");
-      llvm_value right_val = LLVMBuildStructGEP2(state->builder, type, val, 1, "tuple-right");
+      // LLVMTypeRef type = construct_type(state, state->types.node_types[ind]);
+      llvm_value left_val = LLVMBuildExtractValue(state->builder, val, 0, "tuple-left");
+      llvm_value right_val = LLVMBuildExtractValue(state->builder, val, 1, "tuple-right");
       // TODO does the struct have to be a pointer?
 
       node_ind_t sub_a = PT_TUP_SUB_A(node);
@@ -795,16 +804,6 @@ static void cg_pattern(cg_state *state, cg_pattern_params params) {
     case PT_PAT_STRING:
       break;
   }
-}
-
-static void cg_gen_basic_block(cg_state *state, cg_block_params params) {
-  const char *name = params.name;
-  llvm_function fn = params.fn;
-  LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(state->context, fn, name);
-  LLVMPositionBuilderAtEnd(state->builder, block);
-  VEC_PUSH(&state->block_stack, block);
-  // blocks are expressions
-  push_expression_act(state, params.node_ind, STAGE_ONE);
 }
 
 static void cg_pop_env_to(cg_state *state, cg_pop_env_to_params params) {

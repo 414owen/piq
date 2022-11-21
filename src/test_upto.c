@@ -112,6 +112,7 @@ tc_res test_upto_typecheck(test_state *state, const char *restrict input,
   };
   if (tree_res.succeeded) {
     tc = typecheck(input, tree_res.tree);
+    add_typecheck_timings(state, tree_res.tree, tc);
     if (tc.error_amt > 0) {
       *success = false;
       stringstream *ss = ss_init();
