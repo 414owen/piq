@@ -170,16 +170,17 @@ int main(int argc, const char **argv) {
   if (state.total_bytes_tokenized > 0) {
     stringstream timing_ss;
     ss_init_immovable(&timing_ss);
+
+    fputs("Time spent tokenizing: ", timing_ss.stream);
+    print_timespan_timespec(timing_ss.stream, state.total_tokenization_time);
+    newline(timing_ss.stream);
+
     fputs("Total bytes tokenized: ", timing_ss.stream);
     print_byte_amount(timing_ss.stream, state.total_bytes_tokenized);
     newline(timing_ss.stream);
 
     fputs("Total tokens produced: ", timing_ss.stream);
     print_amount(timing_ss.stream, state.total_tokens);
-    newline(timing_ss.stream);
-
-    fputs("Time spent tokenizing: ", timing_ss.stream);
-    print_timespan_timespec(timing_ss.stream, state.total_tokenization_time);
     newline(timing_ss.stream);
 
     {

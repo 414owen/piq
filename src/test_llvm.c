@@ -17,7 +17,7 @@ typedef struct {
   LLVMContextRef llvm_ctx;
   LLVMOrcThreadSafeContextRef orc_ctx;
   LLVMOrcLLJITRef jit;
-  LLVMModuleRef module;
+  char *module_str;
   // LLVMOrcExecutionSessionRef session;
   LLVMOrcJITDylibRef dylib;
 } jit_ctx;
@@ -51,7 +51,7 @@ static jit_ctx jit_llvm_init(void) {
 }
 
 static void jit_dispose(jit_ctx *ctx) {
-  // LLVMDisposeModule(ctx->module);
+  LLVMDisposeMessage(ctx->module_str);
   LLVMOrcDisposeLLJIT(ctx->jit);
   LLVMOrcDisposeThreadSafeContext(ctx->orc_ctx);
 }
@@ -72,11 +72,10 @@ static void *get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
       .data = input,
     };
 
-    llvm_res res =
-      gen_module(test_file.path, test_file, tree, tc.types, ctx->llvm_ctx);
-    ctx->module = res.module;
-
+    llvm_res res = gen_module(test_file.path, test_file, tree, tc.types, ctx->llvm_ctx);
     add_codegen_timings(state, tree, res);
+
+    ctx->module_str = LLVMPrintModuleToString(res.module);
 
     LLVMOrcThreadSafeModuleRef tsm =
       LLVMOrcCreateNewThreadSafeModule(res.module, ctx->orc_ctx);
@@ -85,9 +84,7 @@ static void *get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
       LLVMErrorRef error = LLVMOrcLLJITLookup(ctx->jit, &entry_addr, "test");
       if (error != LLVMErrorSuccess) {
         char *msg = LLVMGetErrorMessage(error);
-        char *module_str = LLVMPrintModuleToString(res.module);
-        failf(state, "LLVMLLJITLookup failed:\n%s\nIn module:\n%s", msg, module_str);
-        LLVMDisposeMessage(module_str);
+        failf(state, "LLVMLLJITLookup failed:\n%s\nIn module:\n%s", msg, ctx->module_str);
         LLVMDisposeErrorMessage(msg);
       }
     }
@@ -101,13 +98,11 @@ static void *get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
 static void ensure_int_result_matches(test_state *state, jit_ctx ctx, int32_t expected,
                                       int32_t got) {
   if (got != expected) {
-    char *module_str = LLVMPrintModuleToString(ctx.module);
     failf(state,
-          "Jit function returned wrong result. Expected: %d, Got: %d.\nModule:\n",
+          "Jit function returned wrong result. Expected: %d, Got: %d.\nModule:%s\n",
           expected,
           got,
-          module_str);
-    LLVMDisposeMessage(module_str);
+          ctx.module_str);
   }
 }
 
@@ -160,7 +155,7 @@ static void test_robustness(test_state *state) {
   {
     stringstream source_file;
     ss_init_immovable(&source_file);
-    static const size_t depth = 1;
+    static const size_t depth = 1000;
     const char *preamble = "(sig sndpar (Fn (I32, I32) I32))\n"
                            "(fun sndpar (a, b) b)\n"
                            "\n"
