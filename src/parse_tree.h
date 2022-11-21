@@ -149,12 +149,14 @@ typedef union {
 
 #define PT_LIST_TYPE_SUB(node) node.sub_a
 
+#define PT_BLOCK_SUBS_START(node) node.subs_start
 #define PT_BLOCK_SUB_AMT(node) node.sub_amt
 #define PT_BLOCK_SUB_IND(inds, node, i) inds[node.subs_start + i]
 
 #define PT_ROOT_SUB_AMT(node) PT_BLOCK_SUB_AMT(node)
 #define PT_ROOT_SUB_IND(inds, node, i) PT_BLOCK_SUB_IND(inds, node, i)
 
+#define PT_FUN_BODY_SUBS_START(node) PT_BLOCK_SUBS_START(node)
 #define PT_FUN_BODY_SUB_AMT(node) PT_BLOCK_SUB_AMT(node)
 #define PT_FUN_BODY_SUB_IND(inds, node, i) PT_BLOCK_SUB_IND(inds, node, i)
 

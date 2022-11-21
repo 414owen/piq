@@ -17,6 +17,7 @@ typedef struct {
   LLVMContextRef llvm_ctx;
   LLVMOrcThreadSafeContextRef orc_ctx;
   LLVMOrcLLJITRef jit;
+  LLVMModuleRef module;
   // LLVMOrcExecutionSessionRef session;
   LLVMOrcJITDylibRef dylib;
 } jit_ctx;
@@ -50,11 +51,12 @@ static jit_ctx jit_llvm_init(void) {
 }
 
 static void jit_dispose(jit_ctx *ctx) {
+  // LLVMDisposeModule(ctx->module);
   LLVMOrcDisposeLLJIT(ctx->jit);
   LLVMOrcDisposeThreadSafeContext(ctx->orc_ctx);
 }
 
-static void *get_entry_fn(test_state *state, jit_ctx ctx, const char *input) {
+static void *get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
   parse_tree tree;
   bool success = false;
   tc_res tc = test_upto_typecheck(state, input, &success, &tree);
@@ -71,21 +73,21 @@ static void *get_entry_fn(test_state *state, jit_ctx ctx, const char *input) {
     };
 
     llvm_res res =
-      gen_module(test_file.path, test_file, tree, tc.types, ctx.llvm_ctx);
+      gen_module(test_file.path, test_file, tree, tc.types, ctx->llvm_ctx);
+    ctx->module = res.module;
 
     add_codegen_timings(state, tree, res);
 
     LLVMOrcThreadSafeModuleRef tsm =
-      LLVMOrcCreateNewThreadSafeModule(res.module, ctx.orc_ctx);
-    LLVMOrcLLJITAddLLVMIRModule(ctx.jit, ctx.dylib, tsm);
+      LLVMOrcCreateNewThreadSafeModule(res.module, ctx->orc_ctx);
+    LLVMOrcLLJITAddLLVMIRModule(ctx->jit, ctx->dylib, tsm);
     {
-      LLVMErrorRef error = LLVMOrcLLJITLookup(ctx.jit, &entry_addr, "test");
+      LLVMErrorRef error = LLVMOrcLLJITLookup(ctx->jit, &entry_addr, "test");
       if (error != LLVMErrorSuccess) {
         char *msg = LLVMGetErrorMessage(error);
-        failf(state, "LLVMLLJITLookup failed:\n%s\nIn module:\n", msg);
-        // char *module_str = LLVMPrintModuleToString(res.module);
-        // failf(state, "LLVMLLJITLookup failed:\n%s\nIn module:\n%s", msg, module_str);
-        // LLVMDisposeMessage(module_str);
+        char *module_str = LLVMPrintModuleToString(res.module);
+        failf(state, "LLVMLLJITLookup failed:\n%s\nIn module:\n%s", msg, module_str);
+        LLVMDisposeMessage(module_str);
         LLVMDisposeErrorMessage(msg);
       }
     }
@@ -96,13 +98,16 @@ static void *get_entry_fn(test_state *state, jit_ctx ctx, const char *input) {
   return (void *)entry_addr;
 }
 
-static void ensure_int_result_matches(test_state *state, int32_t expected,
+static void ensure_int_result_matches(test_state *state, jit_ctx ctx, int32_t expected,
                                       int32_t got) {
   if (got != expected) {
+    char *module_str = LLVMPrintModuleToString(ctx.module);
     failf(state,
-          "Jit function returned wrong result. Expected: %d, Got: %d.\n",
+          "Jit function returned wrong result. Expected: %d, Got: %d.\nModule:\n",
           expected,
-          got);
+          got,
+          module_str);
+    LLVMDisposeMessage(module_str);
   }
 }
 
@@ -110,11 +115,11 @@ static void test_llvm_code_produces_int(test_state *state,
                                         const char *restrict input,
                                         int32_t expected) {
   jit_ctx ctx = jit_llvm_init();
-  void *entry_addr = get_entry_fn(state, ctx, input);
+  void *entry_addr = get_entry_fn(state, &ctx, input);
   int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
   if (entry) {
     int32_t got = entry();
-    ensure_int_result_matches(state, expected, got);
+    ensure_int_result_matches(state, ctx, expected, got);
   }
   jit_dispose(&ctx);
 }
@@ -123,21 +128,21 @@ static void test_llvm_code_maps_int(test_state *state,
                                     const char *restrict input,
                                     int32_t input_param, int32_t expected) {
   jit_ctx ctx = jit_llvm_init();
-  void *entry_addr = get_entry_fn(state, ctx, input);
+  void *entry_addr = get_entry_fn(state, &ctx, input);
   int32_t (*entry)(int32_t) = (int32_t(*)(int32_t))entry_addr;
   if (entry) {
     int32_t got = entry(input_param);
-    ensure_int_result_matches(state, expected, got);
+    ensure_int_result_matches(state, ctx, expected, got);
   }
   jit_dispose(&ctx);
 }
 
 static void test_llvm_code_runs(test_state *state, const char *restrict input) {
   jit_ctx ctx = jit_llvm_init();
-  void *entry_addr = get_entry_fn(state, ctx, input);
+  void *entry_addr = get_entry_fn(state, &ctx, input);
   int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
   if (entry) {
-    int32_t got = entry();
+    entry();
   }
   jit_dispose(&ctx);
 }
@@ -155,7 +160,7 @@ static void test_robustness(test_state *state) {
   {
     stringstream source_file;
     ss_init_immovable(&source_file);
-    static const size_t depth = 10;
+    static const size_t depth = 1;
     const char *preamble = "(sig sndpar (Fn (I32, I32) I32))\n"
                            "(fun sndpar (a, b) b)\n"
                            "\n"
