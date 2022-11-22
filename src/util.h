@@ -122,6 +122,10 @@ MALLOC_ATTR_2(free, 1)
 char *join(const size_t str_amt, const char *const *const strs,
            const char *sep);
 
+NON_NULL_ALL
+MALLOC_ATTR_2(free, 1)
+char *join_two(const char *restrict str1, const char *restrict str2);
+
 NON_NULL_PARAMS
 int vasprintf(char **, const char *restrict, va_list);
 
