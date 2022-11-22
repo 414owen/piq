@@ -84,7 +84,7 @@
             mkdir -p $out/bin
             ${if test
               then "mv test $out/bin/test"
-              else "mv repl $out/bin/lang"}
+              else "mv main $out/bin/lang"}
           '';
         };
 
