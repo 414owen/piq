@@ -13,6 +13,7 @@
 #include "attrs.h"
 #include "consts.h"
 #include "util.h"
+#include "vec.h"
 
 void *memmem(const void *haystack, size_t haystack_len, const void *needle,
              size_t needle_len);
@@ -81,6 +82,7 @@ size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
   }
   return el_amt;
 }
+
 struct timespec time_since_monotonic(const struct timespec start) {
   struct timespec end = get_monotonic_time();
   return timespec_subtract(end, start);
@@ -123,6 +125,35 @@ HEDLEY_NON_NULL(1)
 void ss_finalize(stringstream *ss) {
   putc(0, ss->stream);
   fclose(ss->stream);
+}
+
+NON_NULL_PARAMS
+char *read_entire_file(const char *restrict file_path) {
+  FILE *f = fopen(file_path, "rb");
+  fseek(f, 0, SEEK_END);
+  long fsize = ftell(f);
+  rewind(f);
+  char *string = malloc(fsize + 1);
+  fread(string, fsize, 1, f);
+  fclose(f);
+  string[fsize] = 0;
+  return string;
+}
+
+// You're probably reading from stdin...
+// We won't worry too much about the extra copy
+NON_NULL_PARAMS
+char *read_entire_file_no_seek(FILE *restrict f) {
+  stringstream ss;
+  ss_init_immovable(&ss);
+  char buf[4096];
+  do {
+    size_t amt = fread(buf, 1, 4096, f);
+    fwrite(buf, 1, amt, ss.stream);
+  } while (!feof(f));
+  fputc('\0', ss.stream);
+  ss_finalize(&ss);
+  return ss.string;
 }
 
 NON_NULL_PARAMS

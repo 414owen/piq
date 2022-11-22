@@ -63,11 +63,12 @@ bool mkdirp(char *path, mode_t mode) {
   last_created_parent++;
   while (last_created_parent < sep_amt) {
     size_t boundary = seps[last_created_parent++];
+    char prev = path[boundary];
     path[boundary] = '\0';
     int rc = mkdir(path, mode);
     if (rc != 0 && errno != EEXIST)
       return false;
-    path[boundary] = path_sep;
+    path[boundary] = prev;
   }
 
   stfree(seps, sep_amt * sizeof(size_t));

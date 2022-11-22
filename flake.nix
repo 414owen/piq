@@ -76,7 +76,8 @@
 
           buildPhase = ''
             . ./scripts/environment.sh
-            tup
+            tup generate build.sh
+            ./build.sh
           '';
 
           installPhase = ''

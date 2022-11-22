@@ -880,8 +880,8 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
   destroy_cg_state(&state);
 }
 
-llvm_res gen_module(const char *module_name, source_file source,
-                    parse_tree tree, type_info types, LLVMContextRef ctx) {
+llvm_res llvm_gen_module(const char *module_name, source_file source,
+                         parse_tree tree, type_info types, LLVMContextRef ctx) {
 #ifdef TIME_CODEGEN
   struct timespec start = get_monotonic_time();
 #endif
@@ -898,6 +898,7 @@ llvm_res gen_module(const char *module_name, source_file source,
 void gen_and_print_module(source_file source, parse_tree tree, type_info types,
                           FILE *out_f) {
   LLVMContextRef ctx = LLVMContextCreate();
-  llvm_res res = gen_module("my_module", source, tree, types, ctx);
+  llvm_res res = llvm_gen_module("my_module", source, tree, types, ctx);
   fputs(LLVMPrintModuleToString(res.module), out_f);
+  LLVMContextDispose(ctx);
 }

@@ -409,6 +409,7 @@ void free_parse_tree_res(parse_tree_res res) {
   }
 }
 
+// TODO add line/col number
 void print_parse_tree_error(FILE *f, const char *restrict input,
                             const token *restrict tokens,
                             const parse_tree_res pres) {

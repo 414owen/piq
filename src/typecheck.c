@@ -1052,7 +1052,9 @@ static void tc_statement_matches(typecheck_state *state,
       node_ind_t val_ind = PT_LET_VAL_IND(node_params.node);
       // TODO unify this code with the unambiguous version
       tc_action actions[] = {
-        {.tag = TC_CLONE_WANTED_WANTED, .from = node_params.node_ind, .to = val_ind},
+        {.tag = TC_CLONE_WANTED_WANTED,
+         .from = node_params.node_ind,
+         .to = val_ind},
         {.tag = TC_EXPRESSION_MATCHES, .node_ind = val_ind},
         {
           .tag = TC_CLONE_ACTUAL_ACTUAL,

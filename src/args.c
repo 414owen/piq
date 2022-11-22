@@ -181,7 +181,7 @@ static void parse_long(parse_state *restrict state,
           assign_data(a, str);
           matched = true;
         } else if (prefix_matches && arg_str[a.long_len] == '=') {
-          const char *str = state->argv[state->arg_cursor];
+          const char *str = &arg_str[a.long_len + 1];
           assign_data(a, str);
           matched = true;
         }

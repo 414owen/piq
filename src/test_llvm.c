@@ -73,19 +73,25 @@ static void *get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
     };
 
     llvm_res res =
-      gen_module(test_file.path, test_file, tree, tc.types, ctx->llvm_ctx);
+      llvm_gen_module(test_file.path, test_file, tree, tc.types, ctx->llvm_ctx);
     add_codegen_timings(state, tree, res);
 
     ctx->module_str = LLVMPrintModuleToString(res.module);
 
+#ifdef TIME_CODEGEN
     struct timespec start = get_monotonic_time();
+#endif
     LLVMOrcThreadSafeModuleRef tsm =
       LLVMOrcCreateNewThreadSafeModule(res.module, ctx->orc_ctx);
     LLVMOrcLLJITAddLLVMIRModule(ctx->jit, ctx->dylib, tsm);
     LLVMErrorRef error = LLVMOrcLLJITLookup(ctx->jit, &entry_addr, "test");
+
+#ifdef TIME_CODEGEN
     struct timespec time_taken = time_since_monotonic(start);
     state->total_codegen_time =
       timespec_add(state->total_codegen_time, time_taken);
+#endif
+
     if (error != LLVMErrorSuccess) {
       char *msg = LLVMGetErrorMessage(error);
       failf(state,

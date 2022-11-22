@@ -19,6 +19,7 @@ void test_diagnostics(test_state *state) {
     ss_finalize(&output);
     size_t newlines = count_char_occurences(output.string, '\n');
     test_assert_eq(state, newlines, 4);
+    free(output.string);
   }
   test_end(state);
 

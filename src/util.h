@@ -185,6 +185,12 @@ struct timespec get_monotonic_time(void);
 
 struct timespec time_since_monotonic(const struct timespec start);
 
+NON_NULL_PARAMS
+char *read_entire_file(const char *restrict file_path);
+
+NON_NULL_PARAMS
+char *read_entire_file_no_seek(FILE *restrict f);
+
 #ifdef PREDEF_OS_WINDOWS
 #include "platform/windows/mkdir.h"
 #endif
