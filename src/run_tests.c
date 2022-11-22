@@ -279,6 +279,14 @@ int main(int argc, const char **argv) {
     newline(timing_ss.stream);
 
     {
+      fputs("LLVM IR building time per parse node: ", timing_ss.stream);
+      double nanos_per_token =
+        timespec_to_nanos(state.total_llvm_ir_generation_time) /
+        state.total_parse_nodes_codegened;
+      print_timespan_nanos(timing_ss.stream, nanos_per_token);
+      newline(timing_ss.stream);
+    }
+    {
       fputs("Codegen time per parse node: ", timing_ss.stream);
       double nanos_per_token = timespec_to_nanos(state.total_codegen_time) /
                                state.total_parse_nodes_codegened;
