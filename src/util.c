@@ -200,8 +200,9 @@ char *join(const size_t str_amt, const char *const *restrict const strs,
 
 NON_NULL_ALL
 MALLOC_ATTR_2(free, 1)
-char *join_two(const char *const restrict str1, const char *const restrict str2) {
-  const char *strs[] = { str1, str2 };
+char *join_two(const char *const restrict str1,
+               const char *const restrict str2) {
+  const char *strs[] = {str1, str2};
   return join(2, strs, "");
 }
 

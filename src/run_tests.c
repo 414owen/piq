@@ -266,7 +266,8 @@ int main(int argc, const char **argv) {
     stringstream timing_ss;
     ss_init_immovable(&timing_ss);
     fputs("Time spent building LLVM IR: ", timing_ss.stream);
-    print_timespan_timespec(timing_ss.stream, state.total_llvm_ir_generation_time);
+    print_timespan_timespec(timing_ss.stream,
+                            state.total_llvm_ir_generation_time);
 
     newline(timing_ss.stream);
     fputs("Time spent performing codegen: ", timing_ss.stream);

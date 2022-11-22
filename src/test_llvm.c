@@ -84,7 +84,8 @@ static void *get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
     LLVMOrcLLJITAddLLVMIRModule(ctx->jit, ctx->dylib, tsm);
     LLVMErrorRef error = LLVMOrcLLJITLookup(ctx->jit, &entry_addr, "test");
     struct timespec time_taken = time_since_monotonic(start);
-    state->total_codegen_time = timespec_add(state->total_codegen_time, time_taken);
+    state->total_codegen_time =
+      timespec_add(state->total_codegen_time, time_taken);
     if (error != LLVMErrorSuccess) {
       char *msg = LLVMGetErrorMessage(error);
       failf(state,
@@ -237,8 +238,7 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
 
-  test_start(state, "If expressions work")
-  {
+  test_start(state, "If expressions work") {
     const char *ifthenelse = "(sig ifthenelse (Fn (Bool, I32, I32) I32))\n"
                              "(fun ifthenelse (cond, t, f) (if cond t f))\n";
     {
