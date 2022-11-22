@@ -1052,6 +1052,7 @@ static void tc_statement_matches(typecheck_state *state,
       node_ind_t val_ind = PT_LET_VAL_IND(node_params.node);
       // TODO unify this code with the unambiguous version
       tc_action actions[] = {
+        {.tag = TC_CLONE_WANTED_WANTED, .from = node_params.node_ind, .to = val_ind},
         {.tag = TC_EXPRESSION_MATCHES, .node_ind = val_ind},
         {
           .tag = TC_CLONE_ACTUAL_ACTUAL,
@@ -2240,6 +2241,10 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           debug_out, VEC_DATA_PTR(&state.types.types), state.wanted[action.to]);
         putc('\n', debug_out);
         break;
+      case TC_ASSIGN_TYPE:
+        fputs("Type: ", debug_out);
+        print_type(debug_out, VEC_DATA_PTR(&state.types.types), action.from);
+        break;
       case TC_TYPE:
       case TC_TYPE_LIST_STAGE_TWO:
       case TC_PATTERN_MATCHES:
@@ -2254,10 +2259,6 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
       case TC_RECONSTRUCT_TUPLE:
       case TC_TYPE_FN_STAGE_TWO:
       case TC_CLONE_ACTUAL_ACTUAL:
-      case TC_ASSIGN_TYPE:
-        fputs("Type: ", debug_out);
-        print_type(debug_out, VEC_DATA_PTR(&state.types.types), action.from);
-        break;
       case TC_CLONE_WANTED_ACTUAL:
         fputs("Result: ", debug_out);
         print_type(debug_out,

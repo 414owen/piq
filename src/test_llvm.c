@@ -242,6 +242,7 @@ void test_llvm(test_state *state) {
   */
   test_end(state);
 
+  /*
   test_start(state, "If expressions work")
   {
     const char *ifthenelse = "(sig ifthenelse (Fn (Bool, I32, I32) I32))\n"
@@ -255,6 +256,7 @@ void test_llvm(test_state *state) {
     }
   }
   test_end(state);
+  */
 
   /*
   test_start(state, "Two fns and a call");
