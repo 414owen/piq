@@ -198,6 +198,13 @@ char *join(const size_t str_amt, const char *const *restrict const strs,
   return ss.string;
 }
 
+NON_NULL_ALL
+MALLOC_ATTR_2(free, 1)
+char *join_two(const char *const restrict str1, const char *const restrict str2) {
+  const char *strs[] = { str1, str2 };
+  return join(2, strs, "");
+}
+
 HEDLEY_NO_RETURN
 HEDLEY_PRINTF_FORMAT(3, 4)
 COLD_ATTR
