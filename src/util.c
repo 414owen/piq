@@ -116,6 +116,8 @@ stringstream *ss_init(void) {
 err:
   perror("Can't make string stream");
   exit(1);
+  // doesn't do anything, apart from appeasing tcc
+  return ss;
 }
 
 // This is malloc-like, but it stores the thing inline, so we can't use the

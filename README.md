@@ -68,8 +68,8 @@ A language that does everything right
 
 * ~Search index arrays instead of adding to them?~
 * make ss_init return struct, with a char**, rather than a struct
-* Get rid of PT_TOP_LEVEL, it's just more indirection
-* Higher order tuples are syntactic sugar over 2-tuples, so combinators work
+* ~Get rid of PT_TOP_LEVEL, it's just more indirection~
+* ~Higher order tuples are syntactic sugar over 2-tuples, so combinators work~
 * Generics: Generics introduce a block, where everything in the block
   is generic. Think it'll look clean.
 * Use mermaid in doc strings to produce diagrams
