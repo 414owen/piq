@@ -231,14 +231,19 @@ void test_llvm(test_state *state) {
                         "(fun test () (let b ()) ())";
     test_llvm_code_runs(state, input);
   }
+  /*
   {
     const char *input = "(sig test (Fn () I32))\n"
-                        "(fun test () (let b 3) b)";
+                        "(fun test ()\n"
+                        "  (sig b I32)\n"
+                        "  (let b 3) b)";
     test_llvm_code_produces_int(state, input, 3);
   }
+  */
   test_end(state);
 
-  test_start(state, "If expressions work") {
+  test_start(state, "If expressions work")
+  {
     const char *ifthenelse = "(sig ifthenelse (Fn (Bool, I32, I32) I32))\n"
                              "(fun ifthenelse (cond, t, f) (if cond t f))\n";
     {

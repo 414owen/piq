@@ -373,6 +373,21 @@ static void test_typecheck_succeeds(test_state *state) {
     test_end(state);
   }
 
+  {
+    test_start(state, "Uses let");
+    const char *input = "(sig test (Fn () I32))\n"
+                        "(fun test ()\n"
+                        " (sig b I32)\n"
+                        " (let b →3←)\n"
+                        " →b←)";
+    test_type types[] = {
+      i32,
+      i32,
+    };
+    test_types_match(state, input, types, STATIC_LEN(types));
+    test_end(state);
+  }
+
   test_group_end(state);
 }
 
