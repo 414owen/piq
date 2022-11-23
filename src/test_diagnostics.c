@@ -15,7 +15,7 @@ void test_diagnostics(test_state *state) {
   {
     stringstream output;
     ss_init_immovable(&output);
-    format_error_ctx(output.stream, test_program, 0, 0);
+    format_error_ctx(output.stream, test_program, 0, 1);
     ss_finalize(&output);
     size_t newlines = count_char_occurences(output.string, '\n');
     test_assert_eq(state, newlines, 4);

@@ -14,7 +14,7 @@ static void reply(char *input, FILE *out) {
   tokens_res tres = scan_all(test_file);
   if (!tres.succeeded) {
     puts("Tokenization failed:\n");
-    format_error_ctx(stdout, input, tres.error_pos, tres.error_pos);
+    format_error_ctx(stdout, input, tres.error_pos, 1);
     putc('\n', stdout);
     goto end_a;
   }

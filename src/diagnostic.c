@@ -31,9 +31,10 @@ typedef enum {
 } print_state;
 
 void format_error_ctx(FILE *f, const char *restrict input, buf_ind_t start,
-                      buf_ind_t end) {
-  size_t len = strlen(input);
-  vec_buf_ind line_starts = get_line_starts(input, len);
+                      buf_ind_t len) {
+  size_t buf_len = strlen(input);
+  size_t reset_pos = start + len;
+  vec_buf_ind line_starts = get_line_starts(input, buf_len);
   int64_t ind_of_line_starting_before_start = 0;
 
   for (unsigned i = 0; i < line_starts.len; i++) {
@@ -50,7 +51,7 @@ void format_error_ctx(FILE *f, const char *restrict input, buf_ind_t start,
 
   print_state state = S_BEFORE;
   buf_ind_t nls_after = 0;
-  for (buf_ind_t i = context_start; i < len; i++) {
+  for (buf_ind_t i = context_start; i < buf_len; i++) {
     char c = input[i];
     if (c == '\n') {
       if (state == S_AFTER) {
@@ -69,22 +70,15 @@ void format_error_ctx(FILE *f, const char *restrict input, buf_ind_t start,
         }
         break;
       case S_BLUE:
-      case S_AFTER:
-        break;
-    }
-    putc(c, f);
-    switch (state) {
-      case S_BLUE:
-        if (i == end) {
+        if (i == reset_pos) {
           fputs(RESET, f);
           state = S_AFTER;
         }
         break;
-      case S_BEFORE:
       case S_AFTER:
         break;
     }
-
+    putc(c, f);
     if (c == '\n') {
       fputs(RED "| " RESET, f);
       if (state == S_BLUE) {

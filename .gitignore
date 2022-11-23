@@ -25,3 +25,4 @@ perf.data*
 main
 .cache/
 compile_commands.json
+massif.out.*

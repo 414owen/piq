@@ -17,7 +17,7 @@ static source_file test_file(const char *restrict input) {
 static void test_token_layout(test_state *restrict state) {
   test_group_start(state, "Token");
   test_start(state, "Is small");
-  test_assert_eq(state, sizeof(token), 12);
+  test_assert_eq(state, sizeof(token), 8);
   test_end(state);
   test_group_end(state);
 }

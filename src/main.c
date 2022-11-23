@@ -43,7 +43,7 @@ static void compile_llvm(compile_arguments args) {
   if (!tres.succeeded) {
     // TODO extract out to function, share with repl, maybe share with tests?
     puts("Tokenization failed:\n");
-    format_error_ctx(stdout, source_code, tres.error_pos, tres.error_pos);
+    format_error_ctx(stdout, source_code, tres.error_pos, 1);
     putc('\n', stdout);
     free_tokens_res(tres);
     return;

@@ -95,9 +95,7 @@ static bool test_err_eq(parse_tree tree, tc_res res, size_t err_ind,
   if (eA.type != test_err.type)
     return false;
   parse_node node = tree.nodes[eA.pos];
-  if (node.span.start != err_span.start)
-    return false;
-  if (node.span.end != err_span.end)
+  if (!spans_equal(node.span, err_span))
     return false;
   switch (eA.type) {
     case TYPE_MISMATCH: {
@@ -145,7 +143,7 @@ static char *process_spans(const char *input, span *spans, node_ind_t cases) {
     start += marker_start_len;
 
     const char *end = strstr(start, marker_end);
-    spans[i].end = (buf_ind_t)(end - input) - offset;
+    spans[i].len = (buf_ind_t)(end - input) - offset - spans[i].start;
     offset += marker_end_len;
     amt = end - start;
     memcpy(edit_cursor, start, amt);
@@ -161,9 +159,9 @@ static char *process_spans(const char *input, span *spans, node_ind_t cases) {
   edit_cursor += remaining;
   edit_cursor[0] = '\0';
 
-  for (node_ind_t i = 0; i < cases; i++) {
-    spans[i].end -= 1;
-  }
+  // for (node_ind_t i = 0; i < cases; i++) {
+  //   spans[i].end -= 1;
+  // }
   return edit;
 }
 
@@ -199,7 +197,7 @@ static void test_types_match(test_state *state, const char *input_p,
     bool seen = false;
     for (size_t j = 0; j < pres.tree.node_amt; j++) {
       parse_node node = pres.tree.nodes[j];
-      if (node.span.start == span.start && node.span.end == span.end) {
+      if (spans_equal(node.span, span)) {
         seen = true;
         if (!test_type_eq(res.types.types,
                           res.types.type_inds,
@@ -215,7 +213,10 @@ static void test_types_match(test_state *state, const char *input_p,
       }
     }
     if (!seen) {
-      failf(state, "No node matching position %d-%d", span.start, span.end);
+      failf(state,
+            "No node matching position %d-%d",
+            span.start,
+            span.start + span.len - 1);
     }
   }
   free_tc_res(res);

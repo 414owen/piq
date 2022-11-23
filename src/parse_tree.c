@@ -274,28 +274,19 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       break;
     case PT_ALL_PAT_INT:
     case PT_ALL_EX_INT:
-      fprintf(s->out,
-              "(Int %.*s)",
-              1 + node.span.end - node.span.start,
-              s->input + node.span.start);
+      fprintf(s->out, "(Int %.*s)", node.span.len, s->input + node.span.start);
       break;
     case PT_ALL_MULTI_UPPER_NAME:
-      fprintf(s->out,
-              "(Uname %.*s)",
-              1 + node.span.end - node.span.start,
-              s->input + node.span.start);
+      fprintf(
+        s->out, "(Uname %.*s)", node.span.len, s->input + node.span.start);
       break;
     case PT_PAT_WILDCARD:
-      fprintf(s->out,
-              "(Wildcard %.*s)",
-              1 + node.span.end - node.span.start,
-              s->input + node.span.start);
+      fprintf(
+        s->out, "(Wildcard %.*s)", node.span.len, s->input + node.span.start);
       break;
     case PT_EX_LOWER_NAME:
-      fprintf(s->out,
-              "(Lname %.*s)",
-              1 + node.span.end - node.span.start,
-              s->input + node.span.start);
+      fprintf(
+        s->out, "(Lname %.*s)", node.span.len, s->input + node.span.start);
       break;
     case PT_ALL_EX_IF:
       print_compound(s, "(If ", " ", ")", node);
@@ -350,10 +341,7 @@ void print_parse_tree(FILE *f, const char *restrict input, parse_tree tree) {
     switch (action) {
       case PRINT_SOURCE: {
         parse_node node = tree.nodes[VEC_POP(&s.node_stack)];
-        fprintf(f,
-                "%.*s",
-                1 + node.span.end - node.span.start,
-                input + node.span.start);
+        fprintf(f, "%.*s", node.span.len, input + node.span.start);
         break;
       }
       case PRINT_STR:
@@ -417,7 +405,7 @@ void print_parse_tree_error(FILE *f, const char *restrict input,
                             const parse_tree_res pres) {
   fputs("Parsing failed:\n", f);
   token t = tokens[pres.error_pos];
-  format_error_ctx(f, input, t.start, t.end);
+  format_error_ctx(f, input, t.start, t.len);
   fputs("\nExpected one of: ", f);
   print_tokens(f, pres.expected, pres.expected_amt);
 }
