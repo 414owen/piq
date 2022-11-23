@@ -427,8 +427,9 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
             node_ind_t sub_ind_b = T_TUP_SUB_B(t);
             LLVMTypeRef subs[2] = {llvm_types[sub_ind_a],
                                    llvm_types[sub_ind_b]};
-            llvm_types[type_ind] =
-              LLVMStructTypeInContext(state->context, subs, 2, false);
+            LLVMTypeRef res = LLVMStructCreateNamed(state->context, "tuple");
+            LLVMStructSetBody(res, subs, 2, false);
+            llvm_types[type_ind] = res;
             break;
           }
           case T_FN: {
