@@ -74,6 +74,7 @@ void test_start_internal(test_state *state, const char *name) {
   assert(state->path.len > 0);
   print_depth_indent(state);
   fputs(name, stdout);
+  putc(' ', stdout);
   // we want to know what test is being run when we crash
   fflush(stdout);
   state->current_name = name;
@@ -87,7 +88,7 @@ void test_start_internal(test_state *state, const char *name) {
 }
 
 void test_end_internal(test_state *state) {
-  printf(" %s" RESET "\n", state->current_failed ? RED "❌" : GRN "✓");
+  printf("%s" RESET "\n", state->current_failed ? RED "❌" : GRN "✓");
   if (!state->current_failed)
     state->tests_passed++;
   state->tests_run++;
