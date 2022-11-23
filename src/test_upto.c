@@ -69,10 +69,13 @@ tokens_res test_upto_tokens(test_state *state, const char *restrict input) {
   add_scanner_timings(state, input, tres);
 
   if (!tres.succeeded) {
-    stringstream *ss = ss_init();
-    format_error_ctx(ss->stream, input, tres.error_pos, tres.error_pos);
-    failf(state, "Scanning failed:\n%s", ss_finalize_free(ss));
+    stringstream ss;
+    ss_init_immovable(&ss);
+    format_error_ctx(ss.stream, input, tres.error_pos, tres.error_pos);
+    ss_finalize(&ss);
+    failf(state, "Scanning failed:\n%s", ss.string);
     free_tokens_res(tres);
+    free(ss.string);
   }
 
   return tres;
@@ -118,11 +121,12 @@ tc_res test_upto_typecheck(test_state *state, const char *restrict input,
     add_typecheck_timings(state, tree_res.tree, tc);
     if (tc.error_amt > 0) {
       *success = false;
-      stringstream *ss = ss_init();
-      print_tc_errors(ss->stream, input, tree_res.tree, tc);
-      char *error = ss_finalize_free(ss);
-      failf(state, "Typecheck failed:\n%s", error);
-      free(error);
+      stringstream ss;
+      ss_init_immovable(&ss);
+      print_tc_errors(ss.stream, input, tree_res.tree, tc);
+      ss_finalize(&ss);
+      failf(state, "Typecheck failed:\n%s", ss.string);
+      free(ss.string);
       free_tc_res(tc);
       free_parse_tree_res(tree_res);
     } else {

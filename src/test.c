@@ -106,16 +106,17 @@ void test_end_internal(test_state *state) {
 
 HEDLEY_PRINTF_FORMAT(4, 5)
 void failf_(test_state *state, char *file, size_t line, const char *fmt, ...) {
-  stringstream *ss = ss_init();
-  fprintf(ss->stream, "In %s line %zu: ", file, line);
+  stringstream ss;
+  ss_init_immovable(&ss);
+  fprintf(ss.stream, "In %s line %zu: ", file, line);
 
   va_list ap;
   va_start(ap, fmt);
-  vfprintf(ss->stream, fmt, ap);
+  vfprintf(ss.stream, fmt, ap);
   va_end(ap);
 
-  char *err = ss_finalize_free(ss);
-  fail_with(state, err);
+  ss_finalize(&ss);
+  fail_with(state, ss.string);
 }
 
 const struct timespec zero = {

@@ -105,6 +105,7 @@ char *ss_finalize_free(stringstream *ss) {
 
 MALLOC_ATTR_2(ss_finalize_free, 1)
 HEDLEY_RETURNS_NON_NULL
+HEDLEY_DEPRECATED(1)
 stringstream *ss_init(void) {
   stringstream *ss = malloc_safe(sizeof(stringstream));
   if (ss == NULL)
@@ -129,19 +130,6 @@ void ss_finalize(stringstream *ss) {
   fclose(ss->stream);
 }
 
-NON_NULL_PARAMS
-char *read_entire_file(const char *restrict file_path) {
-  FILE *f = fopen(file_path, "rb");
-  fseek(f, 0, SEEK_END);
-  long fsize = ftell(f);
-  rewind(f);
-  char *string = malloc(fsize + 1);
-  fread(string, fsize, 1, f);
-  fclose(f);
-  string[fsize] = 0;
-  return string;
-}
-
 // You're probably reading from stdin...
 // We won't worry too much about the extra copy
 NON_NULL_PARAMS
@@ -159,10 +147,40 @@ char *read_entire_file_no_seek(FILE *restrict f) {
 }
 
 NON_NULL_PARAMS
+char *read_entire_file(const char *restrict file_path) {
+  errno = 0;
+  FILE *f = fopen(file_path, "rb");
+  if (errno == 0) {
+    perror("Error occurred while opening file.\n");
+    exit(1);
+  }
+  int seek_res = fseek(f, 0, SEEK_END);
+  if (seek_res != 0) {
+    if (errno == EBADF) {
+      // fall back on slower, no-seek version
+      return read_entire_file_no_seek(f);
+    } else {
+      perror("Error occurred while seeking file.\n");
+      exit(1);
+    }
+  } else {
+    long fsize = ftell(f);
+    rewind(f);
+    char *string = malloc(fsize + 1);
+    fread(string, fsize, 1, f);
+    fclose(f);
+    string[fsize] = 0;
+    return string;
+  }
+}
+
+NON_NULL_PARAMS
 int vasprintf(char **buf, const char *restrict fmt, va_list rest) {
-  stringstream *ss = ss_init();
-  int res = vfprintf(ss->stream, fmt, rest);
-  *buf = ss_finalize_free(ss);
+  stringstream ss;
+  ss_init_immovable(&ss);
+  int res = vfprintf(ss.stream, fmt, rest);
+  ss_finalize(&ss);
+  *buf = ss.string;
   return res;
 }
 
