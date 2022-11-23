@@ -20,6 +20,7 @@
   SIG
   UPPER_NAME
   LET
+  DATA
   .
 
 %type commaexressions stack_ref_t
@@ -197,8 +198,88 @@ toplevel(RES) ::= OPEN_PAREN(O) toplevel_under(A) CLOSE_PAREN(C). {
 toplevel_under(RES) ::= fun(A). {
   RES = A;
 }
+
 toplevel_under(RES) ::= sig(A). {
   RES = A;
+}
+
+toplevel_under(RES) ::= datatype_decl(A). {
+  RES = A;
+}
+
+datatype_decl(RES) ::=
+  DATA
+  type_param_decls(A)
+  data_constructor_decls(B). {
+  parse_node n = {
+    .type.statement = PT_STATEMENT_DATA_DECLARATION,
+    .sub_a = A,
+    .sub_b = B,
+  };
+  RES = push_node(s, n);
+}
+
+data_constructor_decl(RES) ::=
+  OPEN_PAREN(OO)
+  // this is assumed to be below P on the ind_stack
+  // if that turns out to be false, I can return a node
+  // from upper_name
+  upper_name(A)
+  OPEN_PAREN
+  data_constructor_params(P)
+  CLOSE_PAREN
+  CLOSE_PAREN(CO). {
+
+  node_ind_t subs_start = s->inds.len;
+  VEC_PUSH(&s->inds, A);
+  VEC_APPEND(&s->inds, P + 1, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - P - 1]);
+  parse_node n = {
+    .type.all = PT_ALL_MULTI_DATA_DECL,
+    .span = span_from_token_inds(s->tokens, OO, CO),
+    .subs_start = subs_start,
+    .sub_amt = P + 2,
+  };
+  RES = push_node(&s->ind_stack, n);
+}
+
+data_constructor_params(RES) ::= . {
+  RES = 0;
+}
+
+data_constructor_params(RES) ::= data_constructor_params(A) type(B). {
+  VEC_PUSH(&s->ind_stack, B);
+  RES = A + 1;
+}
+
+data_constructor_decls(RES) ::= data_constructor_decl(A). {
+  VEC_PUSH(&s->ind_stack, A);
+  RES = 1;
+}
+
+data_constructor_decls(RES) ::= data_constructor_decls(A) data_constructor_decl(B). {
+  VEC_PUSH(&s->ind_stack, B);
+  RES = A + 1;
+}
+
+type_param_decls(RES) ::= OPEN_BRACKET(O) type_params(P) CLOSE_BRACKET(C). {
+  node_ind_t subs_start = s->inds.len;
+  VEC_APPEND(&s->inds, P, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - P]);
+  parse_node n = {
+    .type.statement = PT_ALL_MULTI_TYPE_PARAMS,
+    .sub_amt = P,
+    .subs_start = subs_start,
+    .span = span_from_token_inds(s->tokens, O, C),
+  };
+  RES = push_node(s, n);
+}
+
+type_params(RES) ::= . {
+  RES = 0;
+}
+
+type_params(RES) ::= type_params(A) lower_name_node(L). {
+  VEC_PUSH(&s->ind_stack, L);
+  RES = A + 1;
 }
 
 // Don't use directly. Wrap.

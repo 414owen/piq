@@ -531,6 +531,22 @@ static void test_parser_succeeds_statements(test_state *state) {
   test_group_end(state);
 }
 
+static void test_parser_succeeds_datatype(test_state *state) {
+  test_group_start(state, "User-defined type");
+  {
+    test_start(state, "sum type");
+
+    expected_output out = {
+      .tag = STRING,
+      .str = "(data A B)",
+    };
+    test_parser_succeeds_on(state, "(fun a () (let b ()) ())", out);
+
+    test_end(state);
+  }
+  test_group_end(state);
+}
+
 static void test_parser_succeeds(test_state *state) {
   test_group_start(state, "Succeeds");
 
