@@ -95,9 +95,8 @@ int main(int argc, const char **argv) {
     .junit = false,
     .lite = false,
     .filter_str = NULL,
+    .times = 1,
   };
-
-  int times = 1;
 
   argument args[] = {
     {
@@ -116,7 +115,7 @@ int main(int argc, const char **argv) {
       .tag = ARG_INT,
       .long_name = "times",
       .short_name = 't',
-      .int_data = &times,
+      .int_data = &conf.times,
       .description = "Run the test suite more than once (for benchmarking)",
     },
     {
@@ -141,14 +140,8 @@ int main(int argc, const char **argv) {
   parse_args(pa, argc, argv);
 
   test_state state = test_state_new(conf);
-  state.print_streaming = false;
 
-  for (int i = 0; i < times; i++) {
-    if (i == times - 1) {
-      state.print_streaming = true;
-    }
-    run_tests(&state);
-  }
+  run_tests(&state);
 
   test_state_finalize(&state);
 

@@ -25,6 +25,7 @@
 typedef struct {
   bool junit;
   bool lite;
+  int times;
   const char *filter_str;
 } test_config;
 
@@ -72,7 +73,6 @@ typedef struct {
   struct timespec start_time;
   struct timespec end_time;
   const char *current_name;
-  u8 print_streaming : 1;
   u8 current_failed : 1;
   u8 in_test : 1;
   vec_failure failures;
@@ -85,9 +85,11 @@ typedef struct {
   {                                                                            \
     const char *test_name = desc;                                              \
     if (test_matches(state, test_name)) {                                      \
-      test_start_internal(state, test_name);
+      test_start_internal(state, test_name);                                   \
+      for (int i = 0; i < state->config.times; i++) {
 
 #define test_end(state)                                                        \
+  }                                                                            \
   test_end_internal(state);                                                    \
   }                                                                            \
   }
