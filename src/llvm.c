@@ -398,7 +398,9 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
             break;
           }
           case T_UNIT: {
-            llvm_types[type_ind] = LLVMVoidTypeInContext(state->context);
+            LLVMTypeRef res = LLVMStructCreateNamed(state->context, "unit");
+            LLVMStructSetBody(res, NULL, 0, false);
+            llvm_types[type_ind] = res;
             break;
           }
           case T_CALL: {
@@ -466,6 +468,29 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
   VEC_FREE(&actions);
   VEC_FREE(&inds);
   return llvm_types[root_type_ind];
+}
+
+static void LLVMPositionBuilderAtStart(LLVMBuilderRef builder,
+                                       LLVMBasicBlockRef block) {
+  LLVMValueRef first_instruction = LLVMGetFirstInstruction(block);
+  if (first_instruction == NULL) {
+    LLVMPositionBuilderAtEnd(builder, block);
+  } else {
+    LLVMPositionBuilderBefore(builder, first_instruction);
+  }
+}
+
+static LLVMValueRef cg_alloca_at_function_start(cg_state *state,
+                                                const char *restrict name,
+                                                llvm_type type) {
+  LLVMBasicBlockRef current_block = LLVMGetInsertBlock(state->builder);
+  LLVMBuilderRef builder = state->builder;
+  LLVMFunctionRef current_function = VEC_PEEK(state->function_stack);
+  LLVMBasicBlockRef entry_block = LLVMGetEntryBasicBlock(current_function);
+  LLVMPositionBuilderAtStart(builder, entry_block);
+  LLVMValueRef res = LLVMBuildAlloca(builder, type, name);
+  LLVMPositionBuilderAtEnd(builder, current_block);
+  return res;
 }
 
 static void cg_expression(cg_state *state, cg_expr_params params) {
@@ -581,7 +606,7 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
             construct_type(state, state->types.node_types[ind]);
           const char *name = "tuple";
           LLVMValueRef allocated =
-            LLVMBuildAlloca(state->builder, tup_type, name);
+            cg_alloca_at_function_start(state, name, tup_type);
 
           LLVMValueRef left_val = VEC_POP(&state->val_stack);
           LLVMValueRef right_val = VEC_POP(&state->val_stack);
