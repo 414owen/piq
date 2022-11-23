@@ -14,6 +14,14 @@ static source_file test_file(const char *restrict input) {
   return file;
 }
 
+static void test_token_layout(test_state *restrict state) {
+  test_group_start(state, "Token");
+  test_start(state, "Is small");
+  test_assert_eq(state, sizeof(token), 12);
+  test_end(state);
+  test_group_end(state);
+}
+
 static void test_scanner_tokens(test_state *restrict state,
                                 char *restrict input, size_t token_amt,
                                 const token_type *restrict tokens) {
@@ -240,6 +248,7 @@ static void test_scanner_rejects(test_state *restrict state) {
 
 void test_scanner(test_state *state) {
   test_group_start(state, "Scanner");
+  test_token_layout(state);
   test_scanner_accepts(state);
   test_scanner_rejects(state);
   test_scan_all(state);
