@@ -67,7 +67,7 @@ A language that does everything right
 # Ideas
 
 * ~Search index arrays instead of adding to them?~
-* make ss_init return struct, with a char**, rather than a struct
+* ~make ss_init return struct, with a char**, rather than a struct~, did stack-allocated stringstream
 * ~Get rid of PT_TOP_LEVEL, it's just more indirection~
 * ~Higher order tuples are syntactic sugar over 2-tuples, so combinators work~
 * Generics: Generics introduce a block, where everything in the block

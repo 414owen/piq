@@ -156,19 +156,20 @@ static void test_parser_robustness(test_state *state) {
 
   {
     test_start(state, "Nested calls");
-    stringstream *in = ss_init();
+    stringstream in;
+    ss_init_immovable(&in);
     static const size_t depth = 100000;
     for (size_t i = 0; i < depth; i++) {
-      fputs("(add (1, ", in->stream);
+      fputs("(add (1, ", in.stream);
     }
-    fputs("1", in->stream);
+    fputs("1", in.stream);
     for (size_t i = 0; i < depth; i++) {
-      fputs("))", in->stream);
+      fputs("))", in.stream);
     }
-    char *str = ss_finalize_free(in);
+    ss_finalize(&in);
     expected_output out = {.tag = ANY};
-    test_parser_succeeds_on_form(state, str, out);
-    free(str);
+    test_parser_succeeds_on_form(state, in.string, out);
+    free(in.string);
     test_end(state);
   }
 

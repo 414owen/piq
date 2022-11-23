@@ -391,9 +391,11 @@ void print_parse_tree(FILE *f, const char *restrict input, parse_tree tree) {
 }
 
 char *print_parse_tree_str(const char *restrict input, const parse_tree tree) {
-  stringstream *ss = ss_init();
-  print_parse_tree(ss->stream, input, tree);
-  return ss_finalize_free(ss);
+  stringstream ss;
+  ss_init_immovable(&ss);
+  print_parse_tree(ss.stream, input, tree);
+  ss_finalize(&ss);
+  return ss.string;
 }
 
 void free_parse_tree(parse_tree tree) {

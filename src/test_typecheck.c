@@ -183,11 +183,13 @@ static void test_types_match(test_state *state, const char *input_p,
   add_typecheck_timings(state, pres.tree, res);
 
   if (res.error_amt > 0) {
-    stringstream *ss = ss_init();
+    stringstream ss;
+    ss_init_immovable(&ss);
     fprintf(
-      ss->stream, "Didn't expect typecheck errors. Got %d:\n", res.error_amt);
-    print_tc_errors(ss->stream, input, pres.tree, res);
-    failf(state, ss_finalize_free(ss), input);
+      ss.stream, "Didn't expect typecheck errors. Got %d:\n", res.error_amt);
+    print_tc_errors(ss.stream, input, pres.tree, res);
+    ss_finalize(&ss);
+    failf(state, ss.string, input);
     return;
   }
 
@@ -203,11 +205,12 @@ static void test_types_match(test_state *state, const char *input_p,
                           res.types.type_inds,
                           res.types.node_types[j],
                           exp)) {
-          stringstream *ss = ss_init();
-          print_type(ss->stream, res.types.types, res.types.node_types[j]);
-          char *str = ss_finalize_free(ss);
-          failf(state, "Type mismatch in test. Got: %s", str);
-          free(str);
+          stringstream ss;
+          ss_init_immovable(&ss);
+          print_type(ss.stream, res.types.types, res.types.node_types[j]);
+          ss_finalize(&ss);
+          failf(state, "Type mismatch in test. Got: %s", ss.string);
+          free(ss.string);
         }
       }
     }
@@ -238,15 +241,16 @@ static void test_typecheck_errors(test_state *state, const char *input_p,
   add_typecheck_timings(state, pres.tree, res);
 
   if (!all_errors_match(pres.tree, res, exps, spans, cases)) {
-    stringstream *ss = ss_init();
-    fprintf(ss->stream, "Expected %d errors, got %d.\n", cases, res.error_amt);
+    stringstream ss;
+    ss_init_immovable(&ss);
+    fprintf(ss.stream, "Expected %d errors, got %d.\n", cases, res.error_amt);
     if (res.error_amt > 0) {
-      fputs("Errors:\n", ss->stream);
+      fputs("Errors:\n", ss.stream);
     }
-    print_tc_errors(ss->stream, input, pres.tree, res);
-    char *str = ss_finalize_free(ss);
-    failf(state, str, input);
-    free(str);
+    print_tc_errors(ss.stream, input, pres.tree, res);
+    ss_finalize(&ss);
+    failf(state, ss.string, input);
+    free(ss.string);
   }
 
   free(input);
