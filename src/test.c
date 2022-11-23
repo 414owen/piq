@@ -22,10 +22,8 @@ static void print_depth_indent(test_state *state) {
 
 void test_group_start(test_state *state, char *name) {
   assert(!state->in_test);
-  if (state->print_streaming) {
-    print_depth_indent(state);
-    printf("%s\n", name);
-  }
+  print_depth_indent(state);
+  printf("%s\n", name);
   VEC_PUSH(&state->path, name);
   if (state->config.junit) {
     test_action a = GROUP_ENTER;
@@ -74,12 +72,10 @@ void test_fail_eq(test_state *state, char *a, char *b) {
 void test_start_internal(test_state *state, const char *name) {
   assert(!state->in_test);
   assert(state->path.len > 0);
-  if (state->print_streaming) {
-    print_depth_indent(state);
-    fputs(name, stdout);
-    // we want to know what test is being run when we crash
-    fflush(stdout);
-  }
+  print_depth_indent(state);
+  fputs(name, stdout);
+  // we want to know what test is being run when we crash
+  fflush(stdout);
   state->current_name = name;
   state->current_failed = false;
   state->in_test = true;
@@ -91,9 +87,7 @@ void test_start_internal(test_state *state, const char *name) {
 }
 
 void test_end_internal(test_state *state) {
-  if (state->print_streaming) {
-    printf(" %s" RESET "\n", state->current_failed ? RED "❌" : GRN "✓");
-  }
+  printf(" %s" RESET "\n", state->current_failed ? RED "❌" : GRN "✓");
   if (!state->current_failed)
     state->tests_passed++;
   state->tests_run++;
