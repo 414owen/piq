@@ -25,8 +25,16 @@
 #define  YYSHIFT(shift)           cursor += shift
 #define  YYSHIFTSTAG(tag, shift)  tag += shift
 
-static token_res mk_token(token_type type, buf_ind_t start, buf_ind_t end) {
-  return (token_res) {.succeeded = true, .tok = {.type = type, .start = start, .end = end}};
+static token_res mk_token(token_type type, buf_ind_t start, buf_ind_t after_end) {
+  token_res res = {
+    .succeeded = true,
+    .tok = {
+      .type = type,
+      .start = start,
+      .len = after_end - start,
+    },
+  };
+  return res;
 }
 
 token_res scan(source_file file, buf_ind_t start) {
@@ -50,33 +58,33 @@ token_res scan(source_file file, buf_ind_t start) {
   upper_ident = upperAlpha (alpha | [0-9])*;
   int = [0-9]+;
 
-  // "type"  { return mk_token(TK_TYPE, start, pos - 1);        }
-  // "match" { return mk_token(TK_MATCH, start, pos - 1);       }
-  // "do"    { return mk_token(TK_DO, start, pos - 1)}
+  // "type"  { return mk_token(TK_TYPE, start, pos);        }
+  // "match" { return mk_token(TK_MATCH, start, pos);       }
+  // "do"    { return mk_token(TK_DO, start, pos)}
 
   str = ["]([^"\\\n] | "\\" [^\n])*["];
-  str     { return mk_token(TK_STRING, start, pos - 1);         }
-  "if"    { return mk_token(TK_IF, start, pos - 1);             }
-  "Fn"    { return mk_token(TK_FN_TYPE, start, pos - 1);             }
-  "fn"    { return mk_token(TK_FN, start, pos - 1);             }
-  "fun"   { return mk_token(TK_FUN, start, pos - 1);            }
-  "sig"   { return mk_token(TK_SIG, start, pos - 1);            }
-  "let"   { return mk_token(TK_LET, start, pos - 1);            }
-  "as"    { return mk_token(TK_AS, start, pos - 1);             }
-  lower_ident { return mk_token(TK_LOWER_NAME, start, pos - 1); }
-  upper_ident { return mk_token(TK_UPPER_NAME, start, pos - 1); }
-  "["     { return mk_token(TK_OPEN_BRACKET, start, pos - 1);   }
-  "]"     { return mk_token(TK_CLOSE_BRACKET, start, pos - 1);  }
+  str     { return mk_token(TK_STRING, start, pos);         }
+  "if"    { return mk_token(TK_IF, start, pos);             }
+  "Fn"    { return mk_token(TK_FN_TYPE, start, pos);             }
+  "fn"    { return mk_token(TK_FN, start, pos);             }
+  "fun"   { return mk_token(TK_FUN, start, pos);            }
+  "sig"   { return mk_token(TK_SIG, start, pos);            }
+  "let"   { return mk_token(TK_LET, start, pos);            }
+  "as"    { return mk_token(TK_AS, start, pos);             }
+  lower_ident { return mk_token(TK_LOWER_NAME, start, pos); }
+  upper_ident { return mk_token(TK_UPPER_NAME, start, pos); }
+  "["     { return mk_token(TK_OPEN_BRACKET, start, pos);   }
+  "]"     { return mk_token(TK_CLOSE_BRACKET, start, pos);  }
 
   // parsed here, because allowing spaces between parens
   // can be used to obfuscate
-  "()"    { return mk_token(TK_UNIT, start, pos - 1);  }
-  [(]     { return mk_token(TK_OPEN_PAREN, start, pos - 1);     }
-  [)]     { return mk_token(TK_CLOSE_PAREN, start, pos - 1);    }
-  [,]     { return mk_token(TK_COMMA, start, pos - 1);          }
-  int     { return mk_token(TK_INT, start, pos - 1);            }
-  [\x00]  { return mk_token(TK_EOF, start, pos - 1);            }
-  *       { return (token_res) {.succeeded = false, .tok.start = pos - 1}; }
+  "()"    { return mk_token(TK_UNIT, start, pos);  }
+  [(]     { return mk_token(TK_OPEN_PAREN, start, pos);     }
+  [)]     { return mk_token(TK_CLOSE_PAREN, start, pos);    }
+  [,]     { return mk_token(TK_COMMA, start, pos);          }
+  int     { return mk_token(TK_INT, start, pos);            }
+  [\x00]  { return mk_token(TK_EOF, start, pos);            }
+  *       { return (token_res) {.succeeded = false, .tok.start = start}; }
 */
 }
 
@@ -102,7 +110,7 @@ tokens_res scan_all(source_file file) {
       res.tokens = VEC_FINALIZE(&tokens);
       break;
     }
-    ind = tres.tok.end + 1;
+    ind = tres.tok.start + tres.tok.len;
   }
 #ifdef TIME_TOKENIZER
   res.time_taken = time_since_monotonic(start);

@@ -414,7 +414,8 @@ static bool check_int_fits(typecheck_state *state, node_ind_t node_ind,
   bool res = true;
   const char *buf = state->input;
   uint64_t last, n = 0;
-  for (size_t i = node.span.start; i <= node.span.end; i++) {
+  for (buf_ind_t j = 0; j < node.span.len; j++) {
+    buf_ind_t i = node.span.start + j;
     last = n;
     char digit = buf[i];
     n *= 10;
@@ -1640,8 +1641,9 @@ static void print_tc_error(FILE *f, tc_res res, const char *restrict input,
       break;
   }
   parse_node node = tree.nodes[error.pos];
-  fprintf(f, "\nAt %d-%d:\n", node.span.start, node.span.end);
-  format_error_ctx(f, input, node.span.start, node.span.end);
+  buf_ind_t err_pos_end = node.span.start + node.span.len - 1;
+  fprintf(f, "\nAt %d-%d:\n", node.span.start, err_pos_end);
+  format_error_ctx(f, input, node.span.start, node.span.start);
 }
 
 void print_tc_errors(FILE *f, const char *restrict input, parse_tree tree,
@@ -1705,7 +1707,7 @@ static inline void tc_type(typecheck_state *state, tc_node_params node_params) {
     }
 
     case PT_TY_UPPER_NAME: {
-      binding b = {.start = node.span.start, .end = node.span.end};
+      binding b = {.start = node.span.start, .len = node.span.len};
       size_t ind = lookup_str_ref(
         state->input, state->type_env, state->type_is_builtin, b);
       if (ind == state->type_env.len) {
@@ -1765,7 +1767,7 @@ static void print_popped_env(FILE *debug_out, const char *input,
       fprintf(debug_out,
               "%s%.*s" RESET,
               i >= start ? RED : RESET,
-              b.binding.end - b.binding.start + 1,
+              b.binding.len,
               &input[b.binding.start]);
     }
   }
@@ -1823,7 +1825,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           fprintf(debug_out, "Node ind: '%d'\n", action.node_ind);
           parse_node node = tree.nodes[action.to];
           fprintf(debug_out, "Node: '%s'\n", parse_node_string(node.type));
-          format_error_ctx(debug_out, input, node.span.start, node.span.end);
+          format_error_ctx(debug_out, input, node.span.start, node.span.len);
           putc('\n', debug_out);
           break;
         }
@@ -1840,7 +1842,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
             fputs("To: the same node ^\n", debug_out);
           }
           format_error_ctx(
-            debug_out, input, from_node.span.start, from_node.span.end);
+            debug_out, input, from_node.span.start, from_node.span.len);
           putc('\n', debug_out);
 
           if (action.to != action.from) {
@@ -1850,7 +1852,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
                     action.to,
                     parse_node_string(to_node.type));
             format_error_ctx(
-              debug_out, input, to_node.span.start, to_node.span.end);
+              debug_out, input, to_node.span.start, to_node.span.len);
             putc('\n', debug_out);
           }
           break;
@@ -1863,7 +1865,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
                   action.to,
                   parse_node_string(to_node.type));
           format_error_ctx(
-            debug_out, input, to_node.span.start, to_node.span.end);
+            debug_out, input, to_node.span.start, to_node.span.len);
           putc('\n', debug_out);
           break;
         }
@@ -1883,7 +1885,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           fprintf(debug_out, "Node ind: '%d'\n", action.node_ind);
           parse_node node = tree.nodes[action.node_ind];
           fprintf(debug_out, "Node: '%s'\n", parse_node_string(node.type));
-          format_error_ctx(debug_out, input, node.span.start, node.span.end);
+          format_error_ctx(debug_out, input, node.span.start, node.span.len);
           putc('\n', debug_out);
           break;
         }

@@ -50,6 +50,7 @@ common_objs += args.o
 common_objs += timespec.o
 
 test_objs += run_tests.o
+test_objs += span.o
 test_objs += test_bitset.o
 test_objs += test.o
 test_objs += test_ir.o
@@ -85,6 +86,7 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/dir_exists.c  |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/mkdir_p.c     |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/scope.c       |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/span.c        |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/strint.c      |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/typecheck.c   |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/type.c        |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o

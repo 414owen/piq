@@ -7,6 +7,8 @@
 #define ERROR_LINES_CTX 2
 
 typedef uint32_t buf_ind_t;
+typedef uint16_t token_len_t;
 typedef uint32_t node_ind_t;
+
 extern const char *const program_name;
 extern const char path_sep;

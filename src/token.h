@@ -15,8 +15,8 @@ VEC_DECL(token_type);
 
 typedef struct {
   token_type type;
+  token_len_t len;
   buf_ind_t start;
-  buf_ind_t end;
 } token;
 
 typedef struct {

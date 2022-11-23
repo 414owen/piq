@@ -536,7 +536,7 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
       node_ind_t type_ind = state->types.node_types[ind];
       LLVMTypeRef type = construct_type(state, type_ind);
       const char *str = VEC_GET_PTR(state->source, node.span.start);
-      size_t len = node.span.end - node.span.start + 1;
+      size_t len = node.span.len;
       VEC_PUSH(&state->val_stack,
                LLVMConstIntOfStringAndSize(type, str, len, 10));
       break;
@@ -659,7 +659,7 @@ static llvm_function cg_emit_empty_fn(cg_state *state, node_ind_t ind,
 
   node_ind_t binding_ind = PT_FUN_BINDING_IND(state->parse_tree.inds, node);
   parse_node binding = state->parse_tree.nodes[binding_ind];
-  buf_ind_t binding_len = 1 + binding.span.end - binding.span.start;
+  buf_ind_t binding_len = binding.span.len;
 
   // We should add this back at some point, I guess
   // LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
