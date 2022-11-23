@@ -150,17 +150,17 @@ NON_NULL_PARAMS
 char *read_entire_file(const char *restrict file_path) {
   errno = 0;
   FILE *f = fopen(file_path, "rb");
-  if (errno == 0) {
-    perror("Error occurred while opening file.\n");
+  if (errno != 0) {
+    perror("Error occurred while opening file");
     exit(1);
   }
   int seek_res = fseek(f, 0, SEEK_END);
   if (seek_res != 0) {
-    if (errno == EBADF) {
+    if (errno == ESPIPE) {
       // fall back on slower, no-seek version
       return read_entire_file_no_seek(f);
     } else {
-      perror("Error occurred while seeking file.\n");
+      perror("Error occurred while seeking file");
       exit(1);
     }
   } else {
