@@ -39,7 +39,7 @@ const static argument help_arg = {
 static void print_argument(argument a, int max_long_len, int max_type_len) {
   char *type_str = type_strs[a.tag];
   printf("  -%c%*s--%s%*s  %s\n",
-         a.short_name,
+         a.short_name == '\0' ? ' ' : a.short_name,
          2 + max_long_len - a.long_len,
          "",
          a.long_name,
