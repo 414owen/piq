@@ -209,12 +209,18 @@ toplevel_under(RES) ::= datatype_decl(A). {
 
 datatype_decl(RES) ::=
   DATA
+  upper_name(N)
   type_param_decls(A)
   data_constructor_decls(B). {
+
+  node_ind_t start = s->inds.len;
+  VEC_PUSH(&s->inds, N);
+  VEC_PUSH(&s->inds, A);
+  VEC_PUSH(&s->inds, B);
   parse_node n = {
     .type.statement = PT_STATEMENT_DATA_DECLARATION,
-    .sub_a = A,
-    .sub_b = B,
+    .subs_start = start,
+    .sub_amt = 3,
   };
   RES = push_node(s, n);
 }
@@ -234,12 +240,12 @@ data_constructor_decl(RES) ::=
   VEC_PUSH(&s->inds, A);
   VEC_APPEND(&s->inds, P + 1, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - P - 1]);
   parse_node n = {
-    .type.all = PT_ALL_MULTI_DATA_DECL,
+    .type.all = PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL,
     .span = span_from_token_inds(s->tokens, OO, CO),
     .subs_start = subs_start,
     .sub_amt = P + 2,
   };
-  RES = push_node(&s->ind_stack, n);
+  RES = push_node(s, n);
 }
 
 data_constructor_params(RES) ::= . {
@@ -261,11 +267,21 @@ data_constructor_decls(RES) ::= data_constructor_decls(A) data_constructor_decl(
   RES = A + 1;
 }
 
+type_param_decls(RES) ::= UNIT(A). {
+  parse_node n = {
+    .type.all = PT_ALL_MULTI_TYPE_PARAMS,
+    .subs_start = 0,
+    .sub_amt = 0,
+    .span = span_from_token(s->tokens[A]),
+  };
+  RES = push_node(s, n);
+}
+
 type_param_decls(RES) ::= OPEN_BRACKET(O) type_params(P) CLOSE_BRACKET(C). {
   node_ind_t subs_start = s->inds.len;
   VEC_APPEND(&s->inds, P, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - P]);
   parse_node n = {
-    .type.statement = PT_ALL_MULTI_TYPE_PARAMS,
+    .type.all = PT_ALL_MULTI_TYPE_PARAMS,
     .sub_amt = P,
     .subs_start = subs_start,
     .span = span_from_token_inds(s->tokens, O, C),

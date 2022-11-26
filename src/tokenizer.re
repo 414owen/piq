@@ -71,6 +71,7 @@ token_res scan(source_file file, buf_ind_t start) {
   "sig"   { return mk_token(TK_SIG, start, pos);            }
   "let"   { return mk_token(TK_LET, start, pos);            }
   "as"    { return mk_token(TK_AS, start, pos);             }
+  "data"  { return mk_token(TK_DATA, start, pos);           }
   lower_ident { return mk_token(TK_LOWER_NAME, start, pos); }
   upper_ident { return mk_token(TK_UPPER_NAME, start, pos); }
   "["     { return mk_token(TK_OPEN_BRACKET, start, pos);   }

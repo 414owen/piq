@@ -22,7 +22,6 @@ static void reply(char *input, FILE *out) {
 
   parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (!pres.succeeded) {
-    token error_token = tres.tokens[pres.error_pos];
     print_parse_tree_error(stdout, input, tres.tokens, pres);
     putc('\n', stdout);
     goto end_b;
