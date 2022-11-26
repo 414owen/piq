@@ -11,9 +11,56 @@
 #include <unistd.h>
 
 #include "attrs.h"
+#include "bitset.h"
 #include "consts.h"
 #include "util.h"
 #include "vec.h"
+
+
+// Returns true iff every element in as_v has an element in bs_v
+// where duplicates of each matter.
+NON_NULL_PARAMS
+static bool test_all_as_in_b(
+    size_t el_size,
+    size_t el_amt,
+    const void *restrict as_v,
+    const void *restrict bs_v) {
+  bool res = true;
+  char *as = (char*) as_v;
+  char *bs = (char*) bs_v;
+  size_t bitset_chars = BITNSLOTS(el_amt);
+  bitset_data used = stcalloc(1, bitset_chars);
+  for (node_ind_t i = 0; i < el_amt; i++) {
+    bool has_match = false;
+    void *a = as + el_size * i;
+    for (node_ind_t j = 0; j < el_amt; j++) {
+      void *b = bs + el_size * j;
+      if (memcmp(a, b, el_size) == 0 && !BITTEST(used, j)) {
+        has_match = true;
+        BITSET(used, j);
+        break;
+      }
+    }
+    if (!has_match) {
+      res = false;
+      break;
+    }
+  }
+  stfree(used, bitset_chars);
+  return res;
+}
+
+// You have two arrays you're using as multisets, for whatever reason
+// O(n^2)
+NON_NULL_PARAMS
+bool multiset_eq(
+    size_t el_size,
+    size_t as_len,
+    size_t bs_len,
+    const void *restrict as_v,
+    const void *restrict bs_v) {
+  return as_len == bs_len && test_all_as_in_b(el_size, as_len, as_v, bs_v);
+}
 
 void *memmem(const void *haystack, size_t haystack_len, const void *needle,
              size_t needle_len);

@@ -85,6 +85,7 @@ A language that does everything right
 * Unify wildcard and placeholder terminology
 * Add all EXPR parse tree enums to STMT, as all expressions are valid statements.
 * Optimize some units (eg arg parsing) for size, others for speed
+* Maybe all product types should be records?
 
 # Mistakes
 

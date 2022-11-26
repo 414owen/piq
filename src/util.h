@@ -71,6 +71,14 @@ typedef enum {
   GT = 1,
 } order;
 
+NON_NULL_PARAMS
+bool multiset_eq(
+    size_t el_size,
+    size_t as_len,
+    size_t bs_len,
+    const void *restrict as_v,
+    const void *restrict bs_v);
+
 HEDLEY_RETURNS_NON_NULL
 MALLOC_ATTR_2(free, 1)
 void *malloc_safe(size_t bytes);

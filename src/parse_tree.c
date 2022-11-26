@@ -87,6 +87,10 @@ static tree_node_repr subs_type(parse_node_type type) {
     case PT_ALL_EX_LIST:
     case PT_ALL_EX_FUN_BODY:
     case PT_ALL_STATEMENT_FUN:
+    case PT_ALL_STATEMENT_DATA_DECLARATION:
+    // can have multiple types
+    case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
+    case PT_ALL_MULTI_TYPE_PARAMS:
       res = SUBS_EXTERNAL;
       break;
   }
@@ -162,6 +166,12 @@ const char *parse_node_string(parse_node_type type) {
       break;
     case PT_ALL_MULTI_UPPER_NAME:
       res = "Upper name";
+      break;
+    case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
+      res = "Data constructor";
+      break;
+    case PT_ALL_MULTI_TYPE_PARAMS:
+      res = "Type params";
       break;
   }
   return res;
@@ -311,6 +321,15 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
     case PT_ALL_PAT_STRING:
     case PT_ALL_EX_STRING:
       push_source(s, node_ind);
+      break;
+    case PT_ALL_STATEMENT_DATA_DECLARATION:
+      print_compound(s, "(Data Decl:", ", ", ")", node);
+      break;
+    case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
+      print_compound(s, "(Data Constructor:", ", ", ")", node);
+      break;
+    case PT_ALL_MULTI_TYPE_PARAMS:
+      print_compound(s, "(Type params:", ", ", ")", node);
       break;
   }
 }

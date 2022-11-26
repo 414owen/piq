@@ -1,6 +1,7 @@
 #include <alloca.h>
 #include <string.h>
 
+#include "bitset.h"
 #include "defs.h"
 #include "diagnostic.h"
 #include "parse_tree.h"
@@ -8,6 +9,7 @@
 #include "test.h"
 #include "test_upto.h"
 #include "tests.h"
+#include "util.h"
 #include "vec.h"
 
 // TODO use test_typecheck's span strategy
@@ -20,7 +22,7 @@ typedef struct {
   char *str;
 } expected_output;
 
-static void test_parser_succeeds_on(test_state *state, char *input,
+static void test_parser_succeeds_on(test_state *state, const char *input,
                                     expected_output output) {
   parse_tree_res pres = test_upto_parse_tree(state, input);
   if (pres.succeeded) {
@@ -31,7 +33,9 @@ static void test_parser_succeeds_on(test_state *state, char *input,
         char *parse_tree_str = print_parse_tree_str(input, pres.tree);
         if (strcmp(parse_tree_str, output.str) != 0) {
           failf(state,
-                "Different parse trees.\nExpected: '%s'\nGot: '%s'",
+                "Different parse trees.\n"
+                "Expected: '%s'\n"
+                "Got:      '%s'",
                 output.str,
                 parse_tree_str);
         }
@@ -83,22 +87,21 @@ static void test_parser_fails_on(test_state *state, char *input, buf_ind_t pos,
 
   if (pos != pres.error_pos) {
     failf(state,
-          "Parsing failed at wrong position.\nExpected: %d\nGot: %d",
+          "Parsing failed at wrong position.\n"
+          "Expected: %d\n"
+          "Got:      %d",
           pos,
           pres.error_pos);
   }
 
-  bool expected_tokens_match = pres.expected_amt == expected_amt;
-
-  for (node_ind_t i = 0; expected_tokens_match && i < expected_amt; i++) {
-    if (expected[i] != pres.expected[i])
-      expected_tokens_match = false;
-  }
+  bool expected_tokens_match = multiset_eq(sizeof(token_type), pres.expected_amt, expected_amt, pres.expected, expected);
 
   if (!expected_tokens_match) {
     char *as = print_tokens_str(expected, expected_amt);
     char *bs = print_tokens_str(pres.expected, pres.expected_amt);
-    failf(state, "Expected token mismatch.\nExpected: %s\nGot: %s", as, bs);
+    failf(state, "Expected token mismatch.\n"
+                 "Expected: %s\n"
+                 "Got:      %s", as, bs);
     free(as);
     free(bs);
   }
@@ -392,8 +395,8 @@ static token_type inside_expression[] = {
   TK_OPEN_BRACKET,
   TK_OPEN_PAREN,
   TK_UPPER_NAME,
-  TK_STRING,
   TK_UNIT,
+  TK_STRING,
 };
 
 static token_type inside_block_el[] = {
@@ -408,8 +411,8 @@ static token_type inside_block_el[] = {
   TK_SIG,
   TK_UPPER_NAME,
   TK_LET,
-  TK_STRING,
   TK_UNIT,
+  TK_STRING,
 };
 
 static const size_t inside_expression_amt = STATIC_LEN(inside_expression);
@@ -535,12 +538,12 @@ static void test_parser_succeeds_declaration(test_state *state) {
   test_group_start(state, "User-defined type");
   {
     test_start(state, "sum type");
-    const char *input"(fun a () (let b ()) ())",
+    const char *input = "(data A () (Test))";
     expected_output out = {
       .tag = STRING,
       .str = "(data A B)",
     };
-    test_parser_succeeds_on(state,  out);
+    test_parser_succeeds_on(state,  input, out);
 
     test_end(state);
   }
@@ -551,6 +554,7 @@ static void test_parser_succeeds(test_state *state) {
   test_group_start(state, "Succeeds");
 
   test_parser_succeeds_atomic(state);
+  test_parser_succeeds_declaration(state);
   test_parser_succeeds_compound(state);
   test_parser_succeeds_kitchen_sink(state);
   test_parser_succeeds_root(state);

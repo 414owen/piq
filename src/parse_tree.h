@@ -42,10 +42,10 @@ typedef enum {
   // be a node at all...
   // Maybe the fact that these aren't "near" other
   // parse node categories' enums affects the switch output?
-  PT_ALL_MULTI_LOWER_NAME  = 10,
-  PT_ALL_MULTI_UPPER_NAME  = 11,
-  PT_ALL_MULTI_TYPE_PARAMS = 12,
-  PT_ALL_MULTI_DATA_DECL   = 13,
+  PT_ALL_MULTI_LOWER_NAME            = 10,
+  PT_ALL_MULTI_UPPER_NAME            = 11,
+  PT_ALL_MULTI_TYPE_PARAMS           = 12,
+  PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL = 13,
 
   PT_ALL_PAT_WILDCARD = 14,
   PT_ALL_PAT_TUP = 15,
@@ -129,6 +129,10 @@ typedef union {
 // TODO use twine here
 #define PT_FUN_PARAM_IND(inds, node) inds[node.subs_start + 1]
 #define PT_FUN_BODY_IND(inds, node) inds[node.subs_start + 2]
+
+#define PT_DATA_DECL_TYPENAME_IND(inds, node) inds[node.subs_start + 0]
+#define PT_DATA_DECL_TYPEPARAMS_IND(inds, node) inds[node.subs_start + 1]
+#define PT_DATA_DECL_DATA_CONSTRUCTORS_IND(inds, node) inds[node.subs_start + 2]
 
 // lambda expression
 #define PT_FN_PARAM_IND(node) node.sub_a
