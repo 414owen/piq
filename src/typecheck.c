@@ -529,6 +529,8 @@ static void push_tc_sig(typecheck_state *state, node_ind_t node_ind,
   push_actions(state, STATIC_LEN(actions), actions);
 }
 
+static void ensure_block_has_
+
 // enforce sigs => we're root level
 static void typecheck_block_internal(typecheck_state *state, node_ind_t sub_amt,
                                      node_ind_t subs_start,
@@ -561,6 +563,10 @@ static void typecheck_block_internal(typecheck_state *state, node_ind_t sub_amt,
     node_ind_t sub_ind = state->tree.inds[subs_start + sub_i];
     parse_node sub = state->tree.nodes[sub_ind];
     switch (sub.type.statement) {
+      case PT_STATEMENT_DATA_DECLARATION: {
+        
+        break;
+      }
       case PT_STATEMENT_SIG: {
         bnd_amt++;
         push_tc_sig(state, sub_ind, sub);

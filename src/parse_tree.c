@@ -167,6 +167,9 @@ const char *parse_node_string(parse_node_type type) {
     case PT_ALL_MULTI_UPPER_NAME:
       res = "Upper name";
       break;
+    case PT_ALL_STATEMENT_DATA_DECLARATION:
+      res = "Data declaration";
+      break;
     case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
       res = "Data constructor";
       break;
