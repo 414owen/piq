@@ -263,6 +263,11 @@ void test_llvm(test_state *state) {
                         "(fun test () (let b ()) ())";
     test_llvm_code_runs(state, input);
   }
+  {
+    const char *input = "(sig test (Fn () ()))\n"
+                        "(fun test () (let b ()) b)";
+    test_llvm_code_runs(state, input);
+  }
   /*
   {
     const char *input = "(sig test (Fn () I32))\n"
