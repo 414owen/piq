@@ -148,7 +148,7 @@
 
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; lib.concatLists [
-            (if stdenv.isLinux then [cgdb] else [])
+            (if stdenv.isLinux then [gdb cgdb] else [])
             [
               clang-tools
               clang-tools.clang

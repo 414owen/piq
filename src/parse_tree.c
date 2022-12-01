@@ -28,6 +28,9 @@ parse_node_category parse_node_categories[] = {
 
   [PT_ALL_MULTI_UPPER_NAME] = PT_C_NONE,
   [PT_ALL_MULTI_LOWER_NAME] = PT_C_NONE,
+  [PT_ALL_MULTI_TYPE_PARAMS] = PT_C_NONE,
+  [PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL] = PT_C_NONE,
+  [PT_ALL_MULTI_DATA_CONSTRUCTORS] = PT_C_NONE,
 
   [PT_ALL_PAT_WILDCARD] = PT_C_PATTERN,
   [PT_ALL_PAT_TUP] = PT_C_PATTERN,
@@ -89,6 +92,7 @@ static tree_node_repr subs_type(parse_node_type type) {
     case PT_ALL_STATEMENT_FUN:
     case PT_ALL_STATEMENT_DATA_DECLARATION:
     // can have multiple types
+    case PT_ALL_MULTI_DATA_CONSTRUCTORS:
     case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
     case PT_ALL_MULTI_TYPE_PARAMS:
       res = SUBS_EXTERNAL;
@@ -326,13 +330,16 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       push_source(s, node_ind);
       break;
     case PT_ALL_STATEMENT_DATA_DECLARATION:
-      print_compound(s, "(Data Decl:", ", ", ")", node);
+      print_compound(s, "(DataDecl ", " ", ")", node);
+      break;
+    case PT_ALL_MULTI_DATA_CONSTRUCTORS:
+      print_compound(s, "", "", "", node);
       break;
     case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
-      print_compound(s, "(Data Constructor:", ", ", ")", node);
+      print_compound(s, "(Data Constructor: ", ", ", ")", node);
       break;
     case PT_ALL_MULTI_TYPE_PARAMS:
-      print_compound(s, "(Type params:", ", ", ")", node);
+      print_compound(s, "(Type params: [", ", ", "])", node);
       break;
   }
 }
