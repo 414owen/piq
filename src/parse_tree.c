@@ -180,6 +180,9 @@ const char *parse_node_string(parse_node_type type) {
     case PT_ALL_MULTI_TYPE_PARAMS:
       res = "Type params";
       break;
+    case PT_ALL_MULTI_DATA_CONSTRUCTORS:
+      res = "Data constructors";
+      break;
   }
   return res;
 };

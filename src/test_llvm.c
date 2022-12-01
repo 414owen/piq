@@ -277,7 +277,9 @@ void test_llvm(test_state *state) {
   test_end(state);
   */
 
-  test_robustness(state);
+  if (!state->config.lite) {
+    test_robustness(state);
+  }
 
   test_group_end(state);
 }
