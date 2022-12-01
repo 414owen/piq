@@ -4,6 +4,7 @@
 #include <llvm-c/Analysis.h>
 #include <llvm-c/Target.h>
 
+#include "builtins.h"
 #include "llvm_shim.h"
 
 /*
@@ -168,12 +169,11 @@ typedef struct {
 
 static void cg_block(cg_state *state, node_ind_t start, node_ind_t amt);
 
-static void push_env(cg_state *state, binding bnd, llvm_value val) {
+static void push_env(cg_state *state, bool is_builtin, str_ref bnd, llvm_value val) {
   debug_assert(val != NULL);
-  str_ref str = {.binding = bnd};
-  VEC_PUSH(&state->env_bnds, str);
+  VEC_PUSH(&state->env_bnds, bnd);
   VEC_PUSH(&state->env_vals, val);
-  bs_push(&state->env_is_builtin, false);
+  bs_push(&state->env_is_builtin, is_builtin);
 }
 
 static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
@@ -729,7 +729,8 @@ static void cg_statement_let_stage_two(cg_state *state,
   node_ind_t binding_ind = PT_LET_BND_IND(node);
   parse_node binding = state->parse_tree.nodes[binding_ind];
   LLVMValueRef val = VEC_POP(&state->val_stack);
-  push_env(state, binding.span, val);
+  str_ref str = {.binding = binding.span};
+  push_env(state, false, str, val);
 }
 
 static void cg_statement(cg_state *state, cg_statement_params params) {
@@ -800,7 +801,8 @@ static void cg_block_recursive(cg_state *state, node_ind_t start,
           PT_FUN_BINDING_IND(state->parse_tree.inds, node);
         parse_node binding = state->parse_tree.nodes[binding_ind];
         llvm_function fn = cg_emit_empty_fn(state, sub_ind, node);
-        push_env(state, binding.span, fn);
+        str_ref bnd = {.binding = binding.span};
+        push_env(state, false, bnd, fn);
         push_act_fn_two(state, fn, sub_ind);
         break;
       }
@@ -841,7 +843,8 @@ static void cg_pattern(cg_state *state, cg_pattern_params params) {
       break;
     }
     case PT_PAT_WILDCARD: {
-      push_env(state, node.span, val);
+      str_ref bnd = {.binding = node.span};
+      push_env(state, false, bnd, val);
       break;
     }
     case PT_PAT_UNIT:
@@ -864,6 +867,14 @@ static void cg_pop_env_to(cg_state *state, cg_pop_env_to_params params) {
   bs_pop_n(&state->env_is_builtin, pop_amt);
 }
 
+static void init_llvm_builtins(cg_state *state) {
+  // static void push_env(cg_state *state, binding bnd, llvm_value val) {
+  for (node_ind_t i = 0; i < builtin_term_amount; i++) {
+    str_ref ref = {.builtin = builtin_term_names[i]};
+    push_env(state, true, ref, builtin_term_llvm_values[i]);
+  }
+}
+
 static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
                            source_file source, parse_tree tree,
                            type_info types) {
@@ -873,6 +884,7 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
   LLVMInitializeNativeAsmParser();
 
   cg_state state = new_cg_state(ctx, mod, source, tree, types);
+  init_llvm_builtins(&state);
 
   cg_block_recursive(&state, tree.root_subs_start, tree.root_subs_amt);
 

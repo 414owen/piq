@@ -8,6 +8,7 @@
 
 #include "args.h"
 #include "diagnostic.h"
+#include "initialise.h"
 #include "llvm.h"
 #include "repl.h"
 #include "util.h"
@@ -176,6 +177,7 @@ int main(const int argc, const char **argv) {
   };
 
   parse_args(pa, argc, argv);
+
   switch (root.subcommand_chosen) {
     case COMMAND_NONE: {
       puts("Expected a subcommand.");
@@ -185,6 +187,7 @@ int main(const int argc, const char **argv) {
     case COMMAND_COMPILE: {
       char *validation_error = validate_compile_args(compile_args);
       if (validation_error == NULL) {
+        initialise();
         compile_llvm(compile_args);
         break;
       }
@@ -192,6 +195,7 @@ int main(const int argc, const char **argv) {
       return 1;
     }
     case COMMAND_REPL:
+      initialise();
       repl();
       break;
   }
