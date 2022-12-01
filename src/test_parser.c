@@ -541,7 +541,7 @@ static void test_parser_succeeds_declaration(test_state *state) {
     const char *input = "(data A () (Test))";
     expected_output out = {
       .tag = STRING,
-      .str = "(data A B)",
+      .str = "(DataDecl (Uname A) (Type params: []) (Data Constructor: (Uname Test)))",
     };
     test_parser_succeeds_on(state,  input, out);
 

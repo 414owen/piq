@@ -212,6 +212,7 @@ datatype_decl(RES) ::=
   upper_name(N)
   type_param_decls(A)
   data_constructor_decls(B). {
+  BREAK_PARSER;
 
   node_ind_t start = s->inds.len;
   VEC_PUSH(&s->inds, N);
@@ -231,19 +232,18 @@ data_constructor_decl(RES) ::=
   // if that turns out to be false, I can return a node
   // from upper_name
   upper_name(A)
-  OPEN_PAREN
   data_constructor_params(P)
-  CLOSE_PAREN
   CLOSE_PAREN(CO). {
+  BREAK_PARSER;
 
   node_ind_t subs_start = s->inds.len;
   VEC_PUSH(&s->inds, A);
-  VEC_APPEND(&s->inds, P + 1, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - P - 1]);
+  VEC_APPEND(&s->inds, P, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - P]);
   parse_node n = {
     .type.all = PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL,
     .span = span_from_token_inds(s->tokens, OO, CO),
     .subs_start = subs_start,
-    .sub_amt = P + 2,
+    .sub_amt = P + 1,
   };
   RES = push_node(s, n);
 }
@@ -257,14 +257,26 @@ data_constructor_params(RES) ::= data_constructor_params(A) type(B). {
   RES = A + 1;
 }
 
-data_constructor_decls(RES) ::= data_constructor_decl(A). {
+data_constructor_decls_internal(RES) ::= data_constructor_decl(A). {
   VEC_PUSH(&s->ind_stack, A);
   RES = 1;
 }
 
-data_constructor_decls(RES) ::= data_constructor_decls(A) data_constructor_decl(B). {
+data_constructor_decls_internal(RES) ::= data_constructor_decls_internal(A) data_constructor_decl(B). {
   VEC_PUSH(&s->ind_stack, B);
   RES = A + 1;
+}
+
+data_constructor_decls(RES) ::= data_constructor_decls_internal(A). {
+  node_ind_t subs_start = s->inds.len;
+  VEC_APPEND(&s->inds, A, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - A]);
+  parse_node n = {
+    .type.all = PT_ALL_MULTI_DATA_CONSTRUCTORS,
+    .span = span_from_node_inds(VEC_DATA_PTR(&s->nodes), VEC_GET(s->ind_stack, s->ind_stack.len - A), VEC_LAST(s->ind_stack)),
+    .subs_start = subs_start,
+    .sub_amt = A,
+  };
+  RES = push_node(s, n);
 }
 
 type_param_decls(RES) ::= UNIT(A). {
