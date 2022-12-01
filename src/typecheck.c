@@ -6,6 +6,7 @@
 #include "ast_meta.h"
 #include "binding.h"
 #include "bitset.h"
+#include "builtins.h"
 #include "consts.h"
 #include "diagnostic.h"
 #include "parse_tree.h"
@@ -353,13 +354,9 @@ static void push_actions(typecheck_state *state, node_ind_t amt,
 }
 
 // Add builtin types and custom types to type env
-static void setup_type_env(typecheck_state *state) {
+static void setup_builtins(typecheck_state *state) {
 
-  {
-    type t = {.tag = T_UNKNOWN, .sub_amt = 0, .subs_start = 0};
-    VEC_PUSH(&state->types.types, t);
-    state->unknown_ind = state->types.types.len - 1;
-  }
+  state->unknown_ind = mk_primitive_type(state, T_UNKNOWN);
 
   memset_arbitrary(state->types.node_types,
                    &state->unknown_ind,
@@ -370,29 +367,30 @@ static void setup_type_env(typecheck_state *state) {
                    state->tree.node_amt,
                    sizeof(node_ind_t));
 
+  // Just T_UNKNOWN
+  debug_assert(state->types.types.len == 1);
+
   // Prelude
   {
-    static const char *builtin_names[] = {
-      "Bool", "U8", "U16", "U32", "U64", "I8", "I16", "I32", "I64", "String"};
+    // push builtin types
+    VEC_APPEND(&state->type_env, builtin_type_amount, builtin_type_names);
+    // push builtin type inds
+    for (node_ind_t i = 0; i < builtin_type_ind_amount; i++) {
+      node_ind_t builtin_type_ind = builtin_type_inds[i];
+      // Add one for the extra T_UNKNOWN
+      VEC_PUSH(&state->type_type_inds, builtin_type_ind + 1);
+    }
 
-    static const type_tag primitive_types[] = {
-      T_BOOL, T_U8, T_U16, T_U32, T_U64, T_I8, T_I16, T_I32, T_I64};
-
-    VEC_APPEND(&state->type_env, STATIC_LEN(builtin_names), builtin_names);
     node_ind_t start_type_ind = state->types.types.len;
-    for (node_ind_t i = 0; i < STATIC_LEN(primitive_types); i++) {
-      VEC_PUSH(&state->type_type_inds, start_type_ind + i);
-      type t = {.tag = primitive_types[i], .subs_start = 0, .sub_amt = 0};
-      VEC_PUSH(&state->types.types, t);
+    for (node_ind_t i = 0; i < builtin_type_amount; i++) {
+      VEC_PUSH(&state->type_type_inds, start_type_ind + i + 1);
+      VEC_PUSH(&state->types.types, builtin_types[i]);
       bs_push(&state->type_is_builtin, true);
     }
 
     {
       node_ind_t u8_ind = mk_primitive_type(state, T_U8);
-      node_ind_t list_ind = mk_type_inline(state, T_LIST, u8_ind, 0);
-      state->string_type_ind = list_ind;
-      VEC_PUSH(&state->type_type_inds, state->types.types.len - 1);
-      bs_push(&state->type_is_builtin, true);
+      state->string_type_ind = mk_type_inline(state, T_LIST, u8_ind, 0);
     }
     state->bool_type_ind = mk_primitive_type(state, T_BOOL);
   }
@@ -1649,8 +1647,8 @@ static void print_tc_error(FILE *f, tc_res res, const char *restrict input,
   }
   parse_node node = tree.nodes[error.pos];
   buf_ind_t err_pos_end = node.span.start + node.span.len - 1;
-  fprintf(f, "\nAt %d-%d:\n", node.span.start, err_pos_end);
-  format_error_ctx(f, input, node.span.start, node.span.start);
+  fprintf(f, "\nAt %s %d-%d:\n", parse_node_string(node.type), node.span.start, err_pos_end);
+  format_error_ctx(f, input, node.span.start, node.span.len);
 }
 
 void print_tc_errors(FILE *f, const char *restrict input, parse_tree tree,
@@ -1786,7 +1784,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
   struct timespec start = get_monotonic_time();
 #endif
   typecheck_state state = tc_new_state(input, tree);
-  setup_type_env(&state);
+  setup_builtins(&state);
 
   typecheck_root(&state);
   reverse_arbitrary(
