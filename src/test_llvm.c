@@ -132,6 +132,19 @@ static void test_llvm_code_produces_int(test_state *state,
   jit_dispose(&ctx);
 }
 
+static void test_llvm_code_produces_bool(test_state *state,
+                                        const char *restrict input,
+                                        bool expected) {
+  jit_ctx ctx = jit_llvm_init();
+  void *entry_addr = get_entry_fn(state, &ctx, input);
+  bool (*entry)(void) = (bool(*)(void))entry_addr;
+  if (entry) {
+    bool got = entry();
+    ensure_int_result_matches(state, ctx, expected, got);
+  }
+  jit_dispose(&ctx);
+}
+
 static void test_llvm_code_maps_int(test_state *state,
                                     const char *restrict input,
                                     int32_t input_param, int32_t expected) {
@@ -228,6 +241,19 @@ void test_llvm(test_state *state) {
                         "(fun test a a)";
     test_llvm_code_maps_int(state, input, 1, 1);
     test_llvm_code_maps_int(state, input, 2, 2);
+  }
+  test_end(state);
+
+  test_start(state, "Can return builtin Bool constructors");
+  {
+    const char *input = "(sig test (Fn () Bool))\n"
+                        "(fun test () True)";
+    test_llvm_code_produces_bool(state, input, true);
+  }
+  {
+    const char *input = "(sig test (Fn () Bool))\n"
+                        "(fun test () False)";
+    test_llvm_code_produces_bool(state, input, false);
   }
   test_end(state);
 
