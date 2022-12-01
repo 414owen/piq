@@ -377,9 +377,10 @@ static void setup_builtins(typecheck_state *state) {
     // add builtin types to type environment
     VEC_APPEND(&state->type_env.bindings, builtin_type_amount, builtin_type_names);
 
+    bs_push_true_n(&state->type_env.is_builtin, builtin_type_amount);
+
     for (node_ind_t i = 0; i < builtin_type_amount; i++) {
       VEC_PUSH(&state->type_env.type_inds, i);
-      bs_push(&state->type_env.is_builtin, true);
     }
 
     {
@@ -576,7 +577,7 @@ static void typecheck_block_internal(typecheck_state *state, node_ind_t sub_amt,
           tc_action action = {
             .tag = TC_CLONE_ACTUAL_WANTED, .from = prev_ind, .to = sub_ind};
           push_action(state, action);
-          bs_data_set(sub_has_wanted, sub_i, true);
+          bs_data_set(sub_has_wanted, sub_i);
         } else {
           bnd_amt++;
           if (enforce_sigs) {
@@ -653,7 +654,7 @@ static void typecheck_block_node(typecheck_state *state, tc_node_params params,
       .to = last_el_ind,
     };
     push_action(state, action);
-    bs_data_set(sub_has_wanted, sub_amt - 1, true);
+    bs_data_set(sub_has_wanted, sub_amt - 1);
   }
 
   typecheck_block_internal(
