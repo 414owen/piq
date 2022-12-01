@@ -61,14 +61,16 @@ typedef enum {
   TC_PUSH_ENV,
 
   // terms
+  TC_PATTERN_UNAMBIGUOUS,
   TC_PATTERN_MATCHES,
+
   TC_EXPRESSION_MATCHES,
-  TC_STATEMENT_MATCHES,
+  TC_EXPRESSION_UNAMBIGUOUS,
   TC_EXPRESSION_MATCHES_AS_STAGE_TWO,
 
-  TC_PATTERN_UNAMBIGUOUS,
-  TC_EXPRESSION_UNAMBIGUOUS,
+  TC_STATEMENT_MATCHES,
   TC_STATEMENT_UNAMBIGUOUS,
+
   TC_EXPRESSION_UNAMBIGUOUS_FN_STAGE_TWO,
   TC_STATEMENT_UNAMBIGUOUS_FUN_STAGE_TWO,
 
@@ -528,8 +530,6 @@ static void push_tc_sig(typecheck_state *state, node_ind_t node_ind,
   };
   push_actions(state, STATIC_LEN(actions), actions);
 }
-
-static void ensure_block_has_
 
 // enforce sigs => we're root level
 static void typecheck_block_internal(typecheck_state *state, node_ind_t sub_amt,
