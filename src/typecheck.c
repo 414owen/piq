@@ -38,10 +38,10 @@ when debugging the typechecker using DEBUG_TC.
 
 A wanted type is a type that needs to match, or the typechecker will error.
 
-## What's the difference between `TC_NODE_UNAMBIGUOUS`, and `TC_NODE_MATCHES`?
+## What's the difference between `TC_<NODE_TYPE>_UNAMBIGUOUS`, and `TC_<NODE_TYPE>_MATCHES`?
 
-`TC_NODE_MATCHES` is for when we have a wanted.
-`TC_NODE_UNAMBIGUOUS` is for when we don't have a wanted.
+`TC_<NODE_TYPE>_MATCHES` is for when we have a wanted.
+`TC_<NODE_TYPE>_UNAMBIGUOUS` is for when we don't have a wanted.
 
 
 ## Ideas
@@ -990,7 +990,7 @@ static void tc_statement_unambiguous(typecheck_state *state,
       // I think this case is unreachable?
       UNIMPLEMENTED("typechecking signatures");
       break;
-    // node_unambiguous
+    // statement_unambiguous
     case PT_STATEMENT_LET: {
       node_ind_t bnd_ind = PT_LET_BND_IND(node_params.node);
       parse_node bnd = state->tree.nodes[bnd_ind];
@@ -1016,6 +1016,7 @@ static void tc_statement_unambiguous(typecheck_state *state,
       push_actions(state, STATIC_LEN(actions), actions);
       break;
     }
+    // statement_unambiguous
     case PT_STATEMENT_FUN: {
       node_ind_t param_ind =
         PT_FUN_PARAM_IND(state->tree.inds, node_params.node);
@@ -1052,7 +1053,7 @@ static void tc_statement_matches(typecheck_state *state,
       // I think this case is unreachable?
       UNIMPLEMENTED("typechecking signatures");
       break;
-    // node_matches
+    // statement_matches
     case PT_STATEMENT_LET: {
       node_ind_t bnd_ind = PT_LET_BND_IND(node_params.node);
       parse_node bnd = state->tree.nodes[bnd_ind];
@@ -1082,7 +1083,7 @@ static void tc_statement_matches(typecheck_state *state,
       push_actions(state, STATIC_LEN(actions), actions);
       break;
     }
-    // node_matches
+    // statement_matches
     case PT_STATEMENT_FUN: {
       node_ind_t bnd_ind =
         PT_FUN_BINDING_IND(state->tree.inds, node_params.node);
@@ -1210,34 +1211,34 @@ static void tc_pattern_unambiguous(typecheck_state *state,
 static void tc_expression_unambiguous(typecheck_state *state,
                                       tc_node_params node_params) {
   switch (node_params.node.type.expression) {
-    // node_unambiguous
+    // expression_unambiguous
     case PT_EX_FUN_BODY:
       typecheck_block_node(state, node_params, false);
       break;
 
-    // node_unambiguous
+    // expression_unambiguous
     case PT_EX_UNIT:
       state->types.node_types[node_params.node_ind] =
         mk_primitive_type(state, T_UNIT);
       break;
 
-    // node_unambiguous
+    // expression_unambiguous
     case PT_EX_STRING:
       state->types.node_types[node_params.node_ind] = state->string_type_ind;
       break;
 
-    // node_unambiguous
+    // expression_unambiguous
     case PT_EX_LIST:
       push_list_subs_unambiguous(
         state, node_params, TC_EXPRESSION_UNAMBIGUOUS, TC_EXPRESSION_MATCHES);
       break;
 
-    // node_unambiguous
+    // expression_unambiguous
     case PT_EX_AS:
       tc_as(state, node_params);
       break;
 
-    // node_unambiguous
+    // expression_unambiguous
     case PT_EX_TUP:
       push_tuple_subs(state, node_params, TC_EXPRESSION_UNAMBIGUOUS);
       tc_action action = {.tag = TC_RECONSTRUCT_TUPLE,
@@ -1245,7 +1246,7 @@ static void tc_expression_unambiguous(typecheck_state *state,
       push_action(state, action);
       break;
 
-    // node_unambiguous
+    // expression_unambiguous
     case PT_EX_IF: {
       node_ind_t cond = PT_IF_COND_IND(state->tree.inds, node_params.node);
       node_ind_t b1 = PT_IF_A_IND(state->tree.inds, node_params.node);
@@ -1274,7 +1275,7 @@ static void tc_expression_unambiguous(typecheck_state *state,
       break;
     }
 
-    // node_unambiguous
+    // expression_unambiguous
     case PT_EX_INT: {
       tc_error err = {
         .type = AMBIGUOUS_TYPE,
@@ -1284,7 +1285,7 @@ static void tc_expression_unambiguous(typecheck_state *state,
       break;
     }
 
-    // node_unambiguous
+    // expression_unambiguous
     case PT_EX_UPPER_NAME:
     case PT_EX_LOWER_NAME: {
       binding b = node_params.node.span;
@@ -1305,7 +1306,7 @@ static void tc_expression_unambiguous(typecheck_state *state,
       break;
     }
 
-    // node_unambiguous
+    // expression_unambiguous
     case PT_EX_FN: {
       node_ind_t param_ind = PT_FN_PARAM_IND(node_params.node);
       node_ind_t body_ind = PT_FN_BODY_IND(node_params.node);
@@ -1329,7 +1330,7 @@ static void tc_expression_unambiguous(typecheck_state *state,
       break;
     }
 
-    // node_unambiguous
+    // expression_unambiguous
     case PT_EX_CALL:
       tc_call(state, node_params);
       break;
@@ -1342,12 +1343,12 @@ static void tc_expression_matches(typecheck_state *state,
   // given to the node) Hence, we shouldn't need a combine two_stage, we
   // just assign the 'wanted' type.
   switch (node_params.node.type.expression) {
-    // node_matches
+    // expression_matches
     case PT_EX_FUN_BODY:
       typecheck_block_node(state, node_params, false);
       break;
 
-    // node_matches
+    // expression_matches
     case PT_EX_UNIT:
       if (node_params.wanted.tag != T_UNIT) {
         tc_error err = {
@@ -1359,7 +1360,7 @@ static void tc_expression_matches(typecheck_state *state,
       }
       break;
 
-    // node_matches
+    // expression_matches
     case PT_EX_STRING:
       if (node_params.wanted_ind != state->string_type_ind) {
         tc_error err = {
@@ -1371,12 +1372,12 @@ static void tc_expression_matches(typecheck_state *state,
       }
       break;
 
-    // node_matches
+    // expression_matches
     case PT_EX_LIST:
       push_list_subs_match(state, node_params, TC_EXPRESSION_MATCHES);
       break;
 
-    // node_matches
+    // expression_matches
     case PT_EX_AS: {
       tc_as(state, node_params);
       tc_action action = {
@@ -1387,7 +1388,7 @@ static void tc_expression_matches(typecheck_state *state,
       break;
     }
 
-    // node_matches
+    // expression_matches
     case PT_EX_TUP: {
       if (node_params.wanted.tag != T_TUP) {
         tc_error err = {
@@ -1414,7 +1415,7 @@ static void tc_expression_matches(typecheck_state *state,
       break;
     }
 
-    // node_matches
+    // expression_matches
     case PT_EX_IF: {
       node_ind_t cond = PT_IF_COND_IND(state->tree.inds, node_params.node);
       node_ind_t b1 = PT_IF_A_IND(state->tree.inds, node_params.node);
@@ -1443,12 +1444,12 @@ static void tc_expression_matches(typecheck_state *state,
       break;
     }
 
-    // node_matches
+    // expression_matches
     case PT_EX_INT:
       check_int_fits_type(state, node_params.node_ind, node_params.wanted_ind);
       break;
 
-    // node_matches
+    // expression_matches
     case PT_EX_UPPER_NAME:
     case PT_EX_LOWER_NAME: {
       binding b = node_params.node.span;
@@ -1475,7 +1476,7 @@ static void tc_expression_matches(typecheck_state *state,
       break;
     }
 
-    // node_matches
+    // expression_matches
     case PT_EX_FN: {
       node_ind_t param_ind = PT_FN_PARAM_IND(node_params.node);
       node_ind_t body_ind = PT_FN_BODY_IND(node_params.node);
@@ -1509,7 +1510,7 @@ static void tc_expression_matches(typecheck_state *state,
       break;
     }
 
-    // node_matches
+    // expression_matches
     case PT_EX_CALL:
       tc_call(state, node_params);
       break;
