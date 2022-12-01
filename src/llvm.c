@@ -309,7 +309,7 @@ static void push_statement_act(cg_state *state, node_ind_t node_ind) {
 
 static void push_statement_act_let_stage_two(cg_state *state,
                                              node_ind_t node_ind) {
-  push_statement_like_act(state, CG_EXPR_TUP_STAGE_TWO, node_ind);
+  push_statement_like_act(state, CG_STATEMENT_LET_STAGE_TWO, node_ind);
 }
 
 static void push_pattern_act(cg_state *state, node_ind_t node_ind,
@@ -776,8 +776,9 @@ static void cg_block(cg_state *state, node_ind_t start, node_ind_t amt) {
   size_t last = start + amt - 1;
   node_ind_t result_ind = state->parse_tree.inds[last];
   push_expression_act(state, result_ind);
-  for (size_t i = last; i > start; i--) {
-    node_ind_t sub_ind = state->parse_tree.inds[i];
+  for (node_ind_t i = 0; i < amt; i++) {
+    node_ind_t ind = last - i;
+    node_ind_t sub_ind = state->parse_tree.inds[ind];
     parse_node sub = state->parse_tree.nodes[sub_ind];
     if (sub.type.statement == PT_STATEMENT_SIG)
       continue;
