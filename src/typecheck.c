@@ -149,18 +149,22 @@ typedef struct {
   vec_tc_action stack;
 
   // type names in scope
-  vec_str_ref type_env;
-  // ref to source, or builtin
-  bitset type_is_builtin;
-  // index into res.types
-  vec_node_ind type_type_inds;
+  struct {
+    vec_str_ref bindings;
+    // ref to source, or builtin
+    bitset is_builtin;
+    // index into res.types
+    vec_node_ind type_inds;
+  } type_env;
 
-  // term names in scope
-  vec_str_ref term_env;
-  // ref to source, or builtin
-  bitset term_is_builtin;
-  // index into res.types
-  vec_node_ind term_type_inds;
+  struct {
+    // term names in scope
+    vec_str_ref bindings;
+    // ref to source, or builtin
+    bitset is_builtin;
+    // index into res.types
+    vec_node_ind type_inds;
+  } term_env;
 
   // types.node_types is wanted or known
   node_ind_t *wanted;
@@ -356,8 +360,6 @@ static void push_actions(typecheck_state *state, node_ind_t amt,
 // Add builtin types and custom types to type env
 static void setup_builtins(typecheck_state *state) {
 
-  state->unknown_ind = mk_primitive_type(state, T_UNKNOWN);
-
   memset_arbitrary(state->types.node_types,
                    &state->unknown_ind,
                    state->tree.node_amt,
@@ -367,25 +369,17 @@ static void setup_builtins(typecheck_state *state) {
                    state->tree.node_amt,
                    sizeof(node_ind_t));
 
-  // Just T_UNKNOWN
-  debug_assert(state->types.types.len == 1);
-
   // Prelude
   {
-    // push builtin types
-    VEC_APPEND(&state->type_env, builtin_type_amount, builtin_type_names);
-    // push builtin type inds
-    for (node_ind_t i = 0; i < builtin_type_ind_amount; i++) {
-      node_ind_t builtin_type_ind = builtin_type_inds[i];
-      // Add one for the extra T_UNKNOWN
-      VEC_PUSH(&state->type_type_inds, builtin_type_ind + 1);
-    }
+    // blit builtin types
+    VEC_APPEND(&state->types.types, builtin_type_amount, builtin_types);
 
-    node_ind_t start_type_ind = state->types.types.len;
+    // add builtin types to type environment
+    VEC_APPEND(&state->type_env.bindings, builtin_type_amount, builtin_type_names);
+
     for (node_ind_t i = 0; i < builtin_type_amount; i++) {
-      VEC_PUSH(&state->type_type_inds, start_type_ind + i + 1);
-      VEC_PUSH(&state->types.types, builtin_types[i]);
-      bs_push(&state->type_is_builtin, true);
+      VEC_PUSH(&state->type_env.type_inds, i);
+      bs_push(&state->type_env.is_builtin, true);
     }
 
     {
@@ -394,6 +388,8 @@ static void setup_builtins(typecheck_state *state) {
     }
     state->bool_type_ind = mk_primitive_type(state, T_BOOL);
   }
+
+  state->unknown_ind = mk_primitive_type(state, T_UNKNOWN);
 
   // Declared here
   {
@@ -945,8 +941,8 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
     case PT_PAT_UPPER_NAME: {
       binding b = params.node.span;
       size_t ind = lookup_str_ref(
-        state->input, state->term_env, state->term_is_builtin, b);
-      if (ind == state->term_env.len) {
+        state->input, state->term_env.bindings, state->term_env.is_builtin, b);
+      if (ind == state->term_env.bindings.len) {
         tc_error err = {
           .type = BINDING_NOT_FOUND,
           .pos = params.node_ind,
@@ -954,7 +950,7 @@ static void tc_pattern_matches(typecheck_state *state, tc_node_params params) {
         push_tc_err(state, err);
         break;
       }
-      node_ind_t type_ind = VEC_GET(state->term_type_inds, ind);
+      node_ind_t type_ind = VEC_GET(state->term_env.type_inds, ind);
       tc_action action = {
         .tag = TC_ASSIGN_TYPE, .from = type_ind, .to = params.node_ind};
       push_action(state, action);
@@ -1029,7 +1025,7 @@ static void tc_statement_unambiguous(typecheck_state *state,
           .tag = TC_EXPRESSION_UNAMBIGUOUS,
           .node_ind = body_ind,
         },
-        {.tag = TC_POP_VARS_TO, .amt = state->term_env.len},
+        {.tag = TC_POP_VARS_TO, .amt = state->term_env.bindings.len},
         {
           .tag = TC_STATEMENT_UNAMBIGUOUS_FUN_STAGE_TWO,
           .node_ind = node_params.node_ind,
@@ -1108,7 +1104,7 @@ static void tc_statement_matches(typecheck_state *state,
             .tag = TC_EXPRESSION_MATCHES,
             .node_ind = body_ind,
           },
-          {.tag = TC_POP_VARS_TO, .amt = state->term_env.len},
+          {.tag = TC_POP_VARS_TO, .amt = state->term_env.bindings.len},
         };
         push_actions(state, STATIC_LEN(actions), actions);
         break;
@@ -1188,8 +1184,8 @@ static void tc_pattern_unambiguous(typecheck_state *state,
     case PT_PAT_UPPER_NAME: {
       binding b = params.node.span;
       size_t ind = lookup_str_ref(
-        state->input, state->term_env, state->term_is_builtin, b);
-      if (ind == state->term_env.len) {
+        state->input, state->term_env.bindings, state->term_env.is_builtin, b);
+      if (ind == state->term_env.bindings.len) {
         tc_error err = {
           .type = BINDING_NOT_FOUND,
           .pos = params.node_ind,
@@ -1197,7 +1193,7 @@ static void tc_pattern_unambiguous(typecheck_state *state,
         push_tc_err(state, err);
         break;
       }
-      node_ind_t type_ind = VEC_GET(state->term_type_inds, ind);
+      node_ind_t type_ind = VEC_GET(state->term_env.type_inds, ind);
       tc_action action = {
         .tag = TC_ASSIGN_TYPE, .from = type_ind, .to = params.node_ind};
       push_action(state, action);
@@ -1288,8 +1284,8 @@ static void tc_expression_unambiguous(typecheck_state *state,
     case PT_EX_LOWER_NAME: {
       binding b = node_params.node.span;
       size_t ind = lookup_str_ref(
-        state->input, state->term_env, state->term_is_builtin, b);
-      if (ind == state->term_env.len) {
+        state->input, state->term_env.bindings, state->term_env.is_builtin, b);
+      if (ind == state->term_env.bindings.len) {
         tc_error err = {
           .type = BINDING_NOT_FOUND,
           .pos = node_params.node_ind,
@@ -1297,7 +1293,7 @@ static void tc_expression_unambiguous(typecheck_state *state,
         push_tc_err(state, err);
         break;
       }
-      node_ind_t type_ind = VEC_GET(state->term_type_inds, ind);
+      node_ind_t type_ind = VEC_GET(state->term_env.type_inds, ind);
       tc_action action = {
         .tag = TC_ASSIGN_TYPE, .from = type_ind, .to = node_params.node_ind};
       push_action(state, action);
@@ -1319,7 +1315,7 @@ static void tc_expression_unambiguous(typecheck_state *state,
           .tag = TC_EXPRESSION_UNAMBIGUOUS,
           .node_ind = body_ind,
         },
-        {.tag = TC_POP_VARS_TO, .amt = state->term_env.len},
+        {.tag = TC_POP_VARS_TO, .amt = state->term_env.bindings.len},
         {
           .tag = TC_EXPRESSION_UNAMBIGUOUS_FN_STAGE_TWO,
           .node_ind = node_params.node_ind,
@@ -1452,8 +1448,8 @@ static void tc_expression_matches(typecheck_state *state,
     case PT_EX_LOWER_NAME: {
       binding b = node_params.node.span;
       size_t ind = lookup_str_ref(
-        state->input, state->term_env, state->term_is_builtin, b);
-      if (ind == state->term_env.len) {
+        state->input, state->term_env.bindings, state->term_env.is_builtin, b);
+      if (ind == state->term_env.bindings.len) {
         tc_error err = {
           .type = BINDING_NOT_FOUND,
           .pos = node_params.node_ind,
@@ -1461,7 +1457,7 @@ static void tc_expression_matches(typecheck_state *state,
         push_tc_err(state, err);
         break;
       }
-      node_ind_t type_ind = VEC_GET(state->term_type_inds, ind);
+      node_ind_t type_ind = VEC_GET(state->term_env.type_inds, ind);
       if (node_params.wanted_ind != type_ind) {
         tc_error err = {
           .type = TYPE_MISMATCH,
@@ -1494,7 +1490,7 @@ static void tc_expression_matches(typecheck_state *state,
             .tag = TC_EXPRESSION_MATCHES,
             .node_ind = body_ind,
           },
-          {.tag = TC_POP_VARS_TO, .amt = state->term_env.len}};
+          {.tag = TC_POP_VARS_TO, .amt = state->term_env.bindings.len}};
         push_actions(state, STATIC_LEN(actions), actions);
         break;
       }
@@ -1580,13 +1576,17 @@ static typecheck_state tc_new_state(const char *restrict input,
     .errors = VEC_NEW,
     .wanted = malloc(tree.node_amt * sizeof(node_ind_t)),
 
-    .type_env = VEC_NEW,
-    .type_is_builtin = bs_new(),
-    .type_type_inds = VEC_NEW,
+    .type_env = {
+      .bindings = VEC_NEW,
+      .is_builtin = bs_new(),
+      .type_inds = VEC_NEW,
+    },
 
-    .term_env = VEC_NEW,
-    .term_is_builtin = bs_new(),
-    .term_type_inds = VEC_NEW,
+    .term_env = {
+      .bindings = VEC_NEW,
+      .is_builtin = bs_new(),
+      .type_inds = VEC_NEW,
+    },
 
     .stack = VEC_NEW,
 
@@ -1714,8 +1714,8 @@ static inline void tc_type(typecheck_state *state, tc_node_params node_params) {
     case PT_TY_UPPER_NAME: {
       binding b = {.start = node.span.start, .len = node.span.len};
       size_t ind = lookup_str_ref(
-        state->input, state->type_env, state->type_is_builtin, b);
-      if (ind == state->type_env.len) {
+        state->input, state->type_env.bindings, state->type_env.is_builtin, b);
+      if (ind == state->type_env.bindings.len) {
         tc_error err = {
           .type = TYPE_NOT_FOUND,
           .pos = node_ind,
@@ -1723,7 +1723,7 @@ static inline void tc_type(typecheck_state *state, tc_node_params node_params) {
         push_tc_err(state, err);
         break;
       }
-      node_ind_t type_ind = VEC_GET(state->type_type_inds, ind);
+      node_ind_t type_ind = VEC_GET(state->type_env.type_inds, ind);
       state->types.node_types[node_ind] = type_ind;
       break;
     }
@@ -1813,7 +1813,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           print_popped_env(debug_out,
                            input,
                            state.term_env,
-                           state.term_is_builtin,
+                           state.term_env.is_builtin,
                            state.term_env.len - action.amt);
           break;
         }
@@ -1822,7 +1822,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           print_popped_env(debug_out,
                            input,
                            state.term_env,
-                           state.term_is_builtin,
+                           state.term_env.is_builtin,
                            action.amt);
           break;
         }
@@ -1976,9 +1976,9 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         break;
 
       case TC_PUSH_ENV:
-        VEC_PUSH(&state.term_env, action.binding);
-        bs_push(&state.term_is_builtin, false);
-        VEC_PUSH(&state.term_type_inds,
+        VEC_PUSH(&state.term_env.bindings, action.binding);
+        bs_push(&state.term_env.is_builtin, false);
+        VEC_PUSH(&state.term_env.type_inds,
                  state.types.node_types[action.node_ind]);
         break;
 
@@ -1987,11 +1987,11 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         break;
 
       case TC_POP_N_VARS:
-        VEC_POP_N(&state.term_env.len, action.amt);
+        VEC_POP_N(&state.term_env.bindings.len, action.amt);
         break;
 
       case TC_POP_VARS_TO:
-        VEC_POP_N(&state.term_env.len, state.term_env.len - action.amt);
+        VEC_POP_N(&state.term_env.bindings.len, state.term_env.bindings.len - action.amt);
         break;
 
       case TC_CALL_PARAM_FIRST:
@@ -2289,13 +2289,13 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
 
   VEC_FREE(&state.stack);
 
-  VEC_FREE(&state.type_env);
-  bs_free(&state.type_is_builtin);
-  VEC_FREE(&state.type_type_inds);
+  VEC_FREE(&state.type_env.bindings);
+  bs_free(&state.type_env.is_builtin);
+  VEC_FREE(&state.type_env.type_inds);
 
-  VEC_FREE(&state.term_env);
-  bs_free(&state.term_is_builtin);
-  VEC_FREE(&state.term_type_inds);
+  VEC_FREE(&state.term_env.bindings);
+  bs_free(&state.term_env.is_builtin);
+  VEC_FREE(&state.term_env.type_inds);
   free(state.wanted);
 
 #ifdef DEBUG_TC
