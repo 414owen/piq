@@ -9,7 +9,7 @@
 VEC_DECL_CUSTOM(binding, vec_binding);
 
 typedef union {
-  char *builtin;
+  const char *builtin;
   binding span;
 } str_ref;
 

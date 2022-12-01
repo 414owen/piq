@@ -4,9 +4,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "args.h"
+#include "initialise.h"
 #include "test.h"
 #include "tests.h"
-#include "args.h"
 
 const char *byte_suffixes[] = {"B", "KB", "MB", "GB", "TB"};
 const long mega = 1e6;
@@ -91,6 +92,7 @@ HEDLEY_NEVER_INLINE
 static void newline(FILE *f) { putc('\n', f); }
 
 int main(int argc, const char **argv) {
+  initialise();
   test_config conf = {
     .junit = false,
     .lite = false,

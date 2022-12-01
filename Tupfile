@@ -49,6 +49,7 @@ common_objs += llvm.o
 common_objs += llvm_shim.o
 common_objs += args.o
 common_objs += timespec.o
+common_objs += initialise.o
 
 test_objs += run_tests.o
 test_objs += span.o
@@ -114,6 +115,7 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/args.c             |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/main.c             |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/builtins.c         |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/initialise.c       |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 
 : $(common_objs) $(main_objs) |> ^j^ $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> main
 : $(common_objs) $(test_objs) |> ^j^ $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> test
