@@ -210,6 +210,12 @@ static node_ind_t find_type(typecheck_state *state, type_tag tag,
   return state->types.types.len;
 }
 
+static void tc_push_term_env(typecheck_state *state, str_ref bnd, bool is_builtin, node_ind_t type_ind) {
+  VEC_PUSH(&state->term_env.bindings, bnd);
+  bs_push(&state->term_env.is_builtin, is_builtin);
+  VEC_PUSH(&state->term_env.type_inds, type_ind);
+}
+
 static node_ind_t mk_primitive_type(typecheck_state *state, type_tag tag) {
   debug_assert(type_repr(tag) == SUBS_NONE);
   node_ind_t ind = find_primitive_type(state, tag);
@@ -391,6 +397,15 @@ static void setup_builtins(typecheck_state *state) {
   }
 
   state->unknown_ind = mk_primitive_type(state, T_UNKNOWN);
+
+  for (node_ind_t i = 0; i < builtin_term_amount; i++) {
+    const char *name = builtin_term_names[i];
+    node_ind_t type_ind = builtin_term_type_inds[i];
+    str_ref bnd = {
+      .builtin = name,
+    };
+    tc_push_term_env(state, bnd, true, type_ind);
+  }
 
   // Declared here
   {
@@ -1976,13 +1991,12 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         state.types.node_types[action.to] = state.wanted[action.from];
         break;
 
-      case TC_PUSH_ENV:
-        VEC_PUSH(&state.term_env.bindings, action.binding);
-        bs_push(&state.term_env.is_builtin, false);
-        VEC_PUSH(&state.term_env.type_inds,
-                 state.types.node_types[action.node_ind]);
+      case TC_PUSH_ENV: {
+        str_ref str = {.span = action.binding,};
+        node_ind_t type_ind = state.types.node_types[action.node_ind];
+        tc_push_term_env(&state, str, false, type_ind);
         break;
-
+      }
       case TC_CLONE_WANTED_WANTED:
         state.wanted[action.to] = state.wanted[action.from];
         break;

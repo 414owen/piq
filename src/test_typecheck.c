@@ -260,6 +260,12 @@ static void test_typecheck_errors(test_state *state, const char *input_p,
   stfree(spans, span_bytes);
 }
 
+static const test_type bool_t = {
+  .tag = T_BOOL,
+  .sub_amt = 0,
+  .subs = NULL,
+};
+
 static const test_type u8_t = {
   .tag = T_U8,
   .sub_amt = 0,
@@ -388,6 +394,18 @@ static void test_typecheck_succeeds(test_state *state) {
     test_type types[] = {
       i32,
       i32,
+    };
+    test_types_match(state, input, types, STATIC_LEN(types));
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Recognizes bools");
+    const char *input = "(sig test (Fn () Bool))\n"
+                        "(fun test () (let a →False←) →True←)";
+    test_type types[] = {
+      bool_t,
+      bool_t,
     };
     test_types_match(state, input, types, STATIC_LEN(types));
     test_end(state);
