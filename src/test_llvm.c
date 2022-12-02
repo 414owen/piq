@@ -288,7 +288,8 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
 
-  test_start(state, "If expressions work") {
+  test_start(state, "If expressions work");
+  {
     const char *input = "(sig test (Fn () I32))\n"
                         "(fun test () (if True 1 2))";
     test_llvm_code_produces_int(state, input, 1);
@@ -303,6 +304,21 @@ void test_llvm(test_state *state) {
       test_llvm_code_produces_int(state, input, 1);
       free(input);
     }
+  }
+  test_end(state);
+
+  test_start(state, "Mutual recursion works");
+  {
+    const char *input = 
+      "(sig a (Fn () I32))\n"
+      "(fun a () (if True (b ()) 1))"
+      "\n"
+      "(sig b (Fn () I32))\n"
+      "(fun b () (if False (a ()) 2))"
+      "\n"
+      "(sig test (Fn () I32))\n"
+      "(fun test () (a ()))";
+    test_llvm_code_produces_int(state, input, 2);
   }
   test_end(state);
 

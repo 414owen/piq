@@ -411,6 +411,31 @@ static void test_typecheck_succeeds(test_state *state) {
     test_end(state);
   }
 
+  {
+    test_start(state, "Functions can be recursive");
+    const char *input = "(sig test (Fn () Bool))\n"
+                        "(fun test () →(test ())←)";
+    test_type types[] = {
+      bool_t,
+    };
+    test_types_match(state, input, types, STATIC_LEN(types));
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Functions can be mutually recursive");
+    const char *input = "(sig a (Fn () Bool))\n"
+                        "(fun a () →(b ())←)\n"
+                        "(sig b (Fn () Bool))\n"
+                        "(fun b () →(a ())←)\n";
+    test_type types[] = {
+      bool_t,
+      bool_t,
+    };
+    test_types_match(state, input, types, STATIC_LEN(types));
+    test_end(state);
+  }
+
   test_group_end(state);
 }
 
