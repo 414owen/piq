@@ -169,7 +169,8 @@ typedef struct {
 
 static void cg_block(cg_state *state, node_ind_t start, node_ind_t amt);
 
-static void push_env(cg_state *state, bool is_builtin, str_ref bnd, llvm_value val) {
+static void push_env(cg_state *state, bool is_builtin, str_ref bnd,
+                     llvm_value val) {
   debug_assert(val != NULL);
   VEC_PUSH(&state->env_bnds, bnd);
   VEC_PUSH(&state->env_vals, val);

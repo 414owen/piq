@@ -133,11 +133,11 @@ static void test_llvm_code_produces_int(test_state *state,
 }
 
 static void test_llvm_code_produces_bool(test_state *state,
-                                        const char *restrict input,
-                                        bool expected) {
+                                         const char *restrict input,
+                                         bool expected) {
   jit_ctx ctx = jit_llvm_init();
   void *entry_addr = get_entry_fn(state, &ctx, input);
-  bool (*entry)(void) = (bool(*)(void))entry_addr;
+  bool (*entry)(void) = (bool (*)(void))entry_addr;
   if (entry) {
     bool got = entry();
     ensure_int_result_matches(state, ctx, expected, got);
@@ -288,8 +288,7 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
 
-  test_start(state, "If expressions work")
-  {
+  test_start(state, "If expressions work") {
     const char *input = "(sig test (Fn () I32))\n"
                         "(fun test () (if True 1 2))";
     test_llvm_code_produces_int(state, input, 1);

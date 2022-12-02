@@ -9,7 +9,16 @@
 #include <llvm-c/Target.h>
 
 const char *builtin_type_names[] = {
-  "Bool", "U8", "U16", "U32", "U64", "I8", "I16", "I32", "I64", "String",
+  "Bool",
+  "U8",
+  "U16",
+  "U32",
+  "U64",
+  "I8",
+  "I16",
+  "I32",
+  "I64",
+  "String",
 };
 
 const node_ind_t builtin_type_amount = STATIC_LEN(builtin_type_names);
@@ -91,8 +100,6 @@ static void init_llvm(void) {
   builtin_term_llvm_values[1] = LLVMConstInt(bool_type, 0, false);
 }
 
-void init_builtins_module(void) {
-  init_llvm();
-}
+void init_builtins_module(void) { init_llvm(); }
 
 const node_ind_t builtin_term_amount = STATIC_LEN(builtin_term_names);

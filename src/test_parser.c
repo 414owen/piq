@@ -94,14 +94,21 @@ static void test_parser_fails_on(test_state *state, char *input, buf_ind_t pos,
           pres.error_pos);
   }
 
-  bool expected_tokens_match = multiset_eq(sizeof(token_type), pres.expected_amt, expected_amt, pres.expected, expected);
+  bool expected_tokens_match = multiset_eq(sizeof(token_type),
+                                           pres.expected_amt,
+                                           expected_amt,
+                                           pres.expected,
+                                           expected);
 
   if (!expected_tokens_match) {
     char *as = print_tokens_str(expected, expected_amt);
     char *bs = print_tokens_str(pres.expected, pres.expected_amt);
-    failf(state, "Expected token mismatch.\n"
-                 "Expected: %s\n"
-                 "Got:      %s", as, bs);
+    failf(state,
+          "Expected token mismatch.\n"
+          "Expected: %s\n"
+          "Got:      %s",
+          as,
+          bs);
     free(as);
     free(bs);
   }
@@ -541,9 +548,10 @@ static void test_parser_succeeds_declaration(test_state *state) {
     const char *input = "(data A () (Test))";
     expected_output out = {
       .tag = STRING,
-      .str = "(DataDecl (Uname A) (Type params: []) (Data Constructor: (Uname Test)))",
+      .str = "(DataDecl (Uname A) (Type params: []) (Data Constructor: (Uname "
+             "Test)))",
     };
-    test_parser_succeeds_on(state,  input, out);
+    test_parser_succeeds_on(state, input, out);
 
     test_end(state);
   }
