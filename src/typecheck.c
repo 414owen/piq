@@ -384,11 +384,11 @@ static void setup_builtins(typecheck_state *state) {
 
     // add builtin types to type environment
     VEC_APPEND(
-      &state->type_env.bindings, builtin_type_amount, builtin_type_names);
+      &state->type_env.bindings, named_builtin_type_amount, builtin_type_names);
 
-    bs_push_true_n(&state->type_env.is_builtin, builtin_type_amount);
+    bs_push_true_n(&state->type_env.is_builtin, named_builtin_type_amount);
 
-    for (node_ind_t i = 0; i < builtin_type_amount; i++) {
+    for (node_ind_t i = 0; i < named_builtin_type_amount; i++) {
       VEC_PUSH(&state->type_env.type_inds, i);
     }
 

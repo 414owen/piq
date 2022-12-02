@@ -143,6 +143,18 @@ typedef struct {
 
 VEC_DECL(cg_action);
 
+typedef union {
+  builtin_term builtin;
+  LLVMValueRef value;
+} lang_value_union;
+
+typedef struct {
+  bool is_builtin;
+  lang_value_union data;
+} lang_value;
+
+VEC_DECL(lang_value_union);
+
 typedef struct {
   LLVMContextRef context;
   LLVMBuilderRef builder;
@@ -151,16 +163,17 @@ typedef struct {
   vec_cg_action actions;
 
   // returning vals
-  vec_llvm_value val_stack;
+  bitset val_is_builtin;
+  vec_lang_value_union val_stack;
+
   vec_llvm_block block_stack;
   vec_llvm_function function_stack;
 
   // corresponds to in.types
   LLVMTypeRef *llvm_types;
-
   vec_str_ref env_bnds;
-  vec_llvm_value env_vals;
   bitset env_is_builtin;
+  vec_lang_value_union env_vals;
 
   source_file source;
   parse_tree parse_tree;
@@ -169,12 +182,80 @@ typedef struct {
 
 static void cg_block(cg_state *state, node_ind_t start, node_ind_t amt);
 
-static void push_env(cg_state *state, bool is_builtin, str_ref bnd,
-                     llvm_value val) {
-  debug_assert(val != NULL);
+static void push_env(cg_state *state, str_ref bnd, lang_value val) {
+  debug_assert(val.is_builtin || val.data.value != NULL);
   VEC_PUSH(&state->env_bnds, bnd);
-  VEC_PUSH(&state->env_vals, val);
-  bs_push(&state->env_is_builtin, is_builtin);
+  VEC_PUSH(&state->env_vals, val.data);
+  bs_push(&state->env_is_builtin, val.is_builtin);
+}
+
+static lang_value get_env(cg_state *state, node_ind_t ind) {
+  lang_value res = {
+    .is_builtin = bs_get(state->env_is_builtin, ind),
+    .data = VEC_GET(state->env_vals, ind),
+  };
+  return res;
+}
+
+static lang_value builtin_val(builtin_term term) {
+  lang_value res = {
+    .is_builtin = true,
+    .data = {
+      .builtin = term,
+    },
+  };
+  return res;
+}
+
+static lang_value exogenous_value(LLVMValueRef term) {
+  lang_value res = {
+    .is_builtin = false,
+    .data = {
+      .value = term,
+    }
+  };
+  return res;
+}
+
+static lang_value pop_val(cg_state *state) {
+  debug_assert(state->val_stack.len > 0);
+  debug_assert(state->val_is_builtin.len > 0);
+  lang_value res = {
+    .is_builtin = bs_pop(&state->val_is_builtin),
+    .data = VEC_POP(&state->val_stack),
+  };
+  return res;
+}
+
+static LLVMValueRef pop_exogenous_val(cg_state *state) {
+  lang_value res = pop_val(state);
+  if (res.is_builtin) {
+    switch(res.data.builtin) {
+      case true_builtin:
+        return LLVMConstInt(LLVMInt1TypeInContext(state->context), 1, false);
+        break;
+      case false_builtin:
+        return LLVMConstInt(LLVMInt1TypeInContext(state->context), 0, false);
+        break;
+      // TODO wrap builtin operators in functions?
+      default:
+        give_up("Can't use builtin operator as a first-class value");
+        break;
+    }
+  } else {
+    return res.data.value;
+  }
+}
+
+static void push_exogenous_val(cg_state *state, LLVMValueRef val) {
+  bs_push(&state->val_is_builtin, false);
+  lang_value_union l = {.value = val,};
+  VEC_PUSH(&state->val_stack, l);
+}
+
+static void push_val(cg_state *state, lang_value val) {
+  bs_push(&state->val_is_builtin, val.is_builtin);
+  VEC_PUSH(&state->val_stack, val.data);
 }
 
 static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
@@ -525,21 +606,38 @@ static void cg_expression_call_stage_two(cg_state *state,
   node_ind_t ind = params.node_ind;
   parse_node node = state->parse_tree.nodes[ind];
   node_ind_t callee_ind = PT_CALL_CALLEE_IND(node);
-  LLVMValueRef callee = VEC_POP(&state->val_stack);
-  LLVMValueRef param = VEC_POP(&state->val_stack);
+  lang_value callee = pop_val(state);
+  lang_value param = pop_val(state);
   LLVMTypeRef fn_type =
     construct_type(state, state->types.node_types[callee_ind]);
-  LLVMValueRef res =
-    LLVMBuildCall2(state->builder, fn_type, callee, &param, 1, "call-res");
-  VEC_PUSH(&state->val_stack, res);
+  LLVMValueRef res;
+  if (callee.is_builtin) {
+    LLVMValueRef left_val =
+      LLVMBuildExtractValue(state->builder, param.data.value, 0, "tuple-left");
+    LLVMValueRef right_val =
+      LLVMBuildExtractValue(state->builder, param.data.value, 1, "tuple-right");
+    switch (callee.data.builtin) {
+      case i32_eq_builtin: {
+        res = LLVMBuildICmp(state->builder, LLVMIntEQ, left_val, right_val, "i32-eq?");
+        break;
+      }
+      default: {
+        give_up("Called builtin that isn't an operator");
+        break;
+      }
+    }
+  } else {
+    res = LLVMBuildCall2(state->builder, fn_type, callee.data.value, &param.data.value, 1, "call-res");
+  }
+  push_exogenous_val(state, res);
 }
 
 static void cg_expression_if_stage_two(cg_state *state, cg_expr_params params) {
   node_ind_t ind = params.node_ind;
 
-  LLVMValueRef else_val = VEC_POP(&state->val_stack);
-  LLVMValueRef then_val = VEC_POP(&state->val_stack);
-  LLVMValueRef cond = VEC_POP(&state->val_stack);
+  LLVMValueRef else_val = pop_exogenous_val(state);
+  LLVMValueRef then_val = pop_exogenous_val(state);
+  LLVMValueRef cond = pop_exogenous_val(state);
 
   LLVMTypeRef res_type = construct_type(state, state->types.node_types[ind]);
 
@@ -562,7 +660,7 @@ static void cg_expression_if_stage_two(cg_state *state, cg_expr_params params) {
   LLVMValueRef incoming_vals[2] = {then_val, else_val};
   LLVMBasicBlockRef incoming_blocks[2] = {then_block, else_block};
   LLVMAddIncoming(phi, incoming_vals, incoming_blocks, 2);
-  VEC_PUSH(&state->val_stack, phi);
+  push_exogenous_val(state, phi);
 }
 
 static void cg_expression_tup_stage_two(cg_state *state,
@@ -572,8 +670,8 @@ static void cg_expression_tup_stage_two(cg_state *state,
   const char *name = "tuple";
   LLVMValueRef allocated = cg_alloca_at_function_start(state, name, tup_type);
 
-  LLVMValueRef left_val = VEC_POP(&state->val_stack);
-  LLVMValueRef right_val = VEC_POP(&state->val_stack);
+  LLVMValueRef left_val = pop_exogenous_val(state);
+  LLVMValueRef right_val = pop_exogenous_val(state);
 
   LLVMValueRef left_ptr =
     LLVMBuildStructGEP2(state->builder, tup_type, allocated, 0, name);
@@ -585,7 +683,7 @@ static void cg_expression_tup_stage_two(cg_state *state,
 
   LLVMValueRef res =
     LLVMBuildLoad2(state->builder, tup_type, allocated, "tup-ex");
-  VEC_PUSH(&state->val_stack, res);
+  push_exogenous_val(state, res);
 }
 
 static void cg_expression(cg_state *state, cg_expr_params params) {
@@ -606,8 +704,8 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
         state->source.data, state->env_bnds, state->env_is_builtin, b);
       // missing refs are caught in typecheck phase
       debug_assert(ind != state->env_bnds.len);
-      llvm_value val = VEC_GET(state->env_vals, ind);
-      VEC_PUSH(&state->val_stack, val);
+      lang_value val = get_env(state, ind);
+      push_val(state, val);
       break;
     }
     case PT_EX_INT: {
@@ -615,8 +713,7 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
       LLVMTypeRef type = construct_type(state, type_ind);
       const char *str = VEC_GET_PTR(state->source, node.span.start);
       size_t len = node.span.len;
-      VEC_PUSH(&state->val_stack,
-               LLVMConstIntOfStringAndSize(type, str, len, 10));
+      push_exogenous_val(state, LLVMConstIntOfStringAndSize(type, str, len, 10));
       break;
     }
     case PT_EX_IF: {
@@ -658,7 +755,7 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
       LLVMTypeRef void_type =
         construct_type(state, state->types.node_types[ind]);
       LLVMValueRef void_val = LLVMGetUndef(void_type);
-      VEC_PUSH(&state->val_stack, void_val);
+      push_exogenous_val(state, void_val);
       break;
     }
     case PT_EX_FN:
@@ -735,9 +832,9 @@ static void cg_statement_let_stage_two(cg_state *state,
   debug_assert(ind != state->env_bnds.len);
   node_ind_t binding_ind = PT_LET_BND_IND(node);
   parse_node binding = state->parse_tree.nodes[binding_ind];
-  LLVMValueRef val = VEC_POP(&state->val_stack);
+  lang_value val = pop_val(state);
   str_ref str = {.binding = binding.span};
-  push_env(state, false, str, val);
+  push_env(state, str, val);
 }
 
 static void cg_statement(cg_state *state, cg_statement_params params) {
@@ -768,7 +865,7 @@ static void cg_statement(cg_state *state, cg_statement_params params) {
 }
 
 static void cg_function_stage_three(cg_state *state) {
-  LLVMValueRef ret = VEC_POP(&state->val_stack);
+  LLVMValueRef ret = pop_exogenous_val(state);
   VEC_POP(&state->block_stack);
   LLVMBuildRet(state->builder, ret);
   VEC_POP(&state->function_stack);
@@ -810,7 +907,8 @@ static void cg_block_recursive(cg_state *state, node_ind_t start,
         parse_node binding = state->parse_tree.nodes[binding_ind];
         llvm_function fn = cg_emit_empty_fn(state, sub_ind, node);
         str_ref bnd = {.binding = binding.span};
-        push_env(state, false, bnd, fn);
+        lang_value val = {.is_builtin = false, .data.value = fn,};
+        push_env(state, bnd, val);
         push_act_fn_two(state, fn, sub_ind);
         break;
       }
@@ -852,7 +950,8 @@ static void cg_pattern(cg_state *state, cg_pattern_params params) {
     }
     case PT_PAT_WILDCARD: {
       str_ref bnd = {.binding = node.span};
-      push_env(state, false, bnd, val);
+      lang_value lv = {.is_builtin = false, .data.value = val,};
+      push_env(state, bnd, lv);
       break;
     }
     case PT_PAT_UNIT:
@@ -877,9 +976,10 @@ static void cg_pop_env_to(cg_state *state, cg_pop_env_to_params params) {
 
 static void init_llvm_builtins(cg_state *state) {
   // static void push_env(cg_state *state, binding bnd, llvm_value val) {
-  for (node_ind_t i = 0; i < builtin_term_amount; i++) {
+  for (builtin_term i = 0; i < builtin_term_amount; i++) {
     str_ref ref = {.builtin = builtin_term_names[i]};
-    push_env(state, true, ref, builtin_term_llvm_values[i]);
+    lang_value e = {.is_builtin = true, .data.builtin = i,};
+    push_env(state, ref, e);
   }
 }
 
@@ -918,7 +1018,7 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
         cg_pop_env_to(&state, action.pop_env_to_params);
         break;
       case CG_IGNORE_VALUE:
-        VEC_POP(&state.val_stack);
+        pop_val(&state);
         break;
       case CG_PATTERN:
         cg_pattern(&state, action.pattern_params);
