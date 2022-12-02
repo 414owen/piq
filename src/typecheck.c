@@ -39,7 +39,8 @@ when debugging the typechecker using DEBUG_TC.
 
 A wanted type is a type that needs to match, or the typechecker will error.
 
-## What's the difference between `TC_<NODE_TYPE>_UNAMBIGUOUS`, and `TC_<NODE_TYPE>_MATCHES`?
+## What's the difference between `TC_<NODE_TYPE>_UNAMBIGUOUS`, and
+`TC_<NODE_TYPE>_MATCHES`?
 
 `TC_<NODE_TYPE>_MATCHES` is for when we have a wanted.
 `TC_<NODE_TYPE>_UNAMBIGUOUS` is for when we don't have a wanted.
@@ -210,7 +211,8 @@ static node_ind_t find_type(typecheck_state *state, type_tag tag,
   return state->types.types.len;
 }
 
-static void tc_push_term_env(typecheck_state *state, str_ref bnd, bool is_builtin, node_ind_t type_ind) {
+static void tc_push_term_env(typecheck_state *state, str_ref bnd,
+                             bool is_builtin, node_ind_t type_ind) {
   VEC_PUSH(&state->term_env.bindings, bnd);
   bs_push(&state->term_env.is_builtin, is_builtin);
   VEC_PUSH(&state->term_env.type_inds, type_ind);
@@ -381,7 +383,8 @@ static void setup_builtins(typecheck_state *state) {
     VEC_APPEND(&state->types.types, builtin_type_amount, builtin_types);
 
     // add builtin types to type environment
-    VEC_APPEND(&state->type_env.bindings, builtin_type_amount, builtin_type_names);
+    VEC_APPEND(
+      &state->type_env.bindings, builtin_type_amount, builtin_type_names);
 
     bs_push_true_n(&state->type_env.is_builtin, builtin_type_amount);
 
@@ -574,7 +577,7 @@ static void typecheck_block_internal(typecheck_state *state, node_ind_t sub_amt,
     parse_node sub = state->tree.nodes[sub_ind];
     switch (sub.type.statement) {
       case PT_STATEMENT_DATA_DECLARATION: {
-        
+
         break;
       }
       case PT_STATEMENT_SIG: {
@@ -1592,17 +1595,19 @@ static typecheck_state tc_new_state(const char *restrict input,
     .errors = VEC_NEW,
     .wanted = malloc(tree.node_amt * sizeof(node_ind_t)),
 
-    .type_env = {
-      .bindings = VEC_NEW,
-      .is_builtin = bs_new(),
-      .type_inds = VEC_NEW,
-    },
+    .type_env =
+      {
+        .bindings = VEC_NEW,
+        .is_builtin = bs_new(),
+        .type_inds = VEC_NEW,
+      },
 
-    .term_env = {
-      .bindings = VEC_NEW,
-      .is_builtin = bs_new(),
-      .type_inds = VEC_NEW,
-    },
+    .term_env =
+      {
+        .bindings = VEC_NEW,
+        .is_builtin = bs_new(),
+        .type_inds = VEC_NEW,
+      },
 
     .stack = VEC_NEW,
 
@@ -1663,7 +1668,11 @@ static void print_tc_error(FILE *f, tc_res res, const char *restrict input,
   }
   parse_node node = tree.nodes[error.pos];
   buf_ind_t err_pos_end = node.span.start + node.span.len - 1;
-  fprintf(f, "\nAt %s %d-%d:\n", parse_node_string(node.type), node.span.start, err_pos_end);
+  fprintf(f,
+          "\nAt %s %d-%d:\n",
+          parse_node_string(node.type),
+          node.span.start,
+          err_pos_end);
   format_error_ctx(f, input, node.span.start, node.span.len);
 }
 
@@ -1992,7 +2001,9 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         break;
 
       case TC_PUSH_ENV: {
-        str_ref str = {.span = action.binding,};
+        str_ref str = {
+          .span = action.binding,
+        };
         node_ind_t type_ind = state.types.node_types[action.node_ind];
         tc_push_term_env(&state, str, false, type_ind);
         break;
@@ -2006,7 +2017,8 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         break;
 
       case TC_POP_VARS_TO:
-        VEC_POP_N(&state.term_env.bindings.len, state.term_env.bindings.len - action.amt);
+        VEC_POP_N(&state.term_env.bindings.len,
+                  state.term_env.bindings.len - action.amt);
         break;
 
       case TC_CALL_PARAM_FIRST:

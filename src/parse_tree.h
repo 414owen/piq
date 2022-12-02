@@ -42,11 +42,11 @@ typedef enum {
   // be a node at all...
   // Maybe the fact that these aren't "near" other
   // parse node categories' enums affects the switch output?
-  PT_ALL_MULTI_LOWER_NAME            = 10,
-  PT_ALL_MULTI_UPPER_NAME            = 11,
-  PT_ALL_MULTI_TYPE_PARAMS           = 12,
+  PT_ALL_MULTI_LOWER_NAME = 10,
+  PT_ALL_MULTI_UPPER_NAME = 11,
+  PT_ALL_MULTI_TYPE_PARAMS = 12,
   PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL = 13,
-  PT_ALL_MULTI_DATA_CONSTRUCTORS     = 14,
+  PT_ALL_MULTI_DATA_CONSTRUCTORS = 14,
 
   PT_ALL_PAT_WILDCARD = 15,
   PT_ALL_PAT_TUP = 16,
@@ -57,9 +57,9 @@ typedef enum {
   PT_ALL_PAT_LIST = 21,
 
   // sig and fun two are also top levels
-  PT_ALL_STATEMENT_SIG              = 22,
-  PT_ALL_STATEMENT_FUN              = 23,
-  PT_ALL_STATEMENT_LET              = 24,
+  PT_ALL_STATEMENT_SIG = 22,
+  PT_ALL_STATEMENT_FUN = 23,
+  PT_ALL_STATEMENT_LET = 24,
   PT_ALL_STATEMENT_DATA_DECLARATION = 25,
 
   PT_ALL_TY_CONSTRUCTION = 26,
@@ -96,9 +96,9 @@ typedef enum {
 } parse_node_pattern_type;
 
 typedef enum {
-  PT_STATEMENT_SIG              = PT_ALL_STATEMENT_SIG,
-  PT_STATEMENT_FUN              = PT_ALL_STATEMENT_FUN,
-  PT_STATEMENT_LET              = PT_ALL_STATEMENT_LET,
+  PT_STATEMENT_SIG = PT_ALL_STATEMENT_SIG,
+  PT_STATEMENT_FUN = PT_ALL_STATEMENT_FUN,
+  PT_STATEMENT_LET = PT_ALL_STATEMENT_LET,
   PT_STATEMENT_DATA_DECLARATION = PT_ALL_STATEMENT_DATA_DECLARATION,
 } parse_node_statement_type;
 
