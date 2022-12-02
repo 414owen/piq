@@ -535,27 +535,32 @@ static void cg_expression_call_stage_two(cg_state *state,
 
 static void cg_expression_if_stage_two(cg_state *state, cg_expr_params params) {
   node_ind_t ind = params.node_ind;
-  LLVMValueRef cond = VEC_POP(&state->val_stack);
-  LLVMValueRef then_val = VEC_POP(&state->val_stack);
+
   LLVMValueRef else_val = VEC_POP(&state->val_stack);
+  LLVMValueRef then_val = VEC_POP(&state->val_stack);
+  LLVMValueRef cond = VEC_POP(&state->val_stack);
+
   LLVMTypeRef res_type = construct_type(state, state->types.node_types[ind]);
-  LLVMBasicBlockRef then_block = VEC_POP(&state->block_stack);
+
   LLVMBasicBlockRef else_block = VEC_POP(&state->block_stack);
+  LLVMBasicBlockRef then_block = VEC_POP(&state->block_stack);
+  LLVMPositionBuilderAtEnd(state->builder, VEC_PEEK(state->block_stack));
   LLVMBuildCondBr(state->builder, cond, then_block, else_block);
 
   LLVMBasicBlockRef end_block = LLVMAppendBasicBlockInContext(
     state->context, VEC_PEEK(state->function_stack), "if-end");
-  LLVMPositionBuilderAtEnd(state->builder, end_block);
-  LLVMValueRef phi = LLVMBuildPhi(state->builder, res_type, "end-if");
-  LLVMValueRef incoming_vals[2] = {then_val, else_val};
-  LLVMBasicBlockRef incoming_blocks[2] = {then_block, else_block};
-  LLVMAddIncoming(phi, incoming_vals, incoming_blocks, 2);
 
   LLVMPositionBuilderAtEnd(state->builder, then_block);
   LLVMBuildBr(state->builder, end_block);
 
   LLVMPositionBuilderAtEnd(state->builder, else_block);
   LLVMBuildBr(state->builder, end_block);
+
+  LLVMPositionBuilderAtEnd(state->builder, end_block);
+  LLVMValueRef phi = LLVMBuildPhi(state->builder, res_type, "if-result");
+  LLVMValueRef incoming_vals[2] = {then_val, else_val};
+  LLVMBasicBlockRef incoming_blocks[2] = {then_block, else_block};
+  LLVMAddIncoming(phi, incoming_vals, incoming_blocks, 2);
   VEC_PUSH(&state->val_stack, phi);
 }
 
@@ -616,19 +621,20 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
     case PT_EX_IF: {
       push_expression_act_if_stage_two(state, ind);
 
-      // cond
-      node_ind_t cond_ind = PT_IF_COND_IND(state->parse_tree.inds, node);
-      push_expression_act(state, cond_ind);
+      // else
+      node_ind_t b_node = PT_IF_B_IND(state->parse_tree.inds, node);
+      push_expression_act(state, b_node);
+      push_gen_basic_block(state, VEC_PEEK(state->function_stack), ELSE_STR);
 
       // then
       node_ind_t a_node = PT_IF_A_IND(state->parse_tree.inds, node);
       push_expression_act(state, a_node);
       push_gen_basic_block(state, VEC_PEEK(state->function_stack), THEN_STR);
 
-      // else
-      node_ind_t b_node = PT_IF_B_IND(state->parse_tree.inds, node);
-      push_expression_act(state, b_node);
-      push_gen_basic_block(state, VEC_PEEK(state->function_stack), ELSE_STR);
+      // cond
+      node_ind_t cond_ind = PT_IF_COND_IND(state->parse_tree.inds, node);
+      push_expression_act(state, cond_ind);
+
       break;
     }
     case PT_EX_TUP:
@@ -776,7 +782,7 @@ static void cg_block(cg_state *state, node_ind_t start, node_ind_t amt) {
   size_t last = start + amt - 1;
   node_ind_t result_ind = state->parse_tree.inds[last];
   push_expression_act(state, result_ind);
-  for (node_ind_t i = 0; i < amt; i++) {
+  for (node_ind_t i = 1; i < amt; i++) {
     node_ind_t ind = last - i;
     node_ind_t sub_ind = state->parse_tree.inds[ind];
     parse_node sub = state->parse_tree.nodes[sub_ind];
