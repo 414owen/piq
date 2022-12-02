@@ -277,13 +277,23 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
 
+  test_start(state, "Two fns and a call");
+  {
+    const char *input = "(sig test (Fn () I32))\n"
+                        "(fun test () (a ()))\n"
+                        "(sig a (Fn () I32))\n"
+                        "(fun a () 2)";
+
+    test_llvm_code_produces_int(state, input, 2);
+  }
+  test_end(state);
+
   test_start(state, "If expressions work")
   {
     const char *input = "(sig test (Fn () I32))\n"
                         "(fun test () (if True 1 2))";
     test_llvm_code_produces_int(state, input, 1);
   }
-  /*
   {
     const char *ifthenelse = "(sig ifthenelse (Fn (Bool, I32, I32) I32))\n"
                              "(fun ifthenelse (cond, t, f) (if cond t f))\n";
@@ -295,21 +305,7 @@ void test_llvm(test_state *state) {
       free(input);
     }
   }
-  */
   test_end(state);
-
-  /*
-  test_start(state, "Two fns and a call");
-  {
-    const char *input = "(sig test (Fn () ()))\n"
-                        "(fun test () (a ()))\n"
-                        "(sig a (Fn () ()))\n"
-                        "(fun a () ())";
-
-    test_llvm_code_produces_int(state, input, 2);
-  }
-  test_end(state);
-  */
 
   if (!state->config.lite) {
     test_robustness(state);
