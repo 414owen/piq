@@ -1,3 +1,5 @@
+#pragma once
+
 #include "types.h"
 
 #include <llvm-c/Core.h>
