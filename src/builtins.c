@@ -77,9 +77,10 @@ const type builtin_types[STATIC_LEN(builtin_type_names)] = {
   },
   {
     .tag = T_LIST,
-    .sub_a = 0,
-    .sub_b = 0,
+    .sub_a = 1,
+    .sub_b = 1,
   },
+
 };
 
 const char *builtin_term_names[] = {
