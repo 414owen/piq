@@ -54,8 +54,10 @@ token_res scan(source_file file, buf_ind_t start) {
   alpha = [a-zA-Z];
   lowerAlpha = [a-z];
   upperAlpha = [A-Z];
-  lower_ident = lowerAlpha (alpha | [0-9])*;
-  upper_ident = upperAlpha (alpha | [0-9])*;
+  digit = [0-9];
+  dash = [-];
+  lower_ident = lowerAlpha (alpha | digit | [?])*;
+  upper_ident = upperAlpha (alpha | digit | dash)*;
   int = [0-9]+;
 
   // "type"  { return mk_token(TK_TYPE, start, pos);        }
