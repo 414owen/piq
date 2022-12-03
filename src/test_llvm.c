@@ -317,6 +317,31 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
 
+  test_start(state, "Add builtin");
+  {
+    const char *input = 
+      "(sig test (Fn I32 I32))\n"
+      "(fun test a (i32-add (3, a)))";
+    // TODO make this thing take two arrays of cases, to avoid recompilation...
+    test_llvm_code_maps_int(state, input, 0, 3);
+    test_llvm_code_maps_int(state, input, 8, 11);
+    test_llvm_code_maps_int(state, input, INT32_MAX - 2, INT32_MIN);
+  }
+  test_end(state);
+
+  test_start(state, "Sub builtin");
+  {
+    const char *input = 
+      "(sig test (Fn I32 I32))\n"
+      "(fun test a (i32-sub (a, 4)))";
+    // TODO make this thing take two arrays of cases, to avoid recompilation...
+    test_llvm_code_maps_int(state, input, 4, 0);
+    test_llvm_code_maps_int(state, input, 42, 38);
+    test_llvm_code_maps_int(state, input, 0, -4);
+    test_llvm_code_maps_int(state, input, INT32_MIN + 2, INT32_MAX - 1);
+  }
+  test_end(state);
+
   test_start(state, "Mutual recursion works");
   {
     const char *input = 
