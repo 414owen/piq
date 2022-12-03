@@ -232,6 +232,7 @@ static LLVMValueRef pop_exogenous_val(cg_state *state) {
   if (res.is_builtin) {
     switch(res.data.builtin) {
       case true_builtin:
+        // TODO cache this stuff
         return LLVMConstInt(LLVMInt1TypeInContext(state->context), 1, false);
         break;
       case false_builtin:
@@ -601,6 +602,16 @@ static LLVMValueRef cg_alloca_at_function_start(cg_state *state,
   return res;
 }
 
+static LLVMIntPredicate get_llvm_comparator(builtin_term builtin) {
+  switch (builtin) {
+    case i8_lt_builtin:
+    case i16_lt_builtin:
+    case i32_lt_builtin:
+    case i64_lt_builtin:
+      return LLVMIntSLT;
+  }
+}
+
 static void cg_expression_call_stage_two(cg_state *state,
                                          cg_expr_params params) {
   node_ind_t ind = params.node_ind;
@@ -617,6 +628,8 @@ static void cg_expression_call_stage_two(cg_state *state,
     LLVMValueRef right_val =
       LLVMBuildExtractValue(state->builder, param.data.value, 1, "tuple-right");
     switch (callee.data.builtin) {
+      case i32_lt_builtin:
+      case i32_gt_builtin:
       case i32_eq_builtin: {
         res = LLVMBuildICmp(state->builder, LLVMIntEQ, left_val, right_val, "i32-eq?");
         break;

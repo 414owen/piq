@@ -9,7 +9,26 @@
 typedef enum {
   true_builtin = 0,
   false_builtin = 1,
-  i32_eq_builtin = 2,
+  i8_eq_builtin = 2,
+  i8_gt_builtin = 3,
+  i8_gte_builtin = 4,
+  i8_lt_builtin = 5,
+  i8_lte_builtin = 6,
+  i16_eq_builtin = 7,
+  i16_gt_builtin = 8,
+  i16_gte_builtin = 9,
+  i16_lt_builtin = 10,
+  i16_lte_builtin = 11,
+  i32_eq_builtin = 12,
+  i32_gt_builtin = 13,
+  i32_gte_builtin = 14,
+  i32_lt_builtin = 15,
+  i32_lte_builtin = 16,
+  i64_eq_builtin = 17,
+  i64_gt_builtin = 18,
+  i64_gte_builtin = 19,
+  i64_lt_builtin = 20,
+  i64_lte_builtin = 21,
 } builtin_term;
 
 extern const char *builtin_type_names[];
