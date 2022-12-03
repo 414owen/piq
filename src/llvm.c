@@ -670,7 +670,21 @@ static void cg_expression_call_stage_two(cg_state *state,
       case i32_eq_builtin:
       case i64_eq_builtin: {
         LLVMIntPredicate predicate = llvm_builtin_predicates[callee.data.builtin];
-        res = LLVMBuildICmp(state->builder, predicate, left_val, right_val, "i32-eq?");
+        res = LLVMBuildICmp(state->builder, predicate, left_val, right_val, "eq?");
+        break;
+      }
+      case i8_add_builtin:
+      case i16_add_builtin:
+      case i32_add_builtin:
+      case i64_add_builtin: {
+        res = LLVMBuildAdd(state->builder, left_val, right_val, "+");
+        break;
+      }
+      case i8_sub_builtin:
+      case i16_sub_builtin:
+      case i32_sub_builtin:
+      case i64_sub_builtin: {
+        res = LLVMBuildSub(state->builder, left_val, right_val, "-");
         break;
       }
       default: {
