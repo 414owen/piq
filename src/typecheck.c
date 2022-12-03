@@ -1949,8 +1949,8 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
         tc_action a = {
           .tag = TC_CLONE_WANTED_ACTUAL, .from = node_ind, .to = node_ind};
         push_action(&state, a);
-      }
         HEDLEY_FALL_THROUGH;
+      }
       case TC_PATTERN_UNAMBIGUOUS:
       case TC_TYPE:
       case TC_TYPE_LIST_STAGE_TWO:

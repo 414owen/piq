@@ -307,6 +307,16 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
 
+  test_start(state, "Comparison builtin");
+  {
+    const char *input = 
+      "(sig test (Fn I32 I32))\n"
+      "(fun test a (if (i32-eq? (a, 8)) 4 5))";
+    test_llvm_code_maps_int(state, input, 8, 4);
+    test_llvm_code_maps_int(state, input, 9, 5);
+  }
+  test_end(state);
+
   test_start(state, "Mutual recursion works");
   {
     const char *input = 
