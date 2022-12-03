@@ -34,6 +34,11 @@ typedef enum {
   i16_lte_builtin = 19,
   i32_lte_builtin = 20,
   i64_lte_builtin = 21,
+
+  i8_add_builtin = 22,
+  i16_add_builtin = 23,
+  i32_add_builtin = 24,
+  i64_add_builtin = 25,
 } builtin_term;
 
 extern const char *builtin_type_names[];
