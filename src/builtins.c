@@ -21,21 +21,20 @@ enum {
   string_type_ind = 9,
 
   compare_i8s_type_ind = 10,
+
   tup_of_i8s_type_ind = 11,
-
-  compare_i16s_type_ind = 12,
+  tup_of_i64s_type_ind = 12,
   tup_of_i16s_type_ind = 13,
+  tup_of_i32s_type_ind = 14,
 
-  compare_i32s_type_ind = 14,
-  tup_of_i32s_type_ind = 15,
+  compare_i16s_type_ind = 15,
+  compare_i32s_type_ind = 16,
+  compare_i64s_type_ind = 17,
 
-  compare_i64s_type_ind = 16,
-  tup_of_i64s_type_ind = 17,
-
-  i8_arith_type_ind = 18,
-  i16_arith_type_ind = 19,
-  i32_arith_type_ind = 20,
-  i64_arith_type_ind = 21,
+  i8_arithmetic_type_ind = 18,
+  i16_arithmetic_type_ind = 19,
+  i32_arithmetic_type_ind = 20,
+  i64_arithmetic_type_ind = 21,
 };
 
 const char *builtin_type_names[] = {
@@ -77,10 +76,10 @@ const type builtin_types[] = {
   [compare_i64s_type_ind] = { .tag = T_FN, .sub_a = tup_of_i64s_type_ind, .sub_b = bool_type_ind,},
   [tup_of_i64s_type_ind] = { .tag = T_TUP, .sub_a = i64_type_ind, .sub_b = i64_type_ind,},
 
-  [i8_arith_type_ind] = {.tag = T_FN, .sub_a = tup_of_i8s_type_ind, .sub_b = i8_type_ind,},
-  [i16_arith_type_ind] = {.tag = T_FN, .sub_a = tup_of_i16s_type_ind, .sub_b = i16_type_ind,},
-  [i32_arith_type_ind] = {.tag = T_FN, .sub_a = tup_of_i32s_type_ind, .sub_b = i32_type_ind,},
-  [i64_arith_type_ind] = {.tag = T_FN, .sub_a = tup_of_i64s_type_ind, .sub_b = i64_type_ind,},
+  [i8_arithmetic_type_ind] = {.tag = T_FN, .sub_a = tup_of_i8s_type_ind, .sub_b = i8_type_ind,},
+  [i16_arithmetic_type_ind] = {.tag = T_FN, .sub_a = tup_of_i16s_type_ind, .sub_b = i16_type_ind,},
+  [i32_arithmetic_type_ind] = {.tag = T_FN, .sub_a = tup_of_i32s_type_ind, .sub_b = i32_type_ind,},
+  [i64_arithmetic_type_ind] = {.tag = T_FN, .sub_a = tup_of_i64s_type_ind, .sub_b = i64_type_ind,},
 };
 
 const node_ind_t builtin_type_amount = STATIC_LEN(builtin_types);
@@ -139,10 +138,10 @@ const node_ind_t builtin_term_type_inds[STATIC_LEN(builtin_term_names)] = {
   [i32_lt_builtin] = compare_i32s_type_ind,
   [i64_lt_builtin] = compare_i64s_type_ind,
 
-  [i8_lte_builtin] = compare_i8s_type_ind,
-  [i16_lte_builtin] = compare_i16s_type_ind,
-  [i32_lte_builtin] = compare_i32s_type_ind,
-  [i64_lte_builtin] = compare_i64s_type_ind,
+  [i8_lte_builtin] = i8_arithmetic_type_ind,
+  [i16_lte_builtin] = i16_arithmetic_type_ind,
+  [i32_lte_builtin] = i32_arithmetic_type_ind,
+  [i64_lte_builtin] = i64_arithmetic_type_ind,
 };
 
 const node_ind_t builtin_term_amount = STATIC_LEN(builtin_term_names);

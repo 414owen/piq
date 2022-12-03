@@ -602,15 +602,32 @@ static LLVMValueRef cg_alloca_at_function_start(cg_state *state,
   return res;
 }
 
-static LLVMIntPredicate get_llvm_comparator(builtin_term builtin) {
-  switch (builtin) {
-    case i8_lt_builtin:
-    case i16_lt_builtin:
-    case i32_lt_builtin:
-    case i64_lt_builtin:
-      return LLVMIntSLT;
-  }
-}
+LLVMIntPredicate llvm_builtin_predicates[] = {
+  [i8_eq_builtin] = LLVMIntEQ,
+  [i16_eq_builtin] = LLVMIntEQ,
+  [i32_eq_builtin] = LLVMIntEQ,
+  [i64_eq_builtin] = LLVMIntEQ,
+
+  [i8_lt_builtin] = LLVMIntSLT,
+  [i16_lt_builtin] = LLVMIntSLT,
+  [i32_lt_builtin] = LLVMIntSLT,
+  [i64_lt_builtin] = LLVMIntSLT,
+
+  [i8_lte_builtin] = LLVMIntSLE,
+  [i16_lte_builtin] = LLVMIntSLE,
+  [i32_lte_builtin] = LLVMIntSLE,
+  [i64_lte_builtin] = LLVMIntSLE,
+
+  [i8_gt_builtin] = LLVMIntSGT,
+  [i16_gt_builtin] = LLVMIntSGT,
+  [i32_gt_builtin] = LLVMIntSGT,
+  [i64_gt_builtin] = LLVMIntSGT,
+
+  [i8_gte_builtin] = LLVMIntSGE,
+  [i16_gte_builtin] = LLVMIntSGE,
+  [i32_gte_builtin] = LLVMIntSGE,
+  [i64_gte_builtin] = LLVMIntSGE,
+};
 
 static void cg_expression_call_stage_two(cg_state *state,
                                          cg_expr_params params) {
@@ -628,10 +645,32 @@ static void cg_expression_call_stage_two(cg_state *state,
     LLVMValueRef right_val =
       LLVMBuildExtractValue(state->builder, param.data.value, 1, "tuple-right");
     switch (callee.data.builtin) {
+      case i8_lt_builtin:
+      case i16_lt_builtin:
       case i32_lt_builtin:
+      case i64_lt_builtin:
+
+      case i8_lte_builtin:
+      case i16_lte_builtin:
+      case i32_lte_builtin:
+      case i64_lte_builtin:
+
+      case i8_gt_builtin:
+      case i16_gt_builtin:
       case i32_gt_builtin:
-      case i32_eq_builtin: {
-        res = LLVMBuildICmp(state->builder, LLVMIntEQ, left_val, right_val, "i32-eq?");
+      case i64_gt_builtin:
+
+      case i8_gte_builtin:
+      case i16_gte_builtin:
+      case i32_gte_builtin:
+      case i64_gte_builtin:
+
+      case i8_eq_builtin:
+      case i16_eq_builtin:
+      case i32_eq_builtin:
+      case i64_eq_builtin: {
+        LLVMIntPredicate predicate = llvm_builtin_predicates[callee.data.builtin];
+        res = LLVMBuildICmp(state->builder, predicate, left_val, right_val, "i32-eq?");
         break;
       }
       default: {
