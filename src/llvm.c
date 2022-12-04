@@ -621,41 +621,6 @@ LLVMIntPredicate llvm_builtin_predicates[] = {
   [i32_gte_builtin] = LLVMIntSGE, [i64_gte_builtin] = LLVMIntSGE,
 };
 
-const char *llvm_builtin_fn_names[] = {
-  [i8_lt_builtin] = "i8_lt",     [i16_lt_builtin] = "i16_lt",
-  [i32_lt_builtin] = "i32_lt",   [i64_lt_builtin] = "i64_lt",
-
-  [i8_lte_builtin] = "i8_lte",   [i16_lte_builtin] = "i16_lte",
-  [i32_lte_builtin] = "i32_lte", [i64_lte_builtin] = "i64_lte",
-
-  [i8_gt_builtin] = "i8_gt",     [i16_gt_builtin] = "i16_gt",
-  [i32_gt_builtin] = "i32_gt",   [i64_gt_builtin] = "i64_gt",
-
-  [i8_gte_builtin] = "i8_gte",   [i16_gte_builtin] = "i16_gte",
-  [i32_gte_builtin] = "i32_gte", [i64_gte_builtin] = "i64_gte",
-
-  [i8_eq_builtin] = "i8_eq",     [i16_eq_builtin] = "i16_eq",
-  [i32_eq_builtin] = "i32_eq",   [i64_eq_builtin] = "i64_eq",
-
-  [i8_add_builtin] = "i8_add",   [i16_add_builtin] = "i16_add",
-  [i32_add_builtin] = "i32_add", [i64_add_builtin] = "i64_add",
-
-  [i8_sub_builtin] = "i8_sub",   [i16_sub_builtin] = "i16_sub",
-  [i32_sub_builtin] = "i32_sub", [i64_sub_builtin] = "i64_sub",
-
-  [i8_mul_builtin] = "i8_mul",   [i16_mul_builtin] = "i16_mul",
-  [i32_mul_builtin] = "i32_mul", [i64_mul_builtin] = "i64_mul",
-
-  [i8_div_builtin] = "i8_div",   [i16_div_builtin] = "i16_div",
-  [i32_div_builtin] = "i32_div", [i64_div_builtin] = "i64_div",
-
-  [i8_rem_builtin] = "i8_rem",   [i16_rem_builtin] = "i16_rem",
-  [i32_rem_builtin] = "i32_rem", [i64_rem_builtin] = "i64_rem",
-
-  [i8_mod_builtin] = "i8_mod",   [i16_mod_builtin] = "i16_mod",
-  [i32_mod_builtin] = "i32_mod", [i64_mod_builtin] = "i64_mod",
-};
-
 typedef struct {
   LLVMValueRef left;
   LLVMValueRef right;
@@ -764,7 +729,7 @@ static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term) {
 
   LLVMTypeRef llvm_type = construct_type(state, builtin_term_type_inds[term]);
   LLVMValueRef fn =
-    LLVMAddFunction(state->module, llvm_builtin_fn_names[term], llvm_type);
+    LLVMAddFunction(state->module, builtin_term_names[term], llvm_type);
   VEC_PUSH(&state->function_stack, fn);
 
   {
@@ -1434,7 +1399,7 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
         break;
       case CG_EXPR_TUP_STAGE_TWO:
         cg_expression_tup_stage_two(&state, action.expr_params);
-        break;
+      break;
       case CG_STATEMENT_LET_STAGE_TWO:
         cg_statement_let_stage_two(&state, action.statement_params);
         break;
