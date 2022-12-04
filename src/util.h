@@ -138,6 +138,10 @@ HEDLEY_PRINTF_FORMAT(2, 3)
 int asprintf(char **, const char *restrict, ...);
 
 NON_NULL_PARAMS
+HEDLEY_PRINTF_FORMAT(1, 2)
+char *format_to_string(const char *restrict fmt, ...);
+
+NON_NULL_PARAMS
 void reverse_arbitrary(void *dest, size_t amt, size_t elsize);
 
 HEDLEY_NO_RETURN
