@@ -289,6 +289,7 @@ static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
 }
 
 static void destroy_cg_state(cg_state *state) {
+  bs_free(&state->val_is_builtin);
   bs_free(&state->env_is_builtin);
   free(state->llvm_types);
   LLVMDisposeBuilder(state->builder);
