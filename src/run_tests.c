@@ -85,6 +85,7 @@ static void run_tests(test_state *state) {
   test_parser(state);
   test_typecheck(state);
   test_ir(state);
+  test_semantics(state);
   test_llvm(state);
 }
 

@@ -162,6 +162,8 @@ typedef struct {
 
   vec_cg_action actions;
 
+  LLVMValueRef builtin_function_defs[builtin_term_amount];
+
   // returning vals
   bitset val_is_builtin;
   vec_lang_value_union val_stack;
@@ -180,6 +182,7 @@ typedef struct {
   type_info types;
 } cg_state;
 
+static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term);
 static void cg_block(cg_state *state, node_ind_t start, node_ind_t amt);
 
 static void push_env(cg_state *state, str_ref bnd, lang_value val) {
@@ -216,35 +219,31 @@ static lang_value exogenous_value(LLVMValueRef term) {
   return res;
 }
 
+static LLVMValueRef pop_exogenous_val(cg_state *state) {
+  bool is_builtin = bs_pop(&state->val_is_builtin);
+  lang_value_union data = VEC_POP(&state->val_stack);
+  if (is_builtin) {
+    return cg_builtin_to_value(state, data.builtin);
+  } else {
+    return data.value;
+  }
+}
+
 static lang_value pop_val(cg_state *state) {
   debug_assert(state->val_stack.len > 0);
   debug_assert(state->val_is_builtin.len > 0);
+  /*
+  lang_value res = {
+    .is_builtin = false,
+    .data.value = pop_exogenous_val(state),
+  };
+  return res;
+  */
   lang_value res = {
     .is_builtin = bs_pop(&state->val_is_builtin),
     .data = VEC_POP(&state->val_stack),
   };
   return res;
-}
-
-static LLVMValueRef pop_exogenous_val(cg_state *state) {
-  lang_value res = pop_val(state);
-  if (res.is_builtin) {
-    switch (res.data.builtin) {
-      case true_builtin:
-        // TODO cache this stuff
-        return LLVMConstInt(LLVMInt1TypeInContext(state->context), 1, false);
-        break;
-      case false_builtin:
-        return LLVMConstInt(LLVMInt1TypeInContext(state->context), 0, false);
-        break;
-      // TODO wrap builtin operators in functions?
-      default:
-        give_up("Can't use builtin operator as a first-class value");
-        break;
-    }
-  } else {
-    return res.data.value;
-  }
 }
 
 static void push_exogenous_val(cg_state *state, LLVMValueRef val) {
@@ -268,6 +267,8 @@ static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
     .module = mod,
     .builder = LLVMCreateBuilderInContext(ctx),
     .actions = VEC_NEW,
+
+    .builtin_function_defs = {NULL},
 
     .val_stack = VEC_NEW,
     .block_stack = VEC_NEW,
@@ -620,21 +621,334 @@ LLVMIntPredicate llvm_builtin_predicates[] = {
   [i32_gte_builtin] = LLVMIntSGE, [i64_gte_builtin] = LLVMIntSGE,
 };
 
+const char *llvm_builtin_fn_names[] = {
+  [i8_lt_builtin] = "i8_lt",     [i16_lt_builtin] = "i16_lt",
+  [i32_lt_builtin] = "i32_lt",   [i64_lt_builtin] = "i64_lt",
+
+  [i8_lte_builtin] = "i8_lte",   [i16_lte_builtin] = "i16_lte",
+  [i32_lte_builtin] = "i32_lte", [i64_lte_builtin] = "i64_lte",
+
+  [i8_gt_builtin] = "i8_gt",     [i16_gt_builtin] = "i16_gt",
+  [i32_gt_builtin] = "i32_gt",   [i64_gt_builtin] = "i64_gt",
+
+  [i8_gte_builtin] = "i8_gte",   [i16_gte_builtin] = "i16_gte",
+  [i32_gte_builtin] = "i32_gte", [i64_gte_builtin] = "i64_gte",
+
+  [i8_eq_builtin] = "i8_eq",     [i16_eq_builtin] = "i16_eq",
+  [i32_eq_builtin] = "i32_eq",   [i64_eq_builtin] = "i64_eq",
+
+  [i8_add_builtin] = "i8_add",   [i16_add_builtin] = "i16_add",
+  [i32_add_builtin] = "i32_add", [i64_add_builtin] = "i64_add",
+
+  [i8_sub_builtin] = "i8_sub",   [i16_sub_builtin] = "i16_sub",
+  [i32_sub_builtin] = "i32_sub", [i64_sub_builtin] = "i64_sub",
+
+  [i8_mul_builtin] = "i8_mul",   [i16_mul_builtin] = "i16_mul",
+  [i32_mul_builtin] = "i32_mul", [i64_mul_builtin] = "i64_mul",
+
+  [i8_div_builtin] = "i8_div",   [i16_div_builtin] = "i16_div",
+  [i32_div_builtin] = "i32_div", [i64_div_builtin] = "i64_div",
+
+  [i8_rem_builtin] = "i8_rem",   [i16_rem_builtin] = "i16_rem",
+  [i32_rem_builtin] = "i32_rem", [i64_rem_builtin] = "i64_rem",
+
+  [i8_mod_builtin] = "i8_mod",   [i16_mod_builtin] = "i16_mod",
+  [i32_mod_builtin] = "i32_mod", [i64_mod_builtin] = "i64_mod",
+};
+
+typedef struct {
+  LLVMValueRef left;
+  LLVMValueRef right;
+} tuple_parts;
+
+static tuple_parts cg_eliminate_tuple(cg_state *state, LLVMValueRef tuple) {
+  tuple_parts res = {
+    .left = LLVMBuildExtractValue(state->builder, tuple, 0, "tuple-left"),
+    .right = LLVMBuildExtractValue(state->builder, tuple, 1, "tuple-right"),
+  };
+  return res;
+}
+
+static void cg_gen_basic_block(cg_state *state, cg_block_params params) {
+  const char *name = params.name;
+  llvm_function fn = params.fn;
+  LLVMBasicBlockRef block =
+    LLVMAppendBasicBlockInContext(state->context, fn, name);
+  LLVMPositionBuilderAtEnd(state->builder, block);
+  VEC_PUSH(&state->block_stack, block);
+}
+
+static LLVMValueRef cg_mod_floor(cg_state *state, LLVMValueRef dividend,
+                                 LLVMValueRef divisor) {
+  LLVMValueRef a = LLVMBuildSRem(state->builder, dividend, divisor, "mod a");
+  LLVMValueRef b = LLVMBuildAdd(state->builder, a, divisor, "mod b");
+  return LLVMBuildSRem(state->builder, b, divisor, "mod res");
+}
+
+static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term) {
+  LLVMValueRef old = state->builtin_function_defs[term];
+  if (old != NULL)
+    return old;
+
+  LLVMValueRef res = NULL;
+
+  switch (term) {
+    case true_builtin:
+      // TODO cache this stuff
+      res = LLVMConstInt(LLVMInt1TypeInContext(state->context), 1, false);
+      break;
+    case false_builtin:
+      res = LLVMConstInt(LLVMInt1TypeInContext(state->context), 0, false);
+      break;
+    case i8_lt_builtin:
+    case i16_lt_builtin:
+    case i32_lt_builtin:
+    case i64_lt_builtin:
+
+    case i8_lte_builtin:
+    case i16_lte_builtin:
+    case i32_lte_builtin:
+    case i64_lte_builtin:
+
+    case i8_gt_builtin:
+    case i16_gt_builtin:
+    case i32_gt_builtin:
+    case i64_gt_builtin:
+
+    case i8_gte_builtin:
+    case i16_gte_builtin:
+    case i32_gte_builtin:
+    case i64_gte_builtin:
+
+    case i8_eq_builtin:
+    case i16_eq_builtin:
+    case i32_eq_builtin:
+    case i64_eq_builtin:
+
+    case i8_add_builtin:
+    case i16_add_builtin:
+    case i32_add_builtin:
+    case i64_add_builtin:
+
+    case i8_sub_builtin:
+    case i16_sub_builtin:
+    case i32_sub_builtin:
+    case i64_sub_builtin:
+
+    case i8_mul_builtin:
+    case i16_mul_builtin:
+    case i32_mul_builtin:
+    case i64_mul_builtin:
+
+    case i8_div_builtin:
+    case i16_div_builtin:
+    case i32_div_builtin:
+    case i64_div_builtin:
+
+    case i8_rem_builtin:
+    case i16_rem_builtin:
+    case i32_rem_builtin:
+    case i64_rem_builtin:
+
+    case i8_mod_builtin:
+    case i16_mod_builtin:
+    case i32_mod_builtin:
+    case i64_mod_builtin:
+      break;
+  }
+
+  if (res != NULL) {
+    state->builtin_function_defs[term] = res;
+    return res;
+  }
+
+  LLVMTypeRef llvm_type = construct_type(state, builtin_term_type_inds[term]);
+  LLVMValueRef fn =
+    LLVMAddFunction(state->module, llvm_builtin_fn_names[term], llvm_type);
+  VEC_PUSH(&state->function_stack, fn);
+
+  {
+    cg_block_params params = {
+      .fn = fn,
+      .name = ENTRY_STR,
+    };
+    cg_gen_basic_block(state, params);
+  }
+
+  LLVMValueRef param = LLVMGetParam(fn, 0);
+
+  LLVMValueRef left;
+  LLVMValueRef right;
+
+  switch (term) {
+    case i8_lt_builtin:
+    case i16_lt_builtin:
+    case i32_lt_builtin:
+    case i64_lt_builtin:
+
+    case i8_lte_builtin:
+    case i16_lte_builtin:
+    case i32_lte_builtin:
+    case i64_lte_builtin:
+
+    case i8_gt_builtin:
+    case i16_gt_builtin:
+    case i32_gt_builtin:
+    case i64_gt_builtin:
+
+    case i8_gte_builtin:
+    case i16_gte_builtin:
+    case i32_gte_builtin:
+    case i64_gte_builtin:
+
+    case i8_eq_builtin:
+    case i16_eq_builtin:
+    case i32_eq_builtin:
+    case i64_eq_builtin:
+
+    case i8_add_builtin:
+    case i16_add_builtin:
+    case i32_add_builtin:
+    case i64_add_builtin:
+
+    case i8_sub_builtin:
+    case i16_sub_builtin:
+    case i32_sub_builtin:
+    case i64_sub_builtin:
+
+    case i8_mul_builtin:
+    case i16_mul_builtin:
+    case i32_mul_builtin:
+    case i64_mul_builtin:
+
+    case i8_div_builtin:
+    case i16_div_builtin:
+    case i32_div_builtin:
+    case i64_div_builtin:
+
+    case i8_rem_builtin:
+    case i16_rem_builtin:
+    case i32_rem_builtin:
+    case i64_rem_builtin:
+
+    case i8_mod_builtin:
+    case i16_mod_builtin:
+    case i32_mod_builtin:
+    case i64_mod_builtin: {
+      tuple_parts parts = cg_eliminate_tuple(state, param);
+      left = parts.left;
+      right = parts.right;
+      break;
+    }
+
+    case true_builtin:
+    case false_builtin:
+    case builtin_term_amount:
+      // TODO mark unreachable
+      break;
+  }
+
+  switch (term) {
+    case i8_lt_builtin:
+    case i16_lt_builtin:
+    case i32_lt_builtin:
+    case i64_lt_builtin:
+
+    case i8_lte_builtin:
+    case i16_lte_builtin:
+    case i32_lte_builtin:
+    case i64_lte_builtin:
+
+    case i8_gt_builtin:
+    case i16_gt_builtin:
+    case i32_gt_builtin:
+    case i64_gt_builtin:
+
+    case i8_gte_builtin:
+    case i16_gte_builtin:
+    case i32_gte_builtin:
+    case i64_gte_builtin:
+
+    case i8_eq_builtin:
+    case i16_eq_builtin:
+    case i32_eq_builtin:
+    case i64_eq_builtin: {
+      LLVMIntPredicate predicate = llvm_builtin_predicates[term];
+      res = LLVMBuildICmp(state->builder, predicate, left, right, "eq?");
+      break;
+    }
+    case i8_add_builtin:
+    case i16_add_builtin:
+    case i32_add_builtin:
+    case i64_add_builtin: {
+      res = LLVMBuildAdd(state->builder, left, right, "+");
+      break;
+    }
+    case i8_sub_builtin:
+    case i16_sub_builtin:
+    case i32_sub_builtin:
+    case i64_sub_builtin: {
+      res = LLVMBuildSub(state->builder, left, right, "-");
+      break;
+    }
+    case i8_mul_builtin:
+    case i16_mul_builtin:
+    case i32_mul_builtin:
+    case i64_mul_builtin: {
+      res = LLVMBuildMul(state->builder, left, right, "*");
+      break;
+    }
+    case i8_div_builtin:
+    case i16_div_builtin:
+    case i32_div_builtin:
+    case i64_div_builtin: {
+      res = LLVMBuildSDiv(state->builder, left, right, "/");
+      break;
+    }
+    case i8_rem_builtin:
+    case i16_rem_builtin:
+    case i32_rem_builtin:
+    case i64_rem_builtin: {
+      res = LLVMBuildSRem(state->builder, left, right, "rem");
+      break;
+    }
+    case i8_mod_builtin:
+    case i16_mod_builtin:
+    case i32_mod_builtin:
+    case i64_mod_builtin: {
+      res = cg_mod_floor(state, left, right);
+      break;
+    }
+
+    case true_builtin:
+    case false_builtin:
+    case builtin_term_amount:
+      // TODO mark unreachable
+      break;
+  }
+
+  LLVMBuildRet(state->builder, res);
+
+  VEC_POP(&state->block_stack);
+  LLVMPositionBuilderAtEnd(state->builder, VEC_PEEK(state->block_stack));
+  VEC_POP(&state->function_stack);
+  return fn;
+}
+
 static void cg_expression_call_stage_two(cg_state *state,
                                          cg_expr_params params) {
   node_ind_t ind = params.node_ind;
   parse_node node = state->parse_tree.nodes[ind];
   node_ind_t callee_ind = PT_CALL_CALLEE_IND(node);
   lang_value callee = pop_val(state);
-  lang_value param = pop_val(state);
+  // None of the builtins are higher-order, so we can assume
+  // it will be an exogenous value
+  LLVMValueRef param = pop_exogenous_val(state);
   LLVMTypeRef fn_type =
     construct_type(state, state->types.node_types[callee_ind]);
   LLVMValueRef res;
   if (callee.is_builtin) {
-    LLVMValueRef left_val =
-      LLVMBuildExtractValue(state->builder, param.data.value, 0, "tuple-left");
-    LLVMValueRef right_val =
-      LLVMBuildExtractValue(state->builder, param.data.value, 1, "tuple-right");
+    tuple_parts parts = cg_eliminate_tuple(state, param);
     switch (callee.data.builtin) {
       case i8_lt_builtin:
       case i16_lt_builtin:
@@ -662,43 +976,50 @@ static void cg_expression_call_stage_two(cg_state *state,
       case i64_eq_builtin: {
         LLVMIntPredicate predicate =
           llvm_builtin_predicates[callee.data.builtin];
-        res =
-          LLVMBuildICmp(state->builder, predicate, left_val, right_val, "eq?");
+        res = LLVMBuildICmp(
+          state->builder, predicate, parts.left, parts.right, "eq?");
         break;
       }
       case i8_add_builtin:
       case i16_add_builtin:
       case i32_add_builtin:
       case i64_add_builtin: {
-        res = LLVMBuildAdd(state->builder, left_val, right_val, "+");
+        res = LLVMBuildAdd(state->builder, parts.left, parts.right, "+");
         break;
       }
       case i8_sub_builtin:
       case i16_sub_builtin:
       case i32_sub_builtin:
       case i64_sub_builtin: {
-        res = LLVMBuildSub(state->builder, left_val, right_val, "-");
+        res = LLVMBuildSub(state->builder, parts.left, parts.right, "-");
         break;
       }
       case i8_mul_builtin:
       case i16_mul_builtin:
       case i32_mul_builtin:
       case i64_mul_builtin: {
-        res = LLVMBuildMul(state->builder, left_val, right_val, "*");
+        res = LLVMBuildMul(state->builder, parts.left, parts.right, "*");
         break;
       }
       case i8_div_builtin:
       case i16_div_builtin:
       case i32_div_builtin:
       case i64_div_builtin: {
-        res = LLVMBuildSDiv(state->builder, left_val, right_val, "/");
+        res = LLVMBuildSDiv(state->builder, parts.left, parts.right, "/");
         break;
       }
       case i8_rem_builtin:
       case i16_rem_builtin:
       case i32_rem_builtin:
       case i64_rem_builtin: {
-        res = LLVMBuildSRem(state->builder, left_val, right_val, "%");
+        res = LLVMBuildSRem(state->builder, parts.left, parts.right, "rem");
+        break;
+      }
+      case i8_mod_builtin:
+      case i16_mod_builtin:
+      case i32_mod_builtin:
+      case i64_mod_builtin: {
+        res = cg_mod_floor(state, parts.left, parts.right);
         break;
       }
       default: {
@@ -707,12 +1028,8 @@ static void cg_expression_call_stage_two(cg_state *state,
       }
     }
   } else {
-    res = LLVMBuildCall2(state->builder,
-                         fn_type,
-                         callee.data.value,
-                         &param.data.value,
-                         1,
-                         "call-res");
+    res = LLVMBuildCall2(
+      state->builder, fn_type, callee.data.value, &param, 1, "call-res");
   }
   push_exogenous_val(state, res);
 }
@@ -874,18 +1191,9 @@ static llvm_function cg_emit_empty_fn(cg_state *state, node_ind_t ind,
   return fn;
 }
 
-static void cg_gen_basic_block(cg_state *state, cg_block_params params) {
-  const char *name = params.name;
-  llvm_function fn = params.fn;
-  LLVMBasicBlockRef block =
-    LLVMAppendBasicBlockInContext(state->context, fn, name);
-  LLVMPositionBuilderAtEnd(state->builder, block);
-  VEC_PUSH(&state->block_stack, block);
-}
-
 // generate the body, and schedule cleanup
-static void cg_function_stage_two_internal(cg_state *state, node_ind_t node_ind,
-                                           llvm_function fn, parse_node node) {
+static void cg_function_stage_two_internal(cg_state *state, llvm_function fn,
+                                           parse_node node) {
   VEC_PUSH(&state->function_stack, fn);
 
   u32 env_amt = state->env_bnds.len;
@@ -908,7 +1216,7 @@ static void cg_function_stage_two(cg_state *state,
   node_ind_t ind = params.node_ind;
   parse_node node = state->parse_tree.nodes[ind];
   llvm_function fn = params.fn;
-  cg_function_stage_two_internal(state, ind, fn, node);
+  cg_function_stage_two_internal(state, fn, node);
 }
 
 static void cg_statement_let_stage_two(cg_state *state,
@@ -936,7 +1244,7 @@ static void cg_statement(cg_state *state, cg_statement_params params) {
     // TODO support recursive?
     case PT_STATEMENT_FUN: {
       llvm_function fn = cg_emit_empty_fn(state, ind, node);
-      cg_function_stage_two_internal(state, params.node_ind, fn, node);
+      cg_function_stage_two_internal(state, fn, node);
       break;
     }
     default:
@@ -1022,19 +1330,11 @@ static void cg_pattern(cg_state *state, cg_pattern_params params) {
 
   switch (node.type.pattern) {
     case PT_PAT_TUP: {
-
-      // LLVMTypeRef type = construct_type(state, state->types.node_types[ind]);
-      llvm_value left_val =
-        LLVMBuildExtractValue(state->builder, val, 0, "tuple-left");
-      llvm_value right_val =
-        LLVMBuildExtractValue(state->builder, val, 1, "tuple-right");
-      // TODO does the struct have to be a pointer?
-
       node_ind_t sub_a = PT_TUP_SUB_A(node);
       node_ind_t sub_b = PT_TUP_SUB_B(node);
-
-      push_pattern_act(state, sub_b, right_val);
-      push_pattern_act(state, sub_a, left_val);
+      tuple_parts parts = cg_eliminate_tuple(state, val);
+      push_pattern_act(state, sub_b, parts.right);
+      push_pattern_act(state, sub_a, parts.left);
       break;
     }
     case PT_PAT_WILDCARD: {
