@@ -200,20 +200,19 @@ static lang_value get_env(cg_state *state, node_ind_t ind) {
 static lang_value builtin_val(builtin_term term) {
   lang_value res = {
     .is_builtin = true,
-    .data = {
-      .builtin = term,
-    },
+    .data =
+      {
+        .builtin = term,
+      },
   };
   return res;
 }
 
 static lang_value exogenous_value(LLVMValueRef term) {
-  lang_value res = {
-    .is_builtin = false,
-    .data = {
-      .value = term,
-    }
-  };
+  lang_value res = {.is_builtin = false,
+                    .data = {
+                      .value = term,
+                    }};
   return res;
 }
 
@@ -230,7 +229,7 @@ static lang_value pop_val(cg_state *state) {
 static LLVMValueRef pop_exogenous_val(cg_state *state) {
   lang_value res = pop_val(state);
   if (res.is_builtin) {
-    switch(res.data.builtin) {
+    switch (res.data.builtin) {
       case true_builtin:
         // TODO cache this stuff
         return LLVMConstInt(LLVMInt1TypeInContext(state->context), 1, false);
@@ -250,7 +249,9 @@ static LLVMValueRef pop_exogenous_val(cg_state *state) {
 
 static void push_exogenous_val(cg_state *state, LLVMValueRef val) {
   bs_push(&state->val_is_builtin, false);
-  lang_value_union l = {.value = val,};
+  lang_value_union l = {
+    .value = val,
+  };
   VEC_PUSH(&state->val_stack, l);
 }
 
@@ -603,30 +604,20 @@ static LLVMValueRef cg_alloca_at_function_start(cg_state *state,
 }
 
 LLVMIntPredicate llvm_builtin_predicates[] = {
-  [i8_eq_builtin] = LLVMIntEQ,
-  [i16_eq_builtin] = LLVMIntEQ,
-  [i32_eq_builtin] = LLVMIntEQ,
-  [i64_eq_builtin] = LLVMIntEQ,
+  [i8_eq_builtin] = LLVMIntEQ,    [i16_eq_builtin] = LLVMIntEQ,
+  [i32_eq_builtin] = LLVMIntEQ,   [i64_eq_builtin] = LLVMIntEQ,
 
-  [i8_lt_builtin] = LLVMIntSLT,
-  [i16_lt_builtin] = LLVMIntSLT,
-  [i32_lt_builtin] = LLVMIntSLT,
-  [i64_lt_builtin] = LLVMIntSLT,
+  [i8_lt_builtin] = LLVMIntSLT,   [i16_lt_builtin] = LLVMIntSLT,
+  [i32_lt_builtin] = LLVMIntSLT,  [i64_lt_builtin] = LLVMIntSLT,
 
-  [i8_lte_builtin] = LLVMIntSLE,
-  [i16_lte_builtin] = LLVMIntSLE,
-  [i32_lte_builtin] = LLVMIntSLE,
-  [i64_lte_builtin] = LLVMIntSLE,
+  [i8_lte_builtin] = LLVMIntSLE,  [i16_lte_builtin] = LLVMIntSLE,
+  [i32_lte_builtin] = LLVMIntSLE, [i64_lte_builtin] = LLVMIntSLE,
 
-  [i8_gt_builtin] = LLVMIntSGT,
-  [i16_gt_builtin] = LLVMIntSGT,
-  [i32_gt_builtin] = LLVMIntSGT,
-  [i64_gt_builtin] = LLVMIntSGT,
+  [i8_gt_builtin] = LLVMIntSGT,   [i16_gt_builtin] = LLVMIntSGT,
+  [i32_gt_builtin] = LLVMIntSGT,  [i64_gt_builtin] = LLVMIntSGT,
 
-  [i8_gte_builtin] = LLVMIntSGE,
-  [i16_gte_builtin] = LLVMIntSGE,
-  [i32_gte_builtin] = LLVMIntSGE,
-  [i64_gte_builtin] = LLVMIntSGE,
+  [i8_gte_builtin] = LLVMIntSGE,  [i16_gte_builtin] = LLVMIntSGE,
+  [i32_gte_builtin] = LLVMIntSGE, [i64_gte_builtin] = LLVMIntSGE,
 };
 
 static void cg_expression_call_stage_two(cg_state *state,
@@ -669,8 +660,10 @@ static void cg_expression_call_stage_two(cg_state *state,
       case i16_eq_builtin:
       case i32_eq_builtin:
       case i64_eq_builtin: {
-        LLVMIntPredicate predicate = llvm_builtin_predicates[callee.data.builtin];
-        res = LLVMBuildICmp(state->builder, predicate, left_val, right_val, "eq?");
+        LLVMIntPredicate predicate =
+          llvm_builtin_predicates[callee.data.builtin];
+        res =
+          LLVMBuildICmp(state->builder, predicate, left_val, right_val, "eq?");
         break;
       }
       case i8_add_builtin:
@@ -687,13 +680,39 @@ static void cg_expression_call_stage_two(cg_state *state,
         res = LLVMBuildSub(state->builder, left_val, right_val, "-");
         break;
       }
+      case i8_mul_builtin:
+      case i16_mul_builtin:
+      case i32_mul_builtin:
+      case i64_mul_builtin: {
+        res = LLVMBuildMul(state->builder, left_val, right_val, "*");
+        break;
+      }
+      case i8_div_builtin:
+      case i16_div_builtin:
+      case i32_div_builtin:
+      case i64_div_builtin: {
+        res = LLVMBuildSDiv(state->builder, left_val, right_val, "/");
+        break;
+      }
+      case i8_rem_builtin:
+      case i16_rem_builtin:
+      case i32_rem_builtin:
+      case i64_rem_builtin: {
+        res = LLVMBuildSRem(state->builder, left_val, right_val, "%");
+        break;
+      }
       default: {
         give_up("Called builtin that isn't an operator");
         break;
       }
     }
   } else {
-    res = LLVMBuildCall2(state->builder, fn_type, callee.data.value, &param.data.value, 1, "call-res");
+    res = LLVMBuildCall2(state->builder,
+                         fn_type,
+                         callee.data.value,
+                         &param.data.value,
+                         1,
+                         "call-res");
   }
   push_exogenous_val(state, res);
 }
@@ -779,7 +798,8 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
       LLVMTypeRef type = construct_type(state, type_ind);
       const char *str = VEC_GET_PTR(state->source, node.span.start);
       size_t len = node.span.len;
-      push_exogenous_val(state, LLVMConstIntOfStringAndSize(type, str, len, 10));
+      push_exogenous_val(state,
+                         LLVMConstIntOfStringAndSize(type, str, len, 10));
       break;
     }
     case PT_EX_IF: {
@@ -973,7 +993,10 @@ static void cg_block_recursive(cg_state *state, node_ind_t start,
         parse_node binding = state->parse_tree.nodes[binding_ind];
         llvm_function fn = cg_emit_empty_fn(state, sub_ind, node);
         str_ref bnd = {.binding = binding.span};
-        lang_value val = {.is_builtin = false, .data.value = fn,};
+        lang_value val = {
+          .is_builtin = false,
+          .data.value = fn,
+        };
         push_env(state, bnd, val);
         push_act_fn_two(state, fn, sub_ind);
         break;
@@ -1016,7 +1039,10 @@ static void cg_pattern(cg_state *state, cg_pattern_params params) {
     }
     case PT_PAT_WILDCARD: {
       str_ref bnd = {.binding = node.span};
-      lang_value lv = {.is_builtin = false, .data.value = val,};
+      lang_value lv = {
+        .is_builtin = false,
+        .data.value = val,
+      };
       push_env(state, bnd, lv);
       break;
     }
@@ -1044,7 +1070,10 @@ static void init_llvm_builtins(cg_state *state) {
   // static void push_env(cg_state *state, binding bnd, llvm_value val) {
   for (builtin_term i = 0; i < builtin_term_amount; i++) {
     str_ref ref = {.builtin = builtin_term_names[i]};
-    lang_value e = {.is_builtin = true, .data.builtin = i,};
+    lang_value e = {
+      .is_builtin = true,
+      .data.builtin = i,
+    };
     push_env(state, ref, e);
   }
 }

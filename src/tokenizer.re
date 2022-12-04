@@ -57,7 +57,7 @@ token_res scan(source_file file, buf_ind_t start) {
   digit = [0-9];
   lower_ident = lowerAlpha (alpha | digit | [?-])*;
   upper_ident = upperAlpha (alpha | digit | [-])*;
-  int = [0-9]+;
+  int = [-]?[0-9]+;
 
   // "type"  { return mk_token(TK_TYPE, start, pos);        }
   // "match" { return mk_token(TK_MATCH, start, pos);       }

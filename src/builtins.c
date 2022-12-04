@@ -53,75 +53,179 @@ const char *builtin_type_names[] = {
 const node_ind_t named_builtin_type_amount = STATIC_LEN(builtin_type_names);
 
 const type builtin_types[] = {
-  [bool_type_ind] = { .tag = T_BOOL, .sub_a = 0, .sub_b = 0,},
-  [u8_type_ind] = { .tag = T_U8, .sub_a = 0, .sub_b = 0,},
-  [u16_type_ind] = { .tag = T_U16, .sub_a = 0, .sub_b = 0,},
-  [u32_type_ind] = { .tag = T_U32, .sub_a = 0, .sub_b = 0,},
-  [u64_type_ind] = { .tag = T_U64, .sub_a = 0, .sub_b = 0,},
-  [i8_type_ind] = { .tag = T_I8, .sub_a = 0, .sub_b = 0,},
-  [i16_type_ind] = { .tag = T_I16, .sub_a = 0, .sub_b = 0,},
-  [i32_type_ind] = { .tag = T_I32, .sub_a = 0, .sub_b = 0,},
-  [i64_type_ind] = { .tag = T_I64, .sub_a = 0, .sub_b = 0,},
-  [string_type_ind] = { .tag = T_LIST, .sub_a = u8_type_ind, .sub_b = 0,},
+  [bool_type_ind] =
+    {
+      .tag = T_BOOL,
+      .sub_a = 0,
+      .sub_b = 0,
+    },
+  [u8_type_ind] =
+    {
+      .tag = T_U8,
+      .sub_a = 0,
+      .sub_b = 0,
+    },
+  [u16_type_ind] =
+    {
+      .tag = T_U16,
+      .sub_a = 0,
+      .sub_b = 0,
+    },
+  [u32_type_ind] =
+    {
+      .tag = T_U32,
+      .sub_a = 0,
+      .sub_b = 0,
+    },
+  [u64_type_ind] =
+    {
+      .tag = T_U64,
+      .sub_a = 0,
+      .sub_b = 0,
+    },
+  [i8_type_ind] =
+    {
+      .tag = T_I8,
+      .sub_a = 0,
+      .sub_b = 0,
+    },
+  [i16_type_ind] =
+    {
+      .tag = T_I16,
+      .sub_a = 0,
+      .sub_b = 0,
+    },
+  [i32_type_ind] =
+    {
+      .tag = T_I32,
+      .sub_a = 0,
+      .sub_b = 0,
+    },
+  [i64_type_ind] =
+    {
+      .tag = T_I64,
+      .sub_a = 0,
+      .sub_b = 0,
+    },
+  [string_type_ind] =
+    {
+      .tag = T_LIST,
+      .sub_a = u8_type_ind,
+      .sub_b = 0,
+    },
 
-  [compare_i8s_type_ind] = { .tag = T_FN, .sub_a = tup_of_i8s_type_ind, .sub_b = bool_type_ind,},
-  [tup_of_i8s_type_ind] = { .tag = T_TUP, .sub_a = i8_type_ind, .sub_b = i8_type_ind,},
+  [compare_i8s_type_ind] =
+    {
+      .tag = T_FN,
+      .sub_a = tup_of_i8s_type_ind,
+      .sub_b = bool_type_ind,
+    },
+  [tup_of_i8s_type_ind] =
+    {
+      .tag = T_TUP,
+      .sub_a = i8_type_ind,
+      .sub_b = i8_type_ind,
+    },
 
-  [compare_i16s_type_ind] = { .tag = T_FN, .sub_a = tup_of_i16s_type_ind, .sub_b = bool_type_ind,},
-  [tup_of_i16s_type_ind] = { .tag = T_TUP, .sub_a = i16_type_ind, .sub_b = i16_type_ind,},
+  [compare_i16s_type_ind] =
+    {
+      .tag = T_FN,
+      .sub_a = tup_of_i16s_type_ind,
+      .sub_b = bool_type_ind,
+    },
+  [tup_of_i16s_type_ind] =
+    {
+      .tag = T_TUP,
+      .sub_a = i16_type_ind,
+      .sub_b = i16_type_ind,
+    },
 
-  [compare_i32s_type_ind] = { .tag = T_FN, .sub_a = tup_of_i32s_type_ind, .sub_b = bool_type_ind,},
-  [tup_of_i32s_type_ind] = { .tag = T_TUP, .sub_a = i32_type_ind, .sub_b = i32_type_ind,},
+  [compare_i32s_type_ind] =
+    {
+      .tag = T_FN,
+      .sub_a = tup_of_i32s_type_ind,
+      .sub_b = bool_type_ind,
+    },
+  [tup_of_i32s_type_ind] =
+    {
+      .tag = T_TUP,
+      .sub_a = i32_type_ind,
+      .sub_b = i32_type_ind,
+    },
 
-  [compare_i64s_type_ind] = { .tag = T_FN, .sub_a = tup_of_i64s_type_ind, .sub_b = bool_type_ind,},
-  [tup_of_i64s_type_ind] = { .tag = T_TUP, .sub_a = i64_type_ind, .sub_b = i64_type_ind,},
+  [compare_i64s_type_ind] =
+    {
+      .tag = T_FN,
+      .sub_a = tup_of_i64s_type_ind,
+      .sub_b = bool_type_ind,
+    },
+  [tup_of_i64s_type_ind] =
+    {
+      .tag = T_TUP,
+      .sub_a = i64_type_ind,
+      .sub_b = i64_type_ind,
+    },
 
-  [i8_arithmetic_type_ind] = {.tag = T_FN, .sub_a = tup_of_i8s_type_ind, .sub_b = i8_type_ind,},
-  [i16_arithmetic_type_ind] = {.tag = T_FN, .sub_a = tup_of_i16s_type_ind, .sub_b = i16_type_ind,},
-  [i32_arithmetic_type_ind] = {.tag = T_FN, .sub_a = tup_of_i32s_type_ind, .sub_b = i32_type_ind,},
-  [i64_arithmetic_type_ind] = {.tag = T_FN, .sub_a = tup_of_i64s_type_ind, .sub_b = i64_type_ind,},
+  [i8_arithmetic_type_ind] =
+    {
+      .tag = T_FN,
+      .sub_a = tup_of_i8s_type_ind,
+      .sub_b = i8_type_ind,
+    },
+  [i16_arithmetic_type_ind] =
+    {
+      .tag = T_FN,
+      .sub_a = tup_of_i16s_type_ind,
+      .sub_b = i16_type_ind,
+    },
+  [i32_arithmetic_type_ind] =
+    {
+      .tag = T_FN,
+      .sub_a = tup_of_i32s_type_ind,
+      .sub_b = i32_type_ind,
+    },
+  [i64_arithmetic_type_ind] =
+    {
+      .tag = T_FN,
+      .sub_a = tup_of_i64s_type_ind,
+      .sub_b = i64_type_ind,
+    },
 };
 
 const node_ind_t builtin_type_amount = STATIC_LEN(builtin_types);
 
 const char *builtin_term_names[] = {
-  [true_builtin] = "True",
-  [false_builtin] = "False",
+  [true_builtin] = "True",        [false_builtin] = "False",
 
-  [i8_eq_builtin] = "i8-eq?",
-  [i16_eq_builtin] = "i16-eq?",
-  [i32_eq_builtin] = "i32-eq?",
-  [i64_eq_builtin] = "i64-eq?",
+  [i8_eq_builtin] = "i8-eq?",     [i16_eq_builtin] = "i16-eq?",
+  [i32_eq_builtin] = "i32-eq?",   [i64_eq_builtin] = "i64-eq?",
 
-  [i8_gt_builtin] = "i8-gt?",
-  [i16_gt_builtin] = "i16-gt?",
-  [i32_gt_builtin] = "i32-gt?",
-  [i64_gt_builtin] = "i64-gt?",
+  [i8_gt_builtin] = "i8-gt?",     [i16_gt_builtin] = "i16-gt?",
+  [i32_gt_builtin] = "i32-gt?",   [i64_gt_builtin] = "i64-gt?",
 
-  [i8_gte_builtin] = "i8-gte?",
-  [i16_gte_builtin] = "i16-gte?",
-  [i32_gte_builtin] = "i32-gte?",
-  [i64_gte_builtin] = "i64-gte?",
+  [i8_gte_builtin] = "i8-gte?",   [i16_gte_builtin] = "i16-gte?",
+  [i32_gte_builtin] = "i32-gte?", [i64_gte_builtin] = "i64-gte?",
 
-  [i8_lt_builtin] = "i8-lt?",
-  [i16_lt_builtin] = "i16-lt?",
-  [i32_lt_builtin] = "i32-lt?",
-  [i64_lt_builtin] = "i64-lt?",
+  [i8_lt_builtin] = "i8-lt?",     [i16_lt_builtin] = "i16-lt?",
+  [i32_lt_builtin] = "i32-lt?",   [i64_lt_builtin] = "i64-lt?",
 
-  [i8_lte_builtin] = "i8-lte?",
-  [i16_lte_builtin] = "i16-lte?",
-  [i32_lte_builtin] = "i32-lte?",
-  [i64_lte_builtin] = "i64-lte?",
+  [i8_lte_builtin] = "i8-lte?",   [i16_lte_builtin] = "i16-lte?",
+  [i32_lte_builtin] = "i32-lte?", [i64_lte_builtin] = "i64-lte?",
 
-  [i8_add_builtin] = "i8-add",
-  [i16_add_builtin] = "i16-add",
-  [i32_add_builtin] = "i32-add",
-  [i64_add_builtin] = "i64-add",
+  [i8_add_builtin] = "i8-add",    [i16_add_builtin] = "i16-add",
+  [i32_add_builtin] = "i32-add",  [i64_add_builtin] = "i64-add",
 
-  [i8_sub_builtin] = "i8-sub",
-  [i16_sub_builtin] = "i16-sub",
-  [i32_sub_builtin] = "i32-sub",
-  [i64_sub_builtin] = "i64-sub",
+  [i8_sub_builtin] = "i8-sub",    [i16_sub_builtin] = "i16-sub",
+  [i32_sub_builtin] = "i32-sub",  [i64_sub_builtin] = "i64-sub",
+
+  [i8_mul_builtin] = "i8-mul",    [i16_mul_builtin] = "i16-mul",
+  [i32_mul_builtin] = "i32-mul",  [i64_mul_builtin] = "i64-mul",
+
+  [i8_div_builtin] = "i8-div",    [i16_div_builtin] = "i16-div",
+  [i32_div_builtin] = "i32-div",  [i64_div_builtin] = "i64-div",
+
+  [i8_rem_builtin] = "i8-rem",    [i16_rem_builtin] = "i16-rem",
+  [i32_rem_builtin] = "i32-rem",  [i64_rem_builtin] = "i64-rem",
 };
 
 const node_ind_t builtin_term_type_inds[STATIC_LEN(builtin_term_names)] = {
@@ -162,6 +266,21 @@ const node_ind_t builtin_term_type_inds[STATIC_LEN(builtin_term_names)] = {
   [i16_sub_builtin] = i16_arithmetic_type_ind,
   [i32_sub_builtin] = i32_arithmetic_type_ind,
   [i64_sub_builtin] = i64_arithmetic_type_ind,
+
+  [i8_mul_builtin] = i8_arithmetic_type_ind,
+  [i16_mul_builtin] = i16_arithmetic_type_ind,
+  [i32_mul_builtin] = i32_arithmetic_type_ind,
+  [i64_mul_builtin] = i64_arithmetic_type_ind,
+
+  [i8_div_builtin] = i8_arithmetic_type_ind,
+  [i16_div_builtin] = i16_arithmetic_type_ind,
+  [i32_div_builtin] = i32_arithmetic_type_ind,
+  [i64_div_builtin] = i64_arithmetic_type_ind,
+
+  [i8_rem_builtin] = i8_arithmetic_type_ind,
+  [i16_rem_builtin] = i16_arithmetic_type_ind,
+  [i32_rem_builtin] = i32_arithmetic_type_ind,
+  [i64_rem_builtin] = i64_arithmetic_type_ind,
 };
 
 const node_ind_t builtin_term_amount = STATIC_LEN(builtin_term_names);
