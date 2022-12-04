@@ -59,6 +59,14 @@ typedef enum {
   i16_rem_builtin = 39,
   i32_rem_builtin = 40,
   i64_rem_builtin = 41,
+
+  // mod_floor
+  i8_mod_builtin = 42,
+  i16_mod_builtin = 43,
+  i32_mod_builtin = 44,
+  i64_mod_builtin = 45,
+
+  builtin_term_amount = 46,
 } builtin_term;
 
 extern const char *builtin_type_names[];
@@ -68,5 +76,4 @@ extern const node_ind_t builtin_type_amount;
 extern const node_ind_t builtin_type_inds[];
 extern const node_ind_t builtin_type_ind_amount;
 extern const char *builtin_term_names[];
-extern const node_ind_t builtin_term_amount;
 extern const node_ind_t builtin_term_type_inds[];

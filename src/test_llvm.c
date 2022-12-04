@@ -471,6 +471,37 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
 
+  test_start(state, "Mod builtin");
+  {
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a (i32-mod (10, a)))";
+
+    i32_mapping_test_case cases[] = {
+      {.input = 1, .expected = 0},
+      {.input = 5, .expected = 0},
+      {.input = 10, .expected = 0},
+      {.input = -4, .expected = -2},
+      {.input = -9, .expected = -8},
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+  }
+  {
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a (i32-mod (-10, a)))";
+
+    i32_mapping_test_case cases[] = {
+      {.input = 1, .expected = 0},
+      {.input = 5, .expected = 0},
+      {.input = 10, .expected = 0},
+      {.input = 4, .expected = 2},
+      {.input = 9, .expected = 8},
+      {.input = -4, .expected = -2},
+      {.input = -9, .expected = -1},
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+  }
+  test_end(state);
+
   test_start(state, "Mutual recursion works");
   {
     const char *input = "(sig a (Fn () I32))\n"

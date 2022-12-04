@@ -194,7 +194,7 @@ const type builtin_types[] = {
 
 const node_ind_t builtin_type_amount = STATIC_LEN(builtin_types);
 
-const char *builtin_term_names[] = {
+const char *builtin_term_names[builtin_term_amount] = {
   [true_builtin] = "True",        [false_builtin] = "False",
 
   [i8_eq_builtin] = "i8-eq?",     [i16_eq_builtin] = "i16-eq?",
@@ -226,9 +226,12 @@ const char *builtin_term_names[] = {
 
   [i8_rem_builtin] = "i8-rem",    [i16_rem_builtin] = "i16-rem",
   [i32_rem_builtin] = "i32-rem",  [i64_rem_builtin] = "i64-rem",
+
+  [i8_mod_builtin] = "i8-mod",    [i16_mod_builtin] = "i16-mod",
+  [i32_mod_builtin] = "i32-mod",  [i64_mod_builtin] = "i64-mod",
 };
 
-const node_ind_t builtin_term_type_inds[STATIC_LEN(builtin_term_names)] = {
+const node_ind_t builtin_term_type_inds[builtin_term_amount] = {
   [true_builtin] = bool_type_ind,
   [false_builtin] = bool_type_ind,
 
@@ -281,6 +284,9 @@ const node_ind_t builtin_term_type_inds[STATIC_LEN(builtin_term_names)] = {
   [i16_rem_builtin] = i16_arithmetic_type_ind,
   [i32_rem_builtin] = i32_arithmetic_type_ind,
   [i64_rem_builtin] = i64_arithmetic_type_ind,
-};
 
-const node_ind_t builtin_term_amount = STATIC_LEN(builtin_term_names);
+  [i8_mod_builtin] = i8_arithmetic_type_ind,
+  [i16_mod_builtin] = i16_arithmetic_type_ind,
+  [i32_mod_builtin] = i32_arithmetic_type_ind,
+  [i64_mod_builtin] = i64_arithmetic_type_ind,
+};

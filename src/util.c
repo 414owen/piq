@@ -234,6 +234,17 @@ int asprintf(char **buf, const char *restrict fmt, ...) {
   return res;
 }
 
+NON_NULL_PARAMS
+HEDLEY_PRINTF_FORMAT(1, 2)
+char *format_to_string(const char *restrict fmt, ...) {
+  char *res;
+  va_list ap;
+  va_start(ap, fmt);
+  vasprintf(&res, fmt, ap);
+  va_end(ap);
+  return res;
+}
+
 HEDLEY_NON_NULL(1, 2)
 NON_NULL_PARAMS
 void memset_arbitrary(void *restrict dest, void *restrict el, size_t amt,
