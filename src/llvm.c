@@ -1399,7 +1399,7 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
         break;
       case CG_EXPR_TUP_STAGE_TWO:
         cg_expression_tup_stage_two(&state, action.expr_params);
-      break;
+        break;
       case CG_STATEMENT_LET_STAGE_TWO:
         cg_statement_let_stage_two(&state, action.statement_params);
         break;
