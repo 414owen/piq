@@ -44,6 +44,21 @@ typedef enum {
   i16_sub_builtin = 27,
   i32_sub_builtin = 28,
   i64_sub_builtin = 29,
+
+  i8_mul_builtin = 30,
+  i16_mul_builtin = 31,
+  i32_mul_builtin = 32,
+  i64_mul_builtin = 33,
+
+  i8_div_builtin = 34,
+  i16_div_builtin = 35,
+  i32_div_builtin = 36,
+  i64_div_builtin = 37,
+
+  i8_rem_builtin = 38,
+  i16_rem_builtin = 39,
+  i32_rem_builtin = 40,
+  i64_rem_builtin = 41,
 } builtin_term;
 
 extern const char *builtin_type_names[];

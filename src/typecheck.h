@@ -6,6 +6,7 @@
 #include "types.h"
 
 typedef enum {
+  INT_SMALLER_THAN_MIN,
   INT_LARGER_THAN_MAX,
   TYPE_NOT_FOUND,
   AMBIGUOUS_TYPE,

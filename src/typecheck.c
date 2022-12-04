@@ -424,20 +424,27 @@ static void setup_builtins(typecheck_state *state) {
 }
 
 static bool check_int_fits(typecheck_state *state, node_ind_t node_ind,
+                           uint64_t min, // negative
                            uint64_t max) {
   parse_node node = state->tree.nodes[node_ind];
   bool res = true;
   const char *buf = state->input;
   uint64_t last, n = 0;
-  for (buf_ind_t j = 0; j < node.span.len; j++) {
+  bool negative = false;
+  buf_ind_t j = 0;
+  if (buf[node.span.start] == '-') {
+    negative = true;
+    j++;
+  }
+  for (; j < node.span.len; j++) {
     buf_ind_t i = node.span.start + j;
     last = n;
     char digit = buf[i];
     n *= 10;
     n += digit - '0';
-    if (n < last || n > max) {
+    if (n < last || (!negative && n > max) || (negative && n > min)) {
       tc_error err = {
-        .type = INT_LARGER_THAN_MAX,
+        .type = negative ? INT_SMALLER_THAN_MIN : INT_LARGER_THAN_MAX,
         .pos = node_ind,
       };
       push_tc_err(state, err);
@@ -454,28 +461,29 @@ static bool check_int_fits_type(typecheck_state *state, node_ind_t node_ind,
   bool fits = true;
   switch (wanted.tag) {
     case T_U8:
-      fits = check_int_fits(state, node_ind, UINT8_MAX);
+      // TODO  extract out this call?
+      fits = check_int_fits(state, node_ind, 0, UINT8_MAX);
       break;
     case T_U16:
-      fits = check_int_fits(state, node_ind, UINT16_MAX);
+      fits = check_int_fits(state, node_ind, 0, UINT16_MAX);
       break;
     case T_U32:
-      fits = check_int_fits(state, node_ind, UINT32_MAX);
+      fits = check_int_fits(state, node_ind, 0, UINT32_MAX);
       break;
     case T_U64:
-      fits = check_int_fits(state, node_ind, UINT64_MAX);
+      fits = check_int_fits(state, node_ind, 0, UINT64_MAX);
       break;
     case T_I8:
-      fits = check_int_fits(state, node_ind, INT8_MAX);
+      fits = check_int_fits(state, node_ind, INT8_MIN, INT8_MAX);
       break;
     case T_I16:
-      fits = check_int_fits(state, node_ind, INT16_MAX);
+      fits = check_int_fits(state, node_ind, INT16_MIN, INT16_MAX);
       break;
     case T_I32:
-      fits = check_int_fits(state, node_ind, INT32_MAX);
+      fits = check_int_fits(state, node_ind, INT32_MIN, INT32_MAX);
       break;
     case T_I64:
-      fits = check_int_fits(state, node_ind, INT64_MAX);
+      fits = check_int_fits(state, node_ind, INT64_MIN, INT64_MAX);
       break;
     default: {
       tc_error err = {
@@ -1630,6 +1638,7 @@ static void print_tc_error(FILE *f, tc_res res, const char *restrict input,
     case NEED_SIGNATURE:
       fputs("Top level statement needs signature", f);
       break;
+    case INT_SMALLER_THAN_MIN:
     case INT_LARGER_THAN_MAX:
       fputs("Int doesn't fit into type", f);
       break;

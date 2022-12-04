@@ -145,15 +145,23 @@ static void test_llvm_code_produces_bool(test_state *state,
   jit_dispose(&ctx);
 }
 
+typedef struct {
+  int32_t input;
+  int32_t expected;
+} i32_mapping_test_case;
+
 static void test_llvm_code_maps_int(test_state *state,
-                                    const char *restrict input,
-                                    int32_t input_param, int32_t expected) {
+                                    const char *restrict input, int case_amt,
+                                    i32_mapping_test_case *cases) {
   jit_ctx ctx = jit_llvm_init();
   void *entry_addr = get_entry_fn(state, &ctx, input);
   int32_t (*entry)(int32_t) = (int32_t(*)(int32_t))entry_addr;
   if (entry) {
-    int32_t got = entry(input_param);
-    ensure_int_result_matches(state, ctx, expected, got);
+    for (int i = 0; i < case_amt; i++) {
+      i32_mapping_test_case tup = cases[i];
+      int32_t got = entry(tup.input);
+      ensure_int_result_matches(state, ctx, tup.expected, got);
+    }
   }
   jit_dispose(&ctx);
 }
@@ -239,8 +247,21 @@ void test_llvm(test_state *state) {
   {
     const char *input = "(sig test (Fn I32 I32))\n"
                         "(fun test a a)";
-    test_llvm_code_maps_int(state, input, 1, 1);
-    test_llvm_code_maps_int(state, input, 2, 2);
+    i32_mapping_test_case test_cases[] = {
+      {
+        .input = 1,
+        .expected = 1,
+      },
+      {
+        .input = 2,
+        .expected = 2,
+      },
+      {
+        .input = -500,
+        .expected = -500,
+      },
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(test_cases), test_cases);
   }
   test_end(state);
 
@@ -307,52 +328,159 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
 
-  test_start(state, "Comparison builtin");
+  test_start(state, "Equality builtin");
   {
-    const char *input = 
-      "(sig test (Fn I32 I32))\n"
-      "(fun test a (if (i32-eq? (a, 8)) 4 5))";
-    test_llvm_code_maps_int(state, input, 8, 4);
-    test_llvm_code_maps_int(state, input, 9, 5);
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a (if (i32-eq? (a, 8)) 4 5))";
+
+    i32_mapping_test_case cases[] = {
+      {
+        .input = 8,
+        .expected = 4,
+      },
+      {
+        .input = 9,
+        .expected = 5,
+      },
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
 
   test_start(state, "Add builtin");
   {
-    const char *input = 
-      "(sig test (Fn I32 I32))\n"
-      "(fun test a (i32-add (3, a)))";
-    // TODO make this thing take two arrays of cases, to avoid recompilation...
-    test_llvm_code_maps_int(state, input, 0, 3);
-    test_llvm_code_maps_int(state, input, 8, 11);
-    test_llvm_code_maps_int(state, input, INT32_MAX - 2, INT32_MIN);
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a (i32-add (3, a)))";
+
+    i32_mapping_test_case cases[] = {
+      {
+        .input = 0,
+        .expected = 3,
+      },
+      {
+        .input = 8,
+        .expected = 11,
+      },
+      {
+        .input = INT32_MAX - 2,
+        .expected = INT32_MIN,
+      },
+      {
+        .input = -8,
+        .expected = -5,
+      },
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
 
   test_start(state, "Sub builtin");
   {
-    const char *input = 
-      "(sig test (Fn I32 I32))\n"
-      "(fun test a (i32-sub (a, 4)))";
-    // TODO make this thing take two arrays of cases, to avoid recompilation...
-    test_llvm_code_maps_int(state, input, 4, 0);
-    test_llvm_code_maps_int(state, input, 42, 38);
-    test_llvm_code_maps_int(state, input, 0, -4);
-    test_llvm_code_maps_int(state, input, INT32_MIN + 2, INT32_MAX - 1);
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a (i32-sub (a, 4)))";
+
+    i32_mapping_test_case cases[] = {
+      {
+        .input = 4,
+        .expected = 0,
+      },
+      {
+        .input = 42,
+        .expected = 38,
+      },
+      {
+        .input = INT32_MIN + 2,
+        .expected = INT32_MAX - 1,
+      },
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+  }
+  test_end(state);
+
+  test_start(state, "Mul builtin");
+  {
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a (i32-mul (a, -3)))";
+
+    i32_mapping_test_case cases[] = {
+      {
+        .input = 1,
+        .expected = -3,
+      },
+      {
+        .input = 2,
+        .expected = -6,
+      },
+      {
+        .input = -1,
+        .expected = 3,
+      },
+      {
+        .input = -3,
+        .expected = 9,
+      },
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    // TODO test overflow
+  }
+  test_end(state);
+
+  test_start(state, "Div builtin");
+  {
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a (i32-div (-12, a)))";
+
+    i32_mapping_test_case cases[] = {
+      {.input = 1, .expected = -12},
+      {.input = -1, .expected = 12},
+      {.input = 3, .expected = -4},
+      {.input = -4, .expected = 3},
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+  }
+  test_end(state);
+
+  test_start(state, "Rem builtin");
+  {
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a (i32-rem (10, a)))";
+
+    i32_mapping_test_case cases[] = {
+      {.input = 1, .expected = 0},
+      {.input = 5, .expected = 0},
+      {.input = 10, .expected = 0},
+      {.input = -4, .expected = 2},
+      {.input = -9, .expected = 1},
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+  }
+  {
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a (i32-rem (-10, a)))";
+
+    i32_mapping_test_case cases[] = {
+      {.input = 1, .expected = 0},
+      {.input = 5, .expected = 0},
+      {.input = 10, .expected = 0},
+      {.input = 4, .expected = -2},
+      {.input = 9, .expected = -1},
+      {.input = -4, .expected = -2},
+      {.input = -9, .expected = -1},
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
 
   test_start(state, "Mutual recursion works");
   {
-    const char *input = 
-      "(sig a (Fn () I32))\n"
-      "(fun a () (if True (b ()) 1))"
-      "\n"
-      "(sig b (Fn () I32))\n"
-      "(fun b () (if False (a ()) 2))"
-      "\n"
-      "(sig test (Fn () I32))\n"
-      "(fun test () (a ()))";
+    const char *input = "(sig a (Fn () I32))\n"
+                        "(fun a () (if True (b ()) 1))"
+                        "\n"
+                        "(sig b (Fn () I32))\n"
+                        "(fun b () (if False (a ()) 2))"
+                        "\n"
+                        "(sig test (Fn () I32))\n"
+                        "(fun test () (a ()))";
     test_llvm_code_produces_int(state, input, 2);
   }
   test_end(state);
