@@ -605,7 +605,7 @@ static LLVMValueRef cg_alloca_at_function_start(cg_state *state,
   return res;
 }
 
-LLVMIntPredicate llvm_builtin_predicates[] = {
+static LLVMIntPredicate llvm_builtin_predicates[] = {
   [i8_eq_builtin] = LLVMIntEQ,    [i16_eq_builtin] = LLVMIntEQ,
   [i32_eq_builtin] = LLVMIntEQ,   [i64_eq_builtin] = LLVMIntEQ,
 
