@@ -556,7 +556,8 @@ static void push_tc_sig(typecheck_state *state, node_ind_t node_ind,
 static void typecheck_block_internal(typecheck_state *state, node_ind_t sub_amt,
                                      node_ind_t subs_start,
                                      bitset_data sub_has_wanted,
-                                     bool enforce_sigs) {
+                                     bool enforce_sigs,
+                                     bool must_end_in_expression) {
   if (sub_amt == 0)
     return;
 
@@ -658,6 +659,25 @@ static void typecheck_block_internal(typecheck_state *state, node_ind_t sub_amt,
       }
     }
   }
+
+  if (must_end_in_expression) {
+    node_ind_t last_ind = state->tree.inds[subs_start + sub_amt - 1];
+    parse_node last = state->tree.nodes[last_ind];
+    switch (last.type.statement) {
+      case PT_STATEMENT_DATA_DECLARATION:
+      case PT_STATEMENT_SIG:
+      case PT_STATEMENT_LET:
+      case PT_STATEMENT_FUN: {
+        tc_error err = {
+          .type = BLOCK_ENDS_IN_STATEMENT,
+          .pos = last_ind,
+        };
+        push_tc_err(state, err);
+        break;
+      }
+    }
+  }
+
   tc_action action = {.tag = TC_POP_N_VARS, .amt = bnd_amt};
   push_action(state, action);
 }
@@ -684,7 +704,7 @@ static void typecheck_block_node(typecheck_state *state, tc_node_params params,
   }
 
   typecheck_block_internal(
-    state, sub_amt, subs_start, sub_has_wanted, enforce_sigs);
+    state, sub_amt, subs_start, sub_has_wanted, enforce_sigs, true);
 
   tc_action action = {
     .tag = TC_CLONE_ACTUAL_ACTUAL,
@@ -701,7 +721,7 @@ static void typecheck_root(typecheck_state *state) {
   const node_ind_t subs_start = state->tree.root_subs_start;
   // TODO this can be stored in state, and cached to prevent further allocations
   char *sub_has_wanted = stcalloc(BITNSLOTS(sub_amt), 1);
-  typecheck_block_internal(state, sub_amt, subs_start, sub_has_wanted, true);
+  typecheck_block_internal(state, sub_amt, subs_start, sub_has_wanted, true, false);
   stfree(sub_has_wanted, BITNSLOTS(sub_amt));
 }
 
@@ -1629,6 +1649,9 @@ static void print_tc_error(FILE *f, tc_res res, const char *restrict input,
                            parse_tree tree, node_ind_t err_ind) {
   tc_error error = res.errors[err_ind];
   switch (error.type) {
+    case BLOCK_ENDS_IN_STATEMENT:
+      fputs("Block expression must end in expression", f);
+      break;
     case CALLED_NON_FUNCTION:
       fputs("Tried to call a non-function", f);
       break;
