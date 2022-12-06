@@ -22,6 +22,7 @@ typedef enum {
   TUPLE_WRONG_ARITY,
   LITERAL_MISMATCH,
   MISSING_SIG,
+  BLOCK_ENDS_IN_STATEMENT,
 } tc_error_type;
 
 typedef struct {

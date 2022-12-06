@@ -271,6 +271,7 @@ static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
     .builtin_function_defs = {NULL},
 
     .val_stack = VEC_NEW,
+    .val_is_builtin = bs_new(),
     .block_stack = VEC_NEW,
     .function_stack = VEC_NEW,
 
@@ -898,7 +899,8 @@ static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term) {
   VEC_POP(&state->block_stack);
   LLVMPositionBuilderAtEnd(state->builder, VEC_PEEK(state->block_stack));
   VEC_POP(&state->function_stack);
-  return fn;
+  LLVMValueRef fn_ptr = LLVMConstBitCast(fn, LLVMPointerType(LLVMInt8Type(), 0));
+  return fn_ptr;
 }
 
 static void cg_expression_call_stage_two(cg_state *state,

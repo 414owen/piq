@@ -100,6 +100,7 @@ void bs_push_false_n(bitset *bs, size_t amt) {
 }
 
 bool bs_pop(bitset *bs) {
+  debug_assert(bs->len > 0);
   size_t len = --bs->len;
   return bs_data_get(bs->data, len);
 }

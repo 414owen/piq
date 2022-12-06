@@ -525,6 +525,20 @@ static void test_errors(test_state *state) {
     test_end(state);
   }
 
+  test_start(state, "Blocks must end in expressions");
+  {
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a (let f 1))";
+    const tc_err_test errors[] = {
+      {
+        .type = BLOCK_ENDS_IN_STATEMENT,
+      },
+    };
+    // test_typecheck_errors(state, input, errors, STATIC_LEN(errors));
+
+  }
+  test_end(state);
+
   test_group_end(state);
 }
 
