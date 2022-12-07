@@ -368,15 +368,6 @@ static void push_actions(typecheck_state *state, node_ind_t amt,
 // Add builtin types and custom types to type env
 static void setup_builtins(typecheck_state *state) {
 
-  memset_arbitrary(state->types.node_types,
-                   &state->unknown_ind,
-                   state->tree.node_amt,
-                   sizeof(node_ind_t));
-  memset_arbitrary(state->wanted,
-                   &state->unknown_ind,
-                   state->tree.node_amt,
-                   sizeof(node_ind_t));
-
   // Prelude
   {
     // blit builtin types
@@ -400,6 +391,15 @@ static void setup_builtins(typecheck_state *state) {
   }
 
   state->unknown_ind = mk_primitive_type(state, T_UNKNOWN);
+
+  memset_arbitrary(state->types.node_types,
+                   &state->unknown_ind,
+                   state->tree.node_amt,
+                   sizeof(node_ind_t));
+  memset_arbitrary(state->wanted,
+                   &state->unknown_ind,
+                   state->tree.node_amt,
+                   sizeof(node_ind_t));
 
   for (node_ind_t i = 0; i < builtin_term_amount; i++) {
     const char *name = builtin_term_names[i];
@@ -1869,16 +1869,16 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           fprintf(debug_out, "Popping %d vars. Stack:\n", action.amt);
           print_popped_env(debug_out,
                            input,
-                           state.term_env,
+                           state.term_env.bindings,
                            state.term_env.is_builtin,
-                           state.term_env.len - action.amt);
+                           state.term_env.bindings.len - action.amt);
           break;
         }
         case TC_POP_VARS_TO: {
           fprintf(debug_out, "Keeping %d vars. Stack:\n", action.amt);
           print_popped_env(debug_out,
                            input,
-                           state.term_env,
+                           state.term_env.bindings,
                            state.term_env.is_builtin,
                            action.amt);
           break;
@@ -1955,7 +1955,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           binding b = action.binding;
           fprintf(debug_out,
                   "Binding: '%.*s'\n",
-                  b.end - b.start + 1,
+                  b.len,
                   &input[b.start]);
           node_ind_t type_ind = state.types.node_types[action.node_ind];
           fputs("Type: ", debug_out);
@@ -2090,7 +2090,7 @@ tc_res typecheck(const char *restrict input, parse_tree tree) {
           case T_FN: {
             node_ind_t callee_param_type_ind = T_FN_PARAM_IND(callee_type);
             node_ind_t callee_ret_type_ind = T_FN_RET_IND(callee_type);
-            if (callee_ret_type_ind != node_params.wanted_ind) {
+            if (node_params.wanted_ind != state.unknown_ind && callee_ret_type_ind != node_params.wanted_ind) {
               tc_error err = {.type = TYPE_MISMATCH,
                               .expected = node_params.wanted_ind,
                               .got = callee_ret_type_ind,

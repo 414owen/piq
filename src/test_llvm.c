@@ -549,14 +549,50 @@ void test_llvm(test_state *state) {
   {
     const char *input = "(sig test (Fn I32 I32))\n"
                         "(fun test a\n"
-                          "(let f (if (i32-gte? (a, 47)) i32-add i32-sub))\n"
-                          "(f (a, 10)))";
+                        "  (let f (if True i32-add i32-sub))\n"
+                        "  (f (a, 10)))";
+
+    i32_mapping_test_case cases[] = {
+      {.input = 42, .expected = 52},
+      {.input = 56, .expected = 66},
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+  }
+  {
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a\n"
+                         "  (let f (if False i32-add i32-sub))\n"
+                         "  (f (a, 10)))";
 
     i32_mapping_test_case cases[] = {
       {.input = 42, .expected = 32},
-      {.input = 56, .expected = 66},
+      {.input = 56, .expected = 46},
     };
-    // test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+  }
+  {
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a\n"
+                        "  (let b (if (i32-lte? (a, 12)) (i32-add (4, 5)) 4))\n"
+                        "  b)";
+
+    i32_mapping_test_case cases[] = {
+      {.input = 11, .expected = 9},
+      {.input = 13, .expected = 4},
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+  }
+  {
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a\n"
+                        "  (let f (if (i32-lte? (a, 12)) i32-add i32-sub))\n"
+                        "  (f (3, 4)))";
+
+    i32_mapping_test_case cases[] = {
+      {.input = 11, .expected = 7},
+      {.input = 13, .expected = -1},
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
 
