@@ -174,7 +174,8 @@ typedef struct {
   // corresponds to in.types
   LLVMTypeRef *llvm_types;
   vec_str_ref env_bnds;
-  bitset env_is_builtin;
+  bitset env_bnd_is_builtin;
+  bitset env_val_is_builtin;
   vec_lang_value_union env_vals;
 
   source_file source;
@@ -185,16 +186,17 @@ typedef struct {
 static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term);
 static void cg_block(cg_state *state, node_ind_t start, node_ind_t amt);
 
-static void push_env(cg_state *state, str_ref bnd, lang_value val) {
+static void push_env(cg_state *state, str_ref bnd, bool bnd_is_builtin, lang_value val) {
   debug_assert(val.is_builtin || val.data.value != NULL);
   VEC_PUSH(&state->env_bnds, bnd);
   VEC_PUSH(&state->env_vals, val.data);
-  bs_push(&state->env_is_builtin, val.is_builtin);
+  bs_push(&state->env_bnd_is_builtin, bnd_is_builtin);
+  bs_push(&state->env_val_is_builtin, val.is_builtin);
 }
 
 static lang_value get_env(cg_state *state, node_ind_t ind) {
   lang_value res = {
-    .is_builtin = bs_get(state->env_is_builtin, ind),
+    .is_builtin = bs_get(state->env_val_is_builtin, ind),
     .data = VEC_GET(state->env_vals, ind),
   };
   return res;
@@ -278,7 +280,8 @@ static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
     .llvm_types = (LLVMTypeRef *)calloc(types.type_amt, sizeof(LLVMTypeRef)),
     .env_bnds = VEC_NEW,
     .env_vals = VEC_NEW,
-    .env_is_builtin = bs_new(),
+    .env_bnd_is_builtin = bs_new(),
+    .env_val_is_builtin = bs_new(),
 
     .source = source,
     .parse_tree = tree,
@@ -291,7 +294,8 @@ static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
 
 static void destroy_cg_state(cg_state *state) {
   bs_free(&state->val_is_builtin);
-  bs_free(&state->env_is_builtin);
+  bs_free(&state->env_val_is_builtin);
+  bs_free(&state->env_bnd_is_builtin);
   free(state->llvm_types);
   LLVMDisposeBuilder(state->builder);
   VEC_FREE(&state->actions);
@@ -1071,7 +1075,7 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
     case PT_EX_UPPER_NAME: {
       binding b = node.span;
       node_ind_t ind = lookup_str_ref(
-        state->source.data, state->env_bnds, state->env_is_builtin, b);
+        state->source.data, state->env_bnds, state->env_bnd_is_builtin, b);
       // missing refs are caught in typecheck phase
       debug_assert(ind != state->env_bnds.len);
       lang_value val = get_env(state, ind);
@@ -1196,7 +1200,7 @@ static void cg_statement_let_stage_two(cg_state *state,
   parse_node binding = state->parse_tree.nodes[binding_ind];
   lang_value val = pop_val(state);
   str_ref str = {.binding = binding.span};
-  push_env(state, str, val);
+  push_env(state, str, false, val);
 }
 
 static void cg_statement(cg_state *state, cg_statement_params params) {
@@ -1273,7 +1277,7 @@ static void cg_block_recursive(cg_state *state, node_ind_t start,
           .is_builtin = false,
           .data.value = fn,
         };
-        push_env(state, bnd, val);
+        push_env(state, bnd, false, val);
         push_act_fn_two(state, fn, sub_ind);
         break;
       }
@@ -1311,7 +1315,7 @@ static void cg_pattern(cg_state *state, cg_pattern_params params) {
         .is_builtin = false,
         .data.value = val,
       };
-      push_env(state, bnd, lv);
+      push_env(state, bnd, false, lv);
       break;
     }
     case PT_PAT_UNIT:
@@ -1331,7 +1335,8 @@ static void cg_pop_env_to(cg_state *state, cg_pop_env_to_params params) {
 
   VEC_POP_N(&state->env_bnds.len, pop_amt);
   VEC_POP_N(&state->env_vals.len, pop_amt);
-  bs_pop_n(&state->env_is_builtin, pop_amt);
+  bs_pop_n(&state->env_bnd_is_builtin, pop_amt);
+  bs_pop_n(&state->env_val_is_builtin, pop_amt);
 }
 
 static void init_llvm_builtins(cg_state *state) {
@@ -1342,7 +1347,7 @@ static void init_llvm_builtins(cg_state *state) {
       .is_builtin = true,
       .data.builtin = i,
     };
-    push_env(state, ref, e);
+    push_env(state, ref, true, e);
   }
 }
 
