@@ -530,6 +530,21 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
 
+  test_start(state, "Can assign builtin to var");
+  {
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test a\n"
+                        "  (let f i32-mul)\n"
+                        "  (f (4, a)))";
+
+    i32_mapping_test_case cases[] = {
+      {.input = 12, .expected = 48},
+      {.input = -7, .expected = -28},
+    };
+    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+  }
+  test_end(state);
+
   test_start(state, "Can use builtins in complex expressions");
   {
     const char *input = "(sig test (Fn I32 I32))\n"

@@ -7,6 +7,7 @@
 typedef char *bitset_data;
 
 typedef struct {
+  // TODO store stuff inline here and with cap
   bitset_data data;
   // in bits
   size_t len;
