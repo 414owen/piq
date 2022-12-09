@@ -186,7 +186,8 @@ typedef struct {
 static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term);
 static void cg_block(cg_state *state, node_ind_t start, node_ind_t amt);
 
-static void push_env(cg_state *state, str_ref bnd, bool bnd_is_builtin, lang_value val) {
+static void push_env(cg_state *state, str_ref bnd, bool bnd_is_builtin,
+                     lang_value val) {
   debug_assert(val.is_builtin || val.data.value != NULL);
   VEC_PUSH(&state->env_bnds, bnd);
   VEC_PUSH(&state->env_vals, val.data);
@@ -587,6 +588,21 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
   return llvm_types[root_type_ind];
 }
 
+// wraps function types in a pointer, so that it can be passed around
+static LLVMTypeRef construct_runtime_type(cg_state *state,
+                                          node_ind_t root_type_ind) {
+  type t = state->types.types[root_type_ind];
+  LLVMTypeRef res = construct_type(state, root_type_ind);
+  switch (t.tag) {
+    case T_FN:
+      res = LLVMPointerType(res, 0);
+      break;
+    default:
+      break;
+  }
+  return res;
+}
+
 static void LLVMPositionBuilderAtStart(LLVMBuilderRef builder,
                                        LLVMBasicBlockRef block) {
   LLVMValueRef first_instruction = LLVMGetFirstInstruction(block);
@@ -903,7 +919,8 @@ static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term) {
   VEC_POP(&state->block_stack);
   LLVMPositionBuilderAtEnd(state->builder, VEC_PEEK(state->block_stack));
   VEC_POP(&state->function_stack);
-  LLVMValueRef fn_ptr = LLVMConstBitCast(fn, LLVMPointerType(LLVMInt8Type(), 0));
+  LLVMValueRef fn_ptr =
+    LLVMConstBitCast(fn, LLVMPointerType(LLVMInt8Type(), 0));
   return fn_ptr;
 }
 
@@ -1013,7 +1030,8 @@ static void cg_expression_if_stage_two(cg_state *state, cg_expr_params params) {
   LLVMValueRef then_val = pop_exogenous_val(state);
   LLVMValueRef cond = pop_exogenous_val(state);
 
-  LLVMTypeRef res_type = construct_type(state, state->types.node_types[ind]);
+  LLVMTypeRef res_type =
+    construct_runtime_type(state, state->types.node_types[ind]);
 
   LLVMBasicBlockRef else_block = VEC_POP(&state->block_stack);
   LLVMBasicBlockRef then_block = VEC_POP(&state->block_stack);
@@ -1424,7 +1442,14 @@ llvm_res llvm_gen_module(const char *module_name, source_file source,
   llvm_res res = {
     .module = LLVMModuleCreateWithNameInContext(module_name, ctx),
   };
+  char *err;
+  bool broken = LLVMVerifyModule(res.module, LLVMPrintMessageAction, &err);
+  fputs(err, stderr);
   cg_llvm_module(ctx, res.module, source, tree, types);
+  free(err);
+  if (broken) {
+    exit(1);
+  }
 #ifdef TIME_CODEGEN
   res.time_taken = time_since_monotonic(start);
 #endif

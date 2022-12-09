@@ -535,7 +535,6 @@ static void test_errors(test_state *state) {
       },
     };
     // test_typecheck_errors(state, input, errors, STATIC_LEN(errors));
-
   }
   test_end(state);
 
