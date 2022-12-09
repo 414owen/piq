@@ -545,7 +545,8 @@ void test_llvm(test_state *state) {
   }
   test_end(state);
 
-  test_start(state, "Can use builtins in complex expressions");
+  test_group_start(state, "Can use builtins in complex expressions");
+  test_start(state, "Results of if-expressions");
   {
     const char *input = "(sig test (Fn I32 I32))\n"
                         "(fun test a\n"
@@ -561,24 +562,12 @@ void test_llvm(test_state *state) {
   {
     const char *input = "(sig test (Fn I32 I32))\n"
                         "(fun test a\n"
-                         "  (let f (if False i32-add i32-sub))\n"
-                         "  (f (a, 10)))";
+                        "  (let f (if False i32-add i32-sub))\n"
+                        "  (f (a, 10)))";
 
     i32_mapping_test_case cases[] = {
       {.input = 42, .expected = 32},
       {.input = 56, .expected = 46},
-    };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
-  }
-  {
-    const char *input = "(sig test (Fn I32 I32))\n"
-                        "(fun test a\n"
-                        "  (let b (if (i32-lte? (a, 12)) (i32-add (4, 5)) 4))\n"
-                        "  b)";
-
-    i32_mapping_test_case cases[] = {
-      {.input = 11, .expected = 9},
-      {.input = 13, .expected = 4},
     };
     test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
   }
@@ -595,6 +584,7 @@ void test_llvm(test_state *state) {
     test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
+  test_group_end(state);
 
   if (!state->config.lite) {
     test_robustness(state);
