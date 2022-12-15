@@ -123,3 +123,15 @@ $ ./repl
 
 * [xxHash](https://cyan4973.github.io/xxHash)
 * [libllvm](https://llvm.org/)
+
+# Inspiration taken from
+
+* [Haskell](https://www.haskell.org/)
+* [Rust](https://www.rust-lang.org/fr)
+* [C](https://fr.wikipedia.org/wiki/C_(langage))
+
+# Languages to look out for
+
+* [zig](https://ziglang.org/)
+* [hare](https://harelang.org/)
+* [garnet](https://hg.sr.ht/~icefox/garnet)
