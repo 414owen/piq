@@ -20,9 +20,9 @@ static const char *preamble = "Lang v0.1.0 pre-alpha\n";
 typedef struct {
   bool stdin_input;
   bool no_codegen;
-  char *input_file_path;
-  char *output_file_path;
-  char *llvm_dump_path;
+  const char *input_file_path;
+  const char *output_file_path;
+  const char *llvm_dump_path;
 } compile_arguments;
 
 static void compile_llvm(compile_arguments args) {
