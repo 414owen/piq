@@ -157,7 +157,7 @@
               lcov
               valgrind
               watchexec
-              cocogitto
+              commitizen
             ]
           ];
 
