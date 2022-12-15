@@ -43,19 +43,12 @@ static const char *ELSE_STR = "else";
 #include "util.h"
 #include "vec.h"
 
-// TODO remove these and use VEC_DECL_CUSTOM instead.
-typedef LLVMValueRef llvm_value;
-VEC_DECL(llvm_value);
-
-typedef LLVMTypeRef llvm_type;
-VEC_DECL(llvm_type);
-
-typedef LLVMBasicBlockRef llvm_block;
-VEC_DECL(llvm_block);
-
 typedef LLVMValueRef LLVMFunctionRef;
-typedef LLVMFunctionRef llvm_function;
-VEC_DECL(llvm_function);
+
+VEC_DECL_CUSTOM(LLVMValueRef, vec_llvm_value);
+VEC_DECL_CUSTOM(LLVMTypeRef, vec_llvm_type);
+VEC_DECL_CUSTOM(LLVMBasicBlockRef, vec_llvm_block);
+VEC_DECL_CUSTOM(LLVMFunctionRef, vec_llvm_function);
 
 typedef enum {
 
@@ -109,12 +102,12 @@ typedef struct {
 
 typedef struct {
   node_ind_t node_ind;
-  llvm_value val;
+  LLVMValueRef val;
 } cg_pattern_params;
 
 typedef struct {
   const char *restrict name;
-  llvm_function fn;
+  LLVMFunctionRef fn;
 } cg_block_params;
 
 typedef struct {
@@ -123,7 +116,7 @@ typedef struct {
 
 typedef struct {
   node_ind_t node_ind;
-  llvm_function fn;
+  LLVMFunctionRef fn;
 } cg_fun_stage_two_params;
 
 // We used to have multiple vectors for actions (one per parameter type), but it
@@ -172,7 +165,7 @@ typedef struct {
   vec_llvm_function function_stack;
 
   // corresponds to in.types
-  LLVMTypeRef *llvm_types;
+  LLVMTypeRef *LLVMTypeRefs;
   vec_str_ref env_bnds;
   bitset env_bnd_is_builtin;
   bitset env_val_is_builtin;
@@ -281,7 +274,7 @@ static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
     .block_stack = VEC_NEW,
     .function_stack = VEC_NEW,
 
-    .llvm_types = (LLVMTypeRef *)calloc(types.type_amt, sizeof(LLVMTypeRef)),
+    .LLVMTypeRefs = (LLVMTypeRef *)calloc(types.type_amt, sizeof(LLVMTypeRef)),
     .env_bnds = VEC_NEW,
     .env_vals = VEC_NEW,
     .env_bnd_is_builtin = bs_new(),
@@ -300,7 +293,7 @@ static void destroy_cg_state(cg_state *state) {
   bs_free(&state->val_is_builtin);
   bs_free(&state->env_val_is_builtin);
   bs_free(&state->env_bnd_is_builtin);
-  free(state->llvm_types);
+  free(state->LLVMTypeRefs);
   LLVMDisposeBuilder(state->builder);
   VEC_FREE(&state->actions);
   VEC_FREE(&state->block_stack);
@@ -321,7 +314,7 @@ static void push_act_ignore_value(cg_state *state) {
   push_action(state, act);
 }
 
-static void push_act_fn_two(cg_state *state, llvm_value fn, node_ind_t ind) {
+static void push_act_fn_two(cg_state *state, LLVMValueRef fn, node_ind_t ind) {
   debug_assert(ind < state->parse_tree.node_amt);
   cg_fun_stage_two_params params = {
     .fn = fn,
@@ -408,7 +401,7 @@ static void push_statement_act_let_stage_two(cg_state *state,
 }
 
 static void push_pattern_act(cg_state *state, node_ind_t node_ind,
-                             llvm_value val) {
+                             LLVMValueRef val) {
   debug_assert(node_ind < state->parse_tree.node_amt);
   cg_pattern_params params = {
     .node_ind = node_ind,
@@ -421,7 +414,7 @@ static void push_pattern_act(cg_state *state, node_ind_t node_ind,
   push_action(state, act);
 }
 
-static void push_gen_basic_block(cg_state *state, llvm_function fn,
+static void push_gen_basic_block(cg_state *state, LLVMFunctionRef fn,
                                  const char *restrict str) {
   cg_block_params params = {
     .name = str,
@@ -449,9 +442,9 @@ static void push_gen_type_action(vec_gen_type_action *actions,
 
 static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
 
-  LLVMTypeRef *llvm_types = state->llvm_types;
+  LLVMTypeRef *LLVMTypeRefs = state->LLVMTypeRefs;
   {
-    LLVMTypeRef prev = llvm_types[root_type_ind];
+    LLVMTypeRef prev = LLVMTypeRefs[root_type_ind];
     if (prev != NULL)
       return prev;
   }
@@ -467,11 +460,11 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
     type t = state->types.types[type_ind];
     switch (action) {
       case GEN_TYPE: {
-        if (llvm_types[type_ind] != NULL)
+        if (LLVMTypeRefs[type_ind] != NULL)
           break;
         switch (t.tag) {
           case T_BOOL: {
-            llvm_types[type_ind] = LLVMInt1TypeInContext(state->context);
+            LLVMTypeRefs[type_ind] = LLVMInt1TypeInContext(state->context);
             break;
           }
           case T_LIST: {
@@ -483,22 +476,22 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
           }
           case T_I8:
           case T_U8: {
-            llvm_types[type_ind] = LLVMInt8TypeInContext(state->context);
+            LLVMTypeRefs[type_ind] = LLVMInt8TypeInContext(state->context);
             break;
           }
           case T_I16:
           case T_U16: {
-            llvm_types[type_ind] = LLVMInt16TypeInContext(state->context);
+            LLVMTypeRefs[type_ind] = LLVMInt16TypeInContext(state->context);
             break;
           }
           case T_I32:
           case T_U32: {
-            llvm_types[type_ind] = LLVMInt32TypeInContext(state->context);
+            LLVMTypeRefs[type_ind] = LLVMInt32TypeInContext(state->context);
             break;
           }
           case T_I64:
           case T_U64: {
-            llvm_types[type_ind] = LLVMInt64TypeInContext(state->context);
+            LLVMTypeRefs[type_ind] = LLVMInt64TypeInContext(state->context);
             break;
           }
           case T_TUP: {
@@ -525,7 +518,7 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
           case T_UNIT: {
             LLVMTypeRef res = LLVMStructCreateNamed(state->context, "unit");
             LLVMStructSetBody(res, NULL, 0, false);
-            llvm_types[type_ind] = res;
+            LLVMTypeRefs[type_ind] = res;
             break;
           }
           case T_CALL: {
@@ -545,18 +538,18 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
         switch (t.tag) {
           case T_LIST: {
             node_ind_t sub_ind = t.sub_a;
-            llvm_types[type_ind] =
-              (LLVMTypeRef)LLVMArrayType(llvm_types[sub_ind], 0);
+            LLVMTypeRefs[type_ind] =
+              (LLVMTypeRef)LLVMArrayType(LLVMTypeRefs[sub_ind], 0);
             break;
           }
           case T_TUP: {
             node_ind_t sub_ind_a = T_TUP_SUB_A(t);
             node_ind_t sub_ind_b = T_TUP_SUB_B(t);
-            LLVMTypeRef subs[2] = {llvm_types[sub_ind_a],
-                                   llvm_types[sub_ind_b]};
+            LLVMTypeRef subs[2] = {LLVMTypeRefs[sub_ind_a],
+                                   LLVMTypeRefs[sub_ind_b]};
             LLVMTypeRef res = LLVMStructCreateNamed(state->context, "tuple");
             LLVMStructSetBody(res, subs, 2, false);
-            llvm_types[type_ind] = res;
+            LLVMTypeRefs[type_ind] = res;
             break;
           }
           case T_FN: {
@@ -565,11 +558,11 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
             LLVMTypeRef *llvm_params = stalloc(n_param_bytes);
             for (node_ind_t i = 0; i < param_amt; i++) {
               node_ind_t param_ind = T_FN_PARAM_IND(type_inds, t, i);
-              llvm_params[i] = llvm_types[param_ind];
+              llvm_params[i] = LLVMTypeRefs[param_ind];
             }
             node_ind_t ret_ind = T_FN_RET_IND(type_inds, t);
-            LLVMTypeRef ret_type = llvm_types[ret_ind];
-            llvm_types[type_ind] =
+            LLVMTypeRef ret_type = LLVMTypeRefs[ret_ind];
+            LLVMTypeRefs[type_ind] =
               LLVMFunctionType(ret_type, llvm_params, param_amt, false);
             stfree(llvm_params, n_param_bytes);
             break;
@@ -599,7 +592,7 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
   }
   VEC_FREE(&actions);
   VEC_FREE(&ind_stack);
-  return llvm_types[root_type_ind];
+  return LLVMTypeRefs[root_type_ind];
 }
 
 // wraps function types in a pointer, so that it can be passed around
@@ -629,7 +622,7 @@ static void LLVMPositionBuilderAtStart(LLVMBuilderRef builder,
 
 static LLVMValueRef cg_alloca_at_function_start(cg_state *state,
                                                 const char *restrict name,
-                                                llvm_type type) {
+                                                LLVMTypeRef type) {
   LLVMBasicBlockRef current_block = LLVMGetInsertBlock(state->builder);
   LLVMBuilderRef builder = state->builder;
   LLVMFunctionRef current_function = VEC_PEEK(state->function_stack);
@@ -672,7 +665,7 @@ static tuple_parts cg_eliminate_tuple(cg_state *state, LLVMValueRef tuple) {
 
 static void cg_gen_basic_block(cg_state *state, cg_block_params params) {
   const char *name = params.name;
-  llvm_function fn = params.fn;
+  LLVMFunctionRef fn = params.fn;
   LLVMBasicBlockRef block =
     LLVMAppendBasicBlockInContext(state->context, fn, name);
   LLVMPositionBuilderAtEnd(state->builder, block);
@@ -769,9 +762,9 @@ static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term) {
     return res;
   }
 
-  LLVMTypeRef llvm_type = construct_type(state, builtin_type_inds[term]);
+  LLVMTypeRef LLVMTypeRef = construct_type(state, builtin_type_inds[term]);
   LLVMValueRef fn =
-    LLVMAddFunction(state->module, builtin_term_names[term], llvm_type);
+    LLVMAddFunction(state->module, builtin_term_names[term], LLVMTypeRef);
   VEC_PUSH(&state->function_stack, fn);
 
   {
@@ -1196,7 +1189,7 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
   }
 }
 
-static llvm_function cg_emit_empty_fn(cg_state *state, node_ind_t ind,
+static LLVMFunctionRef cg_emit_empty_fn(cg_state *state, node_ind_t ind,
                                       parse_node node) {
   LLVMTypeRef fn_type = construct_type(state, state->types.node_types[ind]);
 
@@ -1217,7 +1210,7 @@ static llvm_function cg_emit_empty_fn(cg_state *state, node_ind_t ind,
 }
 
 // generate the body, and schedule cleanup
-static void cg_function_stage_two_internal(cg_state *state, llvm_function fn,
+static void cg_function_stage_two_internal(cg_state *state, LLVMFunctionRef fn,
                                            parse_node node) {
   VEC_PUSH(&state->function_stack, fn);
 
@@ -1244,7 +1237,7 @@ static void cg_function_stage_two(cg_state *state,
                                   cg_fun_stage_two_params params) {
   node_ind_t ind = params.node_ind;
   parse_node node = state->parse_tree.nodes[ind];
-  llvm_function fn = params.fn;
+  LLVMFunctionRef fn = params.fn;
   cg_function_stage_two_internal(state, fn, node);
 }
 
@@ -1272,7 +1265,7 @@ static void cg_statement(cg_state *state, cg_statement_params params) {
       break;
     // TODO support recursive?
     case PT_STATEMENT_FUN: {
-      llvm_function fn = cg_emit_empty_fn(state, ind, node);
+      LLVMFunctionRef fn = cg_emit_empty_fn(state, ind, node);
       cg_function_stage_two_internal(state, fn, node);
       break;
     }
@@ -1328,7 +1321,7 @@ static void cg_block_recursive(cg_state *state, node_ind_t start,
         node_ind_t binding_ind =
           PT_FUN_BINDING_IND(state->parse_tree.inds, node);
         parse_node binding = state->parse_tree.nodes[binding_ind];
-        llvm_function fn = cg_emit_empty_fn(state, sub_ind, node);
+        LLVMFunctionRef fn = cg_emit_empty_fn(state, sub_ind, node);
         str_ref bnd = {.binding = binding.span};
         lang_value val = {
           .is_builtin = false,
@@ -1356,7 +1349,7 @@ static void cg_pattern(cg_state *state, cg_pattern_params params) {
   // also, finish writing this
   node_ind_t ind = params.node_ind;
   parse_node node = state->parse_tree.nodes[ind];
-  llvm_value val = params.val;
+  LLVMValueRef val = params.val;
 
   switch (node.type.pattern) {
     case PT_PAT_TUP: {
@@ -1398,7 +1391,7 @@ static void cg_pop_env_to(cg_state *state, cg_pop_env_to_params params) {
 }
 
 static void init_llvm_builtins(cg_state *state) {
-  // static void push_env(cg_state *state, binding bnd, llvm_value val) {
+  // static void push_env(cg_state *state, binding bnd, LLVMValueRef val) {
   for (builtin_term i = 0; i < builtin_term_amount; i++) {
     str_ref ref = {.builtin = builtin_term_names[i]};
     lang_value e = {
