@@ -135,3 +135,4 @@ $ ./repl
 * [zig](https://ziglang.org/)
 * [hare](https://harelang.org/)
 * [garnet](https://hg.sr.ht/~icefox/garnet)
+* [C3](https://c3-lang.org/)
