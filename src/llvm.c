@@ -162,7 +162,7 @@ typedef struct {
 
   vec_cg_action actions;
 
-  LLVMValueRef builtin_function_defs[builtin_term_amount];
+  LLVMValueRef builtin_values[builtin_term_amount];
 
   // returning vals
   bitset val_is_builtin;
@@ -215,10 +215,13 @@ static lang_value builtin_val(builtin_term term) {
 }
 
 static lang_value exogenous_value(LLVMValueRef term) {
-  lang_value res = {.is_builtin = false,
-                    .data = {
-                      .value = term,
-                    }};
+  lang_value res = {
+    .is_builtin = false,
+    .data =
+      {
+        .value = term,
+      },
+  };
   return res;
 }
 
@@ -271,7 +274,7 @@ static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
     .builder = LLVMCreateBuilderInContext(ctx),
     .actions = VEC_NEW,
 
-    .builtin_function_defs = {NULL},
+    .builtin_values = {NULL},
 
     .val_stack = VEC_NEW,
     .val_is_builtin = bs_new(),
@@ -455,11 +458,12 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
 
   vec_gen_type_action actions = VEC_NEW;
   push_gen_type_action(&actions, GEN_TYPE);
-  vec_node_ind inds = VEC_NEW;
-  VEC_PUSH(&inds, root_type_ind);
-  while (inds.len > 0) {
+  vec_node_ind ind_stack = VEC_NEW;
+  VEC_PUSH(&ind_stack, root_type_ind);
+  node_ind_t *type_inds = state->types.type_inds;
+  while (ind_stack.len > 0) {
     gen_type_action action = VEC_POP(&actions);
-    node_ind_t type_ind = VEC_POP(&inds);
+    node_ind_t type_ind = VEC_POP(&ind_stack);
     type t = state->types.types[type_ind];
     switch (action) {
       case GEN_TYPE: {
@@ -472,9 +476,9 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
           }
           case T_LIST: {
             push_gen_type_action(&actions, COMBINE_TYPE);
-            VEC_PUSH(&inds, type_ind);
+            VEC_PUSH(&ind_stack, type_ind);
             push_gen_type_action(&actions, GEN_TYPE);
-            VEC_PUSH(&inds, T_LIST_SUB_IND(t));
+            VEC_PUSH(&ind_stack, T_LIST_SUB_IND(t));
             break;
           }
           case T_I8:
@@ -499,20 +503,23 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
           }
           case T_TUP: {
             push_gen_type_action(&actions, COMBINE_TYPE);
-            VEC_PUSH(&inds, type_ind);
+            VEC_PUSH(&ind_stack, type_ind);
             push_gen_type_action(&actions, GEN_TYPE);
-            VEC_PUSH(&inds, T_TUP_SUB_A(t));
+            VEC_PUSH(&ind_stack, T_TUP_SUB_A(t));
             push_gen_type_action(&actions, GEN_TYPE);
-            VEC_PUSH(&inds, T_TUP_SUB_B(t));
+            VEC_PUSH(&ind_stack, T_TUP_SUB_B(t));
             break;
           }
           case T_FN: {
             push_gen_type_action(&actions, COMBINE_TYPE);
-            VEC_PUSH(&inds, type_ind);
+            VEC_PUSH(&ind_stack, type_ind);
+            node_ind_t param_amt = T_FN_PARAM_AMT(t);
+            for (node_ind_t i = 0; i < param_amt; i++) {
+              push_gen_type_action(&actions, GEN_TYPE);
+              VEC_PUSH(&ind_stack, T_FN_PARAM_IND(type_inds, t, i));
+            }
             push_gen_type_action(&actions, GEN_TYPE);
-            VEC_PUSH(&inds, T_FN_PARAM_IND(t));
-            push_gen_type_action(&actions, GEN_TYPE);
-            VEC_PUSH(&inds, T_FN_RET_IND(t));
+            VEC_PUSH(&ind_stack, T_FN_RET_IND(type_inds, t));
             break;
           }
           case T_UNIT: {
@@ -553,12 +560,18 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
             break;
           }
           case T_FN: {
-            node_ind_t param_ind = T_FN_PARAM_IND(t);
-            node_ind_t ret_ind = T_FN_RET_IND(t);
-            LLVMTypeRef param_type = llvm_types[param_ind];
+            node_ind_t param_amt = T_FN_PARAM_AMT(t);
+            size_t n_param_bytes = sizeof(LLVMTypeRef) * param_amt;
+            LLVMTypeRef *llvm_params = stalloc(n_param_bytes);
+            for (node_ind_t i = 0; i < param_amt; i++) {
+              node_ind_t param_ind = T_FN_PARAM_IND(type_inds, t, i);
+              llvm_params[i] = llvm_types[param_ind];
+            }
+            node_ind_t ret_ind = T_FN_RET_IND(type_inds, t);
             LLVMTypeRef ret_type = llvm_types[ret_ind];
             llvm_types[type_ind] =
-              LLVMFunctionType(ret_type, &param_type, 1, false);
+              LLVMFunctionType(ret_type, llvm_params, param_amt, false);
+            stfree(llvm_params, n_param_bytes);
             break;
           }
           // TODO: There should really be a separate module-local tag for
@@ -575,6 +588,7 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
           case T_I64:
           case T_U64:
           case T_BOOL: {
+            // TODO remove this with more specific actions
             give_up("Can't combine non-compound llvm type");
             break;
           }
@@ -584,7 +598,7 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
     }
   }
   VEC_FREE(&actions);
-  VEC_FREE(&inds);
+  VEC_FREE(&ind_stack);
   return llvm_types[root_type_ind];
 }
 
@@ -673,9 +687,11 @@ static LLVMValueRef cg_mod_floor(cg_state *state, LLVMValueRef dividend,
 }
 
 static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term) {
-  LLVMValueRef old = state->builtin_function_defs[term];
-  if (old != NULL)
-    return old;
+  {
+    LLVMValueRef old = state->builtin_values[term];
+    if (old != NULL)
+      return old;
+  }
 
   LLVMValueRef res = NULL;
 
@@ -742,14 +758,18 @@ static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term) {
     case i32_mod_builtin:
     case i64_mod_builtin:
       break;
+
+    case builtin_term_amount:
+      // TODO mark unreachable
+      break;
   }
 
   if (res != NULL) {
-    state->builtin_function_defs[term] = res;
+    state->builtin_values[term] = res;
     return res;
   }
 
-  LLVMTypeRef llvm_type = construct_type(state, builtin_term_type_inds[term]);
+  LLVMTypeRef llvm_type = construct_type(state, builtin_type_inds[term]);
   LLVMValueRef fn =
     LLVMAddFunction(state->module, builtin_term_names[term], llvm_type);
   VEC_PUSH(&state->function_stack, fn);
@@ -762,9 +782,7 @@ static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term) {
     cg_gen_basic_block(state, params);
   }
 
-  LLVMValueRef param = LLVMGetParam(fn, 0);
-
-  LLVMValueRef left;
+  LLVMValueRef left = LLVMGetParam(fn, 0);
   LLVMValueRef right;
 
   switch (term) {
@@ -822,14 +840,13 @@ static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term) {
     case i16_mod_builtin:
     case i32_mod_builtin:
     case i64_mod_builtin: {
-      tuple_parts parts = cg_eliminate_tuple(state, param);
-      left = parts.left;
-      right = parts.right;
+      right = LLVMGetParam(fn, 1);
       break;
     }
 
     case true_builtin:
     case false_builtin:
+
     case builtin_term_amount:
       // TODO mark unreachable
       break;
@@ -925,19 +942,25 @@ static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term) {
 }
 
 static void cg_expression_call_stage_two(cg_state *state,
-                                         cg_expr_params params) {
-  node_ind_t ind = params.node_ind;
+                                         cg_expr_params call_params) {
+  node_ind_t ind = call_params.node_ind;
   parse_node node = state->parse_tree.nodes[ind];
-  node_ind_t callee_ind = PT_CALL_CALLEE_IND(node);
+  node_ind_t callee_ind = PT_CALL_CALLEE_IND(state->parse_tree.inds, node);
   lang_value callee = pop_val(state);
   // None of the builtins are higher-order, so we can assume
   // it will be an exogenous value
-  LLVMValueRef param = pop_exogenous_val(state);
+  node_ind_t callee_type_ind = state->types.node_types[callee_ind];
+  type callee_type = state->types.types[callee_type_ind];
   LLVMTypeRef fn_type =
     construct_type(state, state->types.node_types[callee_ind]);
+  node_ind_t param_amt = T_FN_PARAM_AMT(callee_type);
+  size_t n_param_ref_bytes = sizeof(LLVMValueRef) * param_amt;
+  LLVMValueRef *llvm_params = stalloc(n_param_ref_bytes);
+  for (node_ind_t i = 0; i < param_amt; i++) {
+    llvm_params[i] = pop_exogenous_val(state);
+  }
   LLVMValueRef res;
   if (callee.is_builtin) {
-    tuple_parts parts = cg_eliminate_tuple(state, param);
     switch (callee.data.builtin) {
       case i8_lt_builtin:
       case i16_lt_builtin:
@@ -966,49 +989,51 @@ static void cg_expression_call_stage_two(cg_state *state,
         LLVMIntPredicate predicate =
           llvm_builtin_predicates[callee.data.builtin];
         res = LLVMBuildICmp(
-          state->builder, predicate, parts.left, parts.right, "eq?");
+          state->builder, predicate, llvm_params[0], llvm_params[1], "eq?");
         break;
       }
       case i8_add_builtin:
       case i16_add_builtin:
       case i32_add_builtin:
       case i64_add_builtin: {
-        res = LLVMBuildAdd(state->builder, parts.left, parts.right, "+");
+        res = LLVMBuildAdd(state->builder, llvm_params[0], llvm_params[1], "+");
         break;
       }
       case i8_sub_builtin:
       case i16_sub_builtin:
       case i32_sub_builtin:
       case i64_sub_builtin: {
-        res = LLVMBuildSub(state->builder, parts.left, parts.right, "-");
+        res = LLVMBuildSub(state->builder, llvm_params[0], llvm_params[1], "-");
         break;
       }
       case i8_mul_builtin:
       case i16_mul_builtin:
       case i32_mul_builtin:
       case i64_mul_builtin: {
-        res = LLVMBuildMul(state->builder, parts.left, parts.right, "*");
+        res = LLVMBuildMul(state->builder, llvm_params[0], llvm_params[1], "*");
         break;
       }
       case i8_div_builtin:
       case i16_div_builtin:
       case i32_div_builtin:
       case i64_div_builtin: {
-        res = LLVMBuildSDiv(state->builder, parts.left, parts.right, "/");
+        res =
+          LLVMBuildSDiv(state->builder, llvm_params[0], llvm_params[1], "/");
         break;
       }
       case i8_rem_builtin:
       case i16_rem_builtin:
       case i32_rem_builtin:
       case i64_rem_builtin: {
-        res = LLVMBuildSRem(state->builder, parts.left, parts.right, "rem");
+        res =
+          LLVMBuildSRem(state->builder, llvm_params[0], llvm_params[1], "rem");
         break;
       }
       case i8_mod_builtin:
       case i16_mod_builtin:
       case i32_mod_builtin:
       case i64_mod_builtin: {
-        res = cg_mod_floor(state, parts.left, parts.right);
+        res = cg_mod_floor(state, llvm_params[0], llvm_params[1]);
         break;
       }
       default: {
@@ -1017,9 +1042,14 @@ static void cg_expression_call_stage_two(cg_state *state,
       }
     }
   } else {
-    res = LLVMBuildCall2(
-      state->builder, fn_type, callee.data.value, &param, 1, "call-res");
+    res = LLVMBuildCall2(state->builder,
+                         fn_type,
+                         callee.data.value,
+                         llvm_params,
+                         param_amt,
+                         "call-res");
   }
+  stfree(llvm_params, n_param_ref_bytes);
   push_exogenous_val(state, res);
 }
 
@@ -1083,10 +1113,15 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
   parse_node node = state->parse_tree.nodes[ind];
   switch (node.type.expression) {
     case PT_EX_CALL: {
+      const node_ind_t *node_inds = state->parse_tree.inds;
       push_expression_act_call_stage_two(state, ind);
       // These will be in the same order on the value (out) stack
-      push_expression_act(state, PT_CALL_CALLEE_IND(node));
-      push_expression_act(state, PT_CALL_PARAM_IND(node));
+      push_expression_act(state, PT_CALL_CALLEE_IND(node_inds, node));
+      node_ind_t param_amt = PT_CALL_PARAM_AMT(node);
+      for (node_ind_t i = 0; i < param_amt; i++) {
+        // reverse on action stack == in order on value stack
+        push_expression_act(state, PT_CALL_PARAM_IND(node_inds, node, i));
+      }
       break;
     }
     case PT_EX_LOWER_NAME:
@@ -1194,9 +1229,13 @@ static void cg_function_stage_two_internal(cg_state *state, llvm_function fn,
   node_ind_t body_ind = PT_FUN_BODY_IND(state->parse_tree.inds, node);
   push_expression_act(state, body_ind);
 
-  LLVMValueRef arg = LLVMGetParam(fn, 0);
-  node_ind_t param_ind = PT_FUN_PARAM_IND(state->parse_tree.inds, node);
-  push_pattern_act(state, param_ind, arg);
+  {
+    for (node_ind_t i = 0; i < PT_FUN_PARAM_AMT(node); i++) {
+      LLVMValueRef arg = LLVMGetParam(fn, i);
+      node_ind_t param_ind = PT_FUN_PARAM_IND(state->parse_tree.inds, node, i);
+      push_pattern_act(state, param_ind, arg);
+    }
+  }
 
   push_gen_basic_block(state, fn, ENTRY_STR);
 }
@@ -1299,6 +1338,7 @@ static void cg_block_recursive(cg_state *state, node_ind_t start,
         push_act_fn_two(state, fn, sub_ind);
         break;
       }
+      case PT_STATEMENT_DATA_DECLARATION:
       case PT_STATEMENT_LET: {
         UNIMPLEMENTED("Top level let binding");
         break;

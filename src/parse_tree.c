@@ -30,6 +30,7 @@ parse_node_category parse_node_categories[] = {
   [PT_ALL_MULTI_LOWER_NAME] = PT_C_NONE,
   [PT_ALL_MULTI_TYPE_PARAMS] = PT_C_NONE,
   [PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL] = PT_C_NONE,
+  [PT_ALL_MULTI_PARAM_DECLS] = PT_C_NONE,
   [PT_ALL_MULTI_DATA_CONSTRUCTORS] = PT_C_NONE,
 
   [PT_ALL_PAT_WILDCARD] = PT_C_PATTERN,
@@ -73,9 +74,7 @@ static tree_node_repr subs_type(parse_node_type type) {
     case PT_ALL_TY_LIST:
       res = SUBS_ONE;
       break;
-    case PT_ALL_EX_CALL:
     case PT_ALL_EX_AS:
-    case PT_ALL_EX_FN:
     case PT_ALL_EX_TUP:
     case PT_ALL_TY_FN:
     case PT_TY_TUP:
@@ -86,6 +85,8 @@ static tree_node_repr subs_type(parse_node_type type) {
     case PT_ALL_PAT_CONSTRUCTION:
       res = SUBS_TWO;
       break;
+    case PT_ALL_EX_CALL:
+    case PT_ALL_EX_FN:
     case PT_ALL_EX_IF:
     case PT_ALL_EX_LIST:
     case PT_ALL_EX_FUN_BODY:
@@ -95,6 +96,7 @@ static tree_node_repr subs_type(parse_node_type type) {
     case PT_ALL_MULTI_DATA_CONSTRUCTORS:
     case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
     case PT_ALL_MULTI_TYPE_PARAMS:
+    case PT_ALL_MULTI_PARAM_DECLS:
       res = SUBS_EXTERNAL;
       break;
   }
@@ -183,6 +185,9 @@ const char *parse_node_string(parse_node_type type) {
     case PT_ALL_MULTI_DATA_CONSTRUCTORS:
       res = "Data constructors";
       break;
+    case PT_ALL_MULTI_PARAM_DECLS:
+      res = "Param decls";
+      break;
   }
   return res;
 };
@@ -197,7 +202,7 @@ typedef struct {
   FILE *out;
 } printer_state;
 
-static void push_str(printer_state *s, char *str) {
+static void push_str(printer_state *s, const char *str) {
   print_action action = PRINT_STR;
   VEC_PUSH(&s->actions, action);
   VEC_PUSH(&s->string_stack, str);
@@ -228,6 +233,15 @@ static bool is_tuple(parse_node_type t) {
   }
 }
 
+static void print_separated(printer_state *s, const node_ind_t *restrict inds,
+                            node_ind_t amt, const char *sep) {
+  for (uint16_t i = 0; i < amt; i++) {
+    if (i > 0)
+      push_str(s, sep);
+    push_node(s, inds[i]);
+  }
+}
+
 static void print_compound(printer_state *s, char *prefix, char *sep,
                            char *terminator, parse_node node) {
   fputs(prefix, s->out);
@@ -244,11 +258,7 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
       push_node(s, node.sub_b);
       break;
     case SUBS_EXTERNAL:
-      for (uint16_t i = 0; i < node.sub_amt; i++) {
-        if (i > 0)
-          push_str(s, sep);
-        push_node(s, s->tree.inds[node.subs_start + i]);
-      }
+      print_separated(s, &s->tree.inds[node.subs_start], node.sub_amt, sep);
       break;
   }
   print_action action = POP_TUP_BS;
@@ -274,12 +284,29 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       break;
     }
     case PT_ALL_STATEMENT_FUN:
-      print_compound(s, "(Fun ", " ", ")", node);
+      push_str(s, "(Fun ");
+      push_node(s, PT_FUN_BINDING_IND(s->tree.inds, node));
+      if (PT_FUN_PARAM_AMT(node) > 0) {
+        push_str(s, " ");
+      }
+      print_separated(s,
+                      &PT_FUN_PARAM_IND(s->tree.inds, node, 0),
+                      PT_FUN_PARAM_AMT(node),
+                      " ");
+      push_str(s, " ");
+      push_node(s, PT_FN_BODY_IND(s->tree.inds, node));
+      push_str(s, ")");
       break;
     case PT_ALL_TY_FN:
-    case PT_ALL_EX_FN:
-      print_compound(s, "(Fn ", " ", ")", node);
+    case PT_ALL_EX_FN: {
+      push_str(s, "(Fn (");
+      print_separated(
+        s, &PT_FN_PARAM_IND(s->tree.inds, node, 0), PT_FN_PARAM_AMT(node), " ");
+      push_str(s, ") ");
+      push_node(s, PT_FN_BODY_IND(s->tree.inds, node));
+      push_str(s, ")");
       break;
+    }
     case PT_ALL_PAT_CONSTRUCTION:
     case PT_ALL_TY_CONSTRUCTION: {
       print_compound(s, "(Construct ", " ", ")", node);
@@ -343,6 +370,9 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       break;
     case PT_ALL_MULTI_TYPE_PARAMS:
       print_compound(s, "(Type params: [", ", ", "])", node);
+      break;
+    case PT_ALL_MULTI_PARAM_DECLS:
+      print_compound(s, "(Param decls: ", ", ", ")", node);
       break;
   }
 }

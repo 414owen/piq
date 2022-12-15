@@ -55,14 +55,12 @@ tree_node_repr type_repr(type_tag tag) {
       res = SUBS_ONE;
       break;
     case T_CALL:
-    case T_FN:
     case T_TUP:
       res = SUBS_TWO;
       break;
-      /*
-        res = SUBS_EXTERNAL;
-        break;
-      */
+    case T_FN:
+      res = SUBS_EXTERNAL;
+      break;
   }
   return res;
 }
@@ -138,7 +136,7 @@ void print_type_head_placeholders(FILE *f, type_tag head) {
   }
 }
 
-void print_type(FILE *f, type *types, node_ind_t root) {
+void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root) {
   vec_print_action stack = VEC_NEW;
   push_node(&stack, root);
   while (stack.len > 0) {
@@ -153,9 +151,11 @@ void print_type(FILE *f, type *types, node_ind_t root) {
         switch (node.tag) {
           case T_FN:
             fputs("(Fn ", f);
-            push_node(&stack, node.sub_a);
-            push_str(&stack, " -> ");
-            push_node(&stack, node.sub_b);
+            for (node_ind_t i = 0; i < T_FN_PARAM_AMT(node); i++) {
+              push_node(&stack, T_FN_PARAM_IND(inds, node, i));
+              push_str(&stack, " -> ");
+            }
+            push_node(&stack, T_FN_RET_IND(inds, node));
             push_str(&stack, ")");
             break;
           case T_TUP:

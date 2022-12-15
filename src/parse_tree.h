@@ -45,28 +45,29 @@ typedef enum {
   PT_ALL_MULTI_LOWER_NAME = 10,
   PT_ALL_MULTI_UPPER_NAME = 11,
   PT_ALL_MULTI_TYPE_PARAMS = 12,
-  PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL = 13,
-  PT_ALL_MULTI_DATA_CONSTRUCTORS = 14,
+  PT_ALL_MULTI_PARAM_DECLS = 13,
+  PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL = 14,
+  PT_ALL_MULTI_DATA_CONSTRUCTORS = 15,
 
-  PT_ALL_PAT_WILDCARD = 15,
-  PT_ALL_PAT_TUP = 16,
-  PT_ALL_PAT_UNIT = 17,
-  PT_ALL_PAT_CONSTRUCTION = 18,
-  PT_ALL_PAT_STRING = 19,
-  PT_ALL_PAT_INT = 20,
-  PT_ALL_PAT_LIST = 21,
+  PT_ALL_PAT_WILDCARD = 16,
+  PT_ALL_PAT_TUP = 17,
+  PT_ALL_PAT_UNIT = 18,
+  PT_ALL_PAT_CONSTRUCTION = 19,
+  PT_ALL_PAT_STRING = 20,
+  PT_ALL_PAT_INT = 21,
+  PT_ALL_PAT_LIST = 22,
 
   // sig and fun two are also top levels
-  PT_ALL_STATEMENT_SIG = 22,
-  PT_ALL_STATEMENT_FUN = 23,
-  PT_ALL_STATEMENT_LET = 24,
-  PT_ALL_STATEMENT_DATA_DECLARATION = 25,
+  PT_ALL_STATEMENT_SIG = 23,
+  PT_ALL_STATEMENT_FUN = 24,
+  PT_ALL_STATEMENT_LET = 25,
+  PT_ALL_STATEMENT_DATA_DECLARATION = 26,
 
-  PT_ALL_TY_CONSTRUCTION = 26,
-  PT_ALL_TY_LIST = 27,
-  PT_ALL_TY_FN = 28,
-  PT_ALL_TY_TUP = 29,
-  PT_ALL_TY_UNIT = 31,
+  PT_ALL_TY_CONSTRUCTION = 27,
+  PT_ALL_TY_LIST = 28,
+  PT_ALL_TY_FN = 29,
+  PT_ALL_TY_TUP = 30,
+  PT_ALL_TY_UNIT = 32,
 } parse_node_type_all;
 
 typedef enum {
@@ -127,24 +128,27 @@ typedef union {
 } parse_node_type;
 
 #define PT_FUN_BINDING_IND(inds, node) inds[node.subs_start + 0]
-// TODO use twine here
-#define PT_FUN_PARAM_IND(inds, node) inds[node.subs_start + 1]
-#define PT_FUN_BODY_IND(inds, node) inds[node.subs_start + 2]
+#define PT_FUN_PARAM_AMT(node) (node.sub_amt - 2)
+#define PT_FUN_PARAM_IND(inds, node, i) inds[node.subs_start + 1 + i]
+#define PT_FUN_BODY_IND(inds, node) inds[node.subs_start + node.sub_amt - 1]
 
 #define PT_DATA_DECL_TYPENAME_IND(inds, node) inds[node.subs_start + 0]
 #define PT_DATA_DECL_TYPEPARAMS_IND(inds, node) inds[node.subs_start + 1]
 #define PT_DATA_DECL_DATA_CONSTRUCTORS_IND(inds, node) inds[node.subs_start + 2]
 
 // lambda expression
-#define PT_FN_PARAM_IND(node) node.sub_a
-#define PT_FN_BODY_IND(node) node.sub_b
+#define PT_FN_PARAM_AMT(node) ((node).sub_amt - 1)
+#define PT_FN_PARAM_IND(inds, node, i) inds[(node).subs_start + i]
+#define PT_FN_BODY_IND(inds, node) inds[(node).subs_start + (node).sub_amt - 1]
 
-#define PT_FN_TYPE_SUB_AMT 2
-#define PT_FN_TYPE_PARAM_IND(node) node.sub_a
-#define PT_FN_TYPE_RETURN_IND(node) node.sub_b
+#define PT_FN_TYPE_PARAM_AMT(node) ((node).sub_amt - 1)
+#define PT_FN_TYPE_PARAM_IND(inds, node, i) (inds)[(node).subs_start + i]
+#define PT_FN_TYPE_RETURN_IND(inds, node)                                      \
+  inds[(node).subs_start + (node).sub_amt - 1]
 
-#define PT_CALL_CALLEE_IND(node) node.sub_a
-#define PT_CALL_PARAM_IND(node) node.sub_b
+#define PT_CALL_CALLEE_IND(inds, node) (inds)[(node).subs_start]
+#define PT_CALL_PARAM_AMT(node) ((node).sub_amt - 1)
+#define PT_CALL_PARAM_IND(inds, node, i) (inds)[(node).subs_start + i + 1]
 
 #define PT_TY_CONSTRUCTION_CALLEE_IND(node) node.sub_a
 #define PT_TY_CONSTRUCTION_PARAM_IND(node) node.sub_b
