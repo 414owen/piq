@@ -1190,7 +1190,7 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
 }
 
 static LLVMFunctionRef cg_emit_empty_fn(cg_state *state, node_ind_t ind,
-                                      parse_node node) {
+                                        parse_node node) {
   LLVMTypeRef fn_type = construct_type(state, state->types.node_types[ind]);
 
   node_ind_t binding_ind = PT_FUN_BINDING_IND(state->parse_tree.inds, node);

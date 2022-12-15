@@ -80,10 +80,6 @@ MALLOC_ATTR_2(free, 1)
 void *malloc_safe(size_t bytes);
 
 NON_NULL_PARAMS
-size_t find_el(const void *haystack, size_t haystacklen, const void *needle,
-               size_t needlelen);
-
-NON_NULL_PARAMS
 size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
                   const void *needle, size_t needle_els);
 

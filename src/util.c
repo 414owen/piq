@@ -92,13 +92,6 @@ void *memclone(void *restrict src, size_t bytes) {
   return dest;
 }
 
-NON_NULL_PARAMS
-size_t find_el(const void *haystack, size_t haystacklen, const void *needle,
-               size_t needlelen) {
-  void *ptr = memmem(haystack, haystacklen, needle, needlelen);
-  return (size_t)((ptr - haystack) / needlelen);
-}
-
 // TODO(speedup) Boyer-Moore, or use memmem internally?
 NON_NULL_PARAMS
 size_t find_range(const void *haystack, size_t el_size, size_t el_amt,

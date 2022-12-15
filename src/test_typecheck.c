@@ -253,6 +253,8 @@ static void test_typecheck_errors(test_state *state, const char *input_p,
 
   parse_tree_res pres = test_upto_parse_tree(state, input);
   if (!pres.succeeded) {
+    stfree(spans, span_bytes);
+    free(input);
     failf(state, "Parsing failed");
     return;
   }
