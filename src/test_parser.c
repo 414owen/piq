@@ -52,7 +52,7 @@ static void test_parser_succeeds_on_form(test_state *state, char *input,
   char *new_input;
   char *old_str = output.str;
   if (output.tag == STRING) {
-    asprintf(&output.str, "(Fun (Lname a) () (Body %s))", old_str);
+    asprintf(&output.str, "(Fun (Lname a) (Body %s))", old_str);
   }
   asprintf(&new_input, "(fun a () %s)", input);
   test_parser_succeeds_on(state, new_input, output);
@@ -190,7 +190,7 @@ static void test_parser_succeeds_kitchen_sink(test_state *state) {
   test_group_start(state, "Kitchen sink");
 
   {
-    test_start(state, "Lots of indentation");
+    test_start(state, "Lots of whitespace");
     test_parser_succeeds_on_form(
       state,
       " ( ( hi 1   ) , 2 ) ",
@@ -212,7 +212,7 @@ static const token_type comma_or_expression_start[] = {
   TK_UNIT,
 };
 
-#define expression_start (comma_or_expression_start + 1)
+#define expression_start (&comma_or_expression_start[1])
 #define expression_start_amt (STATIC_LEN(comma_or_expression_start) - 1)
 
 static void test_if_failures(test_state *state) {
@@ -258,14 +258,14 @@ static void test_if_failures(test_state *state) {
 }
 
 static token_type start_pattern[] = {
-  TK_INT, TK_LOWER_NAME, TK_OPEN_BRACKET, TK_OPEN_PAREN, TK_STRING, TK_UNIT};
+  TK_OPEN_PAREN, TK_UNIT, TK_INT, TK_LOWER_NAME, TK_OPEN_BRACKET, TK_STRING};
+
 static void test_fn_failures(test_state *state) {
   test_group_start(state, "Fn");
 
   {
     test_start(state, "Empty");
-    test_parser_fails_on_form(
-      state, "(fn)", 2, STATIC_LEN(start_pattern), start_pattern);
+    test_parser_fails_on_form(state, "(fn)", 2, 2, start_pattern);
     test_end(state);
   }
 
@@ -279,23 +279,20 @@ static void test_fn_failures(test_state *state) {
   {
     test_start(state, "Nested unit param");
     static const token_type just_comma = TK_COMMA;
-    test_parser_fails_on_form(state, "(fn (()) 1)", 4, 1, &just_comma);
+    test_parser_fails_on_form(state, "(fn ((())) 1)", 5, 1, &just_comma);
     test_end(state);
   }
 
   test_group_end(state);
 }
 
-static void test_call_failures(test_state *state) {
+static void test_call_succeeds(test_state *state) {
   test_group_start(state, "Call");
 
   {
     test_start(state, "No params");
-    test_parser_fails_on_form(state,
-                              "(a)",
-                              2,
-                              STATIC_LEN(comma_or_expression_start),
-                              comma_or_expression_start);
+    test_parser_succeeds_on_form(
+      state, "(a)", expect_string("(Call (Lname a))"));
     test_end(state);
   }
 
@@ -315,7 +312,7 @@ static void test_fn_succeeds(test_state *state) {
   {
     test_start(state, "One arg");
     test_parser_succeeds_on_form(
-      state, "(fn a 1)", expect_string("(Fn (Wildcard a) (Body (Int 1)))"));
+      state, "(fn (a) 1)", expect_string("(Fn ((Wildcard a)) (Body (Int 1)))"));
     test_end(state);
   }
 
@@ -323,15 +320,15 @@ static void test_fn_succeeds(test_state *state) {
     test_start(state, "Two args");
     test_parser_succeeds_on_form(
       state,
-      "(fn (ab, cd) 1)",
-      expect_string("(Fn ((Wildcard ab), (Wildcard cd)) (Body (Int 1)))"));
+      "(fn (ab cd) 1)",
+      expect_string("(Fn ((Wildcard ab) (Wildcard cd)) (Body (Int 1)))"));
     test_end(state);
   }
 
   {
     test_start(state, "Numeric param");
     test_parser_succeeds_on_form(
-      state, "(fn 123 1)", expect_string("(Fn (Int 123) (Body (Int 1)))"));
+      state, "(fn (123) 1)", expect_string("(Fn ((Int 123)) (Body (Int 1)))"));
     test_end(state);
   }
 
@@ -504,11 +501,11 @@ static void test_parser_succeeds_root(test_state *state) {
     test_start(state, "Sig and fun");
 
     expected_output out = {.tag = STRING,
-                           .str = "(Sig (Lname a) (Fn () (Uname I32)))\n"
+                           .str = "(Sig (Lname a) (Fn (()) (Uname I32)))\n"
                                   "(Fun (Lname a) () (Body (Int 12)))"};
     test_parser_succeeds_on(state,
                             "(sig a (Fn () I32))\n"
-                            "(fun a () 12)",
+                            "(fun a (()) 12)",
                             out);
 
     test_end(state);
@@ -517,8 +514,8 @@ static void test_parser_succeeds_root(test_state *state) {
     test_start(state, "Multiple funs");
 
     expected_output out = {.tag = STRING,
-                           .str = "(Fun (Lname a) () (Body (Lname a)))\n(Fun "
-                                  "(Lname b) () (Body (Lname b)))"};
+                           .str = "(Fun (Lname a) (Body (Lname a)))\n"
+                                  "(Fun (Lname b) (Body (Lname b)))"};
     test_parser_succeeds_on(state, "(fun a () a)(fun b () b)", out);
 
     test_end(state);
@@ -532,7 +529,7 @@ static void test_parser_succeeds_statements(test_state *state) {
 
     expected_output out = {
       .tag = STRING,
-      .str = "(Fun (Lname a) () (Body (Let (Lname b) ()) ()))",
+      .str = "(Fun (Lname a) (Body (Let (Lname b) ()) ()))",
     };
     test_parser_succeeds_on(state, "(fun a () (let b ()) ())", out);
 
@@ -571,7 +568,6 @@ static void test_parser_succeeds(test_state *state) {
   if (!state->config.lite) {
     test_parser_robustness(state);
   }
-
   test_group_end(state);
 }
 
@@ -581,13 +577,13 @@ static void test_parser_fails(test_state *state) {
   test_mismatched_parens(state);
   test_if_failures(state);
   test_fn_failures(state);
-  test_call_failures(state);
 
   test_group_end(state);
 }
 
 void test_parser(test_state *state) {
   test_group_start(state, "Parser");
+  test_call_succeeds(state);
   test_parser_succeeds(state);
   test_parser_fails(state);
   test_group_end(state);

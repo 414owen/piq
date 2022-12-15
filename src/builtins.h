@@ -76,4 +76,3 @@ extern const node_ind_t builtin_type_amount;
 extern const node_ind_t builtin_type_inds[];
 extern const node_ind_t builtin_type_ind_amount;
 extern const char *builtin_term_names[];
-extern const node_ind_t builtin_term_type_inds[];

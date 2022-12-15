@@ -39,6 +39,7 @@
 %type string parse_node
 %type unit parse_node
 %type lower_name_node parse_node
+%type param_decls stack_ref_t
 
 %include {
 
@@ -232,19 +233,20 @@ data_constructor_decl(RES) ::=
   // if that turns out to be false, I can return a node
   // from upper_name
   upper_name(A)
-  data_constructor_params(P)
+  data_constructor_params(PS)
   CLOSE_PAREN(CO). {
   BREAK_PARSER;
 
   node_ind_t subs_start = s->inds.len;
   VEC_PUSH(&s->inds, A);
-  VEC_APPEND(&s->inds, P, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - P]);
+  VEC_APPEND(&s->inds, PS, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - PS]);
   parse_node n = {
     .type.all = PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL,
     .span = span_from_token_inds(s->tokens, OO, CO),
     .subs_start = subs_start,
-    .sub_amt = P + 1,
+    .sub_amt = PS + 1,
   };
+  VEC_POP_N(&s->ind_stack, PS);
   RES = push_node(s, n);
 }
 
@@ -276,6 +278,7 @@ data_constructor_decls(RES) ::= data_constructor_decls_internal(A). {
     .subs_start = subs_start,
     .sub_amt = A,
   };
+  VEC_POP_N(&s->ind_stack, A);
   RES = push_node(s, n);
 }
 
@@ -442,13 +445,17 @@ compound_expression(RES) ::= fn(A). {
 
 // compound_expression ::= expression.
 
-fn(RES) ::= FN pattern(B) fun_body(C). {
+fn(RES) ::= FN param_decls(PS) fun_body(C). {
   BREAK_PARSER;
+  node_ind_t start = s->inds.len;
+  VEC_APPEND(&s->inds, PS, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - PS]);
+  VEC_PUSH(&s->inds, C);
   parse_node n = {
     .type.expression = PT_EX_FN,
-    .sub_a = B,
-    .sub_b = C
+    .subs_start = start,
+    .sub_amt = PS + 1,
   };
+  VEC_POP_N(&s->ind_stack, PS);
   RES = push_node(s, n);
 }
 
@@ -458,17 +465,39 @@ sig(RES) ::= SIG lower_name(A) type(B). {
   RES = push_node(s, n);
 }
 
-fun(RES) ::= FUN lower_name(A) pattern(B) fun_body(C). {
+param_decls_internal(RES) ::= param_decls_internal(PS) pattern(A). {
+  BREAK_PARSER;
+  VEC_PUSH(&s->ind_stack, A);
+  RES = PS + 1;
+}
+
+param_decls_internal(RES) ::= . {
+  BREAK_PARSER;
+  RES = 0;
+}
+
+param_decls(RES) ::= OPEN_PAREN param_decls_internal(A) CLOSE_PAREN. {
+  BREAK_PARSER;
+  RES = A;
+}
+
+param_decls(RES) ::= unit. {
+  BREAK_PARSER;
+  RES = 0;
+}
+
+fun(RES) ::= FUN lower_name(A) param_decls(PS) fun_body(C). {
   BREAK_PARSER;
   node_ind_t start = s->inds.len;
   VEC_PUSH(&s->inds, A);
-  VEC_PUSH(&s->inds, B);
+  VEC_APPEND(&s->inds, PS, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - PS]);
   VEC_PUSH(&s->inds, C);
   parse_node n = {
     .type.statement = PT_STATEMENT_FUN,
     .subs_start = start,
-    .sub_amt = 3
+    .sub_amt = PS + 2,
   };
+  VEC_POP_N(&s->ind_stack, PS);
   RES = push_node(s, n);
 }
 
@@ -537,21 +566,25 @@ patterns(RES) ::= patterns(A) pattern(B). {
 }
 
 pattern(RES) ::= lower_name_node(A). {
+  BREAK_PARSER;
   A.type.pattern = PT_PAT_WILDCARD;
   RES = push_node(s, A);
 }
 
 pattern(RES) ::= unit(A). {
+  BREAK_PARSER;
   A.type.pattern = PT_PAT_UNIT;
   RES = push_node(s, A);
 }
 
 pattern(RES) ::= int(A). {
+  BREAK_PARSER;
   A.type.pattern = PT_PAT_INT;
   RES = push_node(s, A);
 }
 
 pattern(RES) ::= string(A). {
+  BREAK_PARSER;
   A.type.pattern = PT_PAT_STRING;
   RES = push_node(s, A);
 }
@@ -579,13 +612,14 @@ pattern_in_parens(RES) ::= pattern_construction(A). {
 }
 
 pattern_in_parens(RES) ::= pattern_tuple(A). {
+  BREAK_PARSER;
   RES = desugar_tuple(s, PT_ALL_PAT_TUP, A);
 }
 
 pattern_construction(RES) ::= upper_name(A) patterns(B). {
   BREAK_PARSER;
   node_ind_t start = s->inds.len;
-  VEC_PUSH(&s->inds, &A);
+  VEC_PUSH(&s->inds, A);
   VEC_APPEND(&s->inds, B, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - B]);
   VEC_POP_N(&s->ind_stack, B);
   parse_node n = {
@@ -633,6 +667,7 @@ type_inside_brackets(RES) ::= type(A). {
 }
 
 type(RES) ::= unit(A). {
+  BREAK_PARSER;
   A.type.type = PT_TY_UNIT;
   RES = push_node(s, A);
 }
@@ -667,12 +702,29 @@ type_inside_parens(RES) ::= type(A) type(B). {
   RES = push_node(s, n);
 }
 
-fn_type(RES) ::= FN_TYPE type(A) type(B). {
+// At minimum we need a return type
+fn_type_params(RES) ::= type(A). {
   BREAK_PARSER;
+  VEC_PUSH(&s->ind_stack, A);
+  RES = 1;
+}
+
+fn_type_params(RES) ::= fn_type_params(PS) type(A). {
+  BREAK_PARSER;
+  VEC_PUSH(&s->ind_stack, A);
+  RES = PS + 1;
+}
+
+// TODO Add this as a builtin type constructor, and use normal call resolution?
+fn_type(RES) ::= FN_TYPE fn_type_params(PS). {
+  BREAK_PARSER;
+  node_ind_t start = s->inds.len;
+  VEC_APPEND(&s->inds, PS, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - PS]);
+  VEC_POP_N(&s->ind_stack, PS);
   parse_node n = {
     .type.type = PT_TY_FN,
-    .sub_a = A,
-    .sub_b = B,
+    .subs_start = start,
+    .sub_amt = PS,
   };
   RES = push_node(s, n);
 }
@@ -719,9 +771,31 @@ tuple_rec(RES) ::= tuple_min(A). {
   RES = A;
 }
 
-call(RES) ::= expression(A) expression(B). {
+expressions(RES) ::= . {
+  RES = 0;
+}
+
+expressions(RES) ::= call_params(N) expression(A). {
   BREAK_PARSER;
-  parse_node n = {.type.expression = PT_EX_CALL, .sub_a = A, .sub_b = B};
+  VEC_PUSH(&s->ind_stack, A);
+  RES = N + 1;
+}
+
+call_params(RES) ::= expressions(A). {
+  RES = A;
+}
+
+call(RES) ::= expression(A) call_params(PS). {
+  BREAK_PARSER;
+  node_ind_t start = s->inds.len;
+  VEC_PUSH(&s->inds, A);
+  VEC_APPEND(&s->inds, PS, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - PS]);
+  VEC_POP_N(&s->ind_stack, PS);
+  parse_node n = {
+    .type.expression = PT_EX_CALL,
+    .subs_start = start,
+    .sub_amt = PS + 1
+  };
   RES = push_node(s, n);
 }
 
@@ -856,10 +930,12 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
     if (res.succeeded) {
       res.tree.nodes = VEC_FINALIZE(&state.nodes);
       res.tree.inds = VEC_FINALIZE(&state.inds);
+      assert(state.ind_stack.len == 0);
     } else {
       VEC_FREE(&state.nodes);
       VEC_FREE(&state.inds);
     }
+    // we turn asserts into debug_asserts in this file
     VEC_FREE(&state.ind_stack);
   #ifdef TIME_PARSER
     res.time_taken = time_since_monotonic(start);

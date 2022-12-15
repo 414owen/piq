@@ -39,8 +39,10 @@ typedef struct {
   };
 } type;
 
-#define T_FN_PARAM_IND(node) node.sub_a
-#define T_FN_RET_IND(node) node.sub_b
+#define T_FN_PARAM_AMT(node) ((node).sub_amt - 1)
+#define T_FN_PARAM_IND(inds, node, i) inds[(node).subs_start + i]
+#define T_FN_RET_IND(inds, node) inds[(node).subs_start + (node).sub_amt - 1]
+
 #define T_LIST_SUB_IND(node) node.sub_a
 #define T_TUP_SUB_AMT(node) 2
 #define T_TUP_SUB_A(node) node.sub_a
@@ -48,7 +50,7 @@ typedef struct {
 
 tree_node_repr type_repr(type_tag tag);
 bool inline_types_eq(type a, type b);
-void print_type(FILE *f, type *types, node_ind_t root);
+void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root);
 void print_type_head_placeholders(FILE *f, type_tag head);
 
 VEC_DECL(type);

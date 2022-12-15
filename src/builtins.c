@@ -21,20 +21,14 @@ enum {
   string_type_ind = 9,
 
   compare_i8s_type_ind = 10,
+  compare_i16s_type_ind = 11,
+  compare_i32s_type_ind = 12,
+  compare_i64s_type_ind = 13,
 
-  tup_of_i8s_type_ind = 11,
-  tup_of_i64s_type_ind = 12,
-  tup_of_i16s_type_ind = 13,
-  tup_of_i32s_type_ind = 14,
-
-  compare_i16s_type_ind = 15,
-  compare_i32s_type_ind = 16,
-  compare_i64s_type_ind = 17,
-
-  i8_arithmetic_type_ind = 18,
-  i16_arithmetic_type_ind = 19,
-  i32_arithmetic_type_ind = 20,
-  i64_arithmetic_type_ind = 21,
+  i8_arithmetic_type_ind = 14,
+  i16_arithmetic_type_ind = 15,
+  i32_arithmetic_type_ind = 16,
+  i64_arithmetic_type_ind = 17,
 };
 
 const char *builtin_type_names[] = {
@@ -48,6 +42,30 @@ const char *builtin_type_names[] = {
   [i32_type_ind] = "I32",
   [i64_type_ind] = "I64",
   [string_type_ind] = "String",
+};
+
+enum {
+  i8_arithmetic_fn_ind_start = builtin_term_amount + 0,
+  i16_arithmetic_fn_ind_start = builtin_term_amount + 3,
+  i32_arithmetic_fn_ind_start = builtin_term_amount + 6,
+  i64_arithmetic_fn_ind_start = builtin_term_amount + 9,
+
+  u8_arithmetic_fn_ind_start = builtin_term_amount + 12,
+  u16_arithmetic_fn_ind_start = builtin_term_amount + 15,
+  u32_arithmetic_fn_ind_start = builtin_term_amount + 18,
+  u64_arithmetic_fn_ind_start = builtin_term_amount + 21,
+
+  i8_predicate_fn_ind_start = builtin_term_amount + 24,
+  i16_predicate_fn_ind_start = builtin_term_amount + 27,
+  i32_predicate_fn_ind_start = builtin_term_amount + 30,
+  i64_predicate_fn_ind_start = builtin_term_amount + 33,
+
+  u8_predicate_fn_ind_start = builtin_term_amount + 36,
+  u16_predicate_fn_ind_start = builtin_term_amount + 39,
+  u32_predicate_fn_ind_start = builtin_term_amount + 42,
+  u64_predicate_fn_ind_start = builtin_term_amount + 45,
+
+  derived_type_amount = builtin_term_amount + 48
 };
 
 const node_ind_t named_builtin_type_amount = STATIC_LEN(builtin_type_names);
@@ -117,78 +135,57 @@ const type builtin_types[] = {
   [compare_i8s_type_ind] =
     {
       .tag = T_FN,
-      .sub_a = tup_of_i8s_type_ind,
-      .sub_b = bool_type_ind,
-    },
-  [tup_of_i8s_type_ind] =
-    {
-      .tag = T_TUP,
-      .sub_a = i8_type_ind,
-      .sub_b = i8_type_ind,
+      .subs_start = i8_predicate_fn_ind_start,
+      .sub_amt = 3,
     },
 
   [compare_i16s_type_ind] =
     {
       .tag = T_FN,
-      .sub_a = tup_of_i16s_type_ind,
-      .sub_b = bool_type_ind,
-    },
-  [tup_of_i16s_type_ind] =
-    {
-      .tag = T_TUP,
-      .sub_a = i16_type_ind,
-      .sub_b = i16_type_ind,
+      .subs_start = i16_predicate_fn_ind_start,
+      .sub_amt = 3,
     },
 
   [compare_i32s_type_ind] =
     {
       .tag = T_FN,
-      .sub_a = tup_of_i32s_type_ind,
-      .sub_b = bool_type_ind,
-    },
-  [tup_of_i32s_type_ind] =
-    {
-      .tag = T_TUP,
-      .sub_a = i32_type_ind,
-      .sub_b = i32_type_ind,
+      .subs_start = i32_predicate_fn_ind_start,
+      .sub_amt = 3,
     },
 
   [compare_i64s_type_ind] =
     {
       .tag = T_FN,
-      .sub_a = tup_of_i64s_type_ind,
-      .sub_b = bool_type_ind,
-    },
-  [tup_of_i64s_type_ind] =
-    {
-      .tag = T_TUP,
-      .sub_a = i64_type_ind,
-      .sub_b = i64_type_ind,
+      .subs_start = i64_predicate_fn_ind_start,
+      .sub_amt = 3,
     },
 
   [i8_arithmetic_type_ind] =
     {
       .tag = T_FN,
-      .sub_a = tup_of_i8s_type_ind,
-      .sub_b = i8_type_ind,
+      .subs_start = i8_arithmetic_fn_ind_start,
+      .sub_amt = 3,
     },
+
   [i16_arithmetic_type_ind] =
     {
       .tag = T_FN,
-      .sub_a = tup_of_i16s_type_ind,
-      .sub_b = i16_type_ind,
+      .subs_start = i16_arithmetic_fn_ind_start,
+      .sub_amt = 3,
     },
+
   [i32_arithmetic_type_ind] =
     {
       .tag = T_FN,
-      .sub_a = tup_of_i32s_type_ind,
-      .sub_b = i32_type_ind,
+      .subs_start = i32_arithmetic_fn_ind_start,
+      .sub_amt = 3,
     },
+
   [i64_arithmetic_type_ind] =
     {
       .tag = T_FN,
-      .sub_a = tup_of_i64s_type_ind,
-      .sub_b = i64_type_ind,
+      .subs_start = i64_arithmetic_fn_ind_start,
+      .sub_amt = 3,
     },
 };
 
@@ -231,7 +228,16 @@ const char *builtin_term_names[builtin_term_amount] = {
   [i32_mod_builtin] = "i32-mod",  [i64_mod_builtin] = "i64-mod",
 };
 
-const node_ind_t builtin_term_type_inds[builtin_term_amount] = {
+enum {
+  builtin_type_ind_amount_enum = builtin_term_amount + derived_type_amount,
+};
+
+const node_ind_t builtin_type_ind_amount = builtin_type_ind_amount_enum;
+
+// builtin_type_inds happens to map terms to their type inds
+// and at the end, contains everything we need to represent the
+// types at those indices
+const node_ind_t builtin_type_inds[builtin_type_ind_amount_enum] = {
   [true_builtin] = bool_type_ind,
   [false_builtin] = bool_type_ind,
 
@@ -289,4 +295,68 @@ const node_ind_t builtin_term_type_inds[builtin_term_amount] = {
   [i16_mod_builtin] = i16_arithmetic_type_ind,
   [i32_mod_builtin] = i32_arithmetic_type_ind,
   [i64_mod_builtin] = i64_arithmetic_type_ind,
+
+  [i8_arithmetic_fn_ind_start + 0] = i8_type_ind,
+  [i8_arithmetic_fn_ind_start + 1] = i8_type_ind,
+  [i8_arithmetic_fn_ind_start + 2] = i8_type_ind,
+
+  [i16_arithmetic_fn_ind_start + 0] = i16_type_ind,
+  [i16_arithmetic_fn_ind_start + 1] = i16_type_ind,
+  [i16_arithmetic_fn_ind_start + 2] = i16_type_ind,
+
+  [i32_arithmetic_fn_ind_start + 0] = i32_type_ind,
+  [i32_arithmetic_fn_ind_start + 1] = i32_type_ind,
+  [i32_arithmetic_fn_ind_start + 2] = i32_type_ind,
+
+  [i64_arithmetic_fn_ind_start + 0] = i64_type_ind,
+  [i64_arithmetic_fn_ind_start + 1] = i64_type_ind,
+  [i64_arithmetic_fn_ind_start + 2] = i64_type_ind,
+
+  [u8_arithmetic_fn_ind_start + 0] = u8_type_ind,
+  [u8_arithmetic_fn_ind_start + 1] = u8_type_ind,
+  [u8_arithmetic_fn_ind_start + 2] = u8_type_ind,
+
+  [u16_arithmetic_fn_ind_start + 0] = u16_type_ind,
+  [u16_arithmetic_fn_ind_start + 1] = u16_type_ind,
+  [u16_arithmetic_fn_ind_start + 2] = u16_type_ind,
+
+  [u32_arithmetic_fn_ind_start + 0] = u32_type_ind,
+  [u32_arithmetic_fn_ind_start + 1] = u32_type_ind,
+  [u32_arithmetic_fn_ind_start + 2] = u32_type_ind,
+
+  [u64_arithmetic_fn_ind_start + 0] = u64_type_ind,
+  [u64_arithmetic_fn_ind_start + 1] = u64_type_ind,
+  [u64_arithmetic_fn_ind_start + 2] = u64_type_ind,
+
+  [i8_predicate_fn_ind_start + 0] = i8_type_ind,
+  [i8_predicate_fn_ind_start + 1] = i8_type_ind,
+  [i8_predicate_fn_ind_start + 2] = bool_type_ind,
+
+  [i16_predicate_fn_ind_start + 0] = i16_type_ind,
+  [i16_predicate_fn_ind_start + 1] = i16_type_ind,
+  [i16_predicate_fn_ind_start + 2] = bool_type_ind,
+
+  [i32_predicate_fn_ind_start + 0] = i32_type_ind,
+  [i32_predicate_fn_ind_start + 1] = i32_type_ind,
+  [i32_predicate_fn_ind_start + 2] = bool_type_ind,
+
+  [i64_predicate_fn_ind_start + 0] = i64_type_ind,
+  [i64_predicate_fn_ind_start + 1] = i64_type_ind,
+  [i64_predicate_fn_ind_start + 2] = bool_type_ind,
+
+  [u8_predicate_fn_ind_start + 0] = u8_type_ind,
+  [u8_predicate_fn_ind_start + 1] = u8_type_ind,
+  [u8_predicate_fn_ind_start + 2] = bool_type_ind,
+
+  [u16_predicate_fn_ind_start + 0] = u16_type_ind,
+  [u16_predicate_fn_ind_start + 1] = u16_type_ind,
+  [u16_predicate_fn_ind_start + 2] = bool_type_ind,
+
+  [u32_predicate_fn_ind_start + 0] = u32_type_ind,
+  [u32_predicate_fn_ind_start + 1] = u32_type_ind,
+  [u32_predicate_fn_ind_start + 2] = bool_type_ind,
+
+  [u64_predicate_fn_ind_start + 0] = u64_type_ind,
+  [u64_predicate_fn_ind_start + 1] = u64_type_ind,
+  [u64_predicate_fn_ind_start + 2] = bool_type_ind,
 };

@@ -188,37 +188,57 @@ static void test_types_match(test_state *state, const char *input_p,
     print_tc_errors(ss.stream, input, pres.tree, res);
     ss_finalize(&ss);
     failf(state, ss.string, input);
-    return;
-  }
-
-  for (size_t i = 0; i < cases; i++) {
-    test_type exp = exps[i];
-    span span = spans[i];
-    bool seen = false;
-    for (size_t j = 0; j < pres.tree.node_amt; j++) {
-      parse_node node = pres.tree.nodes[j];
-      if (spans_equal(node.span, span)) {
-        seen = true;
-        if (!test_type_eq(res.types.types,
-                          res.types.type_inds,
-                          res.types.node_types[j],
-                          exp)) {
-          stringstream ss;
-          ss_init_immovable(&ss);
-          print_type(ss.stream, res.types.types, res.types.node_types[j]);
-          ss_finalize(&ss);
-          failf(state, "Type mismatch in test. Got: %s", ss.string);
-          free(ss.string);
+    free(ss.string);
+  } else {
+    for (size_t i = 0; i < cases; i++) {
+      test_type exp = exps[i];
+      span span = spans[i];
+      bool seen = false;
+      for (size_t j = 0; j < pres.tree.node_amt; j++) {
+        parse_node node = pres.tree.nodes[j];
+        if (spans_equal(node.span, span)) {
+          seen = true;
+          if (!test_type_eq(res.types.types,
+                            res.types.type_inds,
+                            res.types.node_types[j],
+                            exp)) {
+            char *type_str;
+            char *context_str;
+            {
+              stringstream ss;
+              ss_init_immovable(&ss);
+              print_type(ss.stream,
+                         res.types.types,
+                         res.types.type_inds,
+                         res.types.node_types[j]);
+              ss_finalize(&ss);
+              type_str = ss.string;
+            }
+            {
+              stringstream ss;
+              ss_init_immovable(&ss);
+              format_error_ctx(ss.stream, input, span.start, span.len);
+              ss_finalize(&ss);
+              context_str = ss.string;
+            }
+            failf(state,
+                  "Type mismatch in test. Got: %s\n%s",
+                  type_str,
+                  context_str);
+            free(type_str);
+            free(context_str);
+          }
         }
       }
-    }
-    if (!seen) {
-      failf(state,
-            "No node matching position %d-%d",
-            span.start,
-            span.start + span.len - 1);
+      if (!seen) {
+        failf(state,
+              "No node matching position %d-%d",
+              span.start,
+              span.start + span.len - 1);
+      }
     }
   }
+
   free_tc_res(res);
   stfree(spans, span_bytes);
   free_parse_tree_res(pres);
@@ -290,17 +310,17 @@ static const test_type i32 = {
   .subs = NULL,
 };
 
-static const test_type unit = {
-  .tag = T_UNIT,
-  .sub_amt = 0,
-  .subs = NULL,
-};
+// static const test_type unit = {
+//   .tag = T_UNIT,
+//   .sub_amt = 0,
+//   .subs = NULL,
+// };
 
 static void test_typecheck_succeeds(test_state *state) {
   test_group_start(state, "Succeeds");
 
   {
-    const char *input = "(sig a (Fn () →U8←))\n"
+    const char *input = "(sig a (Fn →U8←))\n"
                         "(fun a () 2)";
     test_start(state, "Return type U8");
     test_type types[] = {u8_t};
@@ -309,7 +329,7 @@ static void test_typecheck_succeeds(test_state *state) {
   }
 
   {
-    const char *input = "(sig a (Fn () I8))\n"
+    const char *input = "(sig a (Fn I8))\n"
                         "(fun a () →2←)";
     test_start(state, "Return value");
     test_type types[] = {i8};
@@ -318,10 +338,10 @@ static void test_typecheck_succeeds(test_state *state) {
   }
 
   {
-    const char *input = "(sig a (Fn () I16))\n"
+    const char *input = "(sig a (Fn I16))\n"
                         "(fun →a← () 2)";
     test_start(state, "Fn bnd");
-    const test_type fn_subs[2] = {unit, i16};
+    const test_type fn_subs[] = {i16};
     const test_type fn_type = {
       .tag = T_FN,
       .sub_amt = STATIC_LEN(fn_subs),
@@ -337,7 +357,7 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     const char *input = "(sig a (Fn U8 [U8]))\n"
-                        "(fun a 1 [→12←])";
+                        "(fun a (1) [→12←])";
     test_start(state, "[U8] Literals");
     test_type types[] = {
       u8_t,
@@ -348,7 +368,7 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     const char *input = "(sig a (Fn U8 [U8]))\n"
-                        "(fun a 1 (as I32 →2←) [→12←])";
+                        "(fun a (1) (as I32 →2←) [→12←])";
     test_start(state, "Multi-expression block");
     test_type types[] = {
       i32,
@@ -359,10 +379,10 @@ static void test_typecheck_succeeds(test_state *state) {
   }
 
   {
-    const char *input = "(sig a (Fn () [U8]))\n"
-                        "(fun a () "
-                        "  (sig b (Fn () ()))"
-                        "  (fun b a ())"
+    const char *input = "(sig a (Fn [U8]))\n"
+                        "(fun a () \n"
+                        "  (sig b (Fn () ()))\n"
+                        "  (fun b (a) ())\n"
                         "  [2])";
     test_start(state, "Param shadows binding");
     test_types_match(state, input, NULL, 0);
@@ -371,11 +391,11 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     test_start(state, "Uses global");
-    const char *input = "(sig sndpar (Fn (I16, I32) I32))\n"
-                        "(fun sndpar (a, b) b)\n"
+    const char *input = "(sig sndpar (Fn I16 I32 I32))\n"
+                        "(fun sndpar (a b) b)\n"
                         "\n"
-                        "(sig test (Fn () I32))\n"
-                        "(fun test () (sndpar (→1←, →2←)))";
+                        "(sig test (Fn I32))\n"
+                        "(fun test () (sndpar →1← →2←))";
     test_type types[] = {
       i16,
       i32,
@@ -386,7 +406,7 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     test_start(state, "Uses let");
-    const char *input = "(sig test (Fn () I32))\n"
+    const char *input = "(sig test (Fn I32))\n"
                         "(fun test ()\n"
                         " (sig b I32)\n"
                         " (let b →3←)\n"
@@ -401,7 +421,7 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     test_start(state, "Recognizes bools");
-    const char *input = "(sig test (Fn () Bool))\n"
+    const char *input = "(sig test (Fn Bool))\n"
                         "(fun test () (let a →False←) →True←)";
     test_type types[] = {
       bool_t,
@@ -413,8 +433,8 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     test_start(state, "Functions can be recursive");
-    const char *input = "(sig test (Fn () Bool))\n"
-                        "(fun test () →(test ())←)";
+    const char *input = "(sig test (Fn Bool))\n"
+                        "(fun test () →(test)←)";
     test_type types[] = {
       bool_t,
     };
@@ -424,10 +444,10 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     test_start(state, "Functions can be mutually recursive");
-    const char *input = "(sig a (Fn () Bool))\n"
-                        "(fun a () →(b ())←)\n"
-                        "(sig b (Fn () Bool))\n"
-                        "(fun b () →(a ())←)\n";
+    const char *input = "(sig a (Fn Bool))\n"
+                        "(fun a () →(b)←)\n"
+                        "(sig b (Fn Bool))\n"
+                        "(fun b () →(a)←)\n";
     test_type types[] = {
       bool_t,
       bool_t,
@@ -447,7 +467,7 @@ static void test_errors(test_state *state) {
     const tc_err_test errors[] = {{
       .type = TYPE_HEAD_MISMATCH,
     }};
-    static const char *prog = "(sig a (Fn () I32))\n"
+    static const char *prog = "(sig a (Fn I32))\n"
                               "(fun a () →(2, 3)←)";
     test_typecheck_errors(state, prog, errors, STATIC_LEN(errors));
     test_end(state);
@@ -473,7 +493,7 @@ static void test_errors(test_state *state) {
       },
     };
     test_typecheck_errors(state,
-                          "(sig a (Fn () I32))\n"
+                          "(sig a (Fn I32))\n"
                           "(fun a () →(fn () 1)←)",
                           errors,
                           STATIC_LEN(errors));
@@ -488,7 +508,7 @@ static void test_errors(test_state *state) {
       },
     };
     test_typecheck_errors(state,
-                          "(sig a (Fn () I32))\n"
+                          "(sig a (Fn I32))\n"
                           "(fun a () →[3]←)",
                           errors,
                           STATIC_LEN(errors));
@@ -503,7 +523,7 @@ static void test_errors(test_state *state) {
       },
     };
     test_typecheck_errors(state,
-                          "(sig a (Fn () I32))\n"
+                          "(sig a (Fn I32))\n"
                           "(fun a () →\"hi\"←)",
                           errors,
                           STATIC_LEN(errors));
@@ -518,7 +538,7 @@ static void test_errors(test_state *state) {
       },
     };
     test_typecheck_errors(state,
-                          "(sig a (Fn () String))\n"
+                          "(sig a (Fn String))\n"
                           "(fun a () →321←)",
                           errors,
                           STATIC_LEN(errors));
@@ -528,7 +548,7 @@ static void test_errors(test_state *state) {
   test_start(state, "Blocks must end in expressions");
   {
     const char *input = "(sig test (Fn I32 I32))\n"
-                        "(fun test a (let f 1))";
+                        "(fun test (a) (let f 1))";
     const tc_err_test errors[] = {
       {
         .type = BLOCK_ENDS_IN_STATEMENT,
@@ -558,7 +578,7 @@ static void test_typecheck_stress(test_state *state) {
     }
     fputs("U8", ss.stream);
     fputs(")))\n", ss.stream);
-    fputs("(fun a b b)", ss.stream);
+    fputs("(fun a (b) b)", ss.stream);
     ss_finalize(&ss);
     test_typecheck_errors(state, ss.string, NULL, 0);
     free(ss.string);
