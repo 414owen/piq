@@ -16,9 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
-    - uses: wagoid/commitlint-github-action@v5
+    - uses: webiny/action-conventional-commits@v1.1.0
     - name: Install Nix
       uses: cachix/install-nix-action@v17
     - run: nix build
