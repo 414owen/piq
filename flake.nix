@@ -163,7 +163,7 @@
 
           inputsFrom = builtins.attrValues packages;
 
-          CFLAGS = "-O0 -DDEBUG -DTIME_ALL -g -ggdb";
+          CFLAGS = "-O0 -ggdb3 -DDEBUG -DTIME_ALL";
           CPATH = pkgs.lib.makeSearchPathOutput "dev" "include" packages.${packageName}.buildInputs;
 
           shellHook = ''
