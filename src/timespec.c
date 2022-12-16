@@ -85,3 +85,7 @@ struct timespec timespec_subtract(struct timespec ts1, struct timespec ts2) {
 bool timespec_negative(struct timespec a) {
   return a.tv_sec < 0 || (a.tv_sec == 0 && a.tv_nsec < 0);
 }
+
+bool timespec_gt(struct timespec x, struct timespec y) {
+  return x.tv_sec > y.tv_sec || (x.tv_sec == y.tv_sec && x.tv_nsec > y.tv_nsec);
+}
