@@ -36,7 +36,6 @@ typedef struct {
 #endif
 } tokens_res;
 
-token_res scan(source_file file, buf_ind_t pos);
 tokens_res scan_all(source_file file);
 void free_tokens_res(tokens_res res);
 void print_token(FILE *f, token_type t);
