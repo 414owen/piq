@@ -37,7 +37,7 @@ static token_res mk_token(token_type type, buf_ind_t start, buf_ind_t after_end)
   return res;
 }
 
-token_res scan(source_file file, buf_ind_t start) {
+static token_res scan(source_file file, buf_ind_t start) {
   while (isspace(file.data[start]))
     start++;
   buf_ind_t pos = start;
