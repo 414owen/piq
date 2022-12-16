@@ -108,16 +108,11 @@ static void test_timespec_subtract(test_state *state) {
 }
 
 static void test_monotonic_time(test_state *state) {
-  struct timespec x;
-  struct timespec y;
-  {
-    test_start(state, "subsequent calls lead to greater times");
-    x = get_monotonic_time();
-    y = get_monotonic_time();
-    test_assert(state, y.tv_sec >= x.tv_sec);
-    test_assert(state, y.tv_sec > x.tv_sec || y.tv_nsec > x.tv_nsec);
-    test_end(state);
-  }
+  test_start(state, "subsequent calls lead to greater times");
+  struct timespec x = get_monotonic_time();
+  struct timespec y = get_monotonic_time();
+  test_assert(state, timespec_gt(y, x));
+  test_end(state);
 }
 
 static void test_asprintf(test_state *state) {
