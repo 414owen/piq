@@ -130,9 +130,23 @@ $ ./repl
 * [Rust](https://www.rust-lang.org/fr)
 * [C](https://fr.wikipedia.org/wiki/C_(langage))
 
-# Languages to look out for
+# Cool features other languages have
+
+## OCaml
+
+https://v2.ocaml.org/api/Ephemeron.html
+
+## [hare](https://harelang.org/)
+
+Looking here: https://git.sr.ht/~sircmpwn/hare
+
+Directory structure is used to define platform-dependent modules,
+although currently `diff unix/+linux/nice.ha unix/+freebsd/nice.ha` is empty.
+
+# Language watchlist
+
+I'll probably get around to stealing feature ideas from these at some point.
 
 * [zig](https://ziglang.org/)
-* [hare](https://harelang.org/)
-* [garnet](https://hg.sr.ht/~icefox/garnet)
 * [C3](https://c3-lang.org/)
+* [garnet](https://hg.sr.ht/~icefox/garnet)
