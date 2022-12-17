@@ -28,7 +28,7 @@ static char *type_strs[] = {
   [ARG_INT] = "INT",
 };
 
-const static argument help_arg = {
+static const argument help_arg = {
   .tag = ARG_FLAG,
   .short_name = 'h',
   .long_name = "help",
