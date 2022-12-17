@@ -87,6 +87,65 @@ A language that does everything right
 * Optimize some units (eg arg parsing) for size, others for speed
 * Maybe all product types should be records?
 
+## Thoughts on pointers
+
+Pointers are sometimes too memory-intensive, it's rare that any given part of your
+one's program needs to work with 2^64 bytes of memory. If you are actually working
+with >2^32 bytes of memory, you should probably consider dividing the workload
+and multithreading your program to work on smaller chunks.
+
+## Relative pointers
+
+Jai has relative pointers, which allow the use of 32-bit pointers in
+the same programs as 64-bit pointers. They're also serializable.
+
+### Typed indices
+
+Pointer types are conceptually a (haskell) newtype around an existing type (size_t),
+we could do the same to indices, so that they can only index arrays of a certain
+type...
+
+There can be a builtin index type that's generic, and can access any type of array,
+`IxAny :: Type`, and there can be another builtin type constructor
+`Ix :: Type -> Type`, which is type-safe.
+
+This would bring indices up to safety-par with pointers.
+
+### Indices bound to a specific array
+
+Another compile-time check is that we could associate an index with a *specific*
+array. If I have an index into `arr1` I want to make sure it can't be used
+on `arr2`. This type of index wouldn't need to store the element type (as
+the one above would). I'm not sure what type-level feature this maps onto.
+It's not a dependent type, because there isn't a term in the type, the
+check is that a value derived from a thing can only be used on that thing.
+I guess it has to be called a `provenance type`, which sounds cool.
+
+Questions:
+
+* If I rebind `arr1` as `arr2`, can I still use the index derived from `arr1`?
+* If I make an index into `arr1`, do I want to be able to use it to index a
+  slice derived from `arr1`?
+
+Example:
+
+```
+(let arr1 [1, 2, 3])
+(let arr2 [1, 2, 3])
+
+(sig i (Ix arr1))
+(let i 2)
+(ix arr1 i)              // 3
+(ix arr2 i)              // provenance error
+```
+
+Taking this to its logical conclusion, are there any other values for which
+we want to check that their usage is connected to another value?
+
+How is this modeled? It seems like every (expression?/binding?) should
+conceptually create a singleton type, which can used, initially just by
+builtins, but can eventually be exposed?
+
 # Mistakes
 
 * Having sigs as separate syntactic constructs makes the compiler
@@ -132,9 +191,15 @@ $ ./repl
 
 # Cool features other languages have
 
-## OCaml
+## [Jai](https://inductive.no/jai/)
+
+Relative pointers
+
+## [OCaml](https://ocaml.org/)
 
 https://v2.ocaml.org/api/Ephemeron.html
+
+I'll probably something similar to OCaml's compilation model for generics
 
 ## [hare](https://harelang.org/)
 
@@ -143,10 +208,16 @@ Looking here: https://git.sr.ht/~sircmpwn/hare
 Directory structure is used to define platform-dependent modules,
 although currently `diff unix/+linux/nice.ha unix/+freebsd/nice.ha` is empty.
 
+## [Zig](https://ziglang.org/)
+
+Allocation API, everything that needs dynamic memory takes an allocator.
+
 # Language watchlist
 
 I'll probably get around to stealing feature ideas from these at some point.
 
-* [zig](https://ziglang.org/)
 * [C3](https://c3-lang.org/)
 * [garnet](https://hg.sr.ht/~icefox/garnet)
+* [go](https://go.dev/)
+  TODO check out their compilation model for generics, I've heard it doesn't
+  specialize but gets okay performance?
