@@ -186,20 +186,23 @@ $ ./repl
 # Inspiration taken from
 
 * [Haskell](https://www.haskell.org/)
-* [Rust](https://www.rust-lang.org/fr)
 * [C](https://fr.wikipedia.org/wiki/C_(langage))
 
 # Cool features other languages have
 
+## [Rust](https://www.rust-lang.org/fr)
+
+Disjunctive patterns?
+
 ## [Jai](https://inductive.no/jai/)
 
-Relative pointers
+Relative pointers?
 
 ## [OCaml](https://ocaml.org/)
 
 https://v2.ocaml.org/api/Ephemeron.html
+I'll probably use something similar to OCaml's compilation model for generics
 
-I'll probably something similar to OCaml's compilation model for generics
 
 ## [hare](https://harelang.org/)
 
