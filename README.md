@@ -143,8 +143,8 @@ Taking this to its logical conclusion, are there any other values for which
 we want to check that their usage is connected to another value?
 
 How is this modeled? It seems like every (expression?/binding?) should
-conceptually create a singleton type, which can used, initially just by
-builtins, but can eventually be exposed?
+conceptually create a singleton type, which can initially only be used by
+builtins, but can eventually be exposed to the user?
 
 # Mistakes
 
