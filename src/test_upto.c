@@ -35,9 +35,11 @@ void add_parser_timings_internal(test_state *state, tokens_res tres,
 #ifdef TIME_TYPECHECK
 void add_typecheck_timings_internal(test_state *state, parse_tree tree,
                                     tc_res tc_res) {
-  state->total_typecheck_time =
-    timespec_add(state->total_typecheck_time, tc_res.time_taken);
-  state->total_parse_nodes_typechecked += tree.node_amt;
+  if (tc_res.error_amt == 0) {
+    state->total_typecheck_time =
+      timespec_add(state->total_typecheck_time, tc_res.time_taken);
+    state->total_parse_nodes_typechecked += tree.node_amt;
+  }
 }
 #endif
 
@@ -96,7 +98,7 @@ parse_tree_res test_upto_parse_tree(test_state *state,
     return res;
   }
 
-  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
+  const parse_tree_res pres = parse(tres.tokens, tres.token_amt);
 
   add_parser_timings(state, tres, pres);
 
@@ -109,15 +111,45 @@ parse_tree_res test_upto_parse_tree(test_state *state,
   return pres;
 }
 
+upto_resolution_res test_upto_resolution(test_state *state,
+                                         const char *restrict input) {
+  parse_tree_res tree_res = test_upto_parse_tree(state, input);
+  if (!tree_res.succeeded) {
+    free_parse_tree_res(tree_res);
+    const upto_resolution_res res = {
+      .success = false,
+    };
+    return res;
+  }
+  const resolution_errors errs = resolve_bindings(tree_res.tree, input);
+  if (errs.binding_amt > 0) {
+    const upto_resolution_res res = {
+      .success = false,
+    };
+    char *error_str = print_resolution_errors_string(input, errs);
+    failf(state, "Resolution failed:\n%s", error_str);
+    free(error_str);
+    free(errs.bindings);
+    free_parse_tree_res(tree_res);
+    return res;
+  } else {
+    const upto_resolution_res res = {
+      .success = true,
+      .tree = tree_res.tree,
+    };
+    return res;
+  }
+}
+
 tc_res test_upto_typecheck(test_state *state, const char *restrict input,
                            bool *success, parse_tree *tree) {
-  parse_tree_res tree_res = test_upto_parse_tree(state, input);
+  upto_resolution_res tree_res = test_upto_resolution(state, input);
   tc_res tc = {
     .errors = NULL,
     .error_amt = 0,
   };
-  if (tree_res.succeeded) {
-    tc = typecheck(input, tree_res.tree);
+  if (tree_res.success) {
+    tc = typecheck(tree_res.tree);
     add_typecheck_timings(state, tree_res.tree, tc);
     if (tc.error_amt > 0) {
       *success = false;
@@ -128,14 +160,13 @@ tc_res test_upto_typecheck(test_state *state, const char *restrict input,
       failf(state, "Typecheck failed:\n%s", ss.string);
       free(ss.string);
       free_tc_res(tc);
-      free_parse_tree_res(tree_res);
+      free_parse_tree(tree_res.tree);
     } else {
       *success = true;
     }
     *tree = tree_res.tree;
   } else {
     *success = false;
-    free_parse_tree_res(tree_res);
   }
   return tc;
 }

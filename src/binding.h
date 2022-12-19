@@ -4,13 +4,13 @@
 #include "vec.h"
 #include "span.h"
 
-#define binding span
+typedef span binding;
 
 VEC_DECL_CUSTOM(binding, vec_binding);
 
 typedef union {
   const char *builtin;
-  binding span;
+  binding binding;
 } str_ref;
 
 VEC_DECL(str_ref);

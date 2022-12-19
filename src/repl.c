@@ -6,6 +6,7 @@
 #include "diagnostic.h"
 #include "llvm.h"
 #include "parser.h"
+#include "parse_tree.h"
 #include "token.h"
 #include "typecheck.h"
 #include "util.h"
@@ -27,7 +28,11 @@ static void reply(char *input, FILE *out) {
     goto end_b;
   }
 
-  tc_res tc_res = typecheck(input, pres.tree);
+  resolution_errors res_res = resolve_bindings(pres.tree, input);
+  if (res_res.binding_amt > 0) {
+    print_resolution_errors(stdout, input, res_res);
+  }
+  tc_res tc_res = typecheck(pres.tree);
   if (tc_res.error_amt > 0) {
     print_tc_errors(stdout, input, pres.tree, tc_res);
     putc('\n', stdout);
@@ -64,7 +69,7 @@ int repl(void) {
     if (strlen(input) == 0) {
       // remove newline
       if (multiline_input.len > 0) {
-        VEC_POP(&multiline_input);
+        VEC_POP_(&multiline_input);
       }
       VEC_PUSH(&multiline_input, (char)'\0');
       char *data = VEC_DATA_PTR(&multiline_input);

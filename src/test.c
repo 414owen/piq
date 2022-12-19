@@ -206,7 +206,8 @@ void write_test_results(test_state *state) {
         current.failures = 0;
         break;
       case GROUP_ENTER: {
-        test_aggregate inner = VEC_POP(&agg_stack);
+        test_aggregate inner;
+        VEC_POP(&agg_stack, &inner);
         VEC_PUSH(&aggs, current);
         current.tests += inner.tests;
         current.failures += inner.failures;
@@ -312,7 +313,7 @@ bool test_matches(const test_state *restrict state,
   ss_init_immovable(&ss);
   print_test_path(state->path, ss.stream);
   ss_finalize(&ss);
-  VEC_POP(&state->path);
+  VEC_POP_(&state->path);
   bool res = strstr(ss.string, state->filter_str) != NULL;
   free(ss.string);
   return res;

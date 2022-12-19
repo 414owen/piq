@@ -3,7 +3,9 @@
 #include "ast_meta.h"
 #include "diagnostic.h"
 #include "bitset.h"
+#include "builtins.h"
 #include "parse_tree.h"
+#include "scope.h"
 #include "util.h"
 #include "vec.h"
 
@@ -30,7 +32,6 @@ parse_node_category parse_node_categories[] = {
   [PT_ALL_MULTI_LOWER_NAME] = PT_C_NONE,
   [PT_ALL_MULTI_TYPE_PARAMS] = PT_C_NONE,
   [PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL] = PT_C_NONE,
-  [PT_ALL_MULTI_PARAM_DECLS] = PT_C_NONE,
   [PT_ALL_MULTI_DATA_CONSTRUCTORS] = PT_C_NONE,
 
   [PT_ALL_PAT_WILDCARD] = PT_C_PATTERN,
@@ -55,12 +56,14 @@ parse_node_category parse_node_categories[] = {
 // the reason we have a `node.type.all` at all, and the
 // stable numbering, is so far basically because of this
 // function.
-static tree_node_repr subs_type(parse_node_type type) {
+tree_node_repr pt_subs_type(parse_node_type type) {
   tree_node_repr res = SUBS_NONE;
   switch (type.all) {
     case PT_ALL_EX_INT:
     case PT_ALL_MULTI_LOWER_NAME:
     case PT_ALL_MULTI_UPPER_NAME:
+    case PT_ALL_EX_LOWER_VAR:
+    case PT_ALL_EX_UPPER_VAR:
     case PT_ALL_EX_STRING:
     case PT_ALL_EX_UNIT:
     case PT_ALL_PAT_WILDCARD:
@@ -69,6 +72,8 @@ static tree_node_repr subs_type(parse_node_type type) {
     case PT_ALL_PAT_LIST:
     case PT_ALL_PAT_INT:
     case PT_ALL_TY_UNIT:
+    case PT_ALL_TY_UPPER_NAME:
+    case PT_ALL_TY_LOWER_NAME:
       res = SUBS_NONE;
       break;
     case PT_ALL_TY_LIST:
@@ -76,7 +81,6 @@ static tree_node_repr subs_type(parse_node_type type) {
       break;
     case PT_ALL_EX_AS:
     case PT_ALL_EX_TUP:
-    case PT_ALL_TY_FN:
     case PT_TY_TUP:
     case PT_TY_CONSTRUCTION:
     case PT_ALL_STATEMENT_SIG:
@@ -85,6 +89,7 @@ static tree_node_repr subs_type(parse_node_type type) {
     case PT_ALL_PAT_CONSTRUCTION:
       res = SUBS_TWO;
       break;
+    case PT_ALL_TY_FN:
     case PT_ALL_EX_CALL:
     case PT_ALL_EX_FN:
     case PT_ALL_EX_IF:
@@ -96,7 +101,6 @@ static tree_node_repr subs_type(parse_node_type type) {
     case PT_ALL_MULTI_DATA_CONSTRUCTORS:
     case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
     case PT_ALL_MULTI_TYPE_PARAMS:
-    case PT_ALL_MULTI_PARAM_DECLS:
       res = SUBS_EXTERNAL;
       break;
   }
@@ -108,11 +112,25 @@ VEC_DECL(print_action);
 const char *parse_node_string(parse_node_type type) {
   const char *res = NULL;
   switch (type.all) {
+    case PT_ALL_TY_UPPER_NAME: {
+      res = "TName";
+      break;
+    }
+    case PT_ALL_TY_LOWER_NAME: {
+      res = "TVar";
+      break;
+    }
     case PT_ALL_PAT_WILDCARD:
       res = "Wildcard";
       break;
     case PT_ALL_STATEMENT_LET:
       res = "Let";
+      break;
+    case PT_ALL_EX_LOWER_VAR:
+      res = "Var";
+      break;
+    case PT_ALL_EX_UPPER_VAR:
+      res = "Constructor";
       break;
     case PT_ALL_EX_AS:
       res = "Typed";
@@ -185,12 +203,9 @@ const char *parse_node_string(parse_node_type type) {
     case PT_ALL_MULTI_DATA_CONSTRUCTORS:
       res = "Data constructors";
       break;
-    case PT_ALL_MULTI_PARAM_DECLS:
-      res = "Param decls";
-      break;
   }
   return res;
-};
+}
 
 typedef struct {
   vec_print_action actions;
@@ -246,7 +261,7 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
                            char *terminator, parse_node node) {
   fputs(prefix, s->out);
   bs_push(&s->in_tuple, is_tuple(node.type));
-  switch (subs_type(node.type)) {
+  switch (pt_subs_type(node.type)) {
     case SUBS_NONE:
       break;
     case SUBS_ONE:
@@ -323,17 +338,36 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
     case PT_ALL_EX_INT:
       fprintf(s->out, "(Int %.*s)", node.span.len, s->input + node.span.start);
       break;
+    case PT_ALL_TY_LOWER_NAME:
+      fprintf(
+        s->out, "(TypeVar %.*s)", node.span.len, s->input + node.span.start);
+      break;
+    case PT_ALL_TY_UPPER_NAME:
+      fprintf(s->out,
+              "(TypeConstructor %.*s)",
+              node.span.len,
+              s->input + node.span.start);
+      break;
+    case PT_ALL_EX_UPPER_VAR:
+      fprintf(s->out,
+              "(Constructor %.*s)",
+              node.span.len,
+              s->input + node.span.start);
+      break;
     case PT_ALL_MULTI_UPPER_NAME:
       fprintf(
         s->out, "(Uname %.*s)", node.span.len, s->input + node.span.start);
       break;
-    case PT_PAT_WILDCARD:
+    case PT_ALL_PAT_WILDCARD:
       fprintf(
         s->out, "(Wildcard %.*s)", node.span.len, s->input + node.span.start);
       break;
-    case PT_EX_LOWER_NAME:
+    case PT_ALL_MULTI_LOWER_NAME:
       fprintf(
         s->out, "(Lname %.*s)", node.span.len, s->input + node.span.start);
+      break;
+    case PT_ALL_EX_LOWER_VAR:
+      fprintf(s->out, "(Var %.*s)", node.span.len, s->input + node.span.start);
       break;
     case PT_ALL_EX_IF:
       print_compound(s, "(If ", " ", ")", node);
@@ -371,9 +405,6 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
     case PT_ALL_MULTI_TYPE_PARAMS:
       print_compound(s, "(Type params: [", ", ", "])", node);
       break;
-    case PT_ALL_MULTI_PARAM_DECLS:
-      print_compound(s, "(Param decls: ", ", ", ")", node);
-      break;
   }
 }
 
@@ -399,18 +430,25 @@ void print_parse_tree(FILE *f, const char *restrict input, parse_tree tree) {
 
   while (s.actions.len > 0) {
     fflush(f);
-    print_action action = VEC_POP(&s.actions);
+    print_action action;
+    VEC_POP(&s.actions, &action);
     switch (action) {
       case PRINT_SOURCE: {
-        parse_node node = tree.nodes[VEC_POP(&s.node_stack)];
+        node_ind_t node_ind;
+        VEC_POP(&s.node_stack, &node_ind);
+        parse_node node = tree.nodes[node_ind];
         fprintf(f, "%.*s", node.span.len, input + node.span.start);
         break;
       }
-      case PRINT_STR:
-        fputs(VEC_POP(&s.string_stack), f);
+      case PRINT_STR: {
+        char *str;
+        VEC_POP(&s.string_stack, &str);
+        fputs(str, f);
         break;
+      }
       case PRINT_NODE: {
-        node_ind_t node = VEC_POP(&s.node_stack);
+        node_ind_t node;
+        VEC_POP(&s.node_stack, &node);
         uint32_t first_action = s.actions.len;
         uint32_t first_node = s.node_stack.len;
         uint32_t first_string = s.string_stack.len;
@@ -481,4 +519,244 @@ char *print_parse_tree_error_string(const char *restrict input,
   print_parse_tree_error(ss.stream, input, tokens, pres);
   ss_finalize(&ss);
   return ss.string;
+}
+
+static void push_scoped_traverse_action(pt_traversal *traversal,
+                                        scoped_traverse_action action,
+                                        node_ind_t node_ind) {
+  VEC_PUSH(&traversal->actions, action);
+  VEC_PUSH(&traversal->node_stack, node_ind);
+}
+
+static void pt_scoped_traverse_push_letrec(pt_traversal *traversal,
+                                           node_ind_t start,
+                                           node_ind_t amount) {
+  for (node_ind_t i = 0; i < amount; i++) {
+    const node_ind_t node_ind = traversal->inds[start + amount - 1 - i];
+    VEC_PUSH(&traversal->node_stack, node_ind);
+    const scoped_traverse_action act = TR_VISIT_IN;
+    VEC_PUSH(&traversal->actions, act);
+  }
+  for (node_ind_t i = 0; i < amount; i++) {
+    const node_ind_t node_ind = traversal->inds[start + i];
+    const parse_node node = traversal->nodes[node_ind];
+    if (node.type.statement == PT_ALL_STATEMENT_SIG) {
+      continue;
+    }
+    VEC_PUSH(&traversal->node_stack, node_ind);
+    {
+      const scoped_traverse_action act = TR_PUSH_SCOPE_VAR;
+      VEC_PUSH(&traversal->actions, act);
+    }
+  }
+}
+
+// traverse in scope order meaning that in letrecs, we touch the roots first
+// then the children
+pt_traversal pt_scoped_traverse(parse_tree tree) {
+  pt_traversal res = {
+    .nodes = tree.nodes,
+    .inds = tree.inds,
+    .node_stack = VEC_NEW,
+    .environment_amt = builtin_term_amount,
+  };
+  scoped_traverse_action act = TR_END;
+  VEC_PUSH(&res.actions, act);
+  pt_scoped_traverse_push_letrec(
+    &res, tree.root_subs_start, tree.root_subs_amt);
+  return res;
+}
+
+// pre-then-postorder traversal
+pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
+  scoped_traverse_action action;
+  VEC_POP(&traversal->actions, &action);
+  pt_traverse_elem res = {
+    .action = action,
+  };
+
+  switch (action) {
+    case TR_END:
+      VEC_FREE(&traversal->actions);
+      VEC_FREE(&traversal->node_stack);
+      return res;
+    case TR_POP_TO:
+      VEC_POP(&traversal->amt_stack, &res.data.new_environment_amount);
+      traversal->environment_amt = res.data.new_environment_amount;
+      return res;
+    default:
+      break;
+  }
+
+  node_ind_t node_ind;
+  VEC_POP(&traversal->node_stack, &node_ind);
+
+  if (action == TR_LINK_SIG) {
+    node_ind_t target_ind;
+    VEC_POP(&traversal->node_stack, &target_ind);
+    res.data.sig_index = node_ind;
+    res.data.linked_index = target_ind;
+    return res;
+  }
+
+  parse_node node = traversal->nodes[node_ind];
+  tree_node_repr repr = pt_subs_type(node.type);
+
+  res.data.node_index = node_ind;
+  res.data.node = node;
+
+  if (action == TR_PUSH_SCOPE_VAR) {
+    traversal->environment_amt++;
+    return res;
+  }
+
+  switch (node.type.all) {
+    case PT_ALL_STATEMENT_SIG: {
+      scoped_traverse_action act = TR_LINK_SIG;
+      VEC_PUSH(&traversal->actions, act);
+      node_ind_t target = VEC_PEEK(traversal->node_stack);
+      VEC_PUSH(&traversal->node_stack, target);
+      VEC_PUSH(&traversal->node_stack, node_ind);
+      break;
+    }
+    case PT_ALL_STATEMENT_LET:
+    case PT_ALL_PAT_WILDCARD: {
+      scoped_traverse_action act = TR_PUSH_SCOPE_VAR;
+      VEC_PUSH(&traversal->actions, act);
+      VEC_PUSH(&traversal->node_stack, node_ind);
+      break;
+    }
+    case PT_ALL_STATEMENT_FUN:
+    case PT_ALL_EX_FN: {
+      scoped_traverse_action act = TR_POP_TO;
+      VEC_PUSH(&traversal->actions, act);
+      VEC_PUSH(&traversal->amt_stack, traversal->environment_amt);
+      break;
+    }
+    default:
+      break;
+  }
+
+  switch (repr) {
+    case SUBS_EXTERNAL:
+      VEC_APPEND_REVERSE(&traversal->node_stack,
+                         node.sub_amt,
+                         &traversal->inds[node.subs_start]);
+      const scoped_traverse_action act = TR_VISIT_IN;
+      VEC_REPLICATE(&traversal->actions, node.sub_amt, act);
+      break;
+    case SUBS_NONE:
+      break;
+    case SUBS_TWO:
+      push_scoped_traverse_action(traversal, TR_VISIT_IN, node.sub_b);
+      HEDLEY_FALL_THROUGH;
+    case SUBS_ONE:
+      push_scoped_traverse_action(traversal, TR_VISIT_IN, node.sub_a);
+      break;
+  }
+  return res;
+}
+
+typedef struct {
+  vec_binding not_found;
+  parse_tree tree;
+  const char *restrict input;
+  pt_traverse_elem elem;
+  scope environment;
+  scope type_environment;
+} scope_calculator_state;
+
+static void precalculate_scope_push(scope_calculator_state *state) {
+  switch (state->elem.data.node.type.binding) {
+    case PT_BIND_FUN: {
+      binding b =
+        state->tree
+          .nodes[PT_FUN_BINDING_IND(state->tree.inds, state->elem.data.node)]
+          .span;
+      scope_push(&state->environment, b);
+      break;
+    }
+    case PT_BIND_WILDCARD: {
+      binding b = state->elem.data.node.span;
+      scope_push(&state->environment, b);
+      break;
+    }
+    case PT_BIND_LET: {
+      binding b = state->tree.nodes[PT_LET_BND_IND(state->elem.data.node)].span;
+      scope_push(&state->environment, b);
+      break;
+    }
+  }
+}
+
+static void precalculate_scope_visit(scope_calculator_state *state) {
+  parse_node node = state->elem.data.node;
+  scope scope;
+  switch (node.type.all) {
+    case PT_ALL_TY_LOWER_NAME:
+    case PT_ALL_TY_UPPER_NAME: {
+      scope = state->type_environment;
+      break;
+    }
+    case PT_ALL_EX_LOWER_VAR:
+    case PT_ALL_EX_UPPER_VAR: {
+      scope = state->environment;
+      break;
+    }
+    default:
+      return;
+  }
+  node_ind_t index = lookup_str_ref(state->input, scope, node.span);
+  if (index == scope.bindings.len) {
+    VEC_PUSH(&state->not_found, node.span);
+  }
+  state->tree.nodes[state->elem.data.node_index].variable_index = index;
+}
+
+resolution_errors resolve_bindings(parse_tree tree,
+                                   const char *restrict input) {
+  pt_traversal traversal = pt_scoped_traverse(tree);
+  scope_calculator_state state = {
+    .not_found = VEC_NEW,
+    .tree = tree,
+    .input = input,
+    .environment = scope_new(),
+    .type_environment = scope_new(),
+  };
+  bs_push_true_n(&state.type_environment.is_builtin, named_builtin_type_amount);
+  bs_push_true_n(&state.environment.is_builtin, builtin_term_amount);
+  for (node_ind_t i = 0; i < named_builtin_type_amount; i++) {
+    str_ref s = {.builtin = builtin_type_names[i]};
+    VEC_PUSH(&state.type_environment.bindings, s);
+  }
+  for (node_ind_t i = 0; i < builtin_term_amount; i++) {
+    str_ref s = {.builtin = builtin_term_names[i]};
+    VEC_PUSH(&state.environment.bindings, s);
+  }
+  while (true) {
+    state.elem = pt_scoped_traverse_next(&traversal);
+    switch (state.elem.action) {
+      case TR_LINK_SIG:
+        break;
+      case TR_POP_TO:
+        state.environment.bindings.len = state.elem.data.new_environment_amount;
+        break;
+      case TR_END: {
+        const VEC_LEN_T len = state.not_found.len;
+        resolution_errors res = {
+          .binding_amt = len,
+          .bindings = VEC_FINALIZE(&state.not_found),
+        };
+        scope_free(state.environment);
+        scope_free(state.type_environment);
+        return res;
+      }
+      case TR_PUSH_SCOPE_VAR:
+        precalculate_scope_push(&state);
+        break;
+      case TR_VISIT_IN:
+        precalculate_scope_visit(&state);
+        break;
+    }
+  }
 }

@@ -80,8 +80,7 @@ static void test_scanner_accepts(test_state *restrict state) {
 
   {
     test_start(state, "Empty");
-    static const token_type tokens[0] = {};
-    test_scanner_tokens(state, "", STATIC_LEN(tokens), tokens);
+    test_scanner_tokens(state, "", 0, NULL);
     test_end(state);
   }
 

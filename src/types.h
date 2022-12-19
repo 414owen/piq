@@ -7,37 +7,102 @@
 #include "consts.h"
 #include "vec.h"
 
-typedef enum __attribute__((packed)) {
-  T_UNKNOWN,
-  T_UNIT,
-  T_I8,
-  T_U8,
-  T_I16,
-  T_U16,
-  T_I32,
-  T_U32,
-  T_I64,
-  T_U64,
-  T_FN,
-  T_BOOL,
-  T_TUP,
-  T_LIST,
-  T_CALL
+typedef enum {
+  T_ALL_UNIT,
+  T_ALL_I8,
+  T_ALL_U8,
+  T_ALL_I16,
+  T_ALL_U16,
+  T_ALL_I32,
+  T_ALL_U32,
+  T_ALL_I64,
+  T_ALL_U64,
+  T_ALL_FN,
+  T_ALL_BOOL,
+  T_ALL_TUP,
+  T_ALL_LIST,
+  T_ALL_CALL,
+  // unresolved type variable
+  T_ALL_VAR,
+} type_all_tag;
+
+typedef enum {
+  TC_UNIT = T_ALL_UNIT,
+  TC_I8 = T_ALL_I8,
+  TC_U8 = T_ALL_U8,
+  TC_I16 = T_ALL_I16,
+  TC_U16 = T_ALL_U16,
+  TC_I32 = T_ALL_I32,
+  TC_U32 = T_ALL_U32,
+  TC_I64 = T_ALL_I64,
+  TC_U64 = T_ALL_U64,
+  TC_FN = T_ALL_FN,
+  TC_BOOL = T_ALL_BOOL,
+  TC_TUP = T_ALL_TUP,
+  TC_LIST = T_ALL_LIST,
+  TC_CALL = T_ALL_CALL,
+  TC_VAR = T_ALL_VAR,
+} type_check_tag;
+
+typedef enum {
+  T_UNIT = TC_UNIT,
+  T_I8 = TC_I8,
+  T_U8 = TC_U8,
+  T_I16 = TC_I16,
+  T_U16 = TC_U16,
+  T_I32 = TC_I32,
+  T_U32 = TC_U32,
+  T_I64 = TC_I64,
+  T_U64 = TC_U64,
+  T_FN = TC_FN,
+  T_BOOL = TC_BOOL,
+  T_TUP = TC_TUP,
+  T_LIST = TC_LIST,
+  T_CALL = TC_CALL,
 } type_tag;
 
+typedef node_ind_t type_ref;
+
+VEC_DECL(type_ref);
+
+typedef node_ind_t typevar;
+
+VEC_DECL(typevar);
+
 typedef struct {
-  type_tag tag;
   union {
+    type_tag tag;
+    type_check_tag check_tag;
+    type_all_tag all_tag;
+  };
+  union {
+    typevar type_var;
     struct {
-      node_ind_t subs_start;
-      node_ind_t sub_amt;
+      type_ref subs_start;
+      type_ref sub_amt;
     };
     struct {
-      node_ind_t sub_a;
-      node_ind_t sub_b;
+      type_ref sub_a;
+      type_ref sub_b;
     };
   };
 } type;
+
+VEC_DECL(type);
+
+typedef struct {
+  vec_type types;
+  vec_type_ref inds;
+  union {
+    vec_type_ref node_types;
+    vec_type_ref substitutions;
+  };
+} type_builder;
+
+typedef struct {
+  type *types;
+  type_ref *inds;
+} types;
 
 #define T_FN_PARAM_AMT(node) ((node).sub_amt - 1)
 #define T_FN_PARAM_IND(inds, node, i) inds[(node).subs_start + i]
@@ -48,9 +113,39 @@ typedef struct {
 #define T_TUP_SUB_A(node) node.sub_a
 #define T_TUP_SUB_B(node) node.sub_b
 
-tree_node_repr type_repr(type_tag tag);
+void free_type_builder(type_builder tb);
+tree_node_repr type_repr(type_all_tag tag);
 bool inline_types_eq(type a, type b);
 void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root);
-void print_type_head_placeholders(FILE *f, type_tag head);
+char *print_type_str(type *types, node_ind_t *inds, node_ind_t root);
+void print_type_head_placeholders(FILE *f, type_all_tag head);
 
-VEC_DECL(type);
+node_ind_t find_primitive_type(type_builder *tb, type_all_tag tag);
+node_ind_t find_type(type_builder *tb, type_all_tag tag, const node_ind_t *subs,
+                     node_ind_t sub_amt);
+node_ind_t mk_primitive_type(type_builder *tb, type_all_tag tag);
+node_ind_t mk_type_inline(type_builder *tb, type_all_tag tag, node_ind_t sub_a,
+                          node_ind_t sub_b);
+node_ind_t mk_type(type_builder *tb, type_all_tag tag, const node_ind_t *subs,
+                   node_ind_t sub_amt);
+node_ind_t mk_type_var(type_builder *tb, typevar value);
+
+/*
+typedef struct {
+  const type *types;
+  const node_ind_t *inds;
+  vec_type_ref stack;
+} type_traversal;
+
+typedef struct {
+  type_ref index;
+  type type;
+} type_traversal_elem;
+
+type_traversal traverse_types(types);
+*/
+
+bool type_contains_specific_typevar(const type_builder *types, type_ref root,
+                                    typevar a);
+bool type_contains_unsubstituted_typevar(const type_builder *builder,
+                                         type_ref root);

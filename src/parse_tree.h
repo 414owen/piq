@@ -4,6 +4,8 @@
 #include <time.h>
 
 #include "ast_meta.h"
+#include "binding.h"
+#include "bitset.h"
 #include "consts.h"
 #include "span.h"
 #include "token.h"
@@ -26,48 +28,51 @@ typedef enum {
 // When editing, make sure to add the category in
 // parse_tree.c.
 typedef enum {
-  PT_ALL_EX_CALL = 0,
-  PT_ALL_EX_FN = 1,
-  PT_ALL_EX_FUN_BODY = 2,
-  PT_ALL_EX_IF = 3,
-  PT_ALL_EX_INT = 4,
-  PT_ALL_EX_AS = 5,
+  PT_ALL_EX_CALL,
+  PT_ALL_EX_FN,
+  PT_ALL_EX_FUN_BODY,
+  PT_ALL_EX_IF,
+  PT_ALL_EX_INT,
+  PT_ALL_EX_AS,
+  PT_ALL_EX_LOWER_VAR,
+  PT_ALL_EX_UPPER_VAR,
 
-  PT_ALL_EX_LIST = 6,
-  PT_ALL_EX_STRING = 7,
-  PT_ALL_EX_TUP = 8,
-  PT_ALL_EX_UNIT = 9,
+  PT_ALL_EX_LIST,
+  PT_ALL_EX_STRING,
+  PT_ALL_EX_TUP,
+  PT_ALL_EX_UNIT,
 
   // stuff that is context-agnostic, and that shouldn't really
   // be a node at all...
   // Maybe the fact that these aren't "near" other
   // parse node categories' enums affects the switch output?
-  PT_ALL_MULTI_LOWER_NAME = 10,
-  PT_ALL_MULTI_UPPER_NAME = 11,
-  PT_ALL_MULTI_TYPE_PARAMS = 12,
-  PT_ALL_MULTI_PARAM_DECLS = 13,
-  PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL = 14,
-  PT_ALL_MULTI_DATA_CONSTRUCTORS = 15,
+  PT_ALL_MULTI_LOWER_NAME,
+  PT_ALL_MULTI_UPPER_NAME,
+  PT_ALL_MULTI_TYPE_PARAMS,
+  PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL,
+  PT_ALL_MULTI_DATA_CONSTRUCTORS,
 
-  PT_ALL_PAT_WILDCARD = 16,
-  PT_ALL_PAT_TUP = 17,
-  PT_ALL_PAT_UNIT = 18,
-  PT_ALL_PAT_CONSTRUCTION = 19,
-  PT_ALL_PAT_STRING = 20,
-  PT_ALL_PAT_INT = 21,
-  PT_ALL_PAT_LIST = 22,
+  PT_ALL_PAT_WILDCARD,
+  PT_ALL_PAT_TUP,
+  PT_ALL_PAT_UNIT,
+  PT_ALL_PAT_CONSTRUCTION,
+  PT_ALL_PAT_STRING,
+  PT_ALL_PAT_INT,
+  PT_ALL_PAT_LIST,
 
   // sig and fun two are also top levels
-  PT_ALL_STATEMENT_SIG = 23,
-  PT_ALL_STATEMENT_FUN = 24,
-  PT_ALL_STATEMENT_LET = 25,
-  PT_ALL_STATEMENT_DATA_DECLARATION = 26,
+  PT_ALL_STATEMENT_SIG,
+  PT_ALL_STATEMENT_FUN,
+  PT_ALL_STATEMENT_LET,
+  PT_ALL_STATEMENT_DATA_DECLARATION,
 
-  PT_ALL_TY_CONSTRUCTION = 27,
-  PT_ALL_TY_LIST = 28,
-  PT_ALL_TY_FN = 29,
-  PT_ALL_TY_TUP = 30,
-  PT_ALL_TY_UNIT = 32,
+  PT_ALL_TY_CONSTRUCTION,
+  PT_ALL_TY_LIST,
+  PT_ALL_TY_FN,
+  PT_ALL_TY_TUP,
+  PT_ALL_TY_UNIT,
+  PT_ALL_TY_LOWER_NAME,
+  PT_ALL_TY_UPPER_NAME,
 } parse_node_type_all;
 
 typedef enum {
@@ -77,12 +82,12 @@ typedef enum {
   PT_EX_IF = PT_ALL_EX_IF,
   PT_EX_INT = PT_ALL_EX_INT,
   PT_EX_LIST = PT_ALL_EX_LIST,
-  PT_EX_LOWER_NAME = PT_ALL_MULTI_LOWER_NAME,
   PT_EX_STRING = PT_ALL_EX_STRING,
   PT_EX_TUP = PT_ALL_EX_TUP,
   PT_EX_AS = PT_ALL_EX_AS,
   PT_EX_UNIT = PT_ALL_EX_UNIT,
-  PT_EX_UPPER_NAME = PT_ALL_MULTI_UPPER_NAME,
+  PT_EX_LOWER_VAR = PT_ALL_EX_LOWER_VAR,
+  PT_EX_UPPER_VAR = PT_ALL_EX_UPPER_VAR,
 } parse_node_expression_type;
 
 typedef enum {
@@ -108,9 +113,16 @@ typedef enum {
   PT_TY_LIST = PT_ALL_TY_LIST,
   PT_TY_FN = PT_ALL_TY_FN,
   PT_TY_TUP = PT_ALL_TY_TUP,
-  PT_TY_UPPER_NAME = PT_ALL_MULTI_UPPER_NAME,
   PT_TY_UNIT = PT_ALL_TY_UNIT,
+  PT_TY_LOWER_NAME = PT_ALL_TY_LOWER_NAME,
+  PT_TY_UPPER_NAME = PT_ALL_TY_UPPER_NAME,
 } parse_node_type_type;
+
+typedef enum {
+  PT_BIND_LET = PT_ALL_STATEMENT_LET,
+  PT_BIND_FUN = PT_ALL_STATEMENT_FUN,
+  PT_BIND_WILDCARD = PT_ALL_PAT_WILDCARD,
+} parse_node_binding_introducer_type;
 
 typedef enum {
   PT_TL_SIG = PT_STATEMENT_SIG,
@@ -125,6 +137,7 @@ typedef union {
   parse_node_type_type type;
   parse_node_expression_type expression;
   parse_node_pattern_type pattern;
+  parse_node_binding_introducer_type binding;
 } parse_node_type;
 
 #define PT_FUN_BINDING_IND(inds, node) inds[node.subs_start + 0]
@@ -165,6 +178,8 @@ typedef union {
 #define PT_BLOCK_SUBS_START(node) node.subs_start
 #define PT_BLOCK_SUB_AMT(node) node.sub_amt
 #define PT_BLOCK_SUB_IND(inds, node, i) inds[node.subs_start + i]
+#define PT_BLOCK_LAST_SUB_IND(inds, node)                                      \
+  inds[node.subs_start + node.sub_amt - 1]
 
 #define PT_ROOT_SUB_AMT(node) PT_BLOCK_SUB_AMT(node)
 #define PT_ROOT_SUB_IND(inds, node, i) PT_BLOCK_SUB_IND(inds, node, i)
@@ -172,6 +187,7 @@ typedef union {
 #define PT_FUN_BODY_SUBS_START(node) PT_BLOCK_SUBS_START(node)
 #define PT_FUN_BODY_SUB_AMT(node) PT_BLOCK_SUB_AMT(node)
 #define PT_FUN_BODY_SUB_IND(inds, node, i) PT_BLOCK_SUB_IND(inds, node, i)
+#define PT_FUN_BODY_LAST_SUB_IND(inds, node) PT_BLOCK_LAST_SUB_IND(inds, node)
 
 #define PT_SIG_BINDING_IND(node) node.sub_a
 #define PT_SIG_TYPE_IND(node) node.sub_b
@@ -195,6 +211,14 @@ typedef struct {
 
   union {
     struct {
+      // position of the binding in the parse tree
+      // this probably won't be used.
+      node_ind_t variable_node_ind;
+      // position of the binding in the current scope
+      // vector
+      node_ind_t variable_index;
+    };
+    struct {
       node_ind_t subs_start;
       node_ind_t sub_amt;
     };
@@ -209,7 +233,7 @@ VEC_DECL(parse_node);
 VEC_DECL_CUSTOM(node_ind_t, vec_node_ind);
 
 typedef struct {
-  const parse_node *nodes;
+  parse_node *nodes;
   const node_ind_t *inds;
   node_ind_t root_subs_start;
   node_ind_t root_subs_amt;
@@ -236,3 +260,55 @@ char *print_parse_tree_error_string(const char *input, const token *tokens,
                                     const parse_tree_res pres);
 void free_parse_tree(parse_tree tree);
 void free_parse_tree_res(parse_tree_res res);
+tree_node_repr pt_subs_type(parse_node_type type);
+
+typedef enum {
+  TR_PUSH_SCOPE_VAR,
+  TR_VISIT_IN,
+  // TR_VISIT_OUT,
+  TR_POP_TO,
+  TR_END,
+  // used in constraint generation
+  TR_LINK_SIG,
+} scoped_traverse_action;
+
+VEC_DECL(scoped_traverse_action);
+
+typedef struct {
+  const parse_node *nodes;
+  const node_ind_t *inds;
+  // const node_ind_t node_amt;
+  vec_scoped_traverse_action actions;
+  node_ind_t environment_amt;
+  union {
+    vec_node_ind node_stack;
+    vec_node_ind amt_stack;
+  };
+} pt_traversal;
+
+typedef union {
+  struct {
+    node_ind_t node_index;
+    parse_node node;
+  };
+  struct {
+    node_ind_t sig_index;
+    node_ind_t linked_index;
+  };
+  node_ind_t new_environment_amount;
+} pt_trav_elem_data;
+
+typedef struct {
+  scoped_traverse_action action;
+  pt_trav_elem_data data;
+} pt_traverse_elem;
+
+pt_traversal pt_scoped_traverse(parse_tree tree);
+pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal);
+
+typedef struct {
+  binding *bindings;
+  node_ind_t binding_amt;
+} resolution_errors;
+
+resolution_errors resolve_bindings(parse_tree tree, const char *restrict input);

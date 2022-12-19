@@ -140,8 +140,7 @@ static void test_parser_succeeds_atomic(test_state *state) {
 
   {
     test_start(state, "Name");
-    test_parser_succeeds_on_form(
-      state, "hello", expect_string("(Lname hello)"));
+    test_parser_succeeds_on_form(state, "hello", expect_string("(Var hello)"));
     test_end(state);
   }
 
@@ -194,7 +193,7 @@ static void test_parser_succeeds_kitchen_sink(test_state *state) {
     test_parser_succeeds_on_form(
       state,
       " ( ( hi 1   ) , 2 ) ",
-      expect_string("((Call (Lname hi) (Int 1)), (Int 2))"));
+      expect_string("((Call (Var hi) (Int 1)), (Int 2))"));
     test_end(state);
   }
 
@@ -291,8 +290,7 @@ static void test_call_succeeds(test_state *state) {
 
   {
     test_start(state, "No params");
-    test_parser_succeeds_on_form(
-      state, "(a)", expect_string("(Call (Lname a))"));
+    test_parser_succeeds_on_form(state, "(a)", expect_string("(Call (Var a))"));
     test_end(state);
   }
 
@@ -357,7 +355,7 @@ static void test_parser_succeeds_compound(test_state *state) {
     test_parser_succeeds_on_form(
       state,
       "(add (1, 2))",
-      expect_string("(Call (Lname add) ((Int 1), (Int 2)))"));
+      expect_string("(Call (Var add) ((Int 1), (Int 2)))"));
     test_end(state);
   }
 
@@ -371,7 +369,7 @@ static void test_parser_succeeds_compound(test_state *state) {
   {
     test_start(state, "Typed");
     test_parser_succeeds_on_form(
-      state, "(as I32 1)", expect_string("(As (Uname I32) (Int 1))"));
+      state, "(as I32 1)", expect_string("(As (TypeConstructor I32) (Int 1))"));
     test_end(state);
   }
 
@@ -380,7 +378,7 @@ static void test_parser_succeeds_compound(test_state *state) {
     test_parser_succeeds_on_form(
       state,
       "(1, 2, 3, hi, 4)",
-      expect_string("((Int 1), (Int 2), (Int 3), (Lname hi), (Int 4))"));
+      expect_string("((Int 1), (Int 2), (Int 3), (Var hi), (Int 4))"));
     test_end(state);
   }
 
@@ -475,21 +473,23 @@ static void test_parser_succeeds_type(test_state *state) {
   {
     char *in = "I32";
     test_start(state, in);
-    test_parser_succeeds_on_type(state, in, "(Uname I32)");
+    test_parser_succeeds_on_type(state, in, "(TypeConstructor I32)");
     test_end(state);
   }
 
   {
     char *in = "(I32, I16)";
     test_start(state, in);
-    test_parser_succeeds_on_type(state, in, "((Uname I32), (Uname I16))");
+    test_parser_succeeds_on_type(
+      state, in, "((TypeConstructor I32), (TypeConstructor I16))");
     test_end(state);
   }
 
   {
     char *in = "(I32, I16)";
     test_start(state, in);
-    test_parser_succeeds_on_type(state, in, "((Uname I32), (Uname I16))");
+    test_parser_succeeds_on_type(
+      state, in, "((TypeConstructor I32), (TypeConstructor I16))");
     test_end(state);
   }
 
@@ -501,8 +501,9 @@ static void test_parser_succeeds_root(test_state *state) {
     test_start(state, "Sig and fun");
 
     expected_output out = {.tag = STRING,
-                           .str = "(Sig (Lname a) (Fn (()) (Uname I32)))\n"
-                                  "(Fun (Lname a) () (Body (Int 12)))"};
+                           .str =
+                             "(Sig (Lname a) (Fn (()) (TypeConstructor I32)))\n"
+                             "(Fun (Lname a) () (Body (Int 12)))"};
     test_parser_succeeds_on(state,
                             "(sig a (Fn () I32))\n"
                             "(fun a (()) 12)",
@@ -514,8 +515,8 @@ static void test_parser_succeeds_root(test_state *state) {
     test_start(state, "Multiple funs");
 
     expected_output out = {.tag = STRING,
-                           .str = "(Fun (Lname a) (Body (Lname a)))\n"
-                                  "(Fun (Lname b) (Body (Lname b)))"};
+                           .str = "(Fun (Lname a) (Body (Var a)))\n"
+                                  "(Fun (Lname b) (Body (Var b)))"};
     test_parser_succeeds_on(state, "(fun a () a)(fun b () b)", out);
 
     test_end(state);

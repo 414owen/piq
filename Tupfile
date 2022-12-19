@@ -12,7 +12,7 @@ export READLINE_LIBS
 export READLINE_CFLAGS
 export LLVM_CONFIG_FLAGS
 
-RE2C_OPTIONS = --case-ranges
+# RE2C_OPTIONS = # --case-ranges
 COMMON_FLAGS = \
     -Wall \
     -Wextra \
@@ -50,6 +50,8 @@ common_objs += llvm_shim.o
 common_objs += args.o
 common_objs += timespec.o
 common_objs += initialise.o
+common_objs += types.o
+common_objs += print_tc_errors.o
 
 test_objs += run_tests.o
 test_objs += span.o
@@ -96,6 +98,7 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/util.c        |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/vec.c         |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/llvm.c        |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/types.c       |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/llvm_shim.cpp |> ^j^ $CXX -O2 $(CXXFLAGS) -c -o %o %f |> %B.o
 
 : src/test_llvm.c      | src/parser.h |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
@@ -118,6 +121,7 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/main.c             |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/builtins.c         |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/initialise.c       |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/print_tc_errors.c  |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 
 : $(common_objs) $(main_objs) |> ^j^ $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> main
 : $(common_objs) $(test_objs) |> ^j^ $CXX $(CXXFLAGS) $(LDFLAGS) -o %o %f |> test
