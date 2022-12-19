@@ -44,6 +44,16 @@ void add_codegen_timings_internal(test_state *state, parse_tree tree,
                                   llvm_res llres);
 
 tokens_res test_upto_tokens(test_state *state, const char *input);
+
 parse_tree_res test_upto_parse_tree(test_state *state, const char *input);
+
+typedef struct {
+  bool success;
+  parse_tree tree;
+} upto_resolution_res;
+
+upto_resolution_res test_upto_resolution(test_state *state,
+                                         const char *restrict input);
+
 tc_res test_upto_typecheck(test_state *state, const char *input, bool *success,
                            parse_tree *tree);

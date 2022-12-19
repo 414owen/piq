@@ -26,3 +26,4 @@ main
 .cache/
 compile_commands.json
 massif.out.*
+dhat.*

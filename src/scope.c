@@ -26,24 +26,23 @@ order compare_bnds(const char *restrict source_file, binding a, binding b) {
 
 // TODO consider separating builtins into separate array somehow
 // Find index of binding, return bindings.len if not found
-size_t lookup_str_ref(const char *source_file, vec_str_ref bnds,
-                      bitset is_builtin, binding bnd) {
+node_ind_t lookup_str_ref(const char *source_file, scope scope, binding bnd) {
   const char *bndp = source_file + bnd.start;
-  for (size_t i = 0; i < bnds.len; i++) {
-    size_t ind = bnds.len - 1 - i;
-    str_ref a = VEC_GET(bnds, ind);
-    if (bs_get(is_builtin, ind)) {
+  for (size_t i = 0; i < scope.bindings.len; i++) {
+    size_t ind = scope.bindings.len - 1 - i;
+    str_ref a = VEC_GET(scope.bindings, ind);
+    if (bs_get(scope.is_builtin, ind)) {
       if (strn1eq(bndp, a.builtin, bnd.len)) {
         return ind;
       }
     } else {
-      if (a.span.len != bnd.len)
+      if (a.binding.len != bnd.len)
         continue;
-      if (strncmp(bndp, &source_file[a.span.start], bnd.len) == 0)
+      if (strncmp(bndp, &source_file[a.binding.start], bnd.len) == 0)
         return ind;
     }
   }
-  return bnds.len;
+  return scope.bindings.len;
 }
 
 // TODO remove? not currently used AFAIK
@@ -59,3 +58,90 @@ size_t lookup_bnd(const char *source_file, binding *bnds, node_ind_t bnd_amt,
   }
   return bnd_amt;
 }
+
+scope scope_new(void) {
+  scope res = {
+    .bindings = VEC_NEW,
+    .is_builtin = bs_new(),
+  };
+  return res;
+}
+
+void scope_push(scope *s, binding b) {
+  str_ref str = {
+    .binding = b,
+  };
+  bs_push_false(&s->is_builtin);
+  VEC_PUSH(&s->bindings, str);
+}
+
+void scope_free(scope s) {
+  bs_free(&s.is_builtin);
+  VEC_FREE(&s.bindings);
+}
+
+/*
+scopes_builder scopes_new_builder(const char *restrict input) {
+  scopes_builder res = {
+    .input = input,
+    .scopes = VEC_NEW,
+  };
+  return res;
+}
+
+scoped_binding_ref scopes_lookup_binding(const scopes_builder *restrict scopes,
+binding bnd) { vec_scope_builder builders = scopes->scopes; scope_ref scope_amt
+= builders.len; if (scope_amt == 0) { goto no_results;
+  }
+  scope_ref scope_ind = builders.len - 1;
+  scope_builder scope = VEC_GET(builders, scope_ind);
+  while (true) {
+    for (binding_ref i = 0; i < scope.bindings.len; i++) {
+      binding_ref j = scope.bindings.len - 1 - i;
+      binding b = VEC_GET(scope.bindings, j);
+      if (compare_bnds(scopes->input, b, bnd) == 0) {
+        scoped_binding_ref res = {
+          .scope_ref = scope_ind,
+          .binding_ind = j,
+        };
+        return res;
+      }
+    }
+    if (scope_ind == 0) {
+      goto no_results;
+    }
+    scope_ind = scope.parent;
+    VEC_GET(builders, scope_ind);
+  }
+  no_results: {
+    scoped_binding_ref res = {
+      .scope_ref = 0,
+      .binding_ind = 0,
+    };
+    return res;
+  }
+}
+
+void scopes_add_binding(scopes_builder *restrict scopes, binding bnd) {
+  scope_builder *scope = VEC_PEEK_PTR(scopes->scopes);
+  VEC_PUSH(&scope->bindings, bnd);
+}
+
+scope_ref scopes_push(scopes_builder *restrict scopes) {
+  scope_builder scope = {
+    .bindings = VEC_NEW,
+    .parent = scopes->scopes.len,
+  };
+  VEC_PUSH(&scopes->scopes, scope);
+  return scopes->scopes.len - 1;
+}
+
+// popping doesn't remove anything from the builder
+// it just adds a new scope with its parent the same as the current scope's
+parent scope_ref scopes_pop(scopes_builder *restrict scopes) { scope_builder
+scope = { .bindings = VEC_NEW, .parent = VEC_PEEK(scopes->scopes).parent,
+  };
+  VEC_PUSH(&scopes->scopes, scope);
+  return scopes->scopes.len - 1;
+}
+*/

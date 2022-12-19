@@ -38,8 +38,11 @@
 %type int parse_node
 %type string parse_node
 %type unit parse_node
+%type upper_name_node parse_node
 %type lower_name_node parse_node
 %type param_decls stack_ref_t
+
+// TODO replace 'name' with 'ident'
 
 %include {
 
@@ -179,6 +182,7 @@ block_in_parens(RES) ::= sig(A). {
   RES = A;
 }
 
+// TODO make this a pattern, not a binding
 let(RES) ::= LET lower_name(A) expression(B). {
   BREAK_PARSER;
   parse_node n = {
@@ -323,12 +327,14 @@ int(RES) ::= INT(A).  {
   RES = n;
 }
 
-expression(RES) ::= lower_name(A). {
-  RES = A;
+expression(RES) ::= lower_name_node(A). {
+  A.type.expression = PT_EX_LOWER_VAR;
+  RES = push_node(s, A);
 }
 
-expression(RES) ::= upper_name(A). {
-  RES = A;
+expression(RES) ::= upper_name_node(A). {
+  A.type.expression = PT_EX_UPPER_VAR;
+  RES = push_node(s, A);
 }
 
 expression(RES) ::= unit(A). {
@@ -356,15 +362,20 @@ string(RES) ::= STRING(A). {
   RES = n;
 }
 
-upper_name(RES) ::= UPPER_NAME(A). {
+upper_name_node(RES) ::= UPPER_NAME(A). {
   BREAK_PARSER;
   parse_node n = {
     // works in all contexts
-    .type.all = PT_ALL_MULTI_UPPER_NAME,
     .sub_amt = 0,
     .span = span_from_token(s->tokens[A]),
   };
-  RES = push_node(s, n);
+  RES = n;
+}
+
+upper_name(RES) ::= upper_name_node(A). {
+  BREAK_PARSER;
+  A.type.all = PT_ALL_MULTI_UPPER_NAME;
+  RES = push_node(s, A);
 }
 
 lower_name_node(RES) ::= LOWER_NAME(A). {
@@ -644,8 +655,9 @@ pattern(RES) ::= OPEN_BRACKET(O) pattern_list(A) CLOSE_BRACKET(C). {
   RES = push_node(s, n);
 }
 
-type(RES) ::= upper_name(A). {
-  RES = A;
+type(RES) ::= upper_name_node(A). {
+  A.type.type = PT_TY_UPPER_NAME;
+  RES = push_node(s, A);
 }
 
 type(RES) ::= OPEN_BRACKET(O) type_inside_brackets(B) CLOSE_BRACKET(C). {

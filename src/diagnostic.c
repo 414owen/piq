@@ -1,7 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
+#include <hedley.h>
 
 #include "consts.h"
+#include "diagnostic.h"
+#include "parse_tree.h"
 #include "source.h"
 #include "term.h"
 #include "util.h"
@@ -29,6 +32,23 @@ typedef enum {
   S_BLUE,
   S_AFTER,
 } print_state;
+
+position_info find_line_and_col(const char *restrict input, buf_ind_t target) {
+  position_info res = {
+    .line = 1,
+    .column = 1,
+  };
+  for (buf_ind_t i = 0; i < target; i++) {
+    char c = input[i];
+    if (HEDLEY_PREDICT_FALSE(c == '\n', 0.9)) {
+      res.line++;
+      res.column = 1;
+    } else {
+      res.column++;
+    }
+  }
+  return res;
+}
 
 void format_error_ctx(FILE *f, const char *restrict input, buf_ind_t start,
                       buf_ind_t len) {
@@ -88,4 +108,27 @@ void format_error_ctx(FILE *f, const char *restrict input, buf_ind_t start,
   }
   fputs("\n" RED "\\---" RESET, f);
   VEC_FREE(&line_starts);
+}
+
+void print_resolution_errors(FILE *f, const char *restrict input,
+                             resolution_errors errs) {
+  for (node_ind_t i = 0; i < errs.binding_amt; i++) {
+    binding b = errs.bindings[i];
+    position_info pos = find_line_and_col(input, b.start);
+    fprintf(f,
+            "Unknown binding '%.*s' at %u:%u",
+            b.len,
+            input + b.start,
+            pos.line,
+            pos.column);
+  }
+}
+
+char *print_resolution_errors_string(const char *restrict input,
+                                     resolution_errors errs) {
+  stringstream ss;
+  ss_init_immovable(&ss);
+  print_resolution_errors(ss.stream, input, errs);
+  ss_finalize(&ss);
+  return ss.string;
 }

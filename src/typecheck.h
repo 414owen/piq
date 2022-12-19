@@ -6,23 +6,27 @@
 #include "types.h"
 
 typedef enum {
-  INT_SMALLER_THAN_MIN,
-  INT_LARGER_THAN_MAX,
-  TYPE_NOT_FOUND,
-  AMBIGUOUS_TYPE,
-  BINDING_NOT_FOUND,
-  WRONG_ARITY,
-  NEED_SIGNATURE,
-  CALLED_NON_FUNCTION,
+  // INT_SMALLER_THAN_MIN,
+  // INT_LARGER_THAN_MAX,
+  // TYPE_NOT_FOUND,
+  // AMBIGUOUS_TYPE,
+  // BINDING_NOT_FOUND,
+  // WRONG_ARITY,
+  // NEED_SIGNATURE,
+  // CALLED_NON_FUNCTION,
 
   // TODO Do we need this?
-  TYPE_MISMATCH,
+  // TYPE_MISMATCH,
 
-  TYPE_HEAD_MISMATCH,
-  TUPLE_WRONG_ARITY,
-  LITERAL_MISMATCH,
-  MISSING_SIG,
-  BLOCK_ENDS_IN_STATEMENT,
+  // TYPE_HEAD_MISMATCH,
+  // TUPLE_WRONG_ARITY,
+  // LITERAL_MISMATCH,
+  // MISSING_SIG,
+  // BLOCK_ENDS_IN_STATEMENT,
+
+  TC_ERR_CONFLICT,
+  TC_ERR_AMBIGUOUS,
+  TC_ERR_INFINITE,
 } tc_error_type;
 
 typedef struct {
@@ -31,16 +35,15 @@ typedef struct {
 
   union {
     struct {
-      node_ind_t expected;
-      union {
-        node_ind_t got;
-        type_tag got_type_head;
-      };
-    };
+      type_ref expected_ind;
+      type_ref got_ind;
+    } conflict;
     struct {
-      node_ind_t exp_param_amt;
-      node_ind_t got_param_amt;
-    };
+      type_ref index;
+    } infinite;
+    struct {
+      type_ref index;
+    } ambiguous;
   };
 } tc_error;
 
@@ -50,10 +53,10 @@ typedef struct {
   // all the types
   type *types;
   // type sub-indices
-  node_ind_t *type_inds;
+  type_ref *type_inds;
   // index into types, one per parse_node
-  node_ind_t *node_types;
-  node_ind_t type_amt;
+  type_ref *node_types;
+  type_ref type_amt;
 } type_info;
 
 typedef struct {
@@ -66,5 +69,5 @@ typedef struct {
 } tc_res;
 
 void print_tc_errors(FILE *, const char *input, parse_tree, tc_res);
-tc_res typecheck(const char *input, parse_tree tree);
+tc_res typecheck(parse_tree tree);
 void free_tc_res(tc_res res);

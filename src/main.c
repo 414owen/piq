@@ -60,7 +60,7 @@ static void compile_llvm(compile_arguments args) {
 
   free_tokens_res(tres);
 
-  tc_res tc_res = typecheck(source_code, pres.tree);
+  tc_res tc_res = typecheck(pres.tree);
   if (tc_res.error_amt > 0) {
     print_tc_errors(stdout, source_code, pres.tree, tc_res);
     putc('\n', stdout);

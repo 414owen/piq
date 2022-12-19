@@ -86,6 +86,11 @@ A language that does everything right
 * Add all EXPR parse tree enums to STMT, as all expressions are valid statements.
 * Optimize some units (eg arg parsing) for size, others for speed
 * Maybe all product types should be records?
+* We know the max-depth of the tree after parsing, so all other phases should use fixed size stacks
+* There's something good about C's tagged unions. You can slice and dice the enum, and union them.
+  (see types.h, parse_tree.h), that lets you support more cases in certain program stages.
+  For example, when type checking, I have a T_VAR type, but when I'm doing codegen, I need to
+  know what types I have, so my enum doesn't include that.
 
 ## Thoughts on pointers
 
@@ -215,6 +220,17 @@ although currently `diff unix/+linux/nice.ha unix/+freebsd/nice.ha` is empty.
 
 Allocation API, everything that needs dynamic memory takes an allocator.
 
+## [Austral](https://austral-lang.org/)
+
+[introduction blog post](https://borretti.me/article/introducing-austral)
+
+This language looks very close to what I want.
+I'm not sure what it has against @annotations though. I was considering adding them to this language.
+Linearity via kinds looks great!
+
+I think that type inference is good to have, but there should be a mode
+that tells the compiler to error if (top-level) annotations are left out.
+
 # Language watchlist
 
 I'll probably get around to stealing feature ideas from these at some point.
@@ -224,3 +240,20 @@ I'll probably get around to stealing feature ideas from these at some point.
 * [go](https://go.dev/)
   TODO check out their compilation model for generics, I've heard it doesn't
   specialize but gets okay performance?
+
+# Type inference resources
+
+https://www.youtube.com/watch?v=il3gD7XMdmA (also goes through typing judgement notation)
+
+Wand's algorithm: https://www.win.tue.nl/~hzantema/semssm.pdf
+
+# Performance
+
+To lookup:
+
+* nallocx
+* xallocx
+* sdallocx
+* malloc_info
+* valgrind dhat
+* VTune

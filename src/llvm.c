@@ -220,7 +220,8 @@ static lang_value exogenous_value(LLVMValueRef term) {
 
 static LLVMValueRef pop_exogenous_val(cg_state *state) {
   bool is_builtin = bs_pop(&state->val_is_builtin);
-  lang_value_union data = VEC_POP(&state->val_stack);
+  lang_value_union data;
+  VEC_POP(&state->val_stack, &data);
   if (is_builtin) {
     return cg_builtin_to_value(state, data.builtin);
   } else {
@@ -240,8 +241,8 @@ static lang_value pop_val(cg_state *state) {
   */
   lang_value res = {
     .is_builtin = bs_pop(&state->val_is_builtin),
-    .data = VEC_POP(&state->val_stack),
   };
+  VEC_POP(&state->val_stack, &res.data);
   return res;
 }
 
@@ -274,6 +275,8 @@ static cg_state new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
     .block_stack = VEC_NEW,
     .function_stack = VEC_NEW,
 
+    // TODO this probably shouldn't be lazy, it would be more efficient to build
+    // this up in on go
     .LLVMTypeRefs = (LLVMTypeRef *)calloc(types.type_amt, sizeof(LLVMTypeRef)),
     .env_bnds = VEC_NEW,
     .env_vals = VEC_NEW,
@@ -455,8 +458,10 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
   VEC_PUSH(&ind_stack, root_type_ind);
   node_ind_t *type_inds = state->types.type_inds;
   while (ind_stack.len > 0) {
-    gen_type_action action = VEC_POP(&actions);
-    node_ind_t type_ind = VEC_POP(&ind_stack);
+    gen_type_action action;
+    VEC_POP(&actions, &action);
+    node_ind_t type_ind;
+    VEC_POP(&ind_stack, &type_ind);
     type t = state->types.types[type_ind];
     switch (action) {
       case GEN_TYPE: {
@@ -526,10 +531,6 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
                     "backend yet");
             break;
           }
-          case T_UNKNOWN: {
-            give_up("Type not filled in by typechecker!");
-            break;
-          }
         }
         break;
       }
@@ -570,7 +571,6 @@ static LLVMTypeRef construct_type(cg_state *state, node_ind_t root_type_ind) {
           // TODO: There should really be a separate module-local tag for
           // combinable tags to avoid this non-totality.
           case T_CALL:
-          case T_UNKNOWN:
           case T_UNIT:
           case T_I8:
           case T_U8:
@@ -926,9 +926,9 @@ static LLVMValueRef cg_builtin_to_value(cg_state *state, builtin_term term) {
 
   LLVMBuildRet(state->builder, res);
 
-  VEC_POP(&state->block_stack);
+  VEC_POP_(&state->block_stack);
   LLVMPositionBuilderAtEnd(state->builder, VEC_PEEK(state->block_stack));
-  VEC_POP(&state->function_stack);
+  VEC_POP_(&state->function_stack);
   LLVMValueRef fn_ptr =
     LLVMConstBitCast(fn, LLVMPointerType(LLVMInt8Type(), 0));
   return fn_ptr;
@@ -1056,8 +1056,10 @@ static void cg_expression_if_stage_two(cg_state *state, cg_expr_params params) {
   LLVMTypeRef res_type =
     construct_runtime_type(state, state->types.node_types[ind]);
 
-  LLVMBasicBlockRef else_block = VEC_POP(&state->block_stack);
-  LLVMBasicBlockRef then_block = VEC_POP(&state->block_stack);
+  LLVMBasicBlockRef else_block;
+  VEC_POP(&state->block_stack, &else_block);
+  LLVMBasicBlockRef then_block;
+  VEC_POP(&state->block_stack, &then_block);
   LLVMPositionBuilderAtEnd(state->builder, VEC_PEEK(state->block_stack));
   LLVMBuildCondBr(state->builder, cond, then_block, else_block);
 
@@ -1117,12 +1119,9 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
       }
       break;
     }
-    case PT_EX_LOWER_NAME:
-    case PT_EX_UPPER_NAME: {
-      binding b = node.span;
-      node_ind_t ind = lookup_str_ref(
-        state->source.data, state->env_bnds, state->env_bnd_is_builtin, b);
-      // missing refs are caught in typecheck phase
+    case PT_EX_LOWER_VAR:
+    case PT_EX_UPPER_VAR: {
+      node_ind_t ind = node.variable_index;
       debug_assert(ind != state->env_bnds.len);
       lang_value val = get_env(state, ind);
       push_val(state, val);
@@ -1282,9 +1281,9 @@ static void cg_statement(cg_state *state, cg_statement_params params) {
 
 static void cg_function_stage_three(cg_state *state) {
   LLVMValueRef ret = pop_exogenous_val(state);
-  VEC_POP(&state->block_stack);
+  VEC_POP_(&state->block_stack);
   LLVMBuildRet(state->builder, ret);
-  VEC_POP(&state->function_stack);
+  VEC_POP_(&state->function_stack);
   LLVMPositionBuilderAtEnd(state->builder, VEC_PEEK(state->block_stack));
 }
 
@@ -1418,7 +1417,8 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
   while (state.actions.len > 0) {
 
     // printf("Codegen action %d\n", action_num++);
-    cg_action action = VEC_POP(&state.actions);
+    cg_action action;
+    VEC_POP(&state.actions, &action);
     switch (action.tag) {
       case CG_EXPR:
         cg_expression(&state, action.expr_params);
