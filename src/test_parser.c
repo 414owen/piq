@@ -52,7 +52,7 @@ static void test_parser_succeeds_on_form(test_state *state, char *input,
   char *new_input;
   char *old_str = output.str;
   if (output.tag == STRING) {
-    asprintf(&output.str, "(Fun (Lname a) (Body %s))", old_str);
+    asprintf(&output.str, "(Fun (TermName a) (Body %s))", old_str);
   }
   asprintf(&new_input, "(fun a () %s)", input);
   test_parser_succeeds_on(state, new_input, output);
@@ -140,7 +140,7 @@ static void test_parser_succeeds_atomic(test_state *state) {
 
   {
     test_start(state, "Name");
-    test_parser_succeeds_on_form(state, "hello", expect_string("(Var hello)"));
+    test_parser_succeeds_on_form(state, "hello", expect_string("(TermName hello)"));
     test_end(state);
   }
 
@@ -193,7 +193,7 @@ static void test_parser_succeeds_kitchen_sink(test_state *state) {
     test_parser_succeeds_on_form(
       state,
       " ( ( hi 1   ) , 2 ) ",
-      expect_string("((Call (Var hi) (Int 1)), (Int 2))"));
+      expect_string("((Call (TermName hi) (Int 1)), (Int 2))"));
     test_end(state);
   }
 
@@ -290,7 +290,7 @@ static void test_call_succeeds(test_state *state) {
 
   {
     test_start(state, "No params");
-    test_parser_succeeds_on_form(state, "(a)", expect_string("(Call (Var a))"));
+    test_parser_succeeds_on_form(state, "(a)", expect_string("(Call (TermName a))"));
     test_end(state);
   }
 
@@ -355,7 +355,7 @@ static void test_parser_succeeds_compound(test_state *state) {
     test_parser_succeeds_on_form(
       state,
       "(add (1, 2))",
-      expect_string("(Call (Var add) ((Int 1), (Int 2)))"));
+      expect_string("(Call (TermName add) ((Int 1), (Int 2)))"));
     test_end(state);
   }
 
@@ -378,7 +378,7 @@ static void test_parser_succeeds_compound(test_state *state) {
     test_parser_succeeds_on_form(
       state,
       "(1, 2, 3, hi, 4)",
-      expect_string("((Int 1), (Int 2), (Int 3), (Var hi), (Int 4))"));
+      expect_string("((Int 1), (Int 2), (Int 3), (TermName hi), (Int 4))"));
     test_end(state);
   }
 
@@ -458,7 +458,7 @@ static void test_mismatched_parens(test_state *state) {
 static void test_parser_succeeds_on_type(test_state *state, char *in,
                                          char *ast) {
   char *full_ast;
-  asprintf(&full_ast, "(Sig (Lname a) %s)", ast);
+  asprintf(&full_ast, "(Sig (TermName a) %s)", ast);
   char *full_in;
   asprintf(&full_in, "(sig a %s)", in);
   expected_output out = {.tag = STRING, .str = full_ast};
@@ -502,8 +502,8 @@ static void test_parser_succeeds_root(test_state *state) {
 
     expected_output out = {.tag = STRING,
                            .str =
-                             "(Sig (Lname a) (Fn (()) (TypeConstructor I32)))\n"
-                             "(Fun (Lname a) () (Body (Int 12)))"};
+                             "(Sig (TermName a) (Fn (()) (TypeConstructor I32)))\n"
+                             "(Fun (TermName a) () (Body (Int 12)))"};
     test_parser_succeeds_on(state,
                             "(sig a (Fn () I32))\n"
                             "(fun a (()) 12)",
@@ -515,8 +515,8 @@ static void test_parser_succeeds_root(test_state *state) {
     test_start(state, "Multiple funs");
 
     expected_output out = {.tag = STRING,
-                           .str = "(Fun (Lname a) (Body (Var a)))\n"
-                                  "(Fun (Lname b) (Body (Var b)))"};
+                           .str = "(Fun (TermName a) (Body (TermName a)))\n"
+                                  "(Fun (TermName b) (Body (TermName b)))"};
     test_parser_succeeds_on(state, "(fun a () a)(fun b () b)", out);
 
     test_end(state);
@@ -530,7 +530,7 @@ static void test_parser_succeeds_statements(test_state *state) {
 
     expected_output out = {
       .tag = STRING,
-      .str = "(Fun (Lname a) (Body (Let (Lname b) ()) ()))",
+      .str = "(Fun (TermName a) (Body (Let (TermName b) ()) ()))",
     };
     test_parser_succeeds_on(state, "(fun a () (let b ()) ())", out);
 
@@ -546,8 +546,7 @@ static void test_parser_succeeds_declaration(test_state *state) {
     const char *input = "(data A () (Test))";
     expected_output out = {
       .tag = STRING,
-      .str = "(DataDecl (Uname A) (Type params: []) (Data Constructor: (Uname "
-             "Test)))",
+      .str = "(DataDecl (TypeConstructor A) (Type params: []) (DataConstructor Test))",
     };
     test_parser_succeeds_on(state, input, out);
 

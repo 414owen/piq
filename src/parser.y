@@ -183,11 +183,12 @@ block_in_parens(RES) ::= sig(A). {
 }
 
 // TODO make this a pattern, not a binding
-let(RES) ::= LET lower_name(A) expression(B). {
+let(RES) ::= LET lower_name_node(A) expression(B). {
   BREAK_PARSER;
+  A.type.all = PT_ALL_MULTI_TERM_NAME;
   parse_node n = {
     .type.statement = PT_STATEMENT_LET,
-    .sub_a = A,
+    .sub_a = push_node(s, A),
     .sub_b = B
   };
   RES = push_node(s, n);
@@ -214,13 +215,14 @@ toplevel_under(RES) ::= datatype_decl(A). {
 
 datatype_decl(RES) ::=
   DATA
-  upper_name(N)
+  upper_name_node(N)
   type_param_decls(A)
   data_constructor_decls(B). {
   BREAK_PARSER;
 
   node_ind_t start = s->inds.len;
-  VEC_PUSH(&s->inds, N);
+  N.type.all = PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME;
+  VEC_PUSH(&s->inds, push_node(s, N));
   VEC_PUSH(&s->inds, A);
   VEC_PUSH(&s->inds, B);
   parse_node n = {
@@ -236,13 +238,14 @@ data_constructor_decl(RES) ::=
   // this is assumed to be below P on the ind_stack
   // if that turns out to be false, I can return a node
   // from upper_name
-  upper_name(A)
+  upper_name_node(A)
   data_constructor_params(PS)
   CLOSE_PAREN(CO). {
   BREAK_PARSER;
 
   node_ind_t subs_start = s->inds.len;
-  VEC_PUSH(&s->inds, A);
+  A.type.all = PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME;
+  VEC_PUSH(&s->inds, push_node(s, A));
   VEC_APPEND(&s->inds, PS, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - PS]);
   parse_node n = {
     .type.all = PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL,
@@ -313,6 +316,7 @@ type_params(RES) ::= . {
 }
 
 type_params(RES) ::= type_params(A) lower_name_node(L). {
+  L.type.all = PT_ALL_MULTI_TYPE_PARAM_NAME;
   VEC_PUSH(&s->ind_stack, L);
   RES = A + 1;
 }
@@ -372,26 +376,14 @@ upper_name_node(RES) ::= UPPER_NAME(A). {
   RES = n;
 }
 
-upper_name(RES) ::= upper_name_node(A). {
-  BREAK_PARSER;
-  A.type.all = PT_ALL_MULTI_UPPER_NAME;
-  RES = push_node(s, A);
-}
-
 lower_name_node(RES) ::= LOWER_NAME(A). {
   BREAK_PARSER;
   parse_node n = {
      // works in all contexts
-    .type.all = PT_ALL_MULTI_LOWER_NAME,
     .sub_amt = 0,
     .span = span_from_token(s->tokens[A]),
   };
   RES = n;
-}
-
-lower_name(RES) ::= lower_name_node(A). {
-  BREAK_PARSER;
-  RES = push_node(s, A);
 }
 
 expression(RES) ::= OPEN_BRACKET(A) expression_list_contents(B) CLOSE_BRACKET(C). {
@@ -470,9 +462,14 @@ fn(RES) ::= FN param_decls(PS) fun_body(C). {
   RES = push_node(s, n);
 }
 
-sig(RES) ::= SIG lower_name(A) type(B). {
+sig(RES) ::= SIG lower_name_node(A) type(B). {
   BREAK_PARSER;
-  parse_node n = {.type.statement = PT_STATEMENT_SIG, .sub_a = A, .sub_b = B};
+  A.type.all = PT_ALL_MULTI_TERM_NAME;
+  parse_node n = {
+    .type.statement = PT_STATEMENT_SIG,
+    .sub_a = push_node(s, A),
+    .sub_b = B,
+  };
   RES = push_node(s, n);
 }
 
@@ -497,10 +494,11 @@ param_decls(RES) ::= unit. {
   RES = 0;
 }
 
-fun(RES) ::= FUN lower_name(A) param_decls(PS) fun_body(C). {
+fun(RES) ::= FUN lower_name_node(A) param_decls(PS) fun_body(C). {
   BREAK_PARSER;
   node_ind_t start = s->inds.len;
-  VEC_PUSH(&s->inds, A);
+  A.type.all = PT_ALL_MULTI_TERM_NAME;
+  VEC_PUSH(&s->inds, push_node(s, A));
   VEC_APPEND(&s->inds, PS, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - PS]);
   VEC_PUSH(&s->inds, C);
   parse_node n = {
@@ -627,10 +625,11 @@ pattern_in_parens(RES) ::= pattern_tuple(A). {
   RES = desugar_tuple(s, PT_ALL_PAT_TUP, A);
 }
 
-pattern_construction(RES) ::= upper_name(A) patterns(B). {
+pattern_construction(RES) ::= upper_name_node(A) patterns(B). {
   BREAK_PARSER;
   node_ind_t start = s->inds.len;
-  VEC_PUSH(&s->inds, A);
+  A.type.pattern = PT_ALL_PAT_DATA_CONSTRUCTOR_NAME;
+  VEC_PUSH(&s->inds, push_node(s, A));
   VEC_APPEND(&s->inds, B, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - B]);
   VEC_POP_N(&s->ind_stack, B);
   parse_node n = {
@@ -656,7 +655,7 @@ pattern(RES) ::= OPEN_BRACKET(O) pattern_list(A) CLOSE_BRACKET(C). {
 }
 
 type(RES) ::= upper_name_node(A). {
-  A.type.type = PT_TY_UPPER_NAME;
+  A.type.type = PT_TY_CONSTRUCTOR_NAME;
   RES = push_node(s, A);
 }
 

@@ -14,12 +14,12 @@
 #define node_ind_t buf_ind_t
 
 typedef enum {
-  PT_C_NONE,
-  PT_C_EXPRESSION,
-  PT_C_PATTERN,
-  PT_C_STATEMENT,
-  PT_C_TYPE,
-  PT_C_TOPLEVEL,
+  PT_C_NONE = 1,
+  PT_C_EXPRESSION = 2,
+  PT_C_PATTERN = 3,
+  PT_C_STATEMENT = 4,
+  PT_C_TYPE = 5,
+  PT_C_TOPLEVEL = 6,
 } parse_node_category;
 
 // TODO `type` is way too overloaded here.
@@ -34,9 +34,8 @@ typedef enum {
   PT_ALL_EX_IF,
   PT_ALL_EX_INT,
   PT_ALL_EX_AS,
-  PT_ALL_EX_LOWER_VAR,
+  PT_ALL_EX_TERM_NAME,
   PT_ALL_EX_UPPER_VAR,
-
   PT_ALL_EX_LIST,
   PT_ALL_EX_STRING,
   PT_ALL_EX_TUP,
@@ -46,9 +45,12 @@ typedef enum {
   // be a node at all...
   // Maybe the fact that these aren't "near" other
   // parse node categories' enums affects the switch output?
-  PT_ALL_MULTI_LOWER_NAME,
-  PT_ALL_MULTI_UPPER_NAME,
+  // TODO s/MULTI/Decl/?
+  PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME,
+  PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME,
+  PT_ALL_MULTI_TERM_NAME,
   PT_ALL_MULTI_TYPE_PARAMS,
+  PT_ALL_MULTI_TYPE_PARAM_NAME,
   PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL,
   PT_ALL_MULTI_DATA_CONSTRUCTORS,
 
@@ -56,6 +58,7 @@ typedef enum {
   PT_ALL_PAT_TUP,
   PT_ALL_PAT_UNIT,
   PT_ALL_PAT_CONSTRUCTION,
+  PT_ALL_PAT_DATA_CONSTRUCTOR_NAME,
   PT_ALL_PAT_STRING,
   PT_ALL_PAT_INT,
   PT_ALL_PAT_LIST,
@@ -73,6 +76,8 @@ typedef enum {
   PT_ALL_TY_UNIT,
   PT_ALL_TY_LOWER_NAME,
   PT_ALL_TY_UPPER_NAME,
+
+  PT_ALL_LEN,
 } parse_node_type_all;
 
 typedef enum {
@@ -86,7 +91,7 @@ typedef enum {
   PT_EX_TUP = PT_ALL_EX_TUP,
   PT_EX_AS = PT_ALL_EX_AS,
   PT_EX_UNIT = PT_ALL_EX_UNIT,
-  PT_EX_LOWER_VAR = PT_ALL_EX_LOWER_VAR,
+  PT_EX_LOWER_VAR = PT_ALL_EX_TERM_NAME,
   PT_EX_UPPER_VAR = PT_ALL_EX_UPPER_VAR,
 } parse_node_expression_type;
 
@@ -98,7 +103,7 @@ typedef enum {
   PT_PAT_STRING = PT_ALL_PAT_STRING,
   PT_PAT_INT = PT_ALL_PAT_INT,
   PT_PAT_LIST = PT_ALL_PAT_LIST,
-  PT_PAT_UPPER_NAME = PT_ALL_MULTI_UPPER_NAME,
+  PT_PAT_DATA_CONSTRUCTOR_NAME = PT_ALL_PAT_DATA_CONSTRUCTOR_NAME,
 } parse_node_pattern_type;
 
 typedef enum {
@@ -115,7 +120,7 @@ typedef enum {
   PT_TY_TUP = PT_ALL_TY_TUP,
   PT_TY_UNIT = PT_ALL_TY_UNIT,
   PT_TY_LOWER_NAME = PT_ALL_TY_LOWER_NAME,
-  PT_TY_UPPER_NAME = PT_ALL_TY_UPPER_NAME,
+  PT_TY_CONSTRUCTOR_NAME = PT_ALL_TY_UPPER_NAME,
 } parse_node_type_type;
 
 typedef enum {
@@ -202,9 +207,7 @@ typedef union {
 #define PT_AS_TYPE_IND(node) node.sub_a
 #define PT_AS_VAL_IND(node) node.sub_b
 
-const char *parse_node_string(parse_node_type type);
-
-typedef struct {
+const char *parse_node_stringss[[PT_ALL_LEN] {
   parse_node_type type;
 
   span span;
@@ -260,10 +263,10 @@ char *print_parse_tree_error_string(const char *input, const token *tokens,
                                     const parse_tree_res pres);
 void free_parse_tree(parse_tree tree);
 void free_parse_tree_res(parse_tree_res res);
-tree_node_repr pt_subs_type(parse_node_type type);
+tree_node_repr pt_subs_type[PT_ALL_LEN];
 
-typedef enum {
-  TR_PUSH_SCOPE_VAR,
+typedef {
+  [PT_ALL_LEN]TR_PUSH_SCOPE_VAR,
   TR_VISIT_IN,
   // TR_VISIT_OUT,
   TR_POP_TO,

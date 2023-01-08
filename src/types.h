@@ -8,40 +8,22 @@
 #include "vec.h"
 
 typedef enum {
-  T_ALL_UNIT,
-  T_ALL_I8,
-  T_ALL_U8,
-  T_ALL_I16,
-  T_ALL_U16,
-  T_ALL_I32,
-  T_ALL_U32,
-  T_ALL_I64,
-  T_ALL_U64,
-  T_ALL_FN,
-  T_ALL_BOOL,
-  T_ALL_TUP,
-  T_ALL_LIST,
-  T_ALL_CALL,
-  // unresolved type variable
-  T_ALL_VAR,
-} type_all_tag;
-
-typedef enum {
-  TC_UNIT = T_ALL_UNIT,
-  TC_I8 = T_ALL_I8,
-  TC_U8 = T_ALL_U8,
-  TC_I16 = T_ALL_I16,
-  TC_U16 = T_ALL_U16,
-  TC_I32 = T_ALL_I32,
-  TC_U32 = T_ALL_U32,
-  TC_I64 = T_ALL_I64,
-  TC_U64 = T_ALL_U64,
-  TC_FN = T_ALL_FN,
-  TC_BOOL = T_ALL_BOOL,
-  TC_TUP = T_ALL_TUP,
-  TC_LIST = T_ALL_LIST,
-  TC_CALL = T_ALL_CALL,
-  TC_VAR = T_ALL_VAR,
+  TC_UNIT,
+  TC_I8,
+  TC_U8,
+  TC_I16,
+  TC_U16,
+  TC_I32,
+  TC_U32,
+  TC_I64,
+  TC_U64,
+  TC_FN,
+  TC_BOOL,
+  TC_TUP,
+  TC_LIST,
+  TC_CALL,
+  TC_VAR,
+  TC_OR,
 } type_check_tag;
 
 typedef enum {
@@ -73,7 +55,7 @@ typedef struct {
   union {
     type_tag tag;
     type_check_tag check_tag;
-    type_all_tag all_tag;
+    type_check_tag all_tag;
   };
   union {
     typevar type_var;
@@ -114,19 +96,19 @@ typedef struct {
 #define T_TUP_SUB_B(node) node.sub_b
 
 void free_type_builder(type_builder tb);
-tree_node_repr type_repr(type_all_tag tag);
+tree_node_repr type_repr(type_check_tag tag);
 bool inline_types_eq(type a, type b);
 void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root);
 char *print_type_str(type *types, node_ind_t *inds, node_ind_t root);
-void print_type_head_placeholders(FILE *f, type_all_tag head);
+void print_type_head_placeholders(FILE *f, type_check_tag head);
 
-node_ind_t find_primitive_type(type_builder *tb, type_all_tag tag);
-node_ind_t find_type(type_builder *tb, type_all_tag tag, const node_ind_t *subs,
+node_ind_t find_primitive_type(type_builder *tb, type_check_tag tag);
+node_ind_t find_type(type_builder *tb, type_check_tag tag, const node_ind_t *subs,
                      node_ind_t sub_amt);
-node_ind_t mk_primitive_type(type_builder *tb, type_all_tag tag);
-node_ind_t mk_type_inline(type_builder *tb, type_all_tag tag, node_ind_t sub_a,
+node_ind_t mk_primitive_type(type_builder *tb, type_check_tag tag);
+node_ind_t mk_type_inline(type_builder *tb, type_check_tag tag, node_ind_t sub_a,
                           node_ind_t sub_b);
-node_ind_t mk_type(type_builder *tb, type_all_tag tag, const node_ind_t *subs,
+node_ind_t mk_type(type_builder *tb, type_check_tag tag, const node_ind_t *subs,
                    node_ind_t sub_amt);
 node_ind_t mk_type_var(type_builder *tb, typevar value);
 

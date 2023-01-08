@@ -14,9 +14,14 @@ static char *marker_start = "→";
 static char *marker_end = "←";
 
 typedef struct test_type {
-  type_tag tag;
-  const struct test_type *subs;
-  size_t sub_amt;
+  type_check_tag tag;
+  union {
+    struct {
+      const struct test_type *subs;
+      size_t sub_amt;
+    };
+    typevar type_var;
+  };
 } test_type;
 
 VEC_DECL(test_type);
@@ -55,7 +60,12 @@ static bool test_type_eq(type *types, node_ind_t *inds, node_ind_t root,
   vec_test_type stack_b = VEC_NEW;
   VEC_PUSH(&stack_b, t);
   bool res = true;
-  while (true) {
+
+  // this associative array maps typevars in a to typevars in b, and back
+  vec_typevar substitution_keys = VEC_NEW;
+  vec_typevar substitution_vals = VEC_NEW;
+
+  while (res) {
     if (stack_a.len != stack_b.len) {
       res = false;
       break;
@@ -67,7 +77,7 @@ static bool test_type_eq(type *types, node_ind_t *inds, node_ind_t root,
     type type_a = types[ind_a];
     test_type type_b;
     VEC_POP(&stack_b, &type_b);
-    if (type_a.tag != type_b.tag) {
+    if (type_a.check_tag != type_b.tag) {
       res = false;
       break;
     }
@@ -83,6 +93,15 @@ static bool test_type_eq(type *types, node_ind_t *inds, node_ind_t root,
         VEC_PUSH(&stack_a, type_a.sub_b);
         break;
       case SUBS_NONE:
+        if (type_a.check_tag == TC_VAR) {
+          const size_t ind_k = find_range(VEC_DATA_PTR(&substitution_keys), sizeof(typevar), substitution_keys.len, &type_a.type_var, 1);
+          const size_t ind_v = find_range(VEC_DATA_PTR(&substitution_vals), sizeof(typevar), substitution_keys.len, &type_b.type_var, 1);
+          res &= ind_k == ind_v;
+          if (ind_k == substitution_keys.len) {
+            VEC_PUSH(&substitution_keys, type_a.type_var);
+            VEC_PUSH(&substitution_vals, type_b.type_var);
+          }
+        }
         break;
     }
     VEC_APPEND(&stack_b, type_b.sub_amt, type_b.subs);
@@ -271,13 +290,12 @@ static void test_typecheck_errors(test_state *state, const char *input_p,
   if (!all_errors_match(rres.tree, res, exps, spans, cases)) {
     stringstream ss;
     ss_init_immovable(&ss);
-    fprintf(ss.stream, "Expected %d errors, got %d.\n", cases, res.error_amt);
     if (res.error_amt > 0) {
       fputs("Errors:\n", ss.stream);
     }
     print_tc_errors(ss.stream, input, rres.tree, res);
     ss_finalize(&ss);
-    failf(state, ss.string, input);
+    failf(state, "Expected %d errors, got %d.\n%s", cases, res.error_amt, ss.string);
     free(ss.string);
   }
 
@@ -288,40 +306,50 @@ static void test_typecheck_errors(test_state *state, const char *input_p,
 }
 
 static const test_type bool_t = {
-  .tag = T_BOOL,
+  .tag = TC_BOOL,
   .sub_amt = 0,
   .subs = NULL,
 };
 
 static const test_type u8_t = {
-  .tag = T_U8,
+  .tag = TC_U8,
   .sub_amt = 0,
   .subs = NULL,
 };
 
+static const test_type string_t = {
+  .tag = TC_LIST,
+  .sub_amt = 1,
+  .subs = &u8_t,
+};
+
 static const test_type i8_t = {
-  .tag = T_I8,
+  .tag = TC_I8,
   .sub_amt = 0,
   .subs = NULL,
 };
 
 static const test_type i16_t = {
-  .tag = T_I16,
+  .tag = TC_I16,
   .sub_amt = 0,
   .subs = NULL,
 };
 
 static const test_type i32_t = {
-  .tag = T_I32,
+  .tag = TC_I32,
   .sub_amt = 0,
   .subs = NULL,
 };
 
-// static const test_type unit = {
-//   .tag = T_UNIT,
-//   .sub_amt = 0,
-//   .subs = NULL,
-// };
+static const test_type VAR_A = {
+  .tag = TC_VAR,
+  .type_var = 0,
+};
+
+static const test_type VAR_B = {
+  .tag = TC_VAR,
+  .type_var = 1,
+};
 
 static void test_typecheck_succeeds(test_state *state) {
   test_group_start(state, "Succeeds");
@@ -340,24 +368,6 @@ static void test_typecheck_succeeds(test_state *state) {
                         "(fun a () →2←)";
     test_start(state, "Return value");
     test_type types[] = {i8_t};
-    test_types_match(state, input, types, STATIC_LEN(types));
-    test_end(state);
-  }
-
-  {
-    const char *input = "(sig a (Fn I16))\n"
-                        "(fun →a← () 2)";
-    test_start(state, "Fn bnd");
-    const test_type fn_subs[] = {i16_t};
-    const test_type fn_type = {
-      .tag = T_FN,
-      .sub_amt = STATIC_LEN(fn_subs),
-      .subs = fn_subs,
-    };
-
-    test_type types[] = {
-      fn_type,
-    };
     test_types_match(state, input, types, STATIC_LEN(types));
     test_end(state);
   }
@@ -482,8 +492,16 @@ static void test_errors(test_state *state) {
 
   {
     test_start(state, "I32 vs (Int, Int)");
+    const test_type subs[] = { VAR_A, VAR_B, };
+    const test_type type = {
+      .tag = TC_TUP,
+      .subs = subs,
+      .sub_amt = STATIC_LEN(subs),
+    };
     const tc_err_test errors[] = {{
       .type = TC_ERR_CONFLICT,
+      .type_exp = i32_t,
+      .type_got = type,
     }};
     static const char *prog = "(sig a (Fn I32))\n"
                               "(fun a () →(2, 3)←)";
@@ -493,15 +511,10 @@ static void test_errors(test_state *state) {
 
   {
     test_start(state, "I32 vs (() -> Int)");
-    const test_type i32_t = {
-      .tag = T_I32,
-      .sub_amt = 0,
-      .subs = NULL,
-    };
     const test_type got = {
-      .tag = T_FN,
+      .tag = TC_FN,
       .sub_amt = 1,
-      .subs = &i32_t,
+      .subs = &VAR_A,
     };
     const tc_err_test errors[] = {
       {
@@ -520,9 +533,16 @@ static void test_errors(test_state *state) {
 
   {
     test_start(state, "I32 vs [I32]");
+    const test_type got = {
+      .tag = TC_LIST,
+      .subs = &VAR_A,
+      .sub_amt = 1,
+    };
     const tc_err_test errors[] = {
       {
         .type = TC_ERR_CONFLICT,
+        .type_exp = i32_t,
+        .type_got = got,
       },
     };
     test_typecheck_errors(state,
@@ -538,6 +558,8 @@ static void test_errors(test_state *state) {
     const tc_err_test errors[] = {
       {
         .type = TC_ERR_CONFLICT,
+        .type_exp = i32_t,
+        .type_got = string_t,
       },
     };
     test_typecheck_errors(state,
@@ -553,6 +575,8 @@ static void test_errors(test_state *state) {
     const tc_err_test errors[] = {
       {
         .type = TC_ERR_CONFLICT,
+        .type_exp = string_t,
+        .type_got = VAR_A,
       },
     };
     test_typecheck_errors(state,
@@ -610,7 +634,7 @@ void test_typecheck(test_state *state) {
   test_group_start(state, "Typecheck");
 
   test_typecheck_succeeds(state);
-  // test_errors(state);
+  test_errors(state);
   if (!state->config.lite) {
     test_typecheck_stress(state);
   }

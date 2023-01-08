@@ -55,9 +55,6 @@ bool multiset_eq(size_t el_size, size_t as_len, size_t bs_len,
   return as_len == bs_len && test_all_as_in_b(el_size, as_len, as_v, bs_v);
 }
 
-void *memmem(const void *haystack, size_t haystack_len, const void *needle,
-             size_t needle_len);
-
 HEDLEY_RETURNS_NON_NULL
 MALLOC_ATTR_2(free, 1)
 void *malloc_safe(size_t size) {
@@ -92,7 +89,6 @@ void *memclone(void *restrict src, size_t bytes) {
   return dest;
 }
 
-// TODO(speedup) Boyer-Moore, or use memmem internally?
 NON_NULL_PARAMS
 size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
                   const void *needle, size_t needle_els) {
@@ -101,8 +97,9 @@ size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
   for (size_t i = 0; i < el_amt - needle_els + 1; i++) {
     bool matches = true;
     for (size_t k = 0; matches && k < needle_els; k++) {
+      const size_t el_ind = i + k;
       for (size_t j = 0; j < el_size; j++) {
-        if (((char *)haystack)[(i + k) * el_size + j] !=
+        if (((char *)haystack)[el_ind * el_size + j] !=
             ((char *)needle)[k * el_size + j]) {
           matches = false;
           break;

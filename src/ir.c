@@ -345,7 +345,7 @@ ir_module build_module(parse_tree tree, type_info types) {
             // TODO
             UNIMPLEMENTED("Lowering unit");
             break;
-          case PT_EX_UPPER_NAME:
+          case PT_EX_DATA_CONSTRUCTOR_NAME:
             // TODO
             UNIMPLEMENTED("Lowering constructor");
             break;

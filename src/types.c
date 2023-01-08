@@ -1,6 +1,6 @@
 #include "types.h"
 
-type_ref find_primitive_type(type_builder *tb, type_all_tag tag) {
+type_ref find_primitive_type(type_builder *tb, type_check_tag tag) {
   for (type_ref i = 0; i < tb->types.len; i++) {
     type t = VEC_GET(tb->types, i);
     if (t.all_tag == tag)
@@ -9,7 +9,7 @@ type_ref find_primitive_type(type_builder *tb, type_all_tag tag) {
   return tb->types.len;
 }
 
-type_ref find_type(type_builder *tb, type_all_tag tag, const type_ref *subs,
+type_ref find_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
                    type_ref sub_amt) {
   for (type_ref i = 0; i < tb->types.len; i++) {
     type t = VEC_GET(tb->types, i);
@@ -23,7 +23,7 @@ type_ref find_type(type_builder *tb, type_all_tag tag, const type_ref *subs,
   return tb->types.len;
 }
 
-type_ref mk_primitive_type(type_builder *tb, type_all_tag tag) {
+type_ref mk_primitive_type(type_builder *tb, type_check_tag tag) {
   debug_assert(type_repr(tag) == SUBS_NONE);
   type_ref ind = find_primitive_type(tb, tag);
   if (ind < tb->types.len)
@@ -37,7 +37,7 @@ type_ref mk_primitive_type(type_builder *tb, type_all_tag tag) {
   return tb->types.len - 1;
 }
 
-type_ref mk_type_inline(type_builder *tb, type_all_tag tag, type_ref sub_a,
+type_ref mk_type_inline(type_builder *tb, type_check_tag tag, type_ref sub_a,
                         type_ref sub_b) {
   debug_assert(type_repr(tag) == SUBS_ONE || type_repr(tag) == SUBS_TWO);
   type t = {
@@ -55,7 +55,7 @@ type_ref mk_type_inline(type_builder *tb, type_all_tag tag, type_ref sub_a,
   return tb->types.len - 1;
 }
 
-type_ref mk_type(type_builder *tb, type_all_tag tag, const type_ref *subs,
+type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
                  type_ref sub_amt) {
   debug_assert(type_repr(tag) == SUBS_EXTERNAL);
   if (subs == NULL) {
@@ -114,7 +114,7 @@ static exited_early type_contains_typevar_by(const type_builder *types,
     VEC_POP(&stack, &node_ind);
     type node = VEC_GET(types->types, node_ind);
     switch (node.all_tag) {
-      case T_ALL_VAR: {
+      case TC_VAR: {
         var_step_res step_res = step(node.type_var, data);
         if (step_res.early_exit) {
           res = true;
@@ -125,20 +125,21 @@ static exited_early type_contains_typevar_by(const type_builder *types,
         }
         break;
       }
-      case T_ALL_UNIT:
-      case T_ALL_I8:
-      case T_ALL_U8:
-      case T_ALL_I16:
-      case T_ALL_U16:
-      case T_ALL_I32:
-      case T_ALL_U32:
-      case T_ALL_I64:
-      case T_ALL_U64:
-      case T_ALL_FN:
-      case T_ALL_BOOL:
-      case T_ALL_TUP:
-      case T_ALL_LIST:
-      case T_ALL_CALL:
+      case TC_OR:
+      case TC_UNIT:
+      case TC_I8:
+      case TC_U8:
+      case TC_I16:
+      case TC_U16:
+      case TC_I32:
+      case TC_U32:
+      case TC_I64:
+      case TC_U64:
+      case TC_FN:
+      case TC_BOOL:
+      case TC_TUP:
+      case TC_LIST:
+      case TC_CALL:
         break;
     }
     switch (type_repr(node.all_tag)) {
