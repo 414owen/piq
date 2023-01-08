@@ -5,6 +5,7 @@
 #include "builtins.h"
 #include "consts.h"
 #include "parse_tree.h"
+#include "term.h"
 #include "typecheck.h"
 
 // Typechecking and inference based on wand's algorithm
@@ -56,10 +57,11 @@ static void annotate_parse_tree(const parse_tree tree, type_builder *builder) {
 }
 
 static void add_type_constraint(tc_constraint_builder *builder, type_ref a,
-                                type_ref b) {
+                                type_ref b, node_ind_t provenance) {
   tc_constraint constraint = {
     .a = a,
     .b = b,
+    .provenance = provenance
   };
   VEC_PUSH(&builder->constraints, constraint);
 }
@@ -99,8 +101,8 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       }
       fn_type_inds[num_params] = generate_node_type(builder, node_ind);
       const type_ref fn_type =
-        mk_type(builder->type_builder, T_ALL_FN, fn_type_inds, num_params + 1);
-      add_type_constraint(builder, callee_type, fn_type);
+        mk_type(builder->type_builder, TC_FN, fn_type_inds, num_params + 1);
+      add_type_constraint(builder, callee_type, fn_type, node_ind);
       stfree(fn_type_inds, sizeof(type_ref) * num_params);
       break;
     }
@@ -117,8 +119,8 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       const type_ref body_type = generate_node_type(builder, body_ind);
       fn_type_inds[num_params] = body_type;
       const type_ref fn_type =
-        mk_type(builder->type_builder, T_ALL_FN, fn_type_inds, num_params + 1);
-      add_type_constraint(builder, our_type, fn_type);
+        mk_type(builder->type_builder, TC_FN, fn_type_inds, num_params + 1);
+      add_type_constraint(builder, our_type, fn_type, node_ind);
       stfree(fn_type_inds, sizeof(type_ref) * (num_params + 1));
       break;
     }
@@ -126,14 +128,14 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
     case PT_ALL_EX_TERM_NAME: {
       const type_ref target_type =
         VEC_GET(builder->environment, node.variable_index);
-      add_type_constraint(builder, our_type, target_type);
+      add_type_constraint(builder, our_type, target_type, node_ind);
       break;
     }
     case PT_ALL_TY_CONSTRUCTOR_NAME:
     case PT_ALL_TY_LOWER_NAME: {
       const type_ref target_type =
         VEC_GET(builder->type_environment, node.variable_index);
-      add_type_constraint(builder, our_type, target_type);
+      add_type_constraint(builder, our_type, target_type, node_ind);
       break;
     }
     case PT_ALL_EX_FUN_BODY: {
@@ -141,7 +143,7 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
         PT_FUN_BODY_LAST_SUB_IND(builder->tree.inds, node);
       const type_ref last_stmt_type =
         generate_node_type(builder, last_stmt_ind);
-      add_type_constraint(builder, our_type, last_stmt_type);
+      add_type_constraint(builder, our_type, last_stmt_type, node_ind);
       break;
     }
     case PT_ALL_EX_IF: {
@@ -152,10 +154,10 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       const type_ref branch_b_type = generate_node_type(builder, branch_b_ind);
       const type_ref branch_a_type = generate_node_type(builder, branch_a_ind);
       const type_ref bool_type =
-        mk_primitive_type(builder->type_builder, T_ALL_BOOL);
-      add_type_constraint(builder, cond_type, bool_type);
-      add_type_constraint(builder, our_type, branch_b_type);
-      add_type_constraint(builder, our_type, branch_a_type);
+        mk_primitive_type(builder->type_builder, TC_BOOL);
+      add_type_constraint(builder, cond_type, bool_type, node_ind);
+      add_type_constraint(builder, our_type, branch_b_type, node_ind);
+      add_type_constraint(builder, our_type, branch_a_type, node_ind);
       break;
     }
     case PT_ALL_PAT_INT:
@@ -167,8 +169,8 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       const type_ref expression_type =
         generate_node_type(builder, expression_ind);
       const type_ref type_type = generate_node_type(builder, type_ind);
-      add_type_constraint(builder, our_type, expression_type);
-      add_type_constraint(builder, our_type, type_type);
+      add_type_constraint(builder, our_type, expression_type, node_ind);
+      add_type_constraint(builder, our_type, type_type, node_ind);
       break;
     }
     case PT_ALL_PAT_LIST:
@@ -183,7 +185,7 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
           const node_ind_t sub_ind =
             PT_LIST_SUB_IND(builder->tree.inds, node, i);
           const type_ref sub_type_b = generate_node_type(builder, sub_ind);
-          add_type_constraint(builder, sub_type, sub_type_b);
+          add_type_constraint(builder, sub_type, sub_type_b, node_ind);
         }
       } else {
         sub_type = mk_type_var(builder->type_builder,
@@ -191,17 +193,17 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
         VEC_PUSH(&builder->type_builder->substitutions, sub_type);
       }
       const type_ref list_type =
-        mk_type_inline(builder->type_builder, T_ALL_LIST, sub_type, 0);
-      add_type_constraint(builder, our_type, list_type);
+        mk_type_inline(builder->type_builder, TC_LIST, sub_type, 0);
+      add_type_constraint(builder, our_type, list_type, node_ind);
       break;
     }
     case PT_ALL_PAT_STRING:
     case PT_ALL_EX_STRING: {
       const type_ref u8_type =
-        mk_primitive_type(builder->type_builder, T_ALL_U8);
+        mk_primitive_type(builder->type_builder, TC_U8);
       const type_ref string_type =
-        mk_type_inline(builder->type_builder, T_ALL_LIST, u8_type, 0);
-      add_type_constraint(builder, our_type, string_type);
+        mk_type_inline(builder->type_builder, TC_LIST, u8_type, 0);
+      add_type_constraint(builder, our_type, string_type, node_ind);
       break;
     }
     case PT_ALL_TY_TUP:
@@ -212,16 +214,16 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       const type_ref sub_a_type = generate_node_type(builder, sub_a_ind);
       const type_ref sub_b_type = generate_node_type(builder, sub_b_ind);
       const type_ref tup_type = mk_type_inline(
-        builder->type_builder, T_ALL_TUP, sub_a_type, sub_b_type);
-      add_type_constraint(builder, our_type, tup_type);
+        builder->type_builder, TC_TUP, sub_a_type, sub_b_type);
+      add_type_constraint(builder, our_type, tup_type, node_ind);
       break;
     }
     case PT_ALL_TY_UNIT:
     case PT_ALL_PAT_UNIT:
     case PT_ALL_EX_UNIT: {
       const type_ref unit_type =
-        mk_primitive_type(builder->type_builder, T_ALL_UNIT);
-      add_type_constraint(builder, our_type, unit_type);
+        mk_primitive_type(builder->type_builder, TC_UNIT);
+      add_type_constraint(builder, our_type, unit_type, node_ind);
       break;
     }
     case PT_ALL_PAT_WILDCARD:
@@ -236,8 +238,8 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       const type_ref sig_type_type = generate_node_type(builder, sig_type_ind);
       const type_ref sig_binding_type =
         generate_node_type(builder, sig_binding_ind);
-      add_type_constraint(builder, our_type, sig_binding_type);
-      add_type_constraint(builder, our_type, sig_type_type);
+      add_type_constraint(builder, our_type, sig_binding_type, node_ind);
+      add_type_constraint(builder, our_type, sig_type_type, node_ind);
       break;
     }
     case PT_ALL_STATEMENT_FUN: {
@@ -254,10 +256,10 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       const type_ref body_type = generate_node_type(builder, body_ind);
       fn_type_inds[num_params] = body_type;
       const type_ref fn_type =
-        mk_type(builder->type_builder, T_ALL_FN, fn_type_inds, num_params + 1);
+        mk_type(builder->type_builder, TC_FN, fn_type_inds, num_params + 1);
       const type_ref binding_type = generate_node_type(builder, binding_ind);
-      add_type_constraint(builder, our_type, fn_type);
-      add_type_constraint(builder, our_type, binding_type);
+      add_type_constraint(builder, our_type, fn_type, node_ind);
+      add_type_constraint(builder, our_type, binding_type, node_ind);
       stfree(fn_type_inds, sizeof(type_ref) * (num_params + 1));
       break;
     }
@@ -266,8 +268,8 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       const node_ind_t val_ind = PT_LET_VAL_IND(node);
       const type_ref binding_type = generate_node_type(builder, binding_ind);
       const type_ref val_type = generate_node_type(builder, val_ind);
-      add_type_constraint(builder, our_type, binding_type);
-      add_type_constraint(builder, our_type, val_type);
+      add_type_constraint(builder, our_type, binding_type, node_ind);
+      add_type_constraint(builder, our_type, val_type, node_ind);
       break;
     }
     case PT_ALL_TY_CONSTRUCTION:
@@ -281,8 +283,8 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       const node_ind_t sub_ind = PT_LIST_TYPE_SUB(node);
       const type_ref sub_type = generate_node_type(builder, sub_ind);
       const type_ref list_type =
-        mk_type_inline(builder->type_builder, T_ALL_LIST, sub_type, 0);
-      add_type_constraint(builder, our_type, list_type);
+        mk_type_inline(builder->type_builder, TC_LIST, sub_type, 0);
+      add_type_constraint(builder, our_type, list_type, node_ind);
       break;
     }
   }
@@ -294,7 +296,7 @@ static void generate_constraints_link_sigs(tc_constraint_builder *builder,
     VEC_GET(builder->type_builder->node_types, elem.sig_index);
   const type_ref linked_type =
     VEC_GET(builder->type_builder->node_types, elem.linked_index);
-  add_type_constraint(builder, sig_type, linked_type);
+  add_type_constraint(builder, sig_type, linked_type, elem.node_index);
 }
 
 // I think that, for these to be solved, we have to generate constraints like
@@ -344,6 +346,7 @@ static tc_constraints_res generate_constraints(const parse_tree tree,
     break;
   }
 
+  VEC_REVERSE(&builder.constraints);
   VEC_FREE(&builder.environment);
   VEC_FREE(&builder.type_environment);
   return builder.constraints;
@@ -359,6 +362,9 @@ typedef struct {
   type_builder *types;
   vec_tc_constraint constraints;
   vec_tc_error errors;
+#ifdef DEBUG_TC
+  parse_tree tree;
+#endif
 } unification_state;
 
 static void unify_typevar(unification_state *state, typevar a, type_ref b_ind,
@@ -378,20 +384,35 @@ static void unify_typevar(unification_state *state, typevar a, type_ref b_ind,
     return;
   }
   VEC_DATA_PTR(&state->types->substitutions)[a] = b_ind;
-  // printf("Typevar %d := ", a);
-  // print_type(stdout, VEC_DATA_PTR(&state->types->types),
-  // VEC_DATA_PTR(&state->types->inds), b_ind); putc('\n', stdout);
+#ifdef DEBUG_TC
+  printf("Typevar %d := ", a);
+  print_type(stdout, VEC_DATA_PTR(&state->types->types), VEC_DATA_PTR(&state->types->inds), b_ind);
+  putc('\n', stdout);
+  if (a < state->tree.node_amt) {
+    if (b.check_tag == TC_VAR) {
+      printf(RED "%s" RESET " := " RED "%s" RESET "\n",
+        parse_node_strings[state->tree.nodes[a].type.all],
+        parse_node_strings[state->tree.nodes[b.type_var].type.all]);
+    } else {
+      printf(RED "%s" RESET "\n", parse_node_strings[state->tree.nodes[a].type.all]);
+    }
+  }
+#endif
 }
 
-static void add_conflict(vec_tc_error *errs, type_ref a, type_ref b) {
+static void add_conflict(vec_tc_error *errs, tc_constraint c) {
   tc_error err = {
     .type = TC_ERR_CONFLICT,
+    .pos = c.provenance,
     .conflict =
       {
-        .expected_ind = a,
-        .got_ind = b,
+        .expected_ind = c.a,
+        .got_ind = c.b,
       },
   };
+#ifdef DEBUG_TC
+  puts("Added conflict");
+#endif
   VEC_PUSH(errs, err);
 }
 
@@ -428,6 +449,16 @@ static node_ind_t resolve_type(type_builder *types, type_ref root_ind) {
   return target;
 }
 
+#ifdef DEBUG_TC
+static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
+                                      type_builder *type_builder, parse_tree tree) {
+  unification_state state = {
+    .tree = tree,
+    .errors = VEC_NEW,
+    .types = type_builder,
+    .constraints = p_constraints,
+  };
+#else
 static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
                                       type_builder *type_builder) {
   unification_state state = {
@@ -435,6 +466,7 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
     .types = type_builder,
     .constraints = p_constraints,
   };
+#endif
   while (state.constraints.len > 0) {
     tc_constraint constraint;
     VEC_POP(&state.constraints, &constraint);
@@ -442,19 +474,24 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
     constraint.b = resolve_type(type_builder, constraint.b);
     type a = VEC_GET(type_builder->types, constraint.a);
     type b = VEC_GET(type_builder->types, constraint.b);
-    // printf("solve: %d = %d\n", constraint.a, constraint.b);
+#ifdef DEBUG_TC
+    printf("solve: %d = %d\n", constraint.a, constraint.b);
+#endif
 
     // switcheroo
     if (b.check_tag == TC_VAR && a.check_tag != TC_VAR) {
       tc_constraint c = {
         .a = constraint.b,
         .b = constraint.a,
+        .provenance = constraint.provenance,
       };
       constraint = c;
       type tmp = a;
       a = b;
       b = tmp;
-      // printf("solve: %d = %d\n", constraint.a, constraint.b);
+#ifdef DEBUG_TC
+      printf("solve: %d = %d\n", constraint.a, constraint.b);
+#endif
     }
 
     if (a.check_tag == TC_VAR) {
@@ -463,7 +500,7 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
     }
 
     if (a.check_tag != b.check_tag) {
-      add_conflict(&state.errors, constraint.a, constraint.b);
+      add_conflict(&state.errors, constraint);
       continue;
     }
 
@@ -474,6 +511,7 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
         tc_constraint c = {
           .a = a.sub_b,
           .b = b.sub_b,
+          .provenance = constraint.provenance,
         };
         VEC_PUSH(&state.constraints, c);
         HEDLEY_FALL_THROUGH;
@@ -482,19 +520,21 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
         tc_constraint c = {
           .a = a.sub_a,
           .b = b.sub_a,
+          .provenance = constraint.provenance,
         };
         VEC_PUSH(&state.constraints, c);
         break;
       }
       case SUBS_EXTERNAL:
         if (a.sub_amt != b.sub_amt) {
-          add_conflict(&state.errors, constraint.a, constraint.b);
+          add_conflict(&state.errors, constraint);
           break;
         }
         for (type_ref i = 0; i < a.sub_amt; i++) {
           tc_constraint c = {
             .a = VEC_GET(state.types->inds, a.subs_start + i),
             .b = VEC_GET(state.types->inds, b.subs_start + i),
+            .provenance = constraint.provenance,
           };
           VEC_PUSH(&state.constraints, c);
         }
@@ -510,7 +550,7 @@ void print_tyvar_parse_node(parse_tree tree, type *types, type_ref ref) {
     return;
   }
   fputs("Parse node: ", stdout);
-  puts(parse_node_string(tree.nodes[t.type_var].type));
+  puts(parse_node_strings[tree.nodes[t.type_var].type.all]);
   putc('\n', stdout);
 }
 
@@ -657,7 +697,7 @@ tc_res typecheck(const parse_tree tree) {
   annotate_parse_tree(tree, &type_builder);
   tc_constraints_res constraints_res =
     generate_constraints(tree, &type_builder);
-  /*
+#ifdef DEBUG_TC
   printf("Generated %d constraints: ", constraints_res.len);
   for (node_ind_t i = 0; i < constraints_res.len; i++) {
     tc_constraint c = VEC_GET(constraints_res, i);
@@ -672,9 +712,12 @@ tc_res typecheck(const parse_tree tree) {
     print_tyvar_parse_node(tree, VEC_DATA_PTR(&type_builder.types), c.b);
     puts("\n---\n");
   }
-  */
 
+  vec_tc_error errors = solve_constraints(constraints_res, &type_builder, tree);
+#else
   vec_tc_error errors = solve_constraints(constraints_res, &type_builder);
+#endif
+
   VEC_FREE(&constraints_res);
   if (errors.len == 0) {
     check_ambiguities(tree.node_amt, &type_builder, &errors);

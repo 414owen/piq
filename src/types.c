@@ -3,7 +3,7 @@
 type_ref find_primitive_type(type_builder *tb, type_check_tag tag) {
   for (type_ref i = 0; i < tb->types.len; i++) {
     type t = VEC_GET(tb->types, i);
-    if (t.all_tag == tag)
+    if (t.check_tag == tag)
       return i;
   }
   return tb->types.len;
@@ -13,7 +13,7 @@ type_ref find_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
                    type_ref sub_amt) {
   for (type_ref i = 0; i < tb->types.len; i++) {
     type t = VEC_GET(tb->types, i);
-    if (t.all_tag != tag || t.sub_amt != sub_amt)
+    if (t.check_tag != tag || t.sub_amt != sub_amt)
       continue;
     type_ref *p1 = &VEC_DATA_PTR(&tb->inds)[t.subs_start];
     if (memcmp(p1, subs, sub_amt * sizeof(type_ref)) != 0)
@@ -29,7 +29,7 @@ type_ref mk_primitive_type(type_builder *tb, type_check_tag tag) {
   if (ind < tb->types.len)
     return ind;
   type t = {
-    .all_tag = tag,
+    .check_tag = tag,
     .sub_amt = 0,
     .subs_start = 0,
   };
@@ -41,7 +41,7 @@ type_ref mk_type_inline(type_builder *tb, type_check_tag tag, type_ref sub_a,
                         type_ref sub_b) {
   debug_assert(type_repr(tag) == SUBS_ONE || type_repr(tag) == SUBS_TWO);
   type t = {
-    .all_tag = tag,
+    .check_tag = tag,
     .sub_a = sub_a,
     .sub_b = sub_b,
   };
@@ -73,7 +73,7 @@ type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
     VEC_APPEND(&tb->inds, sub_amt, subs);
   }
   type t = {
-    .all_tag = tag,
+    .check_tag = tag,
     .sub_amt = sub_amt,
     .subs_start = ind,
   };
@@ -113,7 +113,7 @@ static exited_early type_contains_typevar_by(const type_builder *types,
     type_ref node_ind;
     VEC_POP(&stack, &node_ind);
     type node = VEC_GET(types->types, node_ind);
-    switch (node.all_tag) {
+    switch (node.check_tag) {
       case TC_VAR: {
         var_step_res step_res = step(node.type_var, data);
         if (step_res.early_exit) {
@@ -142,7 +142,7 @@ static exited_early type_contains_typevar_by(const type_builder *types,
       case TC_CALL:
         break;
     }
-    switch (type_repr(node.all_tag)) {
+    switch (type_repr(node.check_tag)) {
       case SUBS_NONE:
         break;
       case SUBS_TWO:
