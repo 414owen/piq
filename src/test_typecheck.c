@@ -81,7 +81,7 @@ static bool test_type_eq(type *types, node_ind_t *inds, node_ind_t root,
       res = false;
       break;
     }
-    switch (type_repr(type_a.all_tag)) {
+    switch (type_repr(type_a.check_tag)) {
       case SUBS_EXTERNAL:
         VEC_APPEND(&stack_a, type_a.sub_amt, inds + type_a.subs_start);
         break;
