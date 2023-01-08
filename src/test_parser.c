@@ -369,7 +369,7 @@ static void test_parser_succeeds_compound(test_state *state) {
   {
     test_start(state, "Typed");
     test_parser_succeeds_on_form(
-      state, "(as I32 1)", expect_string("(As (TypeConstructor I32) (Int 1))"));
+      state, "(as I32 1)", expect_string("(As (TypeConstructorName I32) (Int 1))"));
     test_end(state);
   }
 
@@ -473,7 +473,7 @@ static void test_parser_succeeds_type(test_state *state) {
   {
     char *in = "I32";
     test_start(state, in);
-    test_parser_succeeds_on_type(state, in, "(TypeConstructor I32)");
+    test_parser_succeeds_on_type(state, in, "(TypeConstructorName I32)");
     test_end(state);
   }
 
@@ -481,7 +481,7 @@ static void test_parser_succeeds_type(test_state *state) {
     char *in = "(I32, I16)";
     test_start(state, in);
     test_parser_succeeds_on_type(
-      state, in, "((TypeConstructor I32), (TypeConstructor I16))");
+      state, in, "((TypeConstructorName I32), (TypeConstructorName I16))");
     test_end(state);
   }
 
@@ -489,7 +489,7 @@ static void test_parser_succeeds_type(test_state *state) {
     char *in = "(I32, I16)";
     test_start(state, in);
     test_parser_succeeds_on_type(
-      state, in, "((TypeConstructor I32), (TypeConstructor I16))");
+      state, in, "((TypeConstructorName I32), (TypeConstructorName I16))");
     test_end(state);
   }
 
@@ -502,7 +502,7 @@ static void test_parser_succeeds_root(test_state *state) {
 
     expected_output out = {.tag = STRING,
                            .str =
-                             "(Sig (TermName a) (Fn (()) (TypeConstructor I32)))\n"
+                             "(Sig (TermName a) (Fn (()) (TypeConstructorName I32)))\n"
                              "(Fun (TermName a) () (Body (Int 12)))"};
     test_parser_succeeds_on(state,
                             "(sig a (Fn () I32))\n"
@@ -546,7 +546,7 @@ static void test_parser_succeeds_declaration(test_state *state) {
     const char *input = "(data A () (Test))";
     expected_output out = {
       .tag = STRING,
-      .str = "(DataDecl (TypeConstructor A) (Type params: []) (DataConstructor Test))",
+      .str = "(DataDecl (TypeConstructorName A) (Type params: []) (DataConstructorName Test))",
     };
     test_parser_succeeds_on(state, input, out);
 

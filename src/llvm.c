@@ -1182,7 +1182,7 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
     case PT_EX_LIST:
     case PT_EX_STRING:
       printf("Typechecking %s nodes hasn't been implemented yet.\n",
-             parse_node_string(node.type));
+             parse_node_strings[node.type.all]);
       exit(1);
       break;
   }

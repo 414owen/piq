@@ -16,46 +16,9 @@ typedef enum {
   POP_TUP_BS,
 } print_action;
 
-parse_node_category parse_node_categories[] = {
-  [PT_ALL_EX_CALL] = PT_C_EXPRESSION,
-  [PT_ALL_EX_FN] = PT_C_EXPRESSION,
-  [PT_ALL_EX_FUN_BODY] = PT_C_EXPRESSION,
-  [PT_ALL_EX_IF] = PT_C_EXPRESSION,
-  [PT_ALL_EX_INT] = PT_C_EXPRESSION,
-  [PT_ALL_EX_LIST] = PT_C_EXPRESSION,
-  [PT_ALL_EX_STRING] = PT_C_EXPRESSION,
-  [PT_ALL_EX_TUP] = PT_C_EXPRESSION,
-  [PT_ALL_EX_AS] = PT_C_EXPRESSION,
-  [PT_ALL_EX_UNIT] = PT_C_EXPRESSION,
+VEC_DECL(print_action);
 
-  [PT_ALL_MULTI_UPPER_NAME] = PT_C_NONE,
-  [PT_ALL_MULTI_TYPE_PARAMS] = PT_C_NONE,
-  [PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL] = PT_C_NONE,
-  [PT_ALL_MULTI_DATA_CONSTRUCTORS] = PT_C_NONE,
-
-  [PT_ALL_PAT_WILDCARD] = PT_C_PATTERN,
-  [PT_ALL_PAT_TUP] = PT_C_PATTERN,
-  [PT_ALL_PAT_UNIT] = PT_C_PATTERN,
-  [PT_ALL_PAT_CONSTRUCTION] = PT_C_PATTERN,
-  [PT_ALL_PAT_STRING] = PT_C_PATTERN,
-  [PT_ALL_PAT_INT] = PT_C_PATTERN,
-  [PT_ALL_PAT_LIST] = PT_C_PATTERN,
-
-  [PT_ALL_STATEMENT_SIG] = PT_C_STATEMENT,
-  [PT_ALL_STATEMENT_FUN] = PT_C_STATEMENT,
-  [PT_ALL_STATEMENT_LET] = PT_C_STATEMENT,
-
-  [PT_ALL_TY_CONSTRUCTION] = PT_C_TYPE,
-  [PT_ALL_TY_LIST] = PT_C_TYPE,
-  [PT_ALL_TY_FN] = PT_C_TYPE,
-  [PT_ALL_TY_TUP] = PT_C_TYPE,
-  [PT_ALL_TY_UNIT] = PT_C_TYPE,
-};
-
-// the reason we have a `node.type.all` at all, and the
-// stable numbering, is so far basically because of this
-// function.
-tree_node_repr pt_subs_type_arr[] = {
+static const tree_node_repr pt_subs_type_arr[] = {
   [PT_ALL_LEN] = SUBS_NONE,
   [PT_ALL_EX_INT] = SUBS_NONE,
   [PT_ALL_MULTI_TERM_NAME] = SUBS_NONE,
@@ -101,136 +64,52 @@ tree_node_repr pt_subs_type_arr[] = {
   [PT_ALL_MULTI_TYPE_PARAMS] = SUBS_EXTERNAL,
 };
 
-VEC_DECL(print_action);
+const tree_node_repr *pt_subs_type = pt_subs_type_arr;
 
-const char *parse_node_string(parse_node_type type) {
-  const char *res = NULL;
-  switch (type.all) {
-    case PT_ALL_LEN:
-      res = "";
-      break;
-    case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME:
-      res = "DataConstructorName";
-      break;
-    case PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME:
-      res = "DataConstructorName";
-      break;
-    case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME:
-      res = "TypeConstructorName";
-      break;
-    case PT_ALL_MULTI_TYPE_PARAM_NAME:
-      res = "TypeParamName";
-      break;
-    case PT_ALL_TY_CONSTRUCTOR_NAME: {
-      res = "TName";
-      break;
-    }
-    case PT_ALL_TY_LOWER_NAME: {
-      res = "TVar";
-      break;
-    }
-    case PT_ALL_PAT_WILDCARD:
-      res = "Wildcard";
-      break;
-    case PT_ALL_STATEMENT_LET:
-      res = "Let";
-      break;
-    case PT_ALL_EX_TERM_NAME:
-      res = "Var";
-      break;
-    case PT_ALL_EX_UPPER_VAR:
-      res = "Constructor";
-      break;
-    case PT_ALL_EX_AS:
-      res = "Typed";
-      break;
-    case PT_ALL_EX_CALL:
-      res = "Call";
-      break;
-    case PT_ALL_TY_CONSTRUCTION:
-      res = "Construction";
-      break;
-    case PT_ALL_PAT_CONSTRUCTION:
-      res = "Construction";
-      break;
-    case PT_ALL_EX_FN:
-      res = "Fn";
-      break;
-    case PT_ALL_TY_FN:
-      res = "Fn type";
-      break;
-    case PT_ALL_EX_FUN_BODY:
-      res = "Fun body";
-      break;
-    case PT_ALL_STATEMENT_FUN:
-      res = "Fun";
-      break;
-    case PT_ALL_EX_IF:
-      res = "If";
-      break;
-    case PT_ALL_PAT_INT:
-      res = "Int";
-      break;
-    case PT_ALL_EX_INT:
-      res = "Int";
-      break;
-    case PT_ALL_PAT_LIST:
-      res = "List";
-      break;
-    case PT_ALL_EX_LIST:
-      res = "List";
-      break;
-    case PT_ALL_TY_LIST:
-      res = "List";
-      break;
-    case PT_ALL_MULTI_TERM_NAME:
-      res = "Lower name";
-      break;
-    case PT_ALL_STATEMENT_SIG:
-      res = "Sig";
-      break;
-    case PT_ALL_PAT_STRING:
-      res = "String";
-      break;
-    case PT_ALL_EX_STRING:
-      res = "String";
-      break;
-    case PT_ALL_PAT_TUP:
-      res = "Tuple";
-      break;
-    case PT_ALL_TY_TUP:
-      res = "Tuple";
-      break;
-    case PT_ALL_EX_TUP:
-      res = "Tuple";
-      break;
-    case PT_ALL_TY_UNIT:
-      res = "Unit";
-      break;
-    case PT_ALL_PAT_UNIT:
-      res = "Unit";
-      break;
-    case PT_ALL_EX_UNIT:
-      res = "Unit";
-      break;
-    case PT_ALL_MULTI_UPPER_NAME:
-      res = "Upper name";
-      break;
-    case PT_ALL_STATEMENT_DATA_DECLARATION:
-      res = "Data declaration";
-      break;
-    case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
-      res = "Data constructor";
-      break;
-    case PT_ALL_MULTI_TYPE_PARAMS:
-      res = "Type params";
-      break;
-    case PT_ALL_MULTI_DATA_CONSTRUCTORS:
-      res = "Data constructors";
-      break;
-  }
-  return res;
-}
+static const char *parse_node_strings_arr[] = {
+  [PT_ALL_LEN] = "",
+  [PT_ALL_PAT_DATA_CONSTRUCTOR_NAME] = "DataConstructorName",
+  [PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME] = "DataConstructorName",
+  [PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME] = "TypeConstructorName",
+  [PT_ALL_MULTI_TYPE_PARAM_NAME] = "TypeParamName",
+  [PT_ALL_TY_CONSTRUCTOR_NAME] = "TName",
+  [PT_ALL_TY_LOWER_NAME] = "TVar",
+  [PT_ALL_PAT_WILDCARD] = "Wildcard",
+  [PT_ALL_STATEMENT_LET] = "Let",
+  [PT_ALL_EX_TERM_NAME] = "TermName",
+  [PT_ALL_EX_UPPER_VAR] = "Constructor",
+  [PT_ALL_EX_AS] = "Typed",
+  [PT_ALL_EX_CALL] = "Call",
+  [PT_ALL_TY_CONSTRUCTION] = "Construction",
+  [PT_ALL_PAT_CONSTRUCTION] = "Construction",
+  [PT_ALL_EX_FN] = "Fn",
+  [PT_ALL_TY_FN] = "Fn type",
+  [PT_ALL_EX_FUN_BODY] = "Fun body",
+  [PT_ALL_STATEMENT_FUN] = "Fun",
+  [PT_ALL_EX_IF] = "If",
+  [PT_ALL_PAT_INT] = "Int",
+  [PT_ALL_EX_INT] = "Int",
+  [PT_ALL_PAT_LIST] = "List",
+  [PT_ALL_EX_LIST] = "List",
+  [PT_ALL_TY_LIST] = "List",
+  [PT_ALL_MULTI_TERM_NAME] = "Lower name",
+  [PT_ALL_STATEMENT_SIG] = "Sig",
+  [PT_ALL_PAT_STRING] = "String",
+  [PT_ALL_EX_STRING] = "String",
+  [PT_ALL_PAT_TUP] = "Tuple",
+  [PT_ALL_TY_TUP] = "Tuple",
+  [PT_ALL_EX_TUP] = "Tuple",
+  [PT_ALL_TY_UNIT] = "Unit",
+  [PT_ALL_PAT_UNIT] = "Unit",
+  [PT_ALL_EX_UNIT] = "Unit",
+  [PT_ALL_MULTI_UPPER_NAME] = "Upper name",
+  [PT_ALL_STATEMENT_DATA_DECLARATION] = "Data declaration",
+  [PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL] = "Data constructor",
+  [PT_ALL_MULTI_TYPE_PARAMS] = "Type params",
+  [PT_ALL_MULTI_DATA_CONSTRUCTORS] = "Data constructors",
+};
+
+const char **parse_node_strings = parse_node_strings_arr;
 
 typedef struct {
   vec_print_action actions;
@@ -286,7 +165,7 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
                            char *terminator, parse_node node) {
   fputs(prefix, s->out);
   bs_push(&s->in_tuple, is_tuple(node.type));
-  switch (pt_subs_type(node.type)) {
+  switch (pt_subs_type[node.type.all]) {
     case SUBS_NONE:
       break;
     case SUBS_ONE:
@@ -309,6 +188,29 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
 static void print_node(printer_state *s, node_ind_t node_ind) {
   parse_node node = s->tree.nodes[node_ind];
   switch (node.type.all) {
+    case PT_ALL_LEN:
+      // TODO impossible
+      break;
+    case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME: {
+      fprintf(
+        s->out, "(DataConstructorName %.*s)", node.span.len, s->input + node.span.start);
+      break;
+    }
+    case PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME: {
+      fprintf(
+        s->out, "(DataConstructorName %.*s)", node.span.len, s->input + node.span.start);
+      break;
+    }
+    case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME: {
+      fprintf(
+        s->out, "(TypeConstructorName %.*s)", node.span.len, s->input + node.span.start);
+      break;
+    }
+    case PT_ALL_MULTI_TYPE_PARAM_NAME: {
+      fprintf(
+        s->out, "(TypeParamName %.*s)", node.span.len, s->input + node.span.start);
+      break;
+    }
     case PT_ALL_STATEMENT_SIG: {
       print_compound(s, "(Sig ", " ", ")", node);
       break;
@@ -369,7 +271,7 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       break;
     case PT_ALL_TY_CONSTRUCTOR_NAME:
       fprintf(s->out,
-              "(TypeConstructor %.*s)",
+              "(TypeConstructorName %.*s)",
               node.span.len,
               s->input + node.span.start);
       break;
@@ -387,12 +289,10 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       fprintf(
         s->out, "(Wildcard %.*s)", node.span.len, s->input + node.span.start);
       break;
+    case PT_ALL_EX_TERM_NAME:
     case PT_ALL_MULTI_TERM_NAME:
       fprintf(
         s->out, "(TermName %.*s)", node.span.len, s->input + node.span.start);
-      break;
-    case PT_ALL_EX_TERM_NAME:
-      fprintf(s->out, "(Var %.*s)", node.span.len, s->input + node.span.start);
       break;
     case PT_ALL_EX_IF:
       print_compound(s, "(If ", " ", ")", node);
@@ -425,7 +325,7 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       print_compound(s, "", "", "", node);
       break;
     case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
-      print_compound(s, "(Data Constructor: ", ", ", ")", node);
+      print_compound(s, "", ", ", "", node);
       break;
     case PT_ALL_MULTI_TYPE_PARAMS:
       print_compound(s, "(Type params: [", ", ", "])", node);
@@ -625,7 +525,7 @@ pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
   }
 
   parse_node node = traversal->nodes[node_ind];
-  tree_node_repr repr = pt_subs_type(node.type);
+  tree_node_repr repr = pt_subs_type[node.type.all];
 
   res.data.node_index = node_ind;
   res.data.node = node;

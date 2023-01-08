@@ -207,7 +207,7 @@ typedef union {
 #define PT_AS_TYPE_IND(node) node.sub_a
 #define PT_AS_VAL_IND(node) node.sub_b
 
-const char *parse_node_string(parse_node_type type);
+const char **parse_node_strings;
 
 typedef struct {
   parse_node_type type;
@@ -265,7 +265,7 @@ char *print_parse_tree_error_string(const char *input, const token *tokens,
                                     const parse_tree_res pres);
 void free_parse_tree(parse_tree tree);
 void free_parse_tree_res(parse_tree_res res);
-tree_node_repr *pt_subs_type;
+const tree_node_repr *pt_subs_type;
 
 typedef enum {
   TR_PUSH_SCOPE_VAR,
