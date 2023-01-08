@@ -1182,7 +1182,7 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
     case PT_EX_LIST:
     case PT_EX_STRING:
       printf("Typechecking %s nodes hasn't been implemented yet.\n",
-             ps[rse_node_strings[no.all])e.type.all]);
+             parse_node_string(node.type));
       exit(1);
       break;
   }
@@ -1371,7 +1371,7 @@ static void cg_pattern(cg_state *state, cg_pattern_params params) {
     case PT_PAT_UNIT:
       break;
     case PT_PAT_CONSTRUCTION:
-    case PT_PAT_DATA_CONSTRUCTOR_NAME:
+    case PT_PAT_UPPER_NAME:
     case PT_PAT_LIST:
     case PT_PAT_INT:
     case PT_PAT_STRING:
@@ -1401,18 +1401,6 @@ static void init_llvm_builtins(cg_state *state) {
   }
 }
 
-static void cg_push_scope(cg_state *state, pt_trav_elem_data data) {
-  switch (data.node.type.binding) {
-    case PT_BIND_FUN:
-      
-      break;
-    case PT_BIND_LET:
-      break;
-    case PT_BIND_WILDCARD:
-      break;
-  }
-}
-
 static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
                            source_file source, parse_tree tree,
                            type_info types) {
@@ -1424,26 +1412,9 @@ static void cg_llvm_module(LLVMContextRef ctx, LLVMModuleRef mod,
   cg_state state = new_cg_state(ctx, mod, source, tree, types);
   init_llvm_builtins(&state);
 
-  pt_traversal traversal = pt_scoped_traverse(tree);
-  for (;;) {
-    pt_traverse_elem tr_elem = pt_scoped_traverse_next(&traversal);
-    switch (tr_elem.action) {
-      case TR_PUSH_SCOPE_VAR:
-        cg_push_scope(&state, tr_elem.data);
-        continue;
-      case TR_VISIT_IN:
-        continue;
-      case TR_POP_TO:
-        continue;
-      case TR_LINK_SIG:
-        continue;
-      case TR_END:
-        break;
-    }
-    break;
-  }
+  cg_block_recursive(&state, tree.root_subs_start, tree.root_subs_amt);
 
-  while (false) {
+  while (state.actions.len > 0) {
 
     // printf("Codegen action %d\n", action_num++);
     cg_action action;

@@ -152,7 +152,7 @@ void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root) {
       case PRINT_TYPE: {
         type node = types[action.type_ind];
         size_t stack_top = stack.len;
-        switch (node.all_tag) {
+        switch (node.check_tag) {
           case TC_VAR: {
             fprintf(f, "(TypeVar %d)", node.type_var);
             break;
@@ -179,7 +179,7 @@ void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root) {
             push_str(&stack, "]");
             break;
           default:
-            print_type_head(f, node.all_tag);
+            print_type_head(f, node.check_tag);
             break;
         }
         reverse_arbitrary(&VEC_DATA_PTR(&stack)[stack_top],

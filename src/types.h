@@ -55,7 +55,6 @@ typedef struct {
   union {
     type_tag tag;
     type_check_tag check_tag;
-    type_check_tag all_tag;
   };
   union {
     typevar type_var;
