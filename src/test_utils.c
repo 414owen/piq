@@ -35,8 +35,7 @@ static void run_join_tests(test_state *state) {
   test_group_start(state, "Join");
   {
     test_start(state, "Empty");
-    static const char *strs[0] = {};
-    test_join(state, strs, STATIC_LEN(strs), "");
+    test_join(state, NULL, 0, "");
     test_end(state);
   }
   {

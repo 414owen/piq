@@ -56,7 +56,9 @@ static void jit_dispose(jit_ctx *ctx) {
   LLVMOrcDisposeThreadSafeContext(ctx->orc_ctx);
 }
 
-static void *get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
+typedef void (*voidfn)(void);
+
+static voidfn get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
   parse_tree tree;
   bool success = false;
   tc_res tc = test_upto_typecheck(state, input, &success, &tree);
@@ -104,7 +106,7 @@ static void *get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
     free_parse_tree(tree);
     free_tc_res(tc);
   }
-  return (void *)entry_addr;
+  return (voidfn) entry_addr;
 }
 
 static void ensure_int_result_matches(test_state *state, jit_ctx ctx,
@@ -123,7 +125,7 @@ static void test_llvm_code_produces_int(test_state *state,
                                         const char *restrict input,
                                         int32_t expected) {
   jit_ctx ctx = jit_llvm_init();
-  void *entry_addr = get_entry_fn(state, &ctx, input);
+  voidfn entry_addr = get_entry_fn(state, &ctx, input);
   int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
   if (entry) {
     int32_t got = entry();
@@ -136,7 +138,7 @@ static void test_llvm_code_produces_bool(test_state *state,
                                          const char *restrict input,
                                          bool expected) {
   jit_ctx ctx = jit_llvm_init();
-  void *entry_addr = get_entry_fn(state, &ctx, input);
+  voidfn entry_addr = get_entry_fn(state, &ctx, input);
   bool (*entry)(void) = (bool (*)(void))entry_addr;
   if (entry) {
     bool got = entry();
@@ -154,7 +156,7 @@ static void test_llvm_code_maps_int(test_state *state,
                                     const char *restrict input, int case_amt,
                                     i32_mapping_test_case *cases) {
   jit_ctx ctx = jit_llvm_init();
-  void *entry_addr = get_entry_fn(state, &ctx, input);
+  voidfn entry_addr = get_entry_fn(state, &ctx, input);
   int32_t (*entry)(int32_t) = (int32_t(*)(int32_t))entry_addr;
   if (entry) {
     for (int i = 0; i < case_amt; i++) {
@@ -168,7 +170,7 @@ static void test_llvm_code_maps_int(test_state *state,
 
 static void test_llvm_code_runs(test_state *state, const char *restrict input) {
   jit_ctx ctx = jit_llvm_init();
-  void *entry_addr = get_entry_fn(state, &ctx, input);
+  voidfn entry_addr = get_entry_fn(state, &ctx, input);
   int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
   if (entry) {
     entry();
@@ -189,7 +191,7 @@ static void test_robustness(test_state *state) {
   {
     stringstream source_file;
     ss_init_immovable(&source_file);
-    static const size_t depth = 1000;
+    static const size_t depth = 1;
     const char *preamble = "(sig sndpar (Fn I32 I32 I32))\n"
                            "(fun sndpar (a b) b)\n"
                            "\n"

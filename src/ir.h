@@ -242,9 +242,6 @@ typedef struct {
 } ir_upper_name;
 
 typedef struct {
-} ir_sig;
-
-typedef struct {
   binding ir_let_binding;
   ir_expression ir_let_expression;
   ir_type_ind ir_let_type_ind;

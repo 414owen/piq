@@ -50,9 +50,6 @@ A language that does everything right
     * TODO should do same with AST?
   * CI enforces pleasing valgrind
   * Bunch of unit tests
-  * No C extensions
-    * Current exceptions (will replace eventually):
-      * `memmem`
   * Doesn't use recursion
     * Parsing: `LR(1)` grammar, state transition table compiled by `lemon`
     * Everything else recursive:
@@ -91,6 +88,7 @@ A language that does everything right
   (see types.h, parse_tree.h), that lets you support more cases in certain program stages.
   For example, when type checking, I have a T_VAR type, but when I'm doing codegen, I need to
   know what types I have, so my enum doesn't include that.
+* Wrap index types in structs to protect us from bad changes
 
 ## Thoughts on pointers
 
@@ -257,3 +255,11 @@ To lookup:
 * malloc_info
 * valgrind dhat
 * VTune
+* opt-viewer
+
+# Review of https://buttondown.email/hillelwayne/archive/microfeatures-id-like-to-see-in-more-languages/
+
+* Balanced string literals
+  * Use french quotes «because balanced is better»?
+  * Or maybe something recognizable, but balanced, like <"this">?
+* Main arguments are command line arguments: https://lobste.rs/s/ilmbgu/microfeatures_i_d_like_see_more_languages#c_l56bvw

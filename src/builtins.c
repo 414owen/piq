@@ -8,29 +8,6 @@
 #include <llvm-c/Analysis.h>
 #include <llvm-c/Target.h>
 
-enum {
-  bool_type_ind = 0,
-  u8_type_ind = 1,
-  u16_type_ind = 2,
-  u32_type_ind = 3,
-  u64_type_ind = 4,
-  i8_type_ind = 5,
-  i16_type_ind = 6,
-  i32_type_ind = 7,
-  i64_type_ind = 8,
-  string_type_ind = 9,
-
-  compare_i8s_type_ind = 10,
-  compare_i16s_type_ind = 11,
-  compare_i32s_type_ind = 12,
-  compare_i64s_type_ind = 13,
-
-  i8_arithmetic_type_ind = 14,
-  i16_arithmetic_type_ind = 15,
-  i32_arithmetic_type_ind = 16,
-  i64_arithmetic_type_ind = 17,
-};
-
 const char *builtin_type_names[] = {
   [bool_type_ind] = "Bool",
   [u8_type_ind] = "U8",
@@ -41,29 +18,6 @@ const char *builtin_type_names[] = {
   [i16_type_ind] = "I16",
   [i32_type_ind] = "I32",
   [i64_type_ind] = "I64",
-  [string_type_ind] = "String",
-};
-
-enum {
-  i8_arithmetic_fn_ind_start = builtin_term_amount + 0,
-  i16_arithmetic_fn_ind_start = builtin_term_amount + 3,
-  i32_arithmetic_fn_ind_start = builtin_term_amount + 6,
-  i64_arithmetic_fn_ind_start = builtin_term_amount + 9,
-
-  u8_arithmetic_fn_ind_start = builtin_term_amount + 12,
-  u16_arithmetic_fn_ind_start = builtin_term_amount + 15,
-  u32_arithmetic_fn_ind_start = builtin_term_amount + 18,
-  u64_arithmetic_fn_ind_start = builtin_term_amount + 21,
-
-  i8_predicate_fn_ind_start = builtin_term_amount + 24,
-  i16_predicate_fn_ind_start = builtin_term_amount + 27,
-  i32_predicate_fn_ind_start = builtin_term_amount + 30,
-  i64_predicate_fn_ind_start = builtin_term_amount + 33,
-
-  u8_predicate_fn_ind_start = builtin_term_amount + 36,
-  u16_predicate_fn_ind_start = builtin_term_amount + 39,
-  u32_predicate_fn_ind_start = builtin_term_amount + 42,
-  u64_predicate_fn_ind_start = builtin_term_amount + 45,
 
   derived_type_amount = builtin_term_amount + 48
 };

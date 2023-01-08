@@ -6,8 +6,8 @@
 // us to write functions that deal with all node types, without having to
 // understand the node types directly.
 typedef enum {
-  SUBS_EXTERNAL = -1,
-  SUBS_NONE = 0,
-  SUBS_ONE = 1,
-  SUBS_TWO = 2,
+  SUBS_NONE = 1,
+  SUBS_ONE = 2,
+  SUBS_TWO = 3,
+  SUBS_EXTERNAL = 4,
 } tree_node_repr;
