@@ -140,7 +140,8 @@ static void test_parser_succeeds_atomic(test_state *state) {
 
   {
     test_start(state, "Name");
-    test_parser_succeeds_on_form(state, "hello", expect_string("(TermName hello)"));
+    test_parser_succeeds_on_form(
+      state, "hello", expect_string("(TermName hello)"));
     test_end(state);
   }
 
@@ -290,7 +291,8 @@ static void test_call_succeeds(test_state *state) {
 
   {
     test_start(state, "No params");
-    test_parser_succeeds_on_form(state, "(a)", expect_string("(Call (TermName a))"));
+    test_parser_succeeds_on_form(
+      state, "(a)", expect_string("(Call (TermName a))"));
     test_end(state);
   }
 
@@ -369,7 +371,9 @@ static void test_parser_succeeds_compound(test_state *state) {
   {
     test_start(state, "Typed");
     test_parser_succeeds_on_form(
-      state, "(as I32 1)", expect_string("(As (TypeConstructorName I32) (Int 1))"));
+      state,
+      "(as I32 1)",
+      expect_string("(As (TypeConstructorName I32) (Int 1))"));
     test_end(state);
   }
 
@@ -500,10 +504,10 @@ static void test_parser_succeeds_root(test_state *state) {
   {
     test_start(state, "Sig and fun");
 
-    expected_output out = {.tag = STRING,
-                           .str =
-                             "(Sig (TermName a) (Fn (()) (TypeConstructorName I32)))\n"
-                             "(Fun (TermName a) () (Body (Int 12)))"};
+    expected_output out = {
+      .tag = STRING,
+      .str = "(Sig (TermName a) (Fn (()) (TypeConstructorName I32)))\n"
+             "(Fun (TermName a) () (Body (Int 12)))"};
     test_parser_succeeds_on(state,
                             "(sig a (Fn () I32))\n"
                             "(fun a (()) 12)",
@@ -546,7 +550,8 @@ static void test_parser_succeeds_declaration(test_state *state) {
     const char *input = "(data A () (Test))";
     expected_output out = {
       .tag = STRING,
-      .str = "(DataDecl (TypeConstructorName A) (Type params: []) (DataConstructorName Test))",
+      .str = "(DataDecl (TypeConstructorName A) (Type params: []) "
+             "(DataConstructorName Test))",
     };
     test_parser_succeeds_on(state, input, out);
 

@@ -35,7 +35,7 @@ typedef enum {
   PT_ALL_EX_INT,
   PT_ALL_EX_AS,
   PT_ALL_EX_TERM_NAME,
-  PT_ALL_EX_UPPER_VAR,
+  PT_ALL_EX_UPPER_NAME,
   PT_ALL_EX_LIST,
   PT_ALL_EX_STRING,
   PT_ALL_EX_TUP,
@@ -46,7 +46,6 @@ typedef enum {
   // Maybe the fact that these aren't "near" other
   // parse node categories' enums affects the switch output?
   PT_ALL_MULTI_TERM_NAME,
-  PT_ALL_MULTI_UPPER_NAME,
   PT_ALL_MULTI_TYPE_PARAMS,
   PT_ALL_MULTI_TYPE_PARAM_NAME,
   PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME,
@@ -74,7 +73,7 @@ typedef enum {
   PT_ALL_TY_FN,
   PT_ALL_TY_TUP,
   PT_ALL_TY_UNIT,
-  PT_ALL_TY_LOWER_NAME,
+  PT_ALL_TY_PARAM_NAME,
   PT_ALL_TY_CONSTRUCTOR_NAME,
 
   PT_ALL_LEN,
@@ -92,7 +91,7 @@ typedef enum {
   PT_EX_AS = PT_ALL_EX_AS,
   PT_EX_UNIT = PT_ALL_EX_UNIT,
   PT_EX_LOWER_VAR = PT_ALL_EX_TERM_NAME,
-  PT_EX_UPPER_VAR = PT_ALL_EX_UPPER_VAR,
+  PT_EX_UPPER_NAME = PT_ALL_EX_UPPER_NAME,
 } parse_node_expression_type;
 
 typedef enum {
@@ -103,7 +102,7 @@ typedef enum {
   PT_PAT_STRING = PT_ALL_PAT_STRING,
   PT_PAT_INT = PT_ALL_PAT_INT,
   PT_PAT_LIST = PT_ALL_PAT_LIST,
-  PT_PAT_UPPER_NAME = PT_ALL_MULTI_UPPER_NAME,
+  PT_PAT_DATA_CONSTRUCTOR_NAME = PT_ALL_PAT_DATA_CONSTRUCTOR_NAME,
 } parse_node_pattern_type;
 
 typedef enum {
@@ -119,7 +118,7 @@ typedef enum {
   PT_TY_FN = PT_ALL_TY_FN,
   PT_TY_TUP = PT_ALL_TY_TUP,
   PT_TY_UNIT = PT_ALL_TY_UNIT,
-  PT_TY_LOWER_NAME = PT_ALL_TY_LOWER_NAME,
+  PT_TY_PARAM_NAME = PT_ALL_TY_PARAM_NAME,
   PT_TY_CONSTRUCTOR_NAME = PT_ALL_TY_CONSTRUCTOR_NAME,
 } parse_node_type_type;
 

@@ -58,11 +58,7 @@ static void annotate_parse_tree(const parse_tree tree, type_builder *builder) {
 
 static void add_type_constraint(tc_constraint_builder *builder, type_ref a,
                                 type_ref b, node_ind_t provenance) {
-  tc_constraint constraint = {
-    .a = a,
-    .b = b,
-    .provenance = provenance
-  };
+  tc_constraint constraint = {.a = a, .b = b, .provenance = provenance};
   VEC_PUSH(&builder->constraints, constraint);
 }
 
@@ -85,6 +81,13 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
   const node_ind_t node_ind = elem.node_index;
   const type_ref our_type = generate_node_type(builder, node_ind);
   switch (node.type.all) {
+    case PT_ALL_LEN:
+      // TODO Impossible
+      break;
+    case PT_ALL_MULTI_TYPE_PARAM_NAME:
+    case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME:
+      // TODO
+      break;
     // The callee is a function whose parameters have the same type as
     // the call parameters, and that returns the same type as this call
     // expression
@@ -124,7 +127,9 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       stfree(fn_type_inds, sizeof(type_ref) * (num_params + 1));
       break;
     }
-    case PT_ALL_EX_UPPER_VAR:
+    case PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME:
+    case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME:
+    case PT_ALL_EX_UPPER_NAME:
     case PT_ALL_EX_TERM_NAME: {
       const type_ref target_type =
         VEC_GET(builder->environment, node.variable_index);
@@ -132,7 +137,7 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       break;
     }
     case PT_ALL_TY_CONSTRUCTOR_NAME:
-    case PT_ALL_TY_LOWER_NAME: {
+    case PT_ALL_TY_PARAM_NAME: {
       const type_ref target_type =
         VEC_GET(builder->type_environment, node.variable_index);
       add_type_constraint(builder, our_type, target_type, node_ind);
@@ -153,6 +158,7 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       const type_ref cond_type = generate_node_type(builder, cond_ind);
       const type_ref branch_b_type = generate_node_type(builder, branch_b_ind);
       const type_ref branch_a_type = generate_node_type(builder, branch_a_ind);
+      // TODO use bool_type_ind from buildins.h?
       const type_ref bool_type =
         mk_primitive_type(builder->type_builder, TC_BOOL);
       add_type_constraint(builder, cond_type, bool_type, node_ind);
@@ -162,6 +168,7 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
     }
     case PT_ALL_PAT_INT:
     case PT_ALL_EX_INT:
+      add_type_constraint(builder, our_type, any_int_type_ind, node_ind);
       break;
     case PT_ALL_EX_AS: {
       const node_ind_t expression_ind = PT_AS_VAL_IND(node);
@@ -199,8 +206,7 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
     }
     case PT_ALL_PAT_STRING:
     case PT_ALL_EX_STRING: {
-      const type_ref u8_type =
-        mk_primitive_type(builder->type_builder, TC_U8);
+      const type_ref u8_type = mk_primitive_type(builder->type_builder, TC_U8);
       const type_ref string_type =
         mk_type_inline(builder->type_builder, TC_LIST, u8_type, 0);
       add_type_constraint(builder, our_type, string_type, node_ind);
@@ -213,8 +219,8 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       const node_ind_t sub_b_ind = PT_TUP_SUB_B(node);
       const type_ref sub_a_type = generate_node_type(builder, sub_a_ind);
       const type_ref sub_b_type = generate_node_type(builder, sub_b_ind);
-      const type_ref tup_type = mk_type_inline(
-        builder->type_builder, TC_TUP, sub_a_type, sub_b_type);
+      const type_ref tup_type =
+        mk_type_inline(builder->type_builder, TC_TUP, sub_a_type, sub_b_type);
       add_type_constraint(builder, our_type, tup_type, node_ind);
       break;
     }
@@ -227,7 +233,6 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
       break;
     }
     case PT_ALL_PAT_WILDCARD:
-    case PT_ALL_MULTI_UPPER_NAME:
     case PT_ALL_MULTI_TERM_NAME: {
       // This isn't something we'll be checking
       break;
@@ -352,12 +357,6 @@ static tc_constraints_res generate_constraints(const parse_tree tree,
   return builder.constraints;
 }
 
-typedef enum {
-  U_SUCCESS,
-  U_CONFLICT,
-  U_INFINITE,
-} unification_result_tag;
-
 typedef struct {
   type_builder *types;
   vec_tc_constraint constraints;
@@ -386,36 +385,25 @@ static void unify_typevar(unification_state *state, typevar a, type_ref b_ind,
   VEC_DATA_PTR(&state->types->substitutions)[a] = b_ind;
 #ifdef DEBUG_TC
   printf("Typevar %d := ", a);
-  print_type(stdout, VEC_DATA_PTR(&state->types->types), VEC_DATA_PTR(&state->types->inds), b_ind);
+  print_type(stdout,
+             VEC_DATA_PTR(&state->types->types),
+             VEC_DATA_PTR(&state->types->inds),
+             b_ind);
   putc('\n', stdout);
   if (a < state->tree.node_amt) {
     if (b.check_tag == TC_VAR) {
       printf(RED "%s" RESET " := " RED "%s" RESET "\n",
-        parse_node_strings[state->tree.nodes[a].type.all],
-        parse_node_strings[state->tree.nodes[b.type_var].type.all]);
+             parse_node_strings[state->tree.nodes[a].type.all],
+             parse_node_strings[state->tree.nodes[b.type_var].type.all]);
     } else {
-      printf(RED "%s" RESET "\n", parse_node_strings[state->tree.nodes[a].type.all]);
+      printf(RED "%s" RESET "\n",
+             parse_node_strings[state->tree.nodes[a].type.all]);
     }
   }
 #endif
 }
 
-static void add_conflict(vec_tc_error *errs, tc_constraint c) {
-  tc_error err = {
-    .type = TC_ERR_CONFLICT,
-    .pos = c.provenance,
-    .conflict =
-      {
-        .expected_ind = c.a,
-        .got_ind = c.b,
-      },
-  };
-#ifdef DEBUG_TC
-  puts("Added conflict");
-#endif
-  VEC_PUSH(errs, err);
-}
-
+// Returns true if there was a substitution for 't'
 static bool get_substitute_layer(type_builder *types, typevar t,
                                  type_ref *res) {
   type_ref substitution_ind = VEC_GET(types->substitutions, t);
@@ -424,34 +412,208 @@ static bool get_substitute_layer(type_builder *types, typevar t,
   return substitution.check_tag != TC_VAR || substitution.type_var != t;
 }
 
+typedef struct {
+  type_ref target;
+  typevar last_typevar;
+} resolved_type;
+
 // This functions follows the substitution chain to the end
 // and also reduces any chains to chains of one
-static node_ind_t resolve_type(type_builder *types, type_ref root_ind) {
-  type_ref target = root_ind;
-  {
+static resolved_type resolve_type(type_builder *type_builder,
+                                  type_ref root_ind) {
+  vec_type_ref substitutions = type_builder->substitutions;
+  vec_type types = type_builder->types;
+
+  resolved_type res = {
+    .target = root_ind,
+    // when this is updated, all dependencies are also updated, as they still
+    // point here
+    .last_typevar = substitutions.len,
+  };
+
+  type_ref last_typevar_ref = types.len;
+  for (;;) {
+    type a = VEC_GET(types, res.target);
+    // printf("%d\n", res.target);
+    if (a.check_tag == TC_VAR) {
+      last_typevar_ref = res.target;
+      bool had_sub =
+        get_substitute_layer(type_builder, a.type_var, &res.target);
+      if (had_sub) {
+        continue;
+      }
+    }
+    // printf("end.\n");
+    break;
+  }
+
+  // this could be put in the loop instead of branched here
+  if (last_typevar_ref != types.len) {
+    res.last_typevar = VEC_GET(types, last_typevar_ref).type_var;
+    // redirect all type_var links to the last type_var in the chain
+    // making subsequent calls faster.
     type_ref type_ind = root_ind;
-    for (;;) {
-      type a = VEC_GET(types->types, type_ind);
-      if (a.tag == TC_VAR && get_substitute_layer(types, a.type_var, &target)) {
-        type_ind = target;
-      } else {
+    while (type_ind != last_typevar_ref) {
+      type a = VEC_GET(types, type_ind);
+      type_ind = VEC_GET(substitutions, a.type_var);
+      VEC_DATA_PTR(&substitutions)[a.type_var] = last_typevar_ref;
+    }
+  }
+
+  return res;
+}
+
+typedef struct {
+  tc_constraint original;
+
+  type_ref target_a;
+  type_ref target_b;
+
+  // if this points to target_a, then there was no var in the path
+  typevar last_type_var_a;
+  // if this points to target_b, then there was no var in the path;
+  typevar last_type_var_b;
+} tc_resolved_constraint;
+
+static void add_conflict(vec_tc_error *restrict errs,
+                         const tc_resolved_constraint *restrict c) {
+  tc_error err = {
+    .type = TC_ERR_CONFLICT,
+    .pos = c->original.provenance,
+    .conflict =
+      {
+        .expected_ind = c->target_a,
+        .got_ind = c->target_b,
+      },
+  };
+#ifdef DEBUG_TC
+  puts("Added conflict");
+#endif
+  VEC_PUSH(errs, err);
+}
+
+static tc_resolved_constraint tc_resolve_constraint(type_builder *types,
+                                                    tc_constraint constraint) {
+  resolved_type a = resolve_type(types, constraint.a);
+  resolved_type b = resolve_type(types, constraint.b);
+  tc_resolved_constraint res = {
+    .original = constraint,
+    .target_a = a.target,
+    .target_b = b.target,
+    .last_type_var_a = a.last_typevar,
+    .last_type_var_b = b.last_typevar,
+  };
+  return res;
+}
+
+// wrapper that only updates a type variable if it's valid
+// (meaning not equal to substitutions.len)
+static void update_typevar(type_builder *types, typevar t, type_ref val) {
+  if (t == types->substitutions.len) {
+    return;
+  }
+  VEC_DATA_PTR(&types->substitutions)[t] = val;
+}
+
+tc_constraint tc_swap_constraint(tc_constraint constraint) {
+  tc_constraint res = {
+    .a = constraint.b,
+    .b = constraint.a,
+    .provenance = constraint.provenance,
+  };
+  return res;
+}
+
+tc_resolved_constraint
+tc_swap_resolved_constraint(tc_resolved_constraint constraint) {
+  tc_resolved_constraint res = {
+    .original = tc_swap_constraint(constraint.original),
+    .target_a = constraint.target_b,
+    .target_b = constraint.target_a,
+    .last_type_var_a = constraint.last_type_var_b,
+    .last_type_var_b = constraint.last_type_var_a,
+  };
+  return res;
+}
+
+// preconditions:
+// * 'a' resolved to an OR
+// * 'b' did not resolve to a type variable
+// * One of `a` or `b` is traced to from a type variable
+//     (so that we can actually narrow down something)
+// * 'a' is an OR
+// * The subs of ORs are not typevars
+//     at the moment we just never construct one with typevars
+//     If we change this precondition, we'll need to resolve the subs
+static void ensure_subtype(unification_state *state,
+                           tc_resolved_constraint *constraint) {
+  type_builder *types = state->types;
+  type a = VEC_GET(types->types, constraint->target_a);
+  type b = VEC_GET(types->types, constraint->target_b);
+
+  type_ref substitution_amt = types->substitutions.len;
+  if (constraint->last_type_var_a == substitution_amt &&
+      constraint->last_type_var_b == substitution_amt) {
+    give_up("Tried to unify OR types, but didn't have "
+            "a type variable to notify of the result!\n"
+            "This might be fine, but I haven't yet proven "
+            "that the case is valid.");
+  }
+
+  if (b.check_tag == TC_OR) {
+    size_t intersection_amt = 0;
+    for (type_ref i = 0; i < a.sub_amt; i++) {
+      type_ref ref_a = VEC_GET(types->inds, a.subs_start + i);
+      for (type_ref j = 0; j < b.sub_amt; j++) {
+        type_ref ref_b = VEC_GET(types->inds, b.subs_start + j);
+        if (ref_a == ref_b) {
+          intersection_amt++;
+          break;
+        }
+      }
+    }
+    if (intersection_amt == 0) {
+      add_conflict(&state->errors, constraint);
+      return;
+    }
+    const size_t subs_bytes = sizeof(type_ref) * intersection_amt;
+    type_ref *subs = stalloc(subs_bytes);
+    type_ref sub_ind = 0;
+    for (type_ref i = 0; i < a.sub_amt; i++) {
+      type_ref ref_a = VEC_GET(types->inds, a.subs_start + i);
+      for (type_ref j = 0; j < b.sub_amt; j++) {
+        type_ref ref_b = VEC_GET(types->inds, b.subs_start + j);
+        if (ref_a == ref_b) {
+          subs[sub_ind++] = ref_a;
+          break;
+        }
+      }
+    }
+    type_ref intersection =
+      mk_type(state->types, TC_OR, subs, intersection_amt);
+    update_typevar(types, constraint->last_type_var_a, intersection);
+    update_typevar(types, constraint->last_type_var_b, intersection);
+    stfree(subs, subs_bytes);
+  } else {
+    bool updated = false;
+    for (type_ref i = 0; i < a.sub_amt; i++) {
+      type_ref sub_ind = VEC_GET(types->inds, a.subs_start + i);
+      if (sub_ind == constraint->target_b) {
+        update_typevar(types, constraint->last_type_var_a, sub_ind);
+        updated = true;
         break;
       }
     }
+    if (!updated) {
+      add_conflict(&state->errors, constraint);
+    }
   }
-  type_ref type_ind = root_ind;
-  while (type_ind != target) {
-    type a = VEC_GET(types->types, type_ind);
-    type_ind = VEC_GET(types->substitutions, a.type_var);
-    type_ref *sub = VEC_GET_PTR(types->substitutions, a.type_var);
-    *sub = target;
-  }
-  return target;
 }
 
 #ifdef DEBUG_TC
 static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
-                                      type_builder *type_builder, parse_tree tree) {
+                                      type_builder *type_builder,
+                                      parse_tree tree) {
   unification_state state = {
     .tree = tree,
     .errors = VEC_NEW,
@@ -468,39 +630,40 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
   };
 #endif
   while (state.constraints.len > 0) {
-    tc_constraint constraint;
-    VEC_POP(&state.constraints, &constraint);
-    constraint.a = resolve_type(type_builder, constraint.a);
-    constraint.b = resolve_type(type_builder, constraint.b);
-    type a = VEC_GET(type_builder->types, constraint.a);
-    type b = VEC_GET(type_builder->types, constraint.b);
+    tc_resolved_constraint constraint;
+    {
+      tc_constraint original_constraint;
+      VEC_POP(&state.constraints, &original_constraint);
+      constraint = tc_resolve_constraint(type_builder, original_constraint);
+    }
+    type a = VEC_GET(type_builder->types, constraint.target_a);
+    type b = VEC_GET(type_builder->types, constraint.target_b);
+
+    // switcheroos
+    if ((b.check_tag == TC_VAR && a.check_tag != TC_VAR) ||
+        (b.check_tag == TC_OR && a.check_tag != TC_OR &&
+         a.check_tag != TC_VAR)) {
+      tc_constraint new_constraint = tc_swap_constraint(constraint.original);
+      VEC_PUSH(&state.constraints, new_constraint);
+      continue;
+    }
+
 #ifdef DEBUG_TC
-    printf("solve: %d = %d\n", constraint.a, constraint.b);
+    printf("solve: %d = %d\n", constraint.target_a, constraint.target_b);
 #endif
 
-    // switcheroo
-    if (b.check_tag == TC_VAR && a.check_tag != TC_VAR) {
-      tc_constraint c = {
-        .a = constraint.b,
-        .b = constraint.a,
-        .provenance = constraint.provenance,
-      };
-      constraint = c;
-      type tmp = a;
-      a = b;
-      b = tmp;
-#ifdef DEBUG_TC
-      printf("solve: %d = %d\n", constraint.a, constraint.b);
-#endif
+    if (a.check_tag == TC_OR) {
+      ensure_subtype(&state, &constraint);
+      continue;
     }
 
     if (a.check_tag == TC_VAR) {
-      unify_typevar(&state, a.type_var, constraint.b, b);
+      unify_typevar(&state, a.type_var, constraint.target_b, b);
       continue;
     }
 
     if (a.check_tag != b.check_tag) {
-      add_conflict(&state.errors, constraint);
+      add_conflict(&state.errors, &constraint);
       continue;
     }
 
@@ -511,7 +674,7 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
         tc_constraint c = {
           .a = a.sub_b,
           .b = b.sub_b,
-          .provenance = constraint.provenance,
+          .provenance = constraint.original.provenance,
         };
         VEC_PUSH(&state.constraints, c);
         HEDLEY_FALL_THROUGH;
@@ -520,21 +683,21 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
         tc_constraint c = {
           .a = a.sub_a,
           .b = b.sub_a,
-          .provenance = constraint.provenance,
+          .provenance = constraint.original.provenance,
         };
         VEC_PUSH(&state.constraints, c);
         break;
       }
       case SUBS_EXTERNAL:
         if (a.sub_amt != b.sub_amt) {
-          add_conflict(&state.errors, constraint);
+          add_conflict(&state.errors, &constraint);
           break;
         }
         for (type_ref i = 0; i < a.sub_amt; i++) {
           tc_constraint c = {
             .a = VEC_GET(state.types->inds, a.subs_start + i),
             .b = VEC_GET(state.types->inds, b.subs_start + i),
-            .provenance = constraint.provenance,
+            .provenance = constraint.original.provenance,
           };
           VEC_PUSH(&state.constraints, c);
         }
@@ -600,7 +763,8 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
         } else {
           type_ref sub_a;
           VEC_POP(&return_stack, &sub_a);
-          VEC_PUSH(&return_stack, mk_type_inline(builder, t.check_tag, sub_a, 0));
+          VEC_PUSH(&return_stack,
+                   mk_type_inline(builder, t.check_tag, sub_a, 0));
         }
         break;
       }

@@ -6,6 +6,31 @@
 #include <llvm-c/Analysis.h>
 #include <llvm-c/Target.h>
 
+enum {
+  bool_type_ind = 0,
+  u8_type_ind = 1,
+  u16_type_ind = 2,
+  u32_type_ind = 3,
+  u64_type_ind = 4,
+  i8_type_ind = 5,
+  i16_type_ind = 6,
+  i32_type_ind = 7,
+  i64_type_ind = 8,
+  string_type_ind = 9,
+
+  compare_i8s_type_ind = 10,
+  compare_i16s_type_ind = 11,
+  compare_i32s_type_ind = 12,
+  compare_i64s_type_ind = 13,
+
+  i8_arithmetic_type_ind = 14,
+  i16_arithmetic_type_ind = 15,
+  i32_arithmetic_type_ind = 16,
+  i64_arithmetic_type_ind = 17,
+
+  any_int_type_ind = 18,
+};
+
 typedef enum {
   true_builtin = 0,
   false_builtin = 1,

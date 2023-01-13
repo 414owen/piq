@@ -22,12 +22,11 @@ static const tree_node_repr pt_subs_type_arr[] = {
   [PT_ALL_LEN] = SUBS_NONE,
   [PT_ALL_EX_INT] = SUBS_NONE,
   [PT_ALL_MULTI_TERM_NAME] = SUBS_NONE,
-  [PT_ALL_MULTI_UPPER_NAME] = SUBS_NONE,
   [PT_ALL_MULTI_TYPE_PARAM_NAME] = SUBS_NONE,
   [PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME] = SUBS_NONE,
   [PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME] = SUBS_NONE,
   [PT_ALL_EX_TERM_NAME] = SUBS_NONE,
-  [PT_ALL_EX_UPPER_VAR] = SUBS_NONE,
+  [PT_ALL_EX_UPPER_NAME] = SUBS_NONE,
   [PT_ALL_EX_STRING] = SUBS_NONE,
   [PT_ALL_EX_UNIT] = SUBS_NONE,
   [PT_ALL_PAT_WILDCARD] = SUBS_NONE,
@@ -38,7 +37,7 @@ static const tree_node_repr pt_subs_type_arr[] = {
   [PT_ALL_PAT_DATA_CONSTRUCTOR_NAME] = SUBS_NONE,
   [PT_ALL_TY_UNIT] = SUBS_NONE,
   [PT_ALL_TY_CONSTRUCTOR_NAME] = SUBS_NONE,
-  [PT_ALL_TY_LOWER_NAME] = SUBS_NONE,
+  [PT_ALL_TY_PARAM_NAME] = SUBS_NONE,
 
   [PT_ALL_TY_LIST] = SUBS_ONE,
 
@@ -73,11 +72,11 @@ static const char *parse_node_strings_arr[] = {
   [PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME] = "TypeConstructorName",
   [PT_ALL_MULTI_TYPE_PARAM_NAME] = "TypeParamName",
   [PT_ALL_TY_CONSTRUCTOR_NAME] = "TName",
-  [PT_ALL_TY_LOWER_NAME] = "TVar",
+  [PT_ALL_TY_PARAM_NAME] = "TVar",
   [PT_ALL_PAT_WILDCARD] = "Wildcard",
   [PT_ALL_STATEMENT_LET] = "Let",
   [PT_ALL_EX_TERM_NAME] = "TermName",
-  [PT_ALL_EX_UPPER_VAR] = "Constructor",
+  [PT_ALL_EX_UPPER_NAME] = "Constructor",
   [PT_ALL_EX_AS] = "Typed",
   [PT_ALL_EX_CALL] = "Call",
   [PT_ALL_TY_CONSTRUCTION] = "Construction",
@@ -99,10 +98,9 @@ static const char *parse_node_strings_arr[] = {
   [PT_ALL_PAT_TUP] = "Tuple",
   [PT_ALL_TY_TUP] = "Tuple",
   [PT_ALL_EX_TUP] = "Tuple",
-  [PT_ALL_TY_UNIT] = "Unit",
-  [PT_ALL_PAT_UNIT] = "Unit",
-  [PT_ALL_EX_UNIT] = "Unit",
-  [PT_ALL_MULTI_UPPER_NAME] = "Upper name",
+  [PT_ALL_TY_UNIT] = "UnitType",
+  [PT_ALL_PAT_UNIT] = "UnitPattern",
+  [PT_ALL_EX_UNIT] = "UnitExpression",
   [PT_ALL_STATEMENT_DATA_DECLARATION] = "Data declaration",
   [PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL] = "Data constructor",
   [PT_ALL_MULTI_TYPE_PARAMS] = "Type params",
@@ -192,23 +190,31 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       // TODO impossible
       break;
     case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME: {
-      fprintf(
-        s->out, "(DataConstructorName %.*s)", node.span.len, s->input + node.span.start);
+      fprintf(s->out,
+              "(DataConstructorName %.*s)",
+              node.span.len,
+              s->input + node.span.start);
       break;
     }
     case PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME: {
-      fprintf(
-        s->out, "(DataConstructorName %.*s)", node.span.len, s->input + node.span.start);
+      fprintf(s->out,
+              "(DataConstructorName %.*s)",
+              node.span.len,
+              s->input + node.span.start);
       break;
     }
     case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME: {
-      fprintf(
-        s->out, "(TypeConstructorName %.*s)", node.span.len, s->input + node.span.start);
+      fprintf(s->out,
+              "(TypeConstructorName %.*s)",
+              node.span.len,
+              s->input + node.span.start);
       break;
     }
     case PT_ALL_MULTI_TYPE_PARAM_NAME: {
-      fprintf(
-        s->out, "(TypeParamName %.*s)", node.span.len, s->input + node.span.start);
+      fprintf(s->out,
+              "(TypeParamName %.*s)",
+              node.span.len,
+              s->input + node.span.start);
       break;
     }
     case PT_ALL_STATEMENT_SIG: {
@@ -265,7 +271,7 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
     case PT_ALL_EX_INT:
       fprintf(s->out, "(Int %.*s)", node.span.len, s->input + node.span.start);
       break;
-    case PT_ALL_TY_LOWER_NAME:
+    case PT_ALL_TY_PARAM_NAME:
       fprintf(
         s->out, "(TypeVar %.*s)", node.span.len, s->input + node.span.start);
       break;
@@ -275,15 +281,11 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
               node.span.len,
               s->input + node.span.start);
       break;
-    case PT_ALL_EX_UPPER_VAR:
+    case PT_ALL_EX_UPPER_NAME:
       fprintf(s->out,
               "(Constructor %.*s)",
               node.span.len,
               s->input + node.span.start);
-      break;
-    case PT_ALL_MULTI_UPPER_NAME:
-      fprintf(
-        s->out, "(Uname %.*s)", node.span.len, s->input + node.span.start);
       break;
     case PT_ALL_PAT_WILDCARD:
       fprintf(
@@ -465,7 +467,7 @@ static void pt_scoped_traverse_push_letrec(pt_traversal *traversal,
   for (node_ind_t i = 0; i < amount; i++) {
     const node_ind_t node_ind = traversal->inds[start + i];
     const parse_node node = traversal->nodes[node_ind];
-    if (node.type.statement == PT_ALL_STATEMENT_SIG) {
+    if (node.type.statement == PT_STATEMENT_SIG) {
       continue;
     }
     VEC_PUSH(&traversal->node_stack, node_ind);
@@ -618,13 +620,13 @@ static void precalculate_scope_visit(scope_calculator_state *state) {
   parse_node node = state->elem.data.node;
   scope scope;
   switch (node.type.all) {
-    case PT_ALL_TY_LOWER_NAME:
+    case PT_ALL_TY_PARAM_NAME:
     case PT_ALL_TY_CONSTRUCTOR_NAME: {
       scope = state->type_environment;
       break;
     }
     case PT_ALL_EX_TERM_NAME:
-    case PT_ALL_EX_UPPER_VAR: {
+    case PT_ALL_EX_UPPER_NAME: {
       scope = state->environment;
       break;
     }

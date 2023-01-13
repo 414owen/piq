@@ -157,6 +157,15 @@ void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root) {
             fprintf(f, "(TypeVar %d)", node.type_var);
             break;
           }
+          case TC_OR:
+            fputs("(OR ", f);
+            push_node(&stack, T_OR_SUB_IND(inds, node, 0));
+            for (node_ind_t i = 1; i < T_OR_SUB_AMT(node); i++) {
+              push_str(&stack, ", ");
+              push_node(&stack, T_OR_SUB_IND(inds, node, i));
+            }
+            push_str(&stack, ")");
+            break;
           case TC_FN:
             fputs("(Fn ", f);
             for (node_ind_t i = 0; i < T_FN_PARAM_AMT(node); i++) {

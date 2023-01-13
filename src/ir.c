@@ -118,7 +118,7 @@ ir_module build_module(parse_tree tree, type_info types) {
             build_res.pattern.ir_pattern_tag = IR_PAT_UNIT;
             break;
           }
-          case PT_PAT_UPPER_NAME: {
+          case PT_PAT_DATA_CONSTRUCTOR_NAME: {
             build_res.pattern.ir_pattern_tag = IR_PAT_UNIT;
             UNIMPLEMENTED("Lowering constructors in patterns");
             break;

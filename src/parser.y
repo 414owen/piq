@@ -337,7 +337,7 @@ expression(RES) ::= lower_name_node(A). {
 }
 
 expression(RES) ::= upper_name_node(A). {
-  A.type.expression = PT_EX_UPPER_VAR;
+  A.type.expression = PT_EX_UPPER_NAME;
   RES = push_node(s, A);
 }
 
@@ -628,7 +628,7 @@ pattern_in_parens(RES) ::= pattern_tuple(A). {
 pattern_construction(RES) ::= upper_name_node(A) patterns(B). {
   BREAK_PARSER;
   node_ind_t start = s->inds.len;
-  A.type.pattern = PT_ALL_PAT_DATA_CONSTRUCTOR_NAME;
+  A.type.pattern = PT_PAT_DATA_CONSTRUCTOR_NAME;
   VEC_PUSH(&s->inds, push_node(s, A));
   VEC_APPEND(&s->inds, B, &VEC_DATA_PTR(&s->ind_stack)[s->ind_stack.len - B]);
   VEC_POP_N(&s->ind_stack, B);
