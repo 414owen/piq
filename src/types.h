@@ -86,8 +86,11 @@ typedef struct {
 } types;
 
 #define T_FN_PARAM_AMT(node) ((node).sub_amt - 1)
-#define T_FN_PARAM_IND(inds, node, i) inds[(node).subs_start + i]
-#define T_FN_RET_IND(inds, node) inds[(node).subs_start + (node).sub_amt - 1]
+#define T_FN_PARAM_IND(inds, node, i) (inds)[(node).subs_start + i]
+#define T_FN_RET_IND(inds, node) (inds)[(node).subs_start + (node).sub_amt - 1]
+
+#define T_OR_SUB_AMT(node) ((node).sub_amt)
+#define T_OR_SUB_IND(inds, node, i) (inds)[(node).subs_start + i]
 
 #define T_LIST_SUB_IND(node) node.sub_a
 #define T_TUP_SUB_AMT(node) 2
@@ -102,11 +105,11 @@ char *print_type_str(type *types, node_ind_t *inds, node_ind_t root);
 void print_type_head_placeholders(FILE *f, type_check_tag head);
 
 node_ind_t find_primitive_type(type_builder *tb, type_check_tag tag);
-node_ind_t find_type(type_builder *tb, type_check_tag tag, const node_ind_t *subs,
-                     node_ind_t sub_amt);
+node_ind_t find_type(type_builder *tb, type_check_tag tag,
+                     const node_ind_t *subs, node_ind_t sub_amt);
 node_ind_t mk_primitive_type(type_builder *tb, type_check_tag tag);
-node_ind_t mk_type_inline(type_builder *tb, type_check_tag tag, node_ind_t sub_a,
-                          node_ind_t sub_b);
+node_ind_t mk_type_inline(type_builder *tb, type_check_tag tag,
+                          node_ind_t sub_a, node_ind_t sub_b);
 node_ind_t mk_type(type_builder *tb, type_check_tag tag, const node_ind_t *subs,
                    node_ind_t sub_amt);
 node_ind_t mk_type_var(type_builder *tb, typevar value);

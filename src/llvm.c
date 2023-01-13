@@ -1120,7 +1120,7 @@ static void cg_expression(cg_state *state, cg_expr_params params) {
       break;
     }
     case PT_EX_LOWER_VAR:
-    case PT_EX_UPPER_VAR: {
+    case PT_EX_UPPER_NAME: {
       node_ind_t ind = node.variable_index;
       debug_assert(ind != state->env_bnds.len);
       lang_value val = get_env(state, ind);
@@ -1371,7 +1371,7 @@ static void cg_pattern(cg_state *state, cg_pattern_params params) {
     case PT_PAT_UNIT:
       break;
     case PT_PAT_CONSTRUCTION:
-    case PT_PAT_UPPER_NAME:
+    case PT_PAT_DATA_CONSTRUCTOR_NAME:
     case PT_PAT_LIST:
     case PT_PAT_INT:
     case PT_PAT_STRING:

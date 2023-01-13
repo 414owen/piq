@@ -8,43 +8,21 @@
 #include <llvm-c/Analysis.h>
 #include <llvm-c/Target.h>
 
-enum {
-  bool_type_ind = 0,
-  u8_type_ind = 1,
-  u16_type_ind = 2,
-  u32_type_ind = 3,
-  u64_type_ind = 4,
-  i8_type_ind = 5,
-  i16_type_ind = 6,
-  i32_type_ind = 7,
-  i64_type_ind = 8,
-  string_type_ind = 9,
-
-  compare_i8s_type_ind = 10,
-  compare_i16s_type_ind = 11,
-  compare_i32s_type_ind = 12,
-  compare_i64s_type_ind = 13,
-
-  i8_arithmetic_type_ind = 14,
-  i16_arithmetic_type_ind = 15,
-  i32_arithmetic_type_ind = 16,
-  i64_arithmetic_type_ind = 17,
-};
-
 const char *builtin_type_names[] = {
   [bool_type_ind] = "Bool",
   [u8_type_ind] = "U8",
   [u16_type_ind] = "U16",
-  [u32_type_ind] = "U32",
   [u64_type_ind] = "U64",
   [i8_type_ind] = "I8",
   [i16_type_ind] = "I16",
+  [u32_type_ind] = "U32",
   [i32_type_ind] = "I32",
   [i64_type_ind] = "I64",
   [string_type_ind] = "String",
 };
 
 enum {
+  // index into the type indices array
   i8_arithmetic_fn_ind_start = builtin_term_amount + 0,
   i16_arithmetic_fn_ind_start = builtin_term_amount + 3,
   i32_arithmetic_fn_ind_start = builtin_term_amount + 6,
@@ -65,7 +43,9 @@ enum {
   u32_predicate_fn_ind_start = builtin_term_amount + 42,
   u64_predicate_fn_ind_start = builtin_term_amount + 45,
 
-  derived_type_amount = builtin_term_amount + 48
+  any_int_type_ind_start = builtin_term_amount + 48,
+
+  derived_type_amount = builtin_term_amount + 56
 };
 
 const node_ind_t named_builtin_type_amount = STATIC_LEN(builtin_type_names);
@@ -186,6 +166,14 @@ const type builtin_types[] = {
       .tag = T_FN,
       .subs_start = i64_arithmetic_fn_ind_start,
       .sub_amt = 3,
+    },
+
+  [any_int_type_ind] =
+    {
+      .check_tag = TC_OR,
+      .subs_start = any_int_type_ind_start,
+      // signed and usigned 8, 16, 32, and 64 bits
+      .sub_amt = 8,
     },
 };
 
@@ -359,4 +347,13 @@ const node_ind_t builtin_type_inds[builtin_type_ind_amount_enum] = {
   [u64_predicate_fn_ind_start + 0] = u64_type_ind,
   [u64_predicate_fn_ind_start + 1] = u64_type_ind,
   [u64_predicate_fn_ind_start + 2] = bool_type_ind,
+
+  [any_int_type_ind_start + 0] = i8_type_ind,
+  [any_int_type_ind_start + 1] = i16_type_ind,
+  [any_int_type_ind_start + 2] = i32_type_ind,
+  [any_int_type_ind_start + 3] = i64_type_ind,
+  [any_int_type_ind_start + 4] = u8_type_ind,
+  [any_int_type_ind_start + 5] = u16_type_ind,
+  [any_int_type_ind_start + 6] = u32_type_ind,
+  [any_int_type_ind_start + 7] = u64_type_ind,
 };

@@ -106,7 +106,7 @@ static voidfn get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
     free_parse_tree(tree);
     free_tc_res(tc);
   }
-  return (voidfn) entry_addr;
+  return (voidfn)entry_addr;
 }
 
 static void ensure_int_result_matches(test_state *state, jit_ctx ctx,

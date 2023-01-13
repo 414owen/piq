@@ -101,7 +101,7 @@ void debug_vec_get(vec_void *vec, VEC_LEN_T ind);
 void __vec_push(vec_void *vec, void *el, size_t elemsize);
 #define VEC_PUSH(vec, el)                                                      \
   {                                                                            \
-    debug_assert(VEC_ELSIZE(vec) == sizeof(el));        \
+    debug_assert(VEC_ELSIZE(vec) == sizeof(el));                               \
     __typeof__(el) __el = el;                                                  \
     __vec_push((vec_void *)vec, (void *)&__el, sizeof(el));                    \
   }
@@ -149,28 +149,26 @@ void __vec_pop_n(vec_void *vec, VEC_LEN_T n);
 void __vec_clone(vec_void *dest, vec_void *src, size_t elemsize);
 #define VEC_CLONE(dest, src)                                                   \
   {                                                                            \
-    debug_assert(VEC_ELSIZE(dest) == sizeof((src)->data[0]));           \
-    __vec_clone(                                                               \
-      (vec_void *)(dest), (vec_void *)(src), VEC_ELSIZE(src));          \
+    debug_assert(VEC_ELSIZE(dest) == sizeof((src)->data[0]));                  \
+    __vec_clone((vec_void *)(dest), (vec_void *)(src), VEC_ELSIZE(src));       \
   }
 
 char *__vec_finalize(vec_void *vec, size_t elemsize);
 
 // returns minimum heap-allocated buffer
 #define VEC_FINALIZE(vec)                                                      \
-  (__typeof__(*(vec.data)))__vec_finalize((vec_void *)vec,                     \
-                                          VEC_ELSIZE(vec))
+  (__typeof__(*(vec.data)))__vec_finalize((vec_void *)vec, VEC_ELSIZE(vec))
 
 void __vec_append(vec_void *vec, void *els, VEC_LEN_T amt, size_t elemsize);
 
 #define VEC_APPEND(vec, amt, els)                                              \
   {                                                                            \
-    debug_assert(VEC_ELSIZE(vec) == sizeof((els)[0]));                  \
+    debug_assert(VEC_ELSIZE(vec) == sizeof((els)[0]));                         \
     debug_assert(amt == 0 || els != NULL);                                     \
     __vec_append((vec_void *)vec, (void *)(els), amt, sizeof((els)[0]));       \
   }
 
-#define VEC_REVERSE(vec) \
+#define VEC_REVERSE(vec)                                                       \
   reverse_arbitrary(VEC_DATA_PTR(vec), (vec)->len, VEC_ELSIZE(vec))
 
 void __vec_append_reverse(vec_void *vec, void *els, VEC_LEN_T amt,
@@ -178,7 +176,7 @@ void __vec_append_reverse(vec_void *vec, void *els, VEC_LEN_T amt,
 
 #define VEC_APPEND_REVERSE(vec, amt, els)                                      \
   {                                                                            \
-    debug_assert(VEC_ELSIZE(vec) == sizeof((els)[0]));                  \
+    debug_assert(VEC_ELSIZE(vec) == sizeof((els)[0]));                         \
     debug_assert(amt == 0 || els != NULL);                                     \
     __vec_append_reverse(                                                      \
       (vec_void *)vec, (void *)(els), amt, sizeof((els)[0]));                  \
@@ -191,7 +189,7 @@ void __vec_replicate(vec_void *vec, void *el, VEC_LEN_T amt, size_t elemsize);
 // appends el to vec amt times
 #define VEC_REPLICATE(vec, amt, el)                                            \
   {                                                                            \
-    debug_assert(VEC_ELSIZE(vec) == sizeof(el));                        \
+    debug_assert(VEC_ELSIZE(vec) == sizeof(el));                               \
     __typeof__(el) __el = el;                                                  \
     __vec_replicate((vec_void *)vec, (void *)&__el, amt, sizeof(el));          \
   }
