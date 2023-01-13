@@ -158,10 +158,10 @@ void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root) {
             break;
           }
           case TC_OR:
-            fputs("(OR ", f);
+            fputs("(", f);
             push_node(&stack, T_OR_SUB_IND(inds, node, 0));
             for (node_ind_t i = 1; i < T_OR_SUB_AMT(node); i++) {
-              push_str(&stack, ", ");
+              push_str(&stack, " or ");
               push_node(&stack, T_OR_SUB_IND(inds, node, i));
             }
             push_str(&stack, ")");
