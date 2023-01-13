@@ -88,7 +88,7 @@ void test_start_internal(test_state *state, const char *name) {
 }
 
 void test_end_internal(test_state *state) {
-  printf("%s" RESET "\n", state->current_failed ? RED "❌" : GRN "✓");
+  printf("%s" RESET "\n", state->current_failed ? RED "✕" : GRN "✓");
   if (!state->current_failed)
     state->tests_passed++;
   state->tests_run++;
