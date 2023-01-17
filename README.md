@@ -89,6 +89,8 @@ A language that does everything right
   For example, when type checking, I have a T_VAR type, but when I'm doing codegen, I need to
   know what types I have, so my enum doesn't include that.
 * Wrap index types in structs to protect us from bad changes
+* Precalculate stack depth in binding resolution or its own step, then use arrays instead of vectors
+  in other traversals
 
 ## Thoughts on pointers
 
