@@ -86,21 +86,22 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/parse_tree.c | src/parser.h |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/repl.c       | src/parser.h |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/tokenizer.c  | src/parser.h |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/bitset.c      |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/consts.c      |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/diagnostic.c  |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/dir_exists.c  |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/mkdir_p.c     |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/scope.c       |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/span.c        |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/strint.c      |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/typecheck.c   |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/type.c        |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/util.c        |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/vec.c         |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/llvm.c        |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/types.c       |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/llvm_shim.cpp |> ^j^ $CXX -O2 $(CXXFLAGS) -c -o %o %f |> %B.o
+: src/bitset.c              |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/consts.c              |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/diagnostic.c          |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/dir_exists.c          |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/mkdir_p.c             |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/scope.c               |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/span.c                |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/strint.c              |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/typecheck.c           |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/type.c                |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/util.c                |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/vec.c                 |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/llvm.c                |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/types.c               |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/llvm/construct_type.c |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/llvm_shim.cpp         |> ^j^ $CXX -O2 $(CXXFLAGS) -c -o %o %f |> %B.o
 
 : src/test_llvm.c      | src/parser.h |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_parser.c    | src/parser.h |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
