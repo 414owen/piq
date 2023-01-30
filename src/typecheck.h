@@ -50,10 +50,7 @@ typedef struct {
 VEC_DECL(tc_error);
 
 typedef struct {
-  // all the types
-  type *types;
-  // type sub-indices
-  type_ref *type_inds;
+  type_tree tree;
   // index into types, one per parse_node
   type_ref *node_types;
   type_ref type_amt;

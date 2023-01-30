@@ -81,9 +81,9 @@ typedef struct {
 } type_builder;
 
 typedef struct {
-  type *types;
+  type *nodes;
   type_ref *inds;
-} types;
+} type_tree;
 
 #define T_FN_PARAM_AMT(node) ((node).sub_amt - 1)
 #define T_FN_PARAM_IND(inds, node, i) (inds)[(node).subs_start + i]

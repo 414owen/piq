@@ -13,6 +13,8 @@
 
 #define node_ind_t buf_ind_t
 
+VEC_DECL_CUSTOM(node_ind_t, vec_node_ind);
+
 typedef enum {
   PT_C_NONE,
   PT_C_EXPRESSION,
@@ -234,7 +236,6 @@ typedef struct {
 } parse_node;
 
 VEC_DECL(parse_node);
-VEC_DECL_CUSTOM(node_ind_t, vec_node_ind);
 
 typedef struct {
   parse_node *nodes;
@@ -290,15 +291,19 @@ typedef struct {
   };
 } pt_traversal;
 
+typedef struct {
+  node_ind_t node_index;
+  parse_node node;
+} traversal_node_data;
+
+typedef struct {
+  node_ind_t sig_index;
+  node_ind_t linked_index;
+} traversal_link_sig_data;
+
 typedef union {
-  struct {
-    node_ind_t node_index;
-    parse_node node;
-  };
-  struct {
-    node_ind_t sig_index;
-    node_ind_t linked_index;
-  };
+  traversal_node_data node_data;
+  traversal_link_sig_data link_sig_data;
   node_ind_t new_environment_amount;
 } pt_trav_elem_data;
 
