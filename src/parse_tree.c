@@ -6,6 +6,7 @@
 #include "builtins.h"
 #include "parse_tree.h"
 #include "scope.h"
+#include "traverse.h"
 #include "util.h"
 #include "vec.h"
 
@@ -108,6 +109,54 @@ static const char *parse_node_strings_arr[] = {
 };
 
 const char **parse_node_strings = parse_node_strings_arr;
+
+static const parse_node_category parse_node_categories_arr[] = {
+  [PT_ALL_EX_AS] = PT_C_EXPRESSION,
+  [PT_ALL_EX_CALL] = PT_C_EXPRESSION,
+  [PT_ALL_EX_FN] = PT_C_EXPRESSION,
+  [PT_ALL_EX_FUN_BODY] = PT_C_EXPRESSION,
+  [PT_ALL_EX_IF] = PT_C_EXPRESSION,
+  [PT_ALL_EX_INT] = PT_C_EXPRESSION,
+  [PT_ALL_EX_LIST] = PT_C_EXPRESSION,
+  [PT_ALL_EX_STRING] = PT_C_EXPRESSION,
+  [PT_ALL_EX_TERM_NAME] = PT_C_EXPRESSION,
+  [PT_ALL_EX_TUP] = PT_C_EXPRESSION,
+  [PT_ALL_EX_UNIT] = PT_C_EXPRESSION,
+  [PT_ALL_EX_UPPER_NAME] = PT_C_EXPRESSION,
+
+  [PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL] = PT_C_NONE,
+  [PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME] = PT_C_NONE,
+  [PT_ALL_MULTI_DATA_CONSTRUCTORS] = PT_C_NONE,
+  [PT_ALL_MULTI_TERM_NAME] = PT_C_NONE,
+  [PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME] = PT_C_NONE,
+  [PT_ALL_MULTI_TYPE_PARAM_NAME] = PT_C_NONE,
+  [PT_ALL_MULTI_TYPE_PARAMS] = PT_C_NONE,
+
+  [PT_ALL_PAT_CONSTRUCTION] = PT_C_PATTERN,
+  [PT_ALL_PAT_DATA_CONSTRUCTOR_NAME] = PT_C_PATTERN,
+  [PT_ALL_PAT_INT] = PT_C_PATTERN,
+  [PT_ALL_PAT_LIST] = PT_C_PATTERN,
+  [PT_ALL_PAT_STRING] = PT_C_PATTERN,
+  [PT_ALL_PAT_TUP] = PT_C_PATTERN,
+  [PT_ALL_PAT_UNIT] = PT_C_PATTERN,
+  [PT_ALL_PAT_WILDCARD] = PT_C_PATTERN,
+
+  [PT_ALL_STATEMENT_DATA_DECLARATION] = PT_C_STATEMENT,
+  [PT_ALL_STATEMENT_FUN] = PT_C_STATEMENT,
+  [PT_ALL_STATEMENT_LET] = PT_C_STATEMENT,
+  [PT_ALL_STATEMENT_SIG] = PT_C_STATEMENT,
+
+  [PT_ALL_TY_CONSTRUCTION] = PT_C_TYPE,
+  [PT_ALL_TY_CONSTRUCTOR_NAME] = PT_C_TYPE,
+  [PT_ALL_TY_FN] = PT_C_TYPE,
+  [PT_ALL_TY_LIST] = PT_C_TYPE,
+  [PT_ALL_TY_PARAM_NAME] = PT_C_TYPE,
+  [PT_ALL_TY_TUP] = PT_C_TYPE,
+  [PT_ALL_TY_UNIT] = PT_C_TYPE,
+  [PT_ALL_LEN] = 0,
+};
+
+const parse_node_category *parse_node_categories = parse_node_categories_arr;
 
 typedef struct {
   vec_print_action actions;
@@ -448,142 +497,6 @@ char *print_parse_tree_error_string(const char *restrict input,
   return ss.string;
 }
 
-static void push_scoped_traverse_action(pt_traversal *traversal,
-                                        scoped_traverse_action action,
-                                        node_ind_t node_ind) {
-  VEC_PUSH(&traversal->actions, action);
-  VEC_PUSH(&traversal->node_stack, node_ind);
-}
-
-static void pt_scoped_traverse_push_letrec(pt_traversal *traversal,
-                                           node_ind_t start,
-                                           node_ind_t amount) {
-  for (node_ind_t i = 0; i < amount; i++) {
-    const node_ind_t node_ind = traversal->inds[start + amount - 1 - i];
-    VEC_PUSH(&traversal->node_stack, node_ind);
-    const scoped_traverse_action act = TR_VISIT_IN;
-    VEC_PUSH(&traversal->actions, act);
-  }
-  for (node_ind_t i = 0; i < amount; i++) {
-    const node_ind_t node_ind = traversal->inds[start + i];
-    const parse_node node = traversal->nodes[node_ind];
-    if (node.type.statement == PT_STATEMENT_SIG) {
-      continue;
-    }
-    VEC_PUSH(&traversal->node_stack, node_ind);
-    {
-      const scoped_traverse_action act = TR_PUSH_SCOPE_VAR;
-      VEC_PUSH(&traversal->actions, act);
-    }
-  }
-}
-
-// traverse in scope order meaning that in letrecs, we touch the roots first
-// then the children
-pt_traversal pt_scoped_traverse(parse_tree tree) {
-  pt_traversal res = {
-    .nodes = tree.nodes,
-    .inds = tree.inds,
-    .node_stack = VEC_NEW,
-    .environment_amt = builtin_term_amount,
-  };
-  scoped_traverse_action act = TR_END;
-  VEC_PUSH(&res.actions, act);
-  pt_scoped_traverse_push_letrec(
-    &res, tree.root_subs_start, tree.root_subs_amt);
-  return res;
-}
-
-// pre-then-postorder traversal
-pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
-  scoped_traverse_action action;
-  VEC_POP(&traversal->actions, &action);
-  pt_traverse_elem res = {
-    .action = action,
-  };
-
-  switch (action) {
-    case TR_END:
-      VEC_FREE(&traversal->actions);
-      VEC_FREE(&traversal->node_stack);
-      return res;
-    case TR_POP_TO:
-      VEC_POP(&traversal->amt_stack, &res.data.new_environment_amount);
-      traversal->environment_amt = res.data.new_environment_amount;
-      return res;
-    default:
-      break;
-  }
-
-  node_ind_t node_ind;
-  VEC_POP(&traversal->node_stack, &node_ind);
-
-  if (action == TR_LINK_SIG) {
-    node_ind_t target_ind;
-    VEC_POP(&traversal->node_stack, &target_ind);
-    res.data.sig_index = node_ind;
-    res.data.linked_index = target_ind;
-    return res;
-  }
-
-  parse_node node = traversal->nodes[node_ind];
-  tree_node_repr repr = pt_subs_type[node.type.all];
-
-  res.data.node_index = node_ind;
-  res.data.node = node;
-
-  if (action == TR_PUSH_SCOPE_VAR) {
-    traversal->environment_amt++;
-    return res;
-  }
-
-  switch (node.type.all) {
-    case PT_ALL_STATEMENT_SIG: {
-      scoped_traverse_action act = TR_LINK_SIG;
-      VEC_PUSH(&traversal->actions, act);
-      node_ind_t target = VEC_PEEK(traversal->node_stack);
-      VEC_PUSH(&traversal->node_stack, target);
-      VEC_PUSH(&traversal->node_stack, node_ind);
-      break;
-    }
-    case PT_ALL_STATEMENT_LET:
-    case PT_ALL_PAT_WILDCARD: {
-      scoped_traverse_action act = TR_PUSH_SCOPE_VAR;
-      VEC_PUSH(&traversal->actions, act);
-      VEC_PUSH(&traversal->node_stack, node_ind);
-      break;
-    }
-    case PT_ALL_STATEMENT_FUN:
-    case PT_ALL_EX_FN: {
-      scoped_traverse_action act = TR_POP_TO;
-      VEC_PUSH(&traversal->actions, act);
-      VEC_PUSH(&traversal->amt_stack, traversal->environment_amt);
-      break;
-    }
-    default:
-      break;
-  }
-
-  switch (repr) {
-    case SUBS_EXTERNAL:
-      VEC_APPEND_REVERSE(&traversal->node_stack,
-                         node.sub_amt,
-                         &traversal->inds[node.subs_start]);
-      const scoped_traverse_action act = TR_VISIT_IN;
-      VEC_REPLICATE(&traversal->actions, node.sub_amt, act);
-      break;
-    case SUBS_NONE:
-      break;
-    case SUBS_TWO:
-      push_scoped_traverse_action(traversal, TR_VISIT_IN, node.sub_b);
-      HEDLEY_FALL_THROUGH;
-    case SUBS_ONE:
-      push_scoped_traverse_action(traversal, TR_VISIT_IN, node.sub_a);
-      break;
-  }
-  return res;
-}
-
 typedef struct {
   vec_binding not_found;
   parse_tree tree;
@@ -594,22 +507,22 @@ typedef struct {
 } scope_calculator_state;
 
 static void precalculate_scope_push(scope_calculator_state *state) {
-  switch (state->elem.data.node.type.binding) {
+  switch (state->elem.data.node_data.node.type.binding) {
     case PT_BIND_FUN: {
       binding b =
         state->tree
-          .nodes[PT_FUN_BINDING_IND(state->tree.inds, state->elem.data.node)]
+          .nodes[PT_FUN_BINDING_IND(state->tree.inds, state->elem.data.node_data.node)]
           .span;
       scope_push(&state->environment, b);
       break;
     }
     case PT_BIND_WILDCARD: {
-      binding b = state->elem.data.node.span;
+      binding b = state->elem.data.node_data.node.span;
       scope_push(&state->environment, b);
       break;
     }
     case PT_BIND_LET: {
-      binding b = state->tree.nodes[PT_LET_BND_IND(state->elem.data.node)].span;
+      binding b = state->tree.nodes[PT_LET_BND_IND(state->elem.data.node_data.node)].span;
       scope_push(&state->environment, b);
       break;
     }
@@ -617,7 +530,7 @@ static void precalculate_scope_push(scope_calculator_state *state) {
 }
 
 static void precalculate_scope_visit(scope_calculator_state *state) {
-  parse_node node = state->elem.data.node;
+  parse_node node = state->elem.data.node_data.node;
   scope scope;
   switch (node.type.all) {
     case PT_ALL_TY_PARAM_NAME:
@@ -637,12 +550,12 @@ static void precalculate_scope_visit(scope_calculator_state *state) {
   if (index == scope.bindings.len) {
     VEC_PUSH(&state->not_found, node.span);
   }
-  state->tree.nodes[state->elem.data.node_index].variable_index = index;
+  state->tree.nodes[state->elem.data.node_data.node_index].variable_index = index;
 }
 
 resolution_errors resolve_bindings(parse_tree tree,
                                    const char *restrict input) {
-  pt_traversal traversal = pt_scoped_traverse(tree);
+  pt_traversal traversal = pt_scoped_traverse(tree, TRAVERSE_RESOLVE_BINDINGS);
   scope_calculator_state state = {
     .not_found = VEC_NEW,
     .tree = tree,
@@ -683,6 +596,8 @@ resolution_errors resolve_bindings(parse_tree tree,
         break;
       case TR_VISIT_IN:
         precalculate_scope_visit(&state);
+        break;
+      case TR_VISIT_OUT:
         break;
     }
   }

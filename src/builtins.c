@@ -249,9 +249,6 @@ const char *builtin_term_names[builtin_term_amount] = {
 
   [i8_mod_builtin] = "i8-mod",    [i16_mod_builtin] = "i16-mod",
   [i32_mod_builtin] = "i32-mod",  [i64_mod_builtin] = "i64-mod",
-
-  [u8_mod_builtin] = "u8-mod",    [u16_mod_builtin] = "u16-mod",
-  [u32_mod_builtin] = "u32-mod",  [u64_mod_builtin] = "u64-mod",
 };
 
 enum {
@@ -371,11 +368,6 @@ const node_ind_t builtin_type_inds[builtin_type_ind_amount_enum] = {
   [i16_mod_builtin] = i16_arithmetic_type_ind,
   [i32_mod_builtin] = i32_arithmetic_type_ind,
   [i64_mod_builtin] = i64_arithmetic_type_ind,
-
-  [u8_mod_builtin] = u8_arithmetic_type_ind,
-  [u16_mod_builtin] = u16_arithmetic_type_ind,
-  [u32_mod_builtin] = u32_arithmetic_type_ind,
-  [u64_mod_builtin] = u64_arithmetic_type_ind,
 
   [i8_arithmetic_fn_ind_start + 0] = i8_type_ind,
   [i8_arithmetic_fn_ind_start + 1] = i8_type_ind,
