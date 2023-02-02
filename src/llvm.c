@@ -3,10 +3,6 @@
 #include <llvm-c/Analysis.h>
 #include <llvm-c/Target.h>
 
-static const char *ENTRY_STR = "fn-entry";
-static const char *THEN_STR = "if-then";
-static const char *ELSE_STR = "if-else";
-
 #include "binding.h"
 #include "bitset.h"
 #include "builtins.h"
@@ -17,9 +13,15 @@ static const char *ELSE_STR = "if-else";
 #include "llvm_shim.h"
 #include "parse_tree.h"
 #include "scope.h"
+#include "traverse.h"
 #include "typecheck.h"
 #include "util.h"
 #include "vec.h"
+
+static const char *LAMBDA_STR = "lambda";
+static const char *ENTRY_STR = "fn-entry";
+static const char *THEN_STR = "if-then";
+static const char *ELSE_STR = "if-else";
 
 // TODO deduplicate {i,u}<bitwidth>{add,sub,mul} exogenous functions
 
@@ -60,6 +62,7 @@ typedef struct {
   vec_llvm_block block_stack;
   vec_llvm_function function_stack;
 
+  source_file source;
   parse_tree parse_tree;
   type_info types;
 } llvm_cg_state;
@@ -193,7 +196,7 @@ static LLVMValueRef llvm_builtin_to_value(llvm_cg_state *state, builtin_term ter
     LLVMAddFunction(state->module, builtin_term_names[term], type_ref);
   VEC_PUSH(&state->function_stack, fn);
 
-  llvm_cg_basic_block(state, ENTRY_STR, fn);
+  llvm_gen_basic_block(state, ENTRY_STR, fn);
 
   switch (term) {
     case BUILTIN_BINOP_CASES: {
@@ -277,7 +280,7 @@ static void destroy_cg_state(llvm_cg_state *state) {
 }
 
 static llvm_cg_state llvm_new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
-                                       parse_tree tree, type_info types) {
+                                       source_file source, parse_tree tree, type_info types) {
   llvm_cg_state state = {
     .context = ctx,
     .builder = LLVMCreateBuilderInContext(ctx),
@@ -291,6 +294,7 @@ static llvm_cg_state llvm_new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
     .block_stack = VEC_NEW,
     .function_stack = VEC_NEW,
 
+    .source = source,
     .parse_tree = tree,
     .types = types,
   };
@@ -304,6 +308,43 @@ static void llvm_init_builtins(llvm_cg_state *state) {
   llvm_lang_values *values = &state->environment_values;
   for (builtin_term builtin_term = 0; builtin_term < builtin_term_amount; builtin_term++) {
     llvm_push_builtin(values, builtin_term);
+  }
+}
+
+static void llvm_cg_visit_in(llvm_cg_state *state, traversal_node_data data) {
+  switch (data.node.type.all) {
+    case PT_ALL_STATEMENT_FUN: {
+      const node_ind_t binding_ind = PT_FUN_BINDING_IND(state->parse_tree.inds, data.node);
+      const parse_node binding = state->parse_tree.nodes[binding_ind];
+      LLVMFunctionRef fn;
+      if (binding.variable_index < state->environment_values.values.len) {
+        // we've already predeclared this
+        fn = VEC_GET(state->environment_values.values, binding.variable_index).exogenous;
+      } else {
+        LLVMTypeRef fn_type = llvm_construct_type(state, state->types.node_types[data.node_index]);
+        buf_ind_t binding_len = binding.span.len;
+
+        // We should add this back at some point, I guess
+        // LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
+        fn = LLVMAddFunctionCustom(state->module,
+                                &state->source.data[binding.span.start],
+                                binding_len,
+                                fn_type);
+
+        LLVMSetLinkage(fn, LLVMExternalLinkage);
+      }
+      VEC_PUSH(&state->function_stack, fn);
+      llvm_gen_basic_block(state, ENTRY_STR, fn);
+      break;
+    case PT_ALL_EX_FN: {
+      LLVMTypeRef fn_type = llvm_construct_type(state, state->types.node_types[data.node_index]);
+      // We should add this back at some point, I guess
+      // LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
+      LLVMValueRef fn = LLVMAddFunction(state->module, LAMBDA_STR, fn_type);
+      VEC_PUSH(&state->function_stack, fn);
+      llvm_gen_basic_block(state, ENTRY_STR, fn);
+      break;
+    }
   }
 }
 
@@ -393,16 +434,16 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
 }
 
 static void llvm_cg_module(LLVMContextRef ctx, LLVMModuleRef mod,
-                           parse_tree tree, type_info types) {
+                           source_file source, parse_tree tree, type_info types) {
 
   LLVMInitializeNativeTarget();
   LLVMInitializeNativeAsmPrinter();
   LLVMInitializeNativeAsmParser();
 
-  llvm_cg_state state = llvm_new_cg_state(ctx, mod, tree, types);
+  llvm_cg_state state = llvm_new_cg_state(ctx, mod, source, tree, types);
   llvm_init_builtins(&state);
 
-  pt_traversal traversal = pt_scoped_traverse(tree);
+  pt_traversal traversal = pt_scoped_traverse(tree, TRAVERSE_CODEGEN);
   pt_traverse_elem elem = pt_scoped_traverse_next(&traversal);
 
   while (true) {
@@ -413,6 +454,9 @@ static void llvm_cg_module(LLVMContextRef ctx, LLVMModuleRef mod,
         continue;
       case TR_VISIT_IN:
         llvm_cg_visit_in(&state, elem.data.node_data);
+        continue;
+      case TR_VISIT_OUT:
+        llvm_cg_visit_out(&state, elem.data.node_data);
         continue;
       case TR_POP_TO:
         continue;

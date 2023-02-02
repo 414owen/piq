@@ -131,12 +131,12 @@ static bool test_err_eq(parse_tree tree, tc_res res, size_t err_ind,
     return false;
   switch (eA.type) {
     case TC_ERR_CONFLICT: {
-      return test_type_eq(res.types.types,
-                          res.types.type_inds,
+      return test_type_eq(res.types.tree.nodes,
+                          res.types.tree.inds,
                           eA.conflict.expected_ind,
                           test_err.type_exp) &&
-             test_type_eq(res.types.types,
-                          res.types.type_inds,
+             test_type_eq(res.types.tree.nodes,
+                          res.types.tree.inds,
                           eA.conflict.got_ind,
                           test_err.type_got);
     }
@@ -232,8 +232,8 @@ static void test_types_match(test_state *state, const char *input_p,
         parse_node node = rres.tree.nodes[j];
         if (spans_equal(node.span, span)) {
           seen = true;
-          if (!test_type_eq(res.types.types,
-                            res.types.type_inds,
+          if (!test_type_eq(res.types.tree.nodes,
+                            res.types.tree.inds,
                             res.types.node_types[j],
                             exp)) {
             char *type_str;
@@ -242,8 +242,8 @@ static void test_types_match(test_state *state, const char *input_p,
               stringstream ss;
               ss_init_immovable(&ss);
               print_type(ss.stream,
-                         res.types.types,
-                         res.types.type_inds,
+                         res.types.tree.nodes,
+                         res.types.tree.inds,
                          res.types.node_types[j]);
               ss_finalize(&ss);
               type_str = ss.string;

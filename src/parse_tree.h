@@ -16,12 +16,12 @@
 VEC_DECL_CUSTOM(node_ind_t, vec_node_ind);
 
 typedef enum {
-  PT_C_NONE,
-  PT_C_EXPRESSION,
-  PT_C_PATTERN,
-  PT_C_STATEMENT,
-  PT_C_TYPE,
-  PT_C_TOPLEVEL,
+  PT_C_NONE = 1,
+  PT_C_EXPRESSION = 2,
+  PT_C_PATTERN = 3,
+  PT_C_STATEMENT = 4,
+  PT_C_TYPE = 5,
+  PT_C_TOPLEVEL = 6,
 } parse_node_category;
 
 // TODO `type` is way too overloaded here.
@@ -209,6 +209,7 @@ typedef union {
 #define PT_AS_VAL_IND(node) node.sub_b
 
 const char **parse_node_strings;
+const parse_node_category *parse_node_categories;
 
 typedef struct {
   parse_node_type type;
@@ -266,54 +267,6 @@ char *print_parse_tree_error_string(const char *input, const token *tokens,
 void free_parse_tree(parse_tree tree);
 void free_parse_tree_res(parse_tree_res res);
 const tree_node_repr *pt_subs_type;
-
-typedef enum {
-  TR_PUSH_SCOPE_VAR,
-  TR_VISIT_IN,
-  // TR_VISIT_OUT,
-  TR_POP_TO,
-  TR_END,
-  // used in constraint generation
-  TR_LINK_SIG,
-} scoped_traverse_action;
-
-VEC_DECL(scoped_traverse_action);
-
-typedef struct {
-  const parse_node *nodes;
-  const node_ind_t *inds;
-  // const node_ind_t node_amt;
-  vec_scoped_traverse_action actions;
-  node_ind_t environment_amt;
-  union {
-    vec_node_ind node_stack;
-    vec_node_ind amt_stack;
-  };
-} pt_traversal;
-
-typedef struct {
-  node_ind_t node_index;
-  parse_node node;
-} traversal_node_data;
-
-typedef struct {
-  node_ind_t sig_index;
-  node_ind_t linked_index;
-} traversal_link_sig_data;
-
-typedef union {
-  traversal_node_data node_data;
-  traversal_link_sig_data link_sig_data;
-  node_ind_t new_environment_amount;
-} pt_trav_elem_data;
-
-typedef struct {
-  scoped_traverse_action action;
-  pt_trav_elem_data data;
-} pt_traverse_elem;
-
-pt_traversal pt_scoped_traverse(parse_tree tree);
-pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal);
 
 typedef struct {
   binding *bindings;

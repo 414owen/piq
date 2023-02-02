@@ -49,6 +49,7 @@ common_objs += llvm.o
 common_objs += llvm_shim.o
 common_objs += args.o
 common_objs += timespec.o
+common_objs += traverse.o
 common_objs += initialise.o
 common_objs += types.o
 common_objs += print_tc_errors.o
@@ -99,6 +100,7 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/util.c                |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/vec.c                 |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/llvm.c                |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/traverse.c            |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/types.c               |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/llvm/construct_type.c |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/llvm_shim.cpp         |> ^j^ $CXX -O2 $(CXXFLAGS) -c -o %o %f |> %B.o

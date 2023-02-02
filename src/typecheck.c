@@ -6,6 +6,7 @@
 #include "consts.h"
 #include "parse_tree.h"
 #include "term.h"
+#include "traverse.h"
 #include "typecheck.h"
 
 // Typechecking and inference based on wand's algorithm
@@ -76,7 +77,7 @@ static type_ref generate_node_type(tc_constraint_builder *builder,
 }
 
 static void generate_constraints_visit(tc_constraint_builder *builder,
-                                       pt_trav_elem_data elem) {
+                                       traversal_node_data elem) {
   const parse_node node = elem.node;
   const node_ind_t node_ind = elem.node_index;
   const type_ref our_type = generate_node_type(builder, node_ind);
@@ -296,12 +297,12 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
 }
 
 static void generate_constraints_link_sigs(tc_constraint_builder *builder,
-                                           pt_trav_elem_data elem) {
+                                           traversal_link_sig_data elem) {
   const type_ref sig_type =
     VEC_GET(builder->type_builder->node_types, elem.sig_index);
   const type_ref linked_type =
     VEC_GET(builder->type_builder->node_types, elem.linked_index);
-  add_type_constraint(builder, sig_type, linked_type, elem.node_index);
+  add_type_constraint(builder, sig_type, linked_type, elem.linked_index);
 }
 
 // I think that, for these to be solved, we have to generate constraints like
@@ -326,7 +327,7 @@ static tc_constraints_res generate_constraints(const parse_tree tree,
 
   VEC_APPEND(&builder.environment, builtin_term_amount, builtin_type_inds);
 
-  pt_traversal traversal = pt_scoped_traverse(tree);
+  pt_traversal traversal = pt_scoped_traverse(tree, TRAVERSE_TYPECHECK);
   pt_traverse_elem pt_trav_elem;
 
   for (;;) {
@@ -334,16 +335,18 @@ static tc_constraints_res generate_constraints(const parse_tree tree,
     switch (pt_trav_elem.action) {
       case TR_PUSH_SCOPE_VAR:
         generate_constraints_push_environment(&builder,
-                                              pt_trav_elem.data.node_index);
+                                              pt_trav_elem.data.node_data.node_index);
         continue;
       case TR_VISIT_IN:
-        generate_constraints_visit(&builder, pt_trav_elem.data);
+        generate_constraints_visit(&builder, pt_trav_elem.data.node_data);
+        continue;
+      case TR_VISIT_OUT:
         continue;
       case TR_POP_TO:
         builder.environment.len = pt_trav_elem.data.new_environment_amount;
         continue;
       case TR_LINK_SIG:
-        generate_constraints_link_sigs(&builder, pt_trav_elem.data);
+        generate_constraints_link_sigs(&builder, pt_trav_elem.data.link_sig_data);
         continue;
       case TR_END:
         break;
@@ -836,8 +839,10 @@ static type_info cleanup_types(node_ind_t parse_node_amt, type_builder *old) {
   type_info res = {
     .node_types = node_types,
     .type_amt = type_amt,
-    .types = VEC_FINALIZE(&builder.types),
-    .type_inds = VEC_FINALIZE(&builder.inds),
+    .tree = {
+      .nodes = VEC_FINALIZE(&builder.types),
+      .inds = VEC_FINALIZE(&builder.inds),
+    },
   };
 
   return res;
@@ -911,8 +916,10 @@ tc_res typecheck(const parse_tree tree) {
     .types =
       {
         .type_amt = type_builder.types.len,
-        .type_inds = VEC_FINALIZE(&type_builder.inds),
-        .types = VEC_FINALIZE(&type_builder.types),
+        .tree = {
+          .nodes = VEC_FINALIZE(&type_builder.types),
+          .inds = VEC_FINALIZE(&type_builder.inds),
+        },
         .node_types = VEC_FINALIZE(&type_builder.substitutions),
       },
 #ifdef TIME_TYPECHECK
@@ -923,8 +930,8 @@ tc_res typecheck(const parse_tree tree) {
 }
 
 void free_tc_res(tc_res res) {
-  free(res.types.types);
-  free(res.types.type_inds);
+  free(res.types.tree.nodes);
+  free(res.types.tree.inds);
   free(res.types.node_types);
   if (res.error_amt > 0) {
     free(res.errors);
