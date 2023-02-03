@@ -98,6 +98,8 @@ void debug_vec_get(vec_void *vec, VEC_LEN_T ind);
 
 #define VEC_GET_PTR(vec, i) (&VEC_GET_DIRECT(vec, (i)))
 
+#define VEC_SET(vec, i, val) *(VEC_GET_PTR((vec), (i))) = (val)
+
 void __vec_push(vec_void *vec, void *el, size_t elemsize);
 #define VEC_PUSH(vec, el)                                                      \
   {                                                                            \
