@@ -250,13 +250,15 @@ static llvm_lang_value llvm_pop_value(llvm_lang_values *values) {
   return res;
 }
 
+static LLVMValueRef llvm_to_exogenous_value(llvm_cg_state *state, llvm_lang_value value) {
+  return value.is_builtin
+    ? llvm_builtin_to_value(state, value.is_builtin)
+    : value.data.exogenous;
+}
+
 static LLVMValueRef llvm_pop_exogenous_value(llvm_cg_state *state, llvm_lang_values *values) {
   llvm_lang_value value = llvm_pop_value(values);
-  if (value.is_builtin) {
-    return llvm_builtin_to_value(state, value.is_builtin);
-  } else {
-    return value.data.exogenous;
-  }
+  return llvm_to_exogenous_value(state, value);
 }
 
 static llvm_lang_value llvm_get_value(llvm_lang_values values, node_ind_t ind) {
@@ -336,6 +338,7 @@ static void llvm_cg_visit_in(llvm_cg_state *state, traversal_node_data data) {
       VEC_PUSH(&state->function_stack, fn);
       llvm_gen_basic_block(state, ENTRY_STR, fn);
       break;
+    }
     case PT_ALL_EX_FN: {
       LLVMTypeRef fn_type = llvm_construct_type(state, state->types.node_types[data.node_index]);
       // We should add this back at some point, I guess
@@ -345,6 +348,8 @@ static void llvm_cg_visit_in(llvm_cg_state *state, traversal_node_data data) {
       llvm_gen_basic_block(state, ENTRY_STR, fn);
       break;
     }
+    default:
+      break;
   }
 }
 
@@ -382,9 +387,66 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
     }
     case PT_ALL_EX_IF: {
 
+      LLVMBasicBlockRef else_block;
+      VEC_POP(&state->block_stack, &else_block);
+      LLVMBasicBlockRef then_block;
+      VEC_POP(&state->block_stack, &then_block);
+
+      llvm_lang_value else_val = llvm_pop_value(&state->return_values);
+      llvm_lang_value then_val = llvm_pop_value(&state->return_values);
+      llvm_lang_value cond_val = llvm_pop_value(&state->return_values);
+      if (HEDLEY_UNLIKELY(cond_val.is_builtin)) {
+        LLVMBasicBlockRef block_to_delete;
+        llvm_lang_value value_to_return;
+        // TODO remove condition instructions?
+        if (cond_val.data.builtin == true_builtin) {
+            block_to_delete = else_block;
+            value_to_return = then_val;
+        } else {
+            block_to_delete = then_val;
+            value_to_return = else_val;
+        }
+        LLVMDeleteBasicBlock(then_block);
+        VEC_PUSH(&state->return_values, value_to_return);
+        break;
+      }
+      LLVMValueRef else_ex_val = llvm_to_exogenous_value(state, else_val);
+      LLVMValueRef then_ex_val = llvm_to_exogenous_value(state, then_val);
+      LLVMValueRef cond_ex_val = cond_val.data.exogenous;
+
+      // back to the original block
+      LLVMPositionBuilderAtEnd(state->builder, VEC_PEEK(state->block_stack));
+      LLVMBuildCondBr(state->builder, cond_ex_val, then_block, else_block);
+
+      LLVMBasicBlockRef end_block = LLVMAppendBasicBlockInContext(
+        state->context, VEC_PEEK(state->function_stack), "if-end");
+
+      *VEC_PEEK_PTR(state->block_stack) = end_block;
+
+      LLVMPositionBuilderAtEnd(state->builder, else_block);
+      LLVMBuildBr(state->builder, end_block);
+
+      LLVMPositionBuilderAtEnd(state->builder, then_block);
+      LLVMBuildBr(state->builder, end_block);
+
+      LLVMTypeRef res_type = llvm_construct_type(state, state->types.node_types[data.node_index]);
+
+      LLVMPositionBuilderAtEnd(state->builder, end_block);
+      LLVMValueRef phi = LLVMBuildPhi(state->builder, res_type, "if-result");
+      LLVMValueRef incoming_vals[2] = {then_ex_val, else_ex_val};
+      LLVMBasicBlockRef incoming_blocks[2] = {then_block, else_block};
+      LLVMAddIncoming(phi, incoming_vals, incoming_blocks, 2);
+      llvm_push_exogenous_value(&state->return_values, phi);
       break;
     }
-    case PT_ALL_EX_INT:
+    case PT_ALL_EX_INT: {
+      node_ind_t type_ind = state->types.node_types[data.node_index];
+      LLVMTypeRef type = llvm_construct_type(state, type_ind);
+      const char *str = VEC_GET_PTR(state->source, data.node.span.start);
+      size_t len = data.node.span.len;
+      llvm_push_exogenous_value(&state->return_values, LLVMConstIntOfStringAndSize(type, str, len, 10));
+      break;
+    }
     case PT_ALL_EX_AS:
     case PT_ALL_EX_TERM_NAME:
     case PT_ALL_EX_UPPER_NAME:
