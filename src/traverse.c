@@ -197,6 +197,7 @@ pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
           VEC_PUSH(&traversal->actions, act);
           VEC_PUSH(&traversal->node_stack, res.data.node_data.node_index);
         }
+
         switch (res.data.node_data.node.type.all) {
           case PT_ALL_STATEMENT_SIG: {
             if (should_link_sigs & (1 << traversal->mode)) {
@@ -225,6 +226,26 @@ pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
           default:
             break;
         }
+
+        const tree_node_repr repr = pt_subs_type[res.data.node_data.node.type.all];
+
+        switch (repr) {
+          case SUBS_EXTERNAL:
+            VEC_APPEND_REVERSE(&traversal->node_stack,
+                               res.data.node_data.node.sub_amt,
+                               &traversal->inds[res.data.node_data.node.subs_start]);
+            const scoped_traverse_action act = TR_VISIT_IN;
+            VEC_REPLICATE(&traversal->actions, res.data.node_data.node.sub_amt, act);
+            break;
+          case SUBS_NONE:
+            break;
+          case SUBS_TWO:
+            push_scoped_traverse_action(traversal, TR_VISIT_IN, res.data.node_data.node.sub_b);
+            HEDLEY_FALL_THROUGH;
+          case SUBS_ONE:
+            push_scoped_traverse_action(traversal, TR_VISIT_IN, res.data.node_data.node.sub_a);
+            break;
+        }
         return res;
       case TR_POP_TO:
         VEC_POP(&traversal->amt_stack, &res.data.new_environment_amount);
@@ -246,23 +267,4 @@ pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
       }
     }
   }
-
-  switch (repr) {
-    case SUBS_EXTERNAL:
-      VEC_APPEND_REVERSE(&traversal->node_stack,
-                         node.sub_amt,
-                         &traversal->inds[node.subs_start]);
-      const scoped_traverse_action act = TR_VISIT_IN;
-      VEC_REPLICATE(&traversal->actions, node.sub_amt, act);
-      break;
-    case SUBS_NONE:
-      break;
-    case SUBS_TWO:
-      push_scoped_traverse_action(traversal, TR_VISIT_IN, node.sub_b);
-      HEDLEY_FALL_THROUGH;
-    case SUBS_ONE:
-      push_scoped_traverse_action(traversal, TR_VISIT_IN, node.sub_a);
-      break;
-  }
-  return res;
 }
