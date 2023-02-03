@@ -81,6 +81,8 @@ typedef enum {
   PT_ALL_LEN,
 } parse_node_type_all;
 
+VEC_DECL(parse_node_type_all);
+
 typedef enum {
   PT_EX_CALL = PT_ALL_EX_CALL,
   PT_EX_FN = PT_ALL_EX_FN,
@@ -223,7 +225,7 @@ typedef struct {
       node_ind_t variable_node_ind;
       // position of the binding in the current scope
       // vector
-      node_ind_t variable_index;
+      environment_ind_t variable_index;
     };
     struct {
       node_ind_t subs_start;
@@ -274,3 +276,52 @@ typedef struct {
 } resolution_errors;
 
 resolution_errors resolve_bindings(parse_tree tree, const char *restrict input);
+
+
+#define PT_EXPRESSION_CASES \
+  PT_ALL_EX_CALL: \
+  case PT_ALL_EX_FN: \
+  case PT_ALL_EX_FUN_BODY: \
+  case PT_ALL_EX_IF: \
+  case PT_ALL_EX_INT: \
+  case PT_ALL_EX_AS: \
+  case PT_ALL_EX_TERM_NAME: \
+  case PT_ALL_EX_UPPER_NAME: \
+  case PT_ALL_EX_LIST: \
+  case PT_ALL_EX_STRING: \
+  case PT_ALL_EX_TUP: \
+  case PT_ALL_EX_UNIT
+
+#define PT_MULTI_CASES \
+  PT_ALL_MULTI_TERM_NAME: \
+  case PT_ALL_MULTI_TYPE_PARAMS: \
+  case PT_ALL_MULTI_TYPE_PARAM_NAME: \
+  case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME: \
+  case PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME: \
+  case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL: \
+  case PT_ALL_MULTI_DATA_CONSTRUCTORS
+
+#define PT_PATTERN_CASES \
+  PT_ALL_PAT_WILDCARD: \
+  case PT_ALL_PAT_TUP: \
+  case PT_ALL_PAT_UNIT: \
+  case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME: \
+  case PT_ALL_PAT_CONSTRUCTION: \
+  case PT_ALL_PAT_STRING: \
+  case PT_ALL_PAT_INT: \
+  case PT_ALL_PAT_LIST
+
+#define PT_STATEMENT_CASES \
+  PT_ALL_STATEMENT_SIG: \
+  case PT_ALL_STATEMENT_FUN: \
+  case PT_ALL_STATEMENT_LET: \
+  case PT_ALL_STATEMENT_DATA_DECLARATION
+
+#define PT_TYPE_CASES \
+  PT_ALL_TY_CONSTRUCTION: \
+  case PT_ALL_TY_LIST: \
+  case PT_ALL_TY_FN: \
+  case PT_ALL_TY_TUP: \
+  case PT_ALL_TY_UNIT: \
+  case PT_ALL_TY_PARAM_NAME: \
+  case PT_ALL_TY_CONSTRUCTOR_NAME

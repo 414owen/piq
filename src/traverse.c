@@ -6,6 +6,11 @@
 
 /*
 
+Notes on PUSH_SCOPE:
+
+* For letrec, functions are pushed visited on the way in
+* For let, we push the value on the way out.
+
 typedef enum {
 
   // - [x] traverse patterns on the way in
@@ -103,13 +108,15 @@ static void pt_scoped_traverse_push_letrec(pt_traversal *traversal,
   for (node_ind_t i = 0; i < amount; i++) {
     const node_ind_t node_ind = traversal->inds[start + i];
     const parse_node node = traversal->nodes[node_ind];
-    if (node.type.statement == PT_STATEMENT_SIG) {
-      continue;
-    }
-    VEC_PUSH(&traversal->node_stack, node_ind);
-    {
-      const scoped_traverse_action act = TR_PUSH_SCOPE_VAR;
-      VEC_PUSH(&traversal->actions, act);
+    switch (node.type.statement) {
+      case PT_STATEMENT_SIG:
+        continue;
+      case PT_STATEMENT_FUN: {
+        const scoped_traverse_action act = TR_PUSH_SCOPE_VAR;
+        VEC_PUSH(&traversal->actions, act);
+        VEC_PUSH(&traversal->node_stack, node_ind);
+         break;
+      }
     }
   }
 }
@@ -123,9 +130,12 @@ pt_traversal pt_scoped_traverse(parse_tree tree, traverse_mode mode) {
     .mode = mode,
     .nodes = tree.nodes,
     .inds = tree.inds,
+    .path = VEC_NEW,
     .node_stack = VEC_NEW,
     .environment_amt = builtin_term_amount,
   };
+  // to represent root
+  VEC_PUSH(&res.path, PT_ALL_LEN);
   scoped_traverse_action act = TR_END;
   VEC_PUSH(&res.actions, act);
   pt_scoped_traverse_push_letrec(
@@ -133,102 +143,108 @@ pt_traversal pt_scoped_traverse(parse_tree tree, traverse_mode mode) {
   return res;
 }
 
-// pre-then-postorder traversal
-pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
-  scoped_traverse_action action;
-  VEC_POP(&traversal->actions, &action);
-  pt_traverse_elem res = {
-    .action = action,
-  };
+static const uint64_t in_letrec = (((uint64_t) 1) << PT_ALL_LEN);
 
-  switch (action) {
-    case TR_END:
-      VEC_FREE(&traversal->actions);
-      VEC_FREE(&traversal->node_stack);
-      return res;
-    case TR_POP_TO:
-      VEC_POP(&traversal->amt_stack, &res.data.new_environment_amount);
-      traversal->environment_amt = res.data.new_environment_amount;
-      return res;
-    default:
-      break;
-  }
+static traversal_node_data traverse_get_parse_node(pt_traversal *traversal) {
+  traversal_node_data res;
+  VEC_POP(&traversal->node_stack, &res.node_index);
+  res.node = traversal->nodes[res.node_index];
+  return res;
+}
 
-  node_ind_t node_ind;
-  VEC_POP(&traversal->node_stack, &node_ind);
-
-  if (HEDLEY_UNLIKELY(action == TR_LINK_SIG)) {
-    node_ind_t target_ind;
-    VEC_POP(&traversal->node_stack, &target_ind);
-    res.data.link_sig_data.sig_index = node_ind;
-    res.data.link_sig_data.linked_index = target_ind;
-    return res;
-  }
-
-  parse_node node = traversal->nodes[node_ind];
-  tree_node_repr repr = pt_subs_type[node.type.all];
-
-  res.data.node_data.node_index = node_ind;
-  res.data.node_data.node = node;
-
-  if (HEDLEY_UNLIKELY(action == TR_PUSH_SCOPE_VAR)) {
-    traversal->environment_amt++;
-    return res;
-  } else if (HEDLEY_UNLIKELY(action == TR_VISIT_OUT)) {
-    return res;
-  }
-
-  const traverse_mode mode = traversal->mode;
-  
-  // action is TR_VISIT_IN
-
-  bool should_push_out = true;
-
+static bool should_push_out(traverse_mode mode, parse_node_type_all type) {
+  bool res = true;
   // TODO this can just be removed, benchmark removal
-  switch (parse_node_categories[node.type.all]) {
+  switch (parse_node_categories[type]) {
     case PT_C_EXPRESSION:
-      should_push_out = traverse_expressions_out & (1 << mode);
+      res = traverse_expressions_out & (1 << mode);
       break;
     case PT_C_PATTERN:
-      should_push_out = traverse_patterns_out & (1 << mode);
+      res = traverse_patterns_out & (1 << mode);
       break;
     default:
       break;
   }
-
-  if (should_push_out) {
-    scoped_traverse_action act = TR_VISIT_OUT;
-    VEC_PUSH(&traversal->actions, act);
-    VEC_PUSH(&traversal->node_stack, node_ind);
-  }
-
-  switch (node.type.all) {
-    case PT_ALL_STATEMENT_SIG: {
-      if (should_link_sigs & (1 << traversal->mode)) {
-        scoped_traverse_action act = TR_LINK_SIG;
-        VEC_PUSH(&traversal->actions, act);
-        node_ind_t target = VEC_PEEK(traversal->node_stack);
-        VEC_PUSH(&traversal->node_stack, target);
-        VEC_PUSH(&traversal->node_stack, node_ind);
+  return res;
+}
+// pre-then-postorder traversal
+pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
+  while (true) {
+    traverse_action_union action;
+    VEC_POP(&traversal->actions, &action);
+  
+    pt_traverse_elem res = {
+      .action = action.action,
+    };
+    switch (action.action_internal) {
+      case TR_ACT_PUSH_SCOPE_VAR:
+        traversal->environment_amt++;
+        res.data.node_data = traverse_get_parse_node(traversal);
+        return res;
+      case TR_ACT_VISIT_OUT:
+        res.data.node_data = traverse_get_parse_node(traversal);
+        return res;
+      case TR_ACT_INITIAL:
+        res.data.node_data = traverse_get_parse_node(traversal);
+        switch (res.data.node_data.node.type.all) {
+          // TODO smart stuff
+        }
+        break;
+      case TR_ACT_VISIT_IN:
+        res.data.node_data = traverse_get_parse_node(traversal);
+        if (should_push_out(traversal->mode, res.data.node_data.node.type.all)) {
+          scoped_traverse_action act = TR_VISIT_OUT;
+          VEC_PUSH(&traversal->actions, act);
+          VEC_PUSH(&traversal->node_stack, res.data.node_data.node_index);
+        }
+        switch (res.data.node_data.node.type.all) {
+          case PT_ALL_STATEMENT_SIG: {
+            if (should_link_sigs & (1 << traversal->mode)) {
+              scoped_traverse_action act = TR_LINK_SIG;
+              VEC_PUSH(&traversal->actions, act);
+              node_ind_t target = VEC_PEEK(traversal->node_stack);
+              VEC_PUSH(&traversal->node_stack, target);
+              VEC_PUSH(&traversal->node_stack, res.data.node_data.node_index);
+            }
+            break;
+          }
+          case PT_ALL_STATEMENT_LET:
+          case PT_ALL_PAT_WILDCARD: {
+            scoped_traverse_action act = TR_PUSH_SCOPE_VAR;
+            VEC_PUSH(&traversal->actions, act);
+            VEC_PUSH(&traversal->node_stack, res.data.node_data.node_index);
+            break;
+          }
+          case PT_ALL_STATEMENT_FUN:
+          case PT_ALL_EX_FN: {
+            scoped_traverse_action act = TR_POP_TO;
+            VEC_PUSH(&traversal->actions, act);
+            VEC_PUSH(&traversal->amt_stack, traversal->environment_amt);
+            break;
+          }
+          default:
+            break;
+        }
+        return res;
+      case TR_POP_TO:
+        VEC_POP(&traversal->amt_stack, &res.data.new_environment_amount);
+        traversal->environment_amt = res.data.new_environment_amount;
+        return res;
+      case TR_ACT_END:
+        VEC_FREE(&traversal->actions);
+        VEC_FREE(&traversal->node_stack);
+        VEC_FREE(&traversal->path);
+        return res;
+      case TR_ACT_LINK_SIG: {
+        node_ind_t node_ind;
+        node_ind_t target_ind;
+        VEC_POP(&traversal->node_stack, &node_ind);
+        VEC_POP(&traversal->node_stack, &target_ind);
+        res.data.link_sig_data.sig_index = node_ind;
+        res.data.link_sig_data.linked_index = target_ind;
+        return res;
       }
-      break;
     }
-    case PT_ALL_STATEMENT_LET:
-    case PT_ALL_PAT_WILDCARD: {
-      scoped_traverse_action act = TR_PUSH_SCOPE_VAR;
-      VEC_PUSH(&traversal->actions, act);
-      VEC_PUSH(&traversal->node_stack, node_ind);
-      break;
-    }
-    case PT_ALL_STATEMENT_FUN:
-    case PT_ALL_EX_FN: {
-      scoped_traverse_action act = TR_POP_TO;
-      VEC_PUSH(&traversal->actions, act);
-      VEC_PUSH(&traversal->amt_stack, traversal->environment_amt);
-      break;
-    }
-    default:
-      break;
   }
 
   switch (repr) {

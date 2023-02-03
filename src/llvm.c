@@ -18,6 +18,8 @@
 #include "util.h"
 #include "vec.h"
 
+static const char *TUPLE_EXPRESSION_STR = "tup-expr";
+static const char *TUPLE_STR = "tuple";
 static const char *LAMBDA_STR = "lambda";
 static const char *ENTRY_STR = "fn-entry";
 static const char *THEN_STR = "if-then";
@@ -138,7 +140,7 @@ static LLVMValueRef llvm_cg_binop(llvm_cg_state *state, builtin_term term, LLVMV
       res = LLVMBuildAdd(state->builder, left, right, "+");
       break;
     case BUILTIN_SUB_CASES:
-      res = LLVMBuildSub(state->builder, left, right, "-");
+ res = LLVMBuildSub(state->builder, left, right, "-");
       break;
     case BUILTIN_MUL_CASES:
       res = LLVMBuildMul(state->builder, left, right, "*");
@@ -240,6 +242,11 @@ static void llvm_push_builtin(llvm_lang_values *values, builtin_term builtin) {
   bs_push_true(&values->is_builtin);
 }
 
+static void llvm_push_value(llvm_lang_values *values, llvm_lang_value value) {
+  bs_push(&values->is_builtin, value.is_builtin);
+  VEC_PUSH(&values->values, value.data);
+}
+
 static llvm_lang_value llvm_pop_value(llvm_lang_values *values) {
   debug_assert(values->values.length > 0);
   debug_assert(values->is_builtin.length > 0);
@@ -261,7 +268,7 @@ static LLVMValueRef llvm_pop_exogenous_value(llvm_cg_state *state, llvm_lang_val
   return llvm_to_exogenous_value(state, value);
 }
 
-static llvm_lang_value llvm_get_value(llvm_lang_values values, node_ind_t ind) {
+static llvm_lang_value llvm_get_value(llvm_lang_values values, environment_ind_t ind) {
   debug_assert(values->values.length > ind);
   debug_assert(values->is_builtin.length > ind);
   llvm_lang_value res = {
@@ -271,9 +278,22 @@ static llvm_lang_value llvm_get_value(llvm_lang_values values, node_ind_t ind) {
   return res;
 }
 
-static llvm_lang_value llvm_get_environment(llvm_cg_state *state, node_ind_t ind) {
+static llvm_lang_value llvm_get_environment(llvm_cg_state *state, environment_ind_t ind) {
   return llvm_get_value(state->environment_values, ind);
 }
+
+/*
+static void llvm_set_value(llvm_lang_values values, environment_ind_t ind, llvm_lang_value value) {
+  bs_set(values.is_builtin, value.is_builtin);
+  VEC_SET(values.values, ind, value.data);
+}
+
+static void llvm_set_environment(llvm_cg_state *state, environment_ind_t ind, llvm_lang_value value) {
+  debug_assert(values->values.length > ind);
+  debug_assert(values->is_builtin.length > ind);
+  llvm_set_value(state->environment_values, ind, value);
+}
+*/
 
 static void destroy_cg_state(llvm_cg_state *state) {
   LLVMDisposeBuilder(state->builder);
@@ -315,6 +335,72 @@ static void llvm_init_builtins(llvm_cg_state *state) {
 
 static void llvm_cg_visit_in(llvm_cg_state *state, traversal_node_data data) {
   switch (data.node.type.all) {
+    case PT_ALL_EX_CALL:
+      break;
+    case PT_ALL_EX_FN: {
+      LLVMTypeRef fn_type = llvm_construct_type(state, state->types.node_types[data.node_index]);
+      // We should add this back at some point, I guess
+      // LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
+      LLVMValueRef fn = LLVMAddFunction(state->module, LAMBDA_STR, fn_type);
+      VEC_PUSH(&state->function_stack, fn);
+      llvm_gen_basic_block(state, ENTRY_STR, fn);
+      break;
+    }
+    case PT_ALL_EX_FUN_BODY:
+      break;
+    case PT_ALL_EX_IF:
+      break;
+    case PT_ALL_EX_INT:
+      break;
+    case PT_ALL_EX_AS:
+      break;
+    case PT_ALL_EX_TERM_NAME:
+      break;
+    case PT_ALL_EX_UPPER_NAME:
+      break;
+    case PT_ALL_EX_LIST:
+      break;
+    case PT_ALL_EX_STRING:
+      break;
+    case PT_ALL_EX_TUP:
+      break;
+    case PT_ALL_EX_UNIT:
+      break;
+
+    case PT_ALL_MULTI_TERM_NAME:
+      break;
+    case PT_ALL_MULTI_TYPE_PARAMS:
+      break;
+    case PT_ALL_MULTI_TYPE_PARAM_NAME:
+      break;
+    case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME:
+      break;
+    case PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME:
+      break;
+    case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
+      break;
+    case PT_ALL_MULTI_DATA_CONSTRUCTORS:
+      break;
+
+    case PT_ALL_PAT_WILDCARD:
+      break;
+    case PT_ALL_PAT_TUP:
+      break;
+    case PT_ALL_PAT_UNIT:
+      break;
+    case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME:
+      break;
+    case PT_ALL_PAT_CONSTRUCTION:
+      break;
+    case PT_ALL_PAT_STRING:
+      break;
+    case PT_ALL_PAT_INT:
+      break;
+    case PT_ALL_PAT_LIST:
+      break;
+
+    case PT_ALL_STATEMENT_SIG:
+      break;
     case PT_ALL_STATEMENT_FUN: {
       const node_ind_t binding_ind = PT_FUN_BINDING_IND(state->parse_tree.inds, data.node);
       const parse_node binding = state->parse_tree.nodes[binding_ind];
@@ -339,18 +425,54 @@ static void llvm_cg_visit_in(llvm_cg_state *state, traversal_node_data data) {
       llvm_gen_basic_block(state, ENTRY_STR, fn);
       break;
     }
-    case PT_ALL_EX_FN: {
-      LLVMTypeRef fn_type = llvm_construct_type(state, state->types.node_types[data.node_index]);
-      // We should add this back at some point, I guess
-      // LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
-      LLVMValueRef fn = LLVMAddFunction(state->module, LAMBDA_STR, fn_type);
-      VEC_PUSH(&state->function_stack, fn);
-      llvm_gen_basic_block(state, ENTRY_STR, fn);
+    case PT_ALL_STATEMENT_LET:
       break;
-    }
+    case PT_ALL_STATEMENT_DATA_DECLARATION:
+      break;
+
+    case PT_ALL_TY_CONSTRUCTION:
+      break;
+    case PT_ALL_TY_LIST:
+      break;
+    case PT_ALL_TY_FN:
+      break;
+    case PT_ALL_TY_TUP:
+      break;
+    case PT_ALL_TY_UNIT:
+      break;
+    case PT_ALL_TY_PARAM_NAME:
+      break;
+    case PT_ALL_TY_CONSTRUCTOR_NAME:
+      break;
+
+    case PT_ALL_LEN:
+      break;
     default:
       break;
   }
+}
+
+static void LLVMPositionBuilderAtStart(LLVMBuilderRef builder,
+                                       LLVMBasicBlockRef block) {
+  LLVMValueRef first_instruction = LLVMGetFirstInstruction(block);
+  if (HEDLEY_UNLIKELY(first_instruction == NULL)) {
+    LLVMPositionBuilderAtEnd(builder, block);
+  } else {
+    LLVMPositionBuilderBefore(builder, first_instruction);
+  }
+}
+
+static LLVMValueRef llvm_gen_alloca_at_function_start(llvm_cg_state *state,
+                                                const char *restrict name,
+                                                LLVMTypeRef type) {
+  LLVMBasicBlockRef current_block = LLVMGetInsertBlock(state->builder);
+  LLVMBuilderRef builder = state->builder;
+  LLVMFunctionRef current_function = VEC_PEEK(state->function_stack);
+  LLVMBasicBlockRef entry_block = LLVMGetEntryBasicBlock(current_function);
+  LLVMPositionBuilderAtStart(builder, entry_block);
+  LLVMValueRef res = LLVMBuildAlloca(builder, type, name);
+  LLVMPositionBuilderAtEnd(builder, current_block);
+  return res;
 }
 
 static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
@@ -387,14 +509,15 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
     }
     case PT_ALL_EX_IF: {
 
-      LLVMBasicBlockRef else_block;
-      VEC_POP(&state->block_stack, &else_block);
       LLVMBasicBlockRef then_block;
       VEC_POP(&state->block_stack, &then_block);
+      LLVMBasicBlockRef else_block;
+      VEC_POP(&state->block_stack, &else_block);
 
-      llvm_lang_value else_val = llvm_pop_value(&state->return_values);
-      llvm_lang_value then_val = llvm_pop_value(&state->return_values);
       llvm_lang_value cond_val = llvm_pop_value(&state->return_values);
+      llvm_lang_value then_val = llvm_pop_value(&state->return_values);
+      llvm_lang_value else_val = llvm_pop_value(&state->return_values);
+
       if (HEDLEY_UNLIKELY(cond_val.is_builtin)) {
         LLVMBasicBlockRef block_to_delete;
         llvm_lang_value value_to_return;
@@ -403,16 +526,16 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
             block_to_delete = else_block;
             value_to_return = then_val;
         } else {
-            block_to_delete = then_val;
+            block_to_delete = then_block;
             value_to_return = else_val;
         }
-        LLVMDeleteBasicBlock(then_block);
-        VEC_PUSH(&state->return_values, value_to_return);
+        LLVMDeleteBasicBlock(block_to_delete);
+        llvm_push_value(&state->return_values, value_to_return);
         break;
       }
-      LLVMValueRef else_ex_val = llvm_to_exogenous_value(state, else_val);
-      LLVMValueRef then_ex_val = llvm_to_exogenous_value(state, then_val);
       LLVMValueRef cond_ex_val = cond_val.data.exogenous;
+      LLVMValueRef then_ex_val = llvm_to_exogenous_value(state, then_val);
+      LLVMValueRef else_ex_val = llvm_to_exogenous_value(state, else_val);
 
       // back to the original block
       LLVMPositionBuilderAtEnd(state->builder, VEC_PEEK(state->block_stack));
@@ -437,6 +560,7 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
       LLVMBasicBlockRef incoming_blocks[2] = {then_block, else_block};
       LLVMAddIncoming(phi, incoming_vals, incoming_blocks, 2);
       llvm_push_exogenous_value(&state->return_values, phi);
+
       break;
     }
     case PT_ALL_EX_INT: {
@@ -447,49 +571,83 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
       llvm_push_exogenous_value(&state->return_values, LLVMConstIntOfStringAndSize(type, str, len, 10));
       break;
     }
-    case PT_ALL_EX_AS:
-    case PT_ALL_EX_TERM_NAME:
+    case PT_ALL_EX_AS: {
+      break;
+    }
     case PT_ALL_EX_UPPER_NAME:
+    case PT_ALL_EX_TERM_NAME: {
+      node_ind_t ind = data.node.variable_index;
+      debug_assert(ind != state->environment_values.len);
+      llvm_lang_value val = llvm_get_environment(state, ind);
+      llvm_push_value(&state->return_values, val);
+      break;
+    }
     case PT_ALL_EX_LIST:
     case PT_ALL_EX_STRING:
-    case PT_ALL_EX_TUP:
-    case PT_ALL_EX_UNIT:
+      // TODO implement
+      break;
+    case PT_ALL_EX_TUP: {
 
-    case PT_ALL_MULTI_TERM_NAME:
-    case PT_ALL_MULTI_TYPE_PARAMS:
-    case PT_ALL_MULTI_TYPE_PARAM_NAME:
-    case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME:
-    case PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME:
-    case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
-    case PT_ALL_MULTI_DATA_CONSTRUCTORS:
+      node_ind_t ind = data.node_index;
+      LLVMTypeRef tup_type = llvm_construct_type(state, state->types.node_types[ind]);
+      LLVMValueRef allocated = llvm_gen_alloca_at_function_start(state, TUPLE_STR, tup_type);
 
-    case PT_ALL_PAT_WILDCARD:
-    case PT_ALL_PAT_TUP:
-    case PT_ALL_PAT_UNIT:
-    case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME:
-    case PT_ALL_PAT_CONSTRUCTION:
-    case PT_ALL_PAT_STRING:
-    case PT_ALL_PAT_INT:
-    case PT_ALL_PAT_LIST:
+      LLVMValueRef left_val = llvm_pop_exogenous_value(state, &state->return_values);
+      LLVMValueRef right_val = llvm_pop_exogenous_value(state, &state->return_values);
+
+      LLVMValueRef left_ptr =
+        LLVMBuildStructGEP2(state->builder, tup_type, allocated, 0, TUPLE_STR);
+      LLVMValueRef right_ptr =
+        LLVMBuildStructGEP2(state->builder, tup_type, allocated, 1, TUPLE_STR);
+
+      LLVMBuildStore(state->builder, left_val, left_ptr);
+      LLVMBuildStore(state->builder, right_val, right_ptr);
+
+      LLVMValueRef res =
+        LLVMBuildLoad2(state->builder, tup_type, allocated, TUPLE_EXPRESSION_STR);
+      llvm_push_exogenous_value(&state->return_values, res);
+      break;
+    }
+
+    case PT_ALL_EX_UNIT: {
+      LLVMTypeRef void_type =
+        llvm_construct_type(state, state->types.node_types[data.node_index]);
+      LLVMValueRef void_val = LLVMGetUndef(void_type);
+      llvm_push_exogenous_value(&state->return_values, void_val);
+      break;
+    }
+
+    case PT_MULTI_CASES:
+      break;
+    case PT_PATTERN_CASES:
+      break;
 
     case PT_ALL_STATEMENT_SIG:
-    case PT_ALL_STATEMENT_FUN:
-    case PT_ALL_STATEMENT_LET:
-    case PT_ALL_STATEMENT_DATA_DECLARATION:
+      break;
+    case PT_ALL_STATEMENT_FUN: {
+      const LLVMValueRef ret = llvm_pop_exogenous_value(state, &state->return_values);
+      LLVMBuildRet(state->builder, ret);
+      VEC_POP_(&state->block_stack);
+      VEC_POP_(&state->function_stack);
+      LLVMPositionBuilderAtEnd(state->builder, VEC_PEEK(state->block_stack));
+      break;
+    }
 
-    case PT_ALL_TY_CONSTRUCTION:
-    case PT_ALL_TY_LIST:
-    case PT_ALL_TY_FN:
-    case PT_ALL_TY_TUP:
-    case PT_ALL_TY_UNIT:
-    case PT_ALL_TY_PARAM_NAME:
-    case PT_ALL_TY_CONSTRUCTOR_NAME:
+    case PT_ALL_STATEMENT_LET:
+      // return_value stays on the stack, to be dealt with in PUSH_VAR
+      break;
+
+    case PT_ALL_STATEMENT_DATA_DECLARATION:
+      // TODO implement
+      break;
+
+    case PT_TYPE_CASES:
+      break;
 
     case PT_ALL_LEN:
+
     case PT_ALL_EX_FN: {
-      printf("Code generation for %s nodes via LLVM hasn't been implemented yet.\n",
-             parse_node_strings[data.node.type.all]);
-      exit(1);
+      // TODO implement
       break;
     }
   }
@@ -545,7 +703,7 @@ llvm_res llvm_gen_module(const char *module_name, source_file source,
   char *err;
   bool broken = LLVMVerifyModule(res.module, LLVMPrintMessageAction, &err);
   fputs(err, stderr);
-  llvm_cg_module(ctx, res.module, tree, types);
+  llvm_cg_module(ctx, res.module, source, tree, types);
   free(err);
   if (broken) {
     exit(1);
