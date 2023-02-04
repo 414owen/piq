@@ -130,13 +130,13 @@ pt_traversal pt_scoped_traverse(parse_tree tree, traverse_mode mode) {
     .mode = mode,
     .nodes = tree.nodes,
     .inds = tree.inds,
-    .path = VEC_NEW,
+    // .path = VEC_NEW,
     .node_stack = VEC_NEW,
     .environment_amt = builtin_term_amount,
   };
   // to represent root
-  VEC_PUSH(&res.path, PT_ALL_LEN);
-  scoped_traverse_action act = TR_END;
+  // VEC_PUSH(&res.path, PT_ALL_LEN);
+  const scoped_traverse_action act = TR_END;
   VEC_PUSH(&res.actions, act);
   pt_scoped_traverse_push_letrec(
     &res, tree.root_subs_start, tree.root_subs_amt);
@@ -254,7 +254,7 @@ pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
       case TR_ACT_END:
         VEC_FREE(&traversal->actions);
         VEC_FREE(&traversal->node_stack);
-        VEC_FREE(&traversal->path);
+        // VEC_FREE(&traversal->path);
         return res;
       case TR_ACT_LINK_SIG: {
         node_ind_t node_ind;
