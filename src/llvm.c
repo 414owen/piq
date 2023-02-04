@@ -248,8 +248,8 @@ static void llvm_push_value(llvm_lang_values *values, llvm_lang_value value) {
 }
 
 static llvm_lang_value llvm_pop_value(llvm_lang_values *values) {
-  debug_assert(values->values.length > 0);
-  debug_assert(values->is_builtin.length > 0);
+  debug_assert(values->values.len > 0);
+  debug_assert(values->is_builtin.len > 0);
   llvm_lang_value res = {
     .is_builtin = bs_pop(&values->is_builtin),
   };
@@ -269,8 +269,8 @@ static LLVMValueRef llvm_pop_exogenous_value(llvm_cg_state *state, llvm_lang_val
 }
 
 static llvm_lang_value llvm_get_value(llvm_lang_values values, environment_ind_t ind) {
-  debug_assert(values->values.length > ind);
-  debug_assert(values->is_builtin.length > ind);
+  debug_assert(values.values.len > ind);
+  debug_assert(values.is_builtin.len > ind);
   llvm_lang_value res = {
     .is_builtin = bs_get(values.is_builtin, ind),
     .data = VEC_GET(values.values, ind),
@@ -301,6 +301,14 @@ static void destroy_cg_state(llvm_cg_state *state) {
   VEC_FREE(&state->function_stack);
 }
 
+static llvm_lang_values llvm_empty_lang_values(void) {
+  llvm_lang_values res = {
+    .is_builtin = bs_new(),
+    .values = VEC_NEW,
+  };
+  return res;
+}
+
 static llvm_cg_state llvm_new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
                                        source_file source, parse_tree tree, type_info types) {
   llvm_cg_state state = {
@@ -309,8 +317,8 @@ static llvm_cg_state llvm_new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
     .module = mod,
 
     .llvm_type_refs = (LLVMTypeRef *)calloc(types.type_amt, sizeof(LLVMTypeRef)),
-    .return_values = {0},
-    .environment_values = {0},
+    .return_values = llvm_empty_lang_values(),
+    .environment_values = llvm_empty_lang_values(),
     .builtin_values = {NULL},
 
     .block_stack = VEC_NEW,
@@ -577,7 +585,7 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
     case PT_ALL_EX_UPPER_NAME:
     case PT_ALL_EX_TERM_NAME: {
       node_ind_t ind = data.node.variable_index;
-      debug_assert(ind != state->environment_values.len);
+      debug_assert(ind != state->environment_values.is_builtin.len);
       llvm_lang_value val = llvm_get_environment(state, ind);
       llvm_push_value(&state->return_values, val);
       break;
