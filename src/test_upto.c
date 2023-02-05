@@ -94,6 +94,7 @@ parse_tree_res test_upto_parse_tree(test_state *state,
       .expected_amt = 0,
       .expected = NULL,
     };
+    failf(state, "Tokenization failed at: %u", tres.error_pos);
     free_tokens_res(tres);
     return res;
   }
