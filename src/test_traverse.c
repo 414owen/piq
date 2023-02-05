@@ -40,12 +40,26 @@ static void test_traversal(test_state *state, const char *input, traverse_mode m
   test_elems_match(state, &traversal, elems, amount);
 }
 
+static const char *input =
+  "(sig a (Fn ((i8, i8)) i8))\n"
+  "(fun a ((b, c)) (add ((fn () 2) ()) 3))";
+    
+static pt_traverse_elem print_mode_elems[] = {
+  {
+    .action = TR_VISIT_IN,
+    .data.node_data = {
+      
+    },
+  },
+};
+
 void test_traverse(test_state *state) {
   test_group_start(state, "AST Traversal");
 
+
   {
-    test_start(state, "does the right thing");
-    test_traversal(state,)
+    test_start(state, "Print tree mode");
+    test_traversal(state, input, )
     test_end(state);
   }
 
