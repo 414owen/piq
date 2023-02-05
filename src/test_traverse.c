@@ -1,3 +1,4 @@
+#include "test_upto.h"
 #include "traverse.h"
 #include "test.h"
 
@@ -13,7 +14,7 @@ static const char *action_names[] = {
   #undef mk_map
 };
 
-static bool test_elems_match(test_state *state, pt_traverse_elem *elems, int amount, pt_traversal *traversal) {
+static bool test_elems_match(test_state *state, pt_traversal *traversal, pt_traverse_elem *elems, int amount) {
   for (int i = 0; i < amount; i++) {
     pt_traverse_elem a = elems[i];
     pt_traverse_elem b = pt_scoped_traverse_next(traversal);
@@ -30,8 +31,23 @@ static bool test_elems_match(test_state *state, pt_traverse_elem *elems, int amo
   }
 }
 
+static void test_traversal(test_state *state, const char *input, traverse_mode mode, pt_traverse_elem *elems, int amount) {
+  const parse_tree_res tres = test_upto_parse_tree(state, input);
+  if (!tres.succeeded) {
+    return;
+  }
+  pt_traversal traversal = pt_scoped_traverse(tres.tree, mode);
+  test_elems_match(state, &traversal, elems, amount);
+}
+
 void test_traverse(test_state *state) {
   test_group_start(state, "AST Traversal");
-  
+
+  {
+    test_start(state, "does the right thing");
+    test_traversal(state,)
+    test_end(state);
+  }
+
   test_group_end(state);
 }
