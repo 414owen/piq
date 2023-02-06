@@ -104,14 +104,8 @@ static void test_traversal(test_state *state, const char *input, traverse_mode m
 }
 
 static const char *input =
-//  5   0 4   1  2  3
-  "(sig a (Fn I8 I8 I8))\n"
-
-//  23  10   11 12     15      16    19 21
-  "(fun a (b c) (add ((fn () 2) ()) 3))";
-//        ^    ^ ^     ^      ^    ^
-//       13   14 22   18     17   20
-//          params body call
+  "(sig a (Fn I8 (I8, I8) I8))\n"
+  "(fun a (b (c, d)) (add ((fn () 2) ()) 3))";
 
 #define node_act(_action_type, _node_type) \
   { \
@@ -142,7 +136,10 @@ static test_traverse_elem print_mode_elems[] = {
   inout(PT_ALL_MULTI_TERM_NAME),
   in(PT_ALL_TY_FN),
   inout(PT_ALL_TY_CONSTRUCTOR_NAME),
+  in(PT_ALL_TY_TUP),
   inout(PT_ALL_TY_CONSTRUCTOR_NAME),
+  inout(PT_ALL_TY_CONSTRUCTOR_NAME),
+  out(PT_ALL_TY_TUP),
   inout(PT_ALL_TY_CONSTRUCTOR_NAME),
   out(PT_ALL_TY_FN),
   out(PT_ALL_STATEMENT_SIG),
@@ -150,7 +147,10 @@ static test_traverse_elem print_mode_elems[] = {
   in(PT_ALL_STATEMENT_FUN),
   inout(PT_ALL_MULTI_TERM_NAME),
   inout(PT_ALL_PAT_WILDCARD),
+  in(PT_ALL_PAT_TUP),
   inout(PT_ALL_PAT_WILDCARD),
+  inout(PT_ALL_PAT_WILDCARD),
+  out(PT_ALL_PAT_TUP),
   in(PT_ALL_EX_FUN_BODY),
   in(PT_ALL_EX_CALL),
   inout(PT_ALL_EX_TERM_NAME),
@@ -175,6 +175,8 @@ static test_traverse_elem resolve_bindings_elems[] = {
   inout(PT_ALL_MULTI_TERM_NAME),
   in(PT_ALL_TY_FN),
   in(PT_ALL_TY_CONSTRUCTOR_NAME),
+  in(PT_ALL_TY_TUP),
+  in(PT_ALL_TY_CONSTRUCTOR_NAME),
   in(PT_ALL_TY_CONSTRUCTOR_NAME),
   in(PT_ALL_TY_CONSTRUCTOR_NAME),
   out(PT_ALL_STATEMENT_SIG),
@@ -183,6 +185,9 @@ static test_traverse_elem resolve_bindings_elems[] = {
   inout(PT_ALL_MULTI_TERM_NAME),
 
   // params
+  in(PT_ALL_PAT_WILDCARD),
+  push_env(PT_ALL_PAT_WILDCARD),
+  in(PT_ALL_PAT_TUP),
   in(PT_ALL_PAT_WILDCARD),
   push_env(PT_ALL_PAT_WILDCARD),
   in(PT_ALL_PAT_WILDCARD),
@@ -197,7 +202,7 @@ static test_traverse_elem resolve_bindings_elems[] = {
   in(PT_ALL_EX_INT),
 
   // inner lambda, so still has outer fn's params
-  pop_env_to(builtin_term_amount + 3),
+  pop_env_to(builtin_term_amount + 1 + 3),
   in(PT_ALL_EX_UNIT),
   in(PT_ALL_EX_INT),
 
@@ -214,6 +219,8 @@ static test_traverse_elem typecheck_elems[] = {
   inout(PT_ALL_MULTI_TERM_NAME),
   in(PT_ALL_TY_FN),
   in(PT_ALL_TY_CONSTRUCTOR_NAME),
+  in(PT_ALL_TY_TUP),
+  in(PT_ALL_TY_CONSTRUCTOR_NAME),
   in(PT_ALL_TY_CONSTRUCTOR_NAME),
   in(PT_ALL_TY_CONSTRUCTOR_NAME),
   link_sig(PT_ALL_STATEMENT_FUN),
@@ -223,6 +230,9 @@ static test_traverse_elem typecheck_elems[] = {
   inout(PT_ALL_MULTI_TERM_NAME),
 
   // params
+  in(PT_ALL_PAT_WILDCARD),
+  push_env(PT_ALL_PAT_WILDCARD),
+  in(PT_ALL_PAT_TUP),
   in(PT_ALL_PAT_WILDCARD),
   push_env(PT_ALL_PAT_WILDCARD),
   in(PT_ALL_PAT_WILDCARD),
@@ -237,7 +247,7 @@ static test_traverse_elem typecheck_elems[] = {
   in(PT_ALL_EX_INT),
 
   // inner lambda, so still has outer fn's params
-  pop_env_to(builtin_term_amount + 3),
+  pop_env_to(builtin_term_amount + 1 + 3),
   in(PT_ALL_EX_UNIT),
   in(PT_ALL_EX_INT),
 
@@ -261,6 +271,8 @@ static test_traverse_elem codegen_elems[] = {
   out(PT_ALL_TY_CONSTRUCTOR_NAME),
   out(PT_ALL_TY_CONSTRUCTOR_NAME),
   out(PT_ALL_TY_CONSTRUCTOR_NAME),
+  out(PT_ALL_TY_TUP),
+  out(PT_ALL_TY_CONSTRUCTOR_NAME),
   out(PT_ALL_TY_FN),
   out(PT_ALL_STATEMENT_SIG),
 
@@ -270,13 +282,16 @@ static test_traverse_elem codegen_elems[] = {
   // params
   in(PT_ALL_PAT_WILDCARD),
   push_env(PT_ALL_PAT_WILDCARD),
+  in(PT_ALL_PAT_TUP),
+  in(PT_ALL_PAT_WILDCARD),
+  push_env(PT_ALL_PAT_WILDCARD),
   in(PT_ALL_PAT_WILDCARD),
   push_env(PT_ALL_PAT_WILDCARD),
 
   out(PT_ALL_EX_TERM_NAME),
   out(PT_ALL_EX_INT),
   out(PT_ALL_EX_FUN_BODY),
-  pop_env_to(builtin_term_amount + 3),
+  pop_env_to(builtin_term_amount + 1 + 3),
   out(PT_ALL_EX_FN),
   out(PT_ALL_EX_UNIT),
   out(PT_ALL_EX_CALL),
@@ -286,12 +301,6 @@ static test_traverse_elem codegen_elems[] = {
 
   // wtf?
   pop_env_to(builtin_term_amount + 1),
-  out(PT_ALL_EX_UNIT),
-  out(PT_ALL_EX_INT),
-
-  // outer function
-  pop_env_to(builtin_term_amount + 1),
-
   out(PT_ALL_STATEMENT_FUN),
 };
 
