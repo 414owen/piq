@@ -15,8 +15,8 @@ typedef enum {
 
   // - [x] traverse patterns on the way in
   // - [x] traverse patterns on the way out
-  // - [x] traverse expressions on the way in
-  // - [x] traverse expressions on the way out
+  // - [x] traverse types/expressions on the way in
+  // - [x] traverse types/expressions on the way out
   // - [ ] push scope
   // - [ ] pop scope
   // - [ ] link signatures
@@ -25,8 +25,8 @@ typedef enum {
 
   // - [x] traverse patterns on the way in
   // - [ ] traverse patterns on the way out
-  // - [x] traverse expressions on the way in
-  // - [ ] traverse expressions on the way out
+  // - [x] traverse types/expressions on the way in
+  // - [ ] traverse types/expressions on the way out
   // - [x] push scope
   // - [x] pop scope
   // - [ ] link signatures
@@ -35,8 +35,8 @@ typedef enum {
 
   // - [x] traverse patterns on the way in
   // - [ ] traverse patterns on the way out
-  // - [x] traverse expressions on the way in
-  // - [ ] traverse expressions on the way out
+  // - [x] traverse types/expressions on the way in
+  // - [ ] traverse types/expressions on the way out
   // - [x] push scope
   // - [x] pop scope
   // - [x] link signatures
@@ -45,8 +45,8 @@ typedef enum {
 
   // - [x] traverse patterns on the way in
   // - [ ] traverse patterns on the way out
-  // - [ ] traverse expressions on the way in
-  // - [x] traverse expressions on the way out
+  // - [ ] traverse types/expressions on the way in
+  // - [x] traverse types/expressions on the way out
   // - [x] push scope
   // - [x] pop scope
   // - [ ] link signatures
@@ -167,15 +167,32 @@ static traversal_node_data traverse_get_parse_node(pt_traversal *traversal) {
   return res;
 }
 
+// these could probably be made faster with lookups...
 static bool should_push_out(traversal_wanted_actions wanted_actions, parse_node_type_all type) {
   bool res = true;
-  // TODO this can just be removed, benchmark removal
   switch (parse_node_categories[type]) {
+    case PT_C_TYPE:
     case PT_C_EXPRESSION:
       res = wanted_actions.traverse_expressions_out;
       break;
     case PT_C_PATTERN:
       res = wanted_actions.traverse_patterns_out;
+      break;
+    default:
+      break;
+  }
+  return res;
+}
+
+static bool should_traverse_in(traversal_wanted_actions wanted_actions, parse_node_type_all type) {
+  bool res = true;
+  switch (parse_node_categories[type]) {
+    case PT_C_TYPE:
+    case PT_C_EXPRESSION:
+      res = wanted_actions.traverse_expressions_in;
+      break;
+    case PT_C_PATTERN:
+      res = wanted_actions.traverse_patterns_in;
       break;
     default:
       break;
@@ -260,7 +277,10 @@ pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
             push_scoped_traverse_action(traversal, TR_VISIT_IN, res.data.node_data.node.sub_a);
             break;
         }
-        return res;
+        if (should_traverse_in(traversal->wanted_actions, res.data.node_data.node.type.all)) {
+          return res;
+        }
+        break;
       case TR_POP_TO:
         VEC_POP(&traversal->amt_stack, &res.data.new_environment_amount);
         traversal->environment_amt = res.data.new_environment_amount;
