@@ -18,7 +18,7 @@
 
 #define test_assert_eq_fmt(state, a, b, fmt)                                            \
   if ((a) != (b)) {                                                              \
-    failf(state, #a " != " #b "\nExpected: '" fmt "', got: '" fmt "'"); \
+    failf(state, #a " != " #b "\nExpected: '" fmt "', got: '" fmt "'", a, b); \
   }
 
 #define test_assert_eq_fmt_f(state, a, b, fmt, transform)                                            \

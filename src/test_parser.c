@@ -516,6 +516,28 @@ static void test_parser_succeeds_root(test_state *state) {
     test_end(state);
   }
   {
+    test_start(state, "Sig with params");
+
+    expected_output out = {
+      .tag = STRING,
+      .str = "(Sig (TermName a) (Fn ((TypeConstructorName I8) (TypeConstructorName I16)) (TypeConstructorName I32)))"
+    };
+    test_parser_succeeds_on(state, "(sig a (Fn I8 I16 I32))", out);
+
+    test_end(state);
+  }
+  {
+    test_start(state, "Fun with params");
+
+    expected_output out = {
+      .tag = STRING,
+      .str = "(Fun (TermName a) (Wildcard a) () (Body (Int 12)))"
+    };
+    test_parser_succeeds_on(state, "(fun a (a ()) 12)", out);
+
+    test_end(state);
+  }
+  {
     test_start(state, "Multiple funs");
 
     expected_output out = {.tag = STRING,
