@@ -47,6 +47,7 @@ typedef enum {
 
 } traverse_mode;
 
+/*
 typedef enum {
   // first time we see a node
   TR_ACT_INITIAL = 0,
@@ -57,23 +58,37 @@ typedef enum {
   TR_ACT_END = 5,
   TR_ACT_LINK_SIG = 6,
 } scoped_traverse_internal_action;
+*/
 
 typedef enum {
-  TR_PUSH_SCOPE_VAR = TR_ACT_INITIAL,
-  TR_NEW_BLOCK = TR_ACT_PUSH_SCOPE_VAR,
-  TR_VISIT_IN = TR_ACT_VISIT_IN,
-  TR_VISIT_OUT = TR_ACT_VISIT_OUT,
-  TR_POP_TO = TR_ACT_POP_TO,
-  TR_END = TR_ACT_END,
-  TR_LINK_SIG = TR_ACT_LINK_SIG,
+  TR_PUSH_SCOPE_VAR,
+  TR_NEW_BLOCK,
+  TR_VISIT_IN,
+  TR_VISIT_OUT,
+  TR_POP_TO,
+  TR_END,
+  TR_LINK_SIG,
 } scoped_traverse_action;
 
+/*
 typedef union {
   scoped_traverse_action action;
   scoped_traverse_internal_action action_internal;
 } traverse_action_union;
+*/
 
-VEC_DECL_CUSTOM(traverse_action_union, vec_traverse_action);
+// VEC_DECL_CUSTOM(traverse_action_union, vec_traverse_action);
+VEC_DECL_CUSTOM(scoped_traverse_action, vec_traverse_action);
+
+typedef struct {
+  uint8_t traverse_patterns_in : 1;
+  uint8_t traverse_patterns_out : 1;
+  uint8_t traverse_expressions_in : 1;
+  uint8_t traverse_expressions_out : 1;
+  uint8_t edit_environment : 1;
+  uint8_t link_sigs : 1;
+  uint8_t add_blocks : 1;
+} traversal_wanted_actions;
 
 typedef struct {
   const parse_node *nodes;
@@ -82,11 +97,12 @@ typedef struct {
   // const node_ind_t node_amt;
   vec_traverse_action actions;
   node_ind_t environment_amt;
-  const traverse_mode mode;
   union {
     vec_node_ind node_stack;
     vec_node_ind amt_stack;
   };
+  traverse_mode mode;
+  traversal_wanted_actions wanted_actions;
 } pt_traversal;
 
 typedef struct {
