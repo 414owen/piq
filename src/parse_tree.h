@@ -250,11 +250,36 @@ typedef struct {
 } parse_tree;
 
 typedef struct {
+  enum {
+    SEMERR_OUT_OF_PLACE_SIG,
+  } type;
+  union {
+    struct {
+      node_ind_t sig_index;
+      node_ind_t next_index;
+    };
+  };
+} semantic_error;
+
+VEC_DECL(semantic_error);
+
+typedef enum {
+  PRT_SUCCESS,
+  PRT_PARSE_ERROR,
+  PRT_SEMANTIC_ERRORS,
+} parse_result_type;
+
+typedef struct {
   parse_tree tree;
-  token_type *expected;
-  node_ind_t error_pos;
-  uint8_t expected_amt;
-  bool succeeded;
+  union {
+    struct {
+      token_type *expected;
+      node_ind_t error_pos;
+      uint8_t expected_amt;
+    };
+    vec_semantic_error semantic_errors;
+  };
+  parse_result_type type;
   struct timespec time_taken;
 } parse_tree_res;
 
@@ -262,9 +287,9 @@ parse_tree_res parse(token *tokens, size_t token_amt);
 
 void print_parse_tree(FILE *f, const char *input, const parse_tree tree);
 char *print_parse_tree_str(const char *input, const parse_tree tree);
-void print_parse_tree_error(FILE *f, const char *input, const token *tokens,
+void print_parse_errors(FILE *f, const char *input, const token *tokens,
                             const parse_tree_res pres);
-char *print_parse_tree_error_string(const char *input, const token *tokens,
+char *print_parse_errors_string(const char *input, const token *tokens,
                                     const parse_tree_res pres);
 void free_parse_tree(parse_tree tree);
 void free_parse_tree_res(parse_tree_res res);
@@ -277,51 +302,50 @@ typedef struct {
 
 resolution_errors resolve_bindings(parse_tree tree, const char *restrict input);
 
-
-#define PT_EXPRESSION_CASES \
-  PT_ALL_EX_CALL: \
-  case PT_ALL_EX_FN: \
-  case PT_ALL_EX_FUN_BODY: \
-  case PT_ALL_EX_IF: \
-  case PT_ALL_EX_INT: \
-  case PT_ALL_EX_AS: \
-  case PT_ALL_EX_TERM_NAME: \
-  case PT_ALL_EX_UPPER_NAME: \
-  case PT_ALL_EX_LIST: \
-  case PT_ALL_EX_STRING: \
-  case PT_ALL_EX_TUP: \
+#define PT_EXPRESSION_CASES                                                    \
+  PT_ALL_EX_CALL:                                                              \
+  case PT_ALL_EX_FN:                                                           \
+  case PT_ALL_EX_FUN_BODY:                                                     \
+  case PT_ALL_EX_IF:                                                           \
+  case PT_ALL_EX_INT:                                                          \
+  case PT_ALL_EX_AS:                                                           \
+  case PT_ALL_EX_TERM_NAME:                                                    \
+  case PT_ALL_EX_UPPER_NAME:                                                   \
+  case PT_ALL_EX_LIST:                                                         \
+  case PT_ALL_EX_STRING:                                                       \
+  case PT_ALL_EX_TUP:                                                          \
   case PT_ALL_EX_UNIT
 
-#define PT_MULTI_CASES \
-  PT_ALL_MULTI_TERM_NAME: \
-  case PT_ALL_MULTI_TYPE_PARAMS: \
-  case PT_ALL_MULTI_TYPE_PARAM_NAME: \
-  case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME: \
-  case PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME: \
-  case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL: \
+#define PT_MULTI_CASES                                                         \
+  PT_ALL_MULTI_TERM_NAME:                                                      \
+  case PT_ALL_MULTI_TYPE_PARAMS:                                               \
+  case PT_ALL_MULTI_TYPE_PARAM_NAME:                                           \
+  case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME:                                     \
+  case PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME:                                     \
+  case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:                                     \
   case PT_ALL_MULTI_DATA_CONSTRUCTORS
 
-#define PT_PATTERN_CASES \
-  PT_ALL_PAT_WILDCARD: \
-  case PT_ALL_PAT_TUP: \
-  case PT_ALL_PAT_UNIT: \
-  case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME: \
-  case PT_ALL_PAT_CONSTRUCTION: \
-  case PT_ALL_PAT_STRING: \
-  case PT_ALL_PAT_INT: \
+#define PT_PATTERN_CASES                                                       \
+  PT_ALL_PAT_WILDCARD:                                                         \
+  case PT_ALL_PAT_TUP:                                                         \
+  case PT_ALL_PAT_UNIT:                                                        \
+  case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME:                                       \
+  case PT_ALL_PAT_CONSTRUCTION:                                                \
+  case PT_ALL_PAT_STRING:                                                      \
+  case PT_ALL_PAT_INT:                                                         \
   case PT_ALL_PAT_LIST
 
-#define PT_STATEMENT_CASES \
-  PT_ALL_STATEMENT_SIG: \
-  case PT_ALL_STATEMENT_FUN: \
-  case PT_ALL_STATEMENT_LET: \
+#define PT_STATEMENT_CASES                                                     \
+  PT_ALL_STATEMENT_SIG:                                                        \
+  case PT_ALL_STATEMENT_FUN:                                                   \
+  case PT_ALL_STATEMENT_LET:                                                   \
   case PT_ALL_STATEMENT_DATA_DECLARATION
 
-#define PT_TYPE_CASES \
-  PT_ALL_TY_CONSTRUCTION: \
-  case PT_ALL_TY_LIST: \
-  case PT_ALL_TY_FN: \
-  case PT_ALL_TY_TUP: \
-  case PT_ALL_TY_UNIT: \
-  case PT_ALL_TY_PARAM_NAME: \
+#define PT_TYPE_CASES                                                          \
+  PT_ALL_TY_CONSTRUCTION:                                                      \
+  case PT_ALL_TY_LIST:                                                         \
+  case PT_ALL_TY_FN:                                                           \
+  case PT_ALL_TY_TUP:                                                          \
+  case PT_ALL_TY_UNIT:                                                         \
+  case PT_ALL_TY_PARAM_NAME:                                                   \
   case PT_ALL_TY_CONSTRUCTOR_NAME

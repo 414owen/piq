@@ -25,7 +25,7 @@ typedef struct {
 static void test_parser_succeeds_on(test_state *state, const char *input,
                                     expected_output output) {
   parse_tree_res pres = test_upto_parse_tree(state, input);
-  if (pres.succeeded) {
+  if (pres.type != PRT_SUCCESS) {
     switch (output.tag) {
       case ANY:
         break;
@@ -74,15 +74,20 @@ static void test_parser_fails_on(test_state *state, char *input, buf_ind_t pos,
 
   add_parser_timings(state, tres, pres);
 
-  if (pres.succeeded) {
-    char *parse_tree_str = print_parse_tree_str(input, pres.tree);
-    failf(state,
-          "Parsing \"%s\" was supposed to fail.\nGot parse tree:\n%s",
-          input,
-          parse_tree_str);
-    free((void *)pres.tree.inds);
-    free((void *)pres.tree.nodes);
-    goto end_a;
+  switch (pres.type) {
+    case PRT_SEMANTIC_ERRORS:
+    case PRT_SUCCESS: {
+      char *parse_tree_str = print_parse_tree_str(input, pres.tree);
+      failf(state,
+            "Parsing \"%s\" was supposed to fail.\nGot parse tree:\n%s",
+            input,
+            parse_tree_str);
+      free((void *)pres.tree.inds);
+      free((void *)pres.tree.nodes);
+      goto end_a;
+    }
+    case PRT_PARSE_ERROR:
+      break;
   }
 
   if (pos != pres.error_pos) {
@@ -520,8 +525,8 @@ static void test_parser_succeeds_root(test_state *state) {
 
     expected_output out = {
       .tag = STRING,
-      .str = "(Sig (TermName a) (Fn ((TypeConstructorName I8) (TypeConstructorName I16)) (TypeConstructorName I32)))"
-    };
+      .str = "(Sig (TermName a) (Fn ((TypeConstructorName I8) "
+             "(TypeConstructorName I16)) (TypeConstructorName I32)))"};
     test_parser_succeeds_on(state, "(sig a (Fn I8 I16 I32))", out);
 
     test_end(state);
@@ -531,8 +536,7 @@ static void test_parser_succeeds_root(test_state *state) {
 
     expected_output out = {
       .tag = STRING,
-      .str = "(Fun (TermName a) (Wildcard a) () (Body (Int 12)))"
-    };
+      .str = "(Fun (TermName a) (Wildcard a) () (Body (Int 12)))"};
     test_parser_succeeds_on(state, "(fun a (a ()) 12)", out);
 
     test_end(state);

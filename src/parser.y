@@ -47,6 +47,7 @@
 %include {
 
   #include <assert.h>
+  #include <hedley.h>
   #include <time.h>
 
   #include "defs.h"
@@ -69,9 +70,10 @@
     node_ind_t error_pos;
     uint8_t expected_amt;
     bool get_expected;
-    bool succeeded;
+    parse_result_type state;
+    vec_semantic_error semantic_errors;
     vec_node_ind ind_stack;
-  } state;
+  } parse_state;
 
   typedef node_ind_t stack_ref_t;
 
@@ -89,8 +91,8 @@
     #define BREAK_PARSER do {} while(0)
   #endif
 
-  static node_ind_t desugar_tuple(state*, parse_node_type_all, stack_ref_t);
-  static node_ind_t push_node(state *s, parse_node node);
+  static node_ind_t desugar_tuple(parse_state*, parse_node_type_all, stack_ref_t);
+  static node_ind_t push_node(parse_state *s, parse_node node);
 
   static buf_ind_t after_token_end(token t) {
     return t.start + t.len;
@@ -129,7 +131,7 @@
   }
 }
 
-%extra_argument { state *s }
+%extra_argument { parse_state *s }
 
 root(RES) ::= toplevels(A) EOF . {
   BREAK_PARSER;
@@ -835,15 +837,22 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
 %syntax_error {
   BREAK_PARSER;
   vec_token_type expected = VEC_NEW;
-  if (s->succeeded) {
-    s->error_pos = s->pos;
-    for (token_type i = 0; i < YYNTOKEN; i++) {
-      int a = yy_find_shift_action((YYCODETYPE)i, yypParser->yytos->stateno);
-      if (a != YY_ERROR_ACTION) VEC_PUSH(&expected, i);
+  switch (s->state) {
+    case PRT_SEMANTIC_ERRORS:
+      VEC_FREE(&s->semantic_errors);
+      HEDLEY_FALL_THROUGH;
+    case PRT_SUCCESS: {
+      s->error_pos = s->pos;
+      for (token_type i = 0; i < YYNTOKEN; i++) {
+        int a = yy_find_shift_action((YYCODETYPE)i, yypParser->yytos->stateno);
+        if (a != YY_ERROR_ACTION) VEC_PUSH(&expected, i);
+      }
+      s->expected_amt = expected.len;
+      s->expected = VEC_FINALIZE(&expected);
+      s->state = PRT_PARSE_ERROR;
     }
-    s->expected_amt = expected.len;
-    s->expected = VEC_FINALIZE(&expected);
-    s->succeeded = false;
+    case PRT_PARSE_ERROR:
+      break;
   }
 }
 
@@ -853,12 +862,12 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
 }
 
 %code {
-  static node_ind_t push_node(state *s, parse_node node) {
+  static node_ind_t push_node(parse_state *s, parse_node node) {
     VEC_PUSH(&s->nodes, node);
     return s->nodes.len - 1;
   }
 
-  static node_ind_t desugar_tuple(state *s, parse_node_type_all tag, stack_ref_t el_amount) {
+  static node_ind_t desugar_tuple(parse_state *s, parse_node_type_all tag, stack_ref_t el_amount) {
     vec_node_ind ind_stack = s->ind_stack;
     node_ind_t node_amt = s->nodes.len;
 
@@ -905,9 +914,9 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
 #endif
     yyParser xp;
     ParseInit(&xp);
-    state state = {
+    parse_state state = {
       .tokens = tokens,
-      .succeeded = true,
+      .state = PRT_SUCCESS,
       .root_subs_start = 0,
       .root_subs_amt = 0,
       .nodes = VEC_NEW,
@@ -918,6 +927,7 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
       .get_expected = get_expected,
       .error_pos = -1,
       .expected_amt = 0,
+      .semantic_errors = VEC_NEW,
       .expected = NULL,
     };
 
@@ -928,7 +938,7 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
     ParseFinalize(&xp);
 
     parse_tree_res res =  {
-      .succeeded = state.succeeded,
+      .type = state.state,
       .tree = {
         .node_amt = state.nodes.len,
         .root_subs_start = state.root_subs_start,
@@ -938,7 +948,10 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
       .expected_amt = state.expected_amt,
       .expected = state.expected,
     };
-    if (res.succeeded) {
+    if (res.type == PRT_SEMANTIC_ERRORS) {
+      res.semantic_errors = state.semantic_errors;
+    }
+    if (res.type == PRT_SUCCESS) {
       res.tree.nodes = VEC_FINALIZE(&state.nodes);
       res.tree.inds = VEC_FINALIZE(&state.inds);
       assert(state.ind_stack.len == 0);

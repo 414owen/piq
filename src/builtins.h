@@ -162,18 +162,17 @@ extern const node_ind_t builtin_type_inds[];
 extern const node_ind_t builtin_type_ind_amount;
 extern const char *builtin_term_names[];
 
-#define EACH_BUILTIN_BITWIDTH_CASE(prefix, suffix) \
-  prefix ## 8 ## suffix: \
-  case prefix ## 16 ## suffix: \
-  case prefix ## 32 ## suffix: \
-  case prefix ## 64 ## suffix
+#define EACH_BUILTIN_BITWIDTH_CASE(prefix, suffix)                             \
+  prefix##8##suffix : case prefix##16##suffix : case prefix##32##suffix        \
+    : case prefix##64##suffix
 
-#define EACH_SIGNED_BUILTIN_CASE(op) EACH_BUILTIN_BITWIDTH_CASE(i, _ ## op ## _builtin)
-#define EACH_UNSIGNED_BUILTIN_CASE(op) EACH_BUILTIN_BITWIDTH_CASE(u, _ ## op ## _builtin)
+#define EACH_SIGNED_BUILTIN_CASE(op)                                           \
+  EACH_BUILTIN_BITWIDTH_CASE(i, _##op##_builtin)
+#define EACH_UNSIGNED_BUILTIN_CASE(op)                                         \
+  EACH_BUILTIN_BITWIDTH_CASE(u, _##op##_builtin)
 
-#define EACH_BUILTIN_TYPE_CASE(op) \
-  EACH_SIGNED_BUILTIN_CASE(op): \
-  case EACH_UNSIGNED_BUILTIN_CASE(op)
+#define EACH_BUILTIN_TYPE_CASE(op)                                             \
+  EACH_SIGNED_BUILTIN_CASE(op) : case EACH_UNSIGNED_BUILTIN_CASE(op)
 
 #define BUILTIN_ADD_CASES EACH_BUILTIN_TYPE_CASE(add)
 #define BUILTIN_SUB_CASES EACH_BUILTIN_TYPE_CASE(sub)
@@ -195,30 +194,30 @@ extern const char *builtin_term_names[];
 #define BUILTIN_GTE_CASES EACH_BUILTIN_TYPE_CASE(gte)
 #define BUILTIN_EQ_CASES EACH_BUILTIN_TYPE_CASE(eq)
 
-#define BUILTIN_COMPARISON_CASES \
-  BUILTIN_LT_CASES: \
-  case BUILTIN_LTE_CASES: \
-  case BUILTIN_GT_CASES: \
-  case BUILTIN_GTE_CASES: \
+#define BUILTIN_COMPARISON_CASES                                               \
+  BUILTIN_LT_CASES:                                                            \
+  case BUILTIN_LTE_CASES:                                                      \
+  case BUILTIN_GT_CASES:                                                       \
+  case BUILTIN_GTE_CASES:                                                      \
   case BUILTIN_EQ_CASES
 
-#define BUILTIN_ARITHMETIC_CASES \
-  BUILTIN_ADD_CASES: \
-  case BUILTIN_SUB_CASES: \
-  case BUILTIN_MUL_CASES: \
-  case BUILTIN_DIV_CASES: \
-  case BUILTIN_REM_CASES: \
+#define BUILTIN_ARITHMETIC_CASES                                               \
+  BUILTIN_ADD_CASES:                                                           \
+  case BUILTIN_SUB_CASES:                                                      \
+  case BUILTIN_MUL_CASES:                                                      \
+  case BUILTIN_DIV_CASES:                                                      \
+  case BUILTIN_REM_CASES:                                                      \
   case BUILTIN_MOD_CASES
 
-#define BUILTIN_BINOP_CASES \
-  BUILTIN_COMPARISON_CASES: \
+#define BUILTIN_BINOP_CASES                                                    \
+  BUILTIN_COMPARISON_CASES:                                                    \
   case BUILTIN_ARITHMETIC_CASES
 
-#define BUILTIN_FUNCTION_CASES \
-  BUILTIN_COMPARISON_CASES: \
+#define BUILTIN_FUNCTION_CASES                                                 \
+  BUILTIN_COMPARISON_CASES:                                                    \
   case BUILTIN_ARITHMETIC_CASES
 
-#define BUILTIN_NON_FUNCTION_CASES \
-  true_builtin: \
-  case false_builtin: \
+#define BUILTIN_NON_FUNCTION_CASES                                             \
+  true_builtin:                                                                \
+  case false_builtin:                                                          \
   case builtin_term_amount

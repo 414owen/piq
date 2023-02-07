@@ -16,19 +16,25 @@
   if ((a) != (b))                                                              \
     test_fail_eq(state, #a, #b);
 
-#define test_assert_eq_fmt(state, a, b, fmt)                                            \
-  if ((a) != (b)) {                                                              \
-    failf(state, #a " != " #b "\nExpected: '" fmt "', got: '" fmt "'", a, b); \
+#define test_assert_eq_fmt(state, a, b, fmt)                                   \
+  if ((a) != (b)) {                                                            \
+    failf(state, #a " != " #b "\nExpected: '" fmt "', got: '" fmt "'", a, b);  \
   }
 
-#define test_assert_eq_fmt_f(state, a, b, fmt, transform)                                            \
-  if ((a) != (b)) {                                                              \
-    failf(state, #a " != " #b "\nExpected: '" fmt "', got: '" fmt "'", (transform)(a), (transform)(b)); \
+#define test_assert_eq_fmt_f(state, a, b, fmt, transform)                      \
+  if ((a) != (b)) {                                                            \
+    failf(state,                                                               \
+          #a " != " #b "\nExpected: '" fmt "', got: '" fmt "'",                \
+          (transform)(a),                                                      \
+          (transform)(b));                                                     \
   }
 
-#define test_assert_eq_fmt_a(state, a, b, fmt, transform)                                            \
-  if ((a) != (b)) {                                                              \
-    failf(state, #a " != " #b "\nExpected: '" fmt "', got: '" fmt "'", (transform)[a], (transform)[b]); \
+#define test_assert_eq_fmt_a(state, a, b, fmt, transform)                      \
+  if ((a) != (b)) {                                                            \
+    failf(state,                                                               \
+          #a " != " #b "\nExpected: '" fmt "', got: '" fmt "'",                \
+          (transform)[a],                                                      \
+          (transform)[b]);                                                     \
   }
 
 #define test_assert_neq(state, a, b)                                           \
