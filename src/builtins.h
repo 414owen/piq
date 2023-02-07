@@ -151,7 +151,7 @@ typedef enum {
   i32_mod_builtin = 84,
   i64_mod_builtin = 85,
 
-  builtin_term_amount = 90,
+  builtin_term_amount = 86,
 } builtin_term;
 
 extern const char *builtin_type_names[];
