@@ -62,17 +62,20 @@ void bs_update(bitset bs, size_t ind, bool b) {
 
 void bs_push_true(bitset *bs) {
   bs_grow(bs, bs->len + 1);
-  bs_data_set(bs->data, bs->len++);
+  bs_data_set(bs->data, bs->len);
+  bs->len++;
 }
 
 void bs_push_false(bitset *bs) {
   bs_grow(bs, bs->len + 1);
-  bs_data_clear(bs->data, bs->len++);
+  bs_data_clear(bs->data, bs->len);
+  bs->len++;
 }
 
 void bs_push(bitset *bs, bool bit) {
   bs_grow(bs, bs->len + 1);
-  bs_data_update(bs->data, bs->len++, bit);
+  bs_data_update(bs->data, bs->len, bit);
+  bs->len++;
 }
 
 void bs_push_true_n(bitset *bs, size_t amt) {
