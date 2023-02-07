@@ -468,17 +468,14 @@ void free_parse_tree(parse_tree tree) {
 }
 
 void free_parse_tree_res(parse_tree_res res) {
-  if (res.succeeded) {
+  if (res.type != PRT_SUCCESS) {
     free_parse_tree(res.tree);
   } else {
     free(res.expected);
   }
 }
 
-// TODO add line/col number
-void print_parse_tree_error(FILE *f, const char *restrict input,
-                            const token *restrict tokens,
-                            const parse_tree_res pres) {
+static void print_honest_parse_error(FILE *f, const char *restrict input, const token *restrict tokens, const parse_tree_res pres) {
   fputs("Parsing failed:\n", f);
   token t = tokens[pres.error_pos];
   format_error_ctx(f, input, t.start, t.len);
@@ -486,13 +483,51 @@ void print_parse_tree_error(FILE *f, const char *restrict input,
   print_tokens(f, pres.expected, pres.expected_amt);
 }
 
+static void print_semantic_error(FILE *f, const char *restrict input,
+                            const parse_tree tree,
+                            const semantic_error err) {
+  switch (err.type) {
+    case SEMERR_OUT_OF_PLACE_SIG: {
+      fprintf(f, "Expected binding to match signature:\n");
+      parse_node node = tree.nodes[err.sig_index];
+      format_error_ctx(f, input, node.span.start, node.span.len);
+      break;
+    }
+  }
+}
+
+static void print_semantic_errors(FILE *f, const char *restrict input,
+                            const token *restrict tokens,
+                            const parse_tree_res pres) {
+  for (uint32_t i = 0; i < pres.semantic_errors.len; i++) {
+    print_semantic_error(f, input, pres.tree, VEC_GET(pres.semantic_errors, i));
+  }
+}
+
+// TODO add line/col number
+void print_parse_errors(FILE *f, const char *restrict input,
+                            const token *restrict tokens,
+                            const parse_tree_res pres) {
+  switch (pres.type) {
+    case PRT_SUCCESS:
+      // impossible
+      break;
+    case PRT_PARSE_ERROR:
+      print_honest_parse_error(f, input, tokens, pres);
+      break;
+    case PRT_SEMANTIC_ERRORS:
+      print_semantic_errors(f, input, tokens, pres);
+      break;
+  }
+}
+
 MALLOC_ATTR_2(free, 1)
-char *print_parse_tree_error_string(const char *restrict input,
+char *print_parse_errors_string(const char *restrict input,
                                     const token *restrict tokens,
                                     const parse_tree_res pres) {
   stringstream ss;
   ss_init_immovable(&ss);
-  print_parse_tree_error(ss.stream, input, tokens, pres);
+  print_parse_errors(ss.stream, input, tokens, pres);
   ss_finalize(&ss);
   return ss.string;
 }
@@ -509,10 +544,10 @@ typedef struct {
 static void precalculate_scope_push(scope_calculator_state *state) {
   switch (state->elem.data.node_data.node.type.binding) {
     case PT_BIND_FUN: {
-      binding b =
-        state->tree
-          .nodes[PT_FUN_BINDING_IND(state->tree.inds, state->elem.data.node_data.node)]
-          .span;
+      binding b = state->tree
+                    .nodes[PT_FUN_BINDING_IND(state->tree.inds,
+                                              state->elem.data.node_data.node)]
+                    .span;
       scope_push(&state->environment, b);
       break;
     }
@@ -522,7 +557,8 @@ static void precalculate_scope_push(scope_calculator_state *state) {
       break;
     }
     case PT_BIND_LET: {
-      binding b = state->tree.nodes[PT_LET_BND_IND(state->elem.data.node_data.node)].span;
+      binding b =
+        state->tree.nodes[PT_LET_BND_IND(state->elem.data.node_data.node)].span;
       scope_push(&state->environment, b);
       break;
     }
@@ -550,7 +586,8 @@ static void precalculate_scope_visit(scope_calculator_state *state) {
   if (index == scope.bindings.len) {
     VEC_PUSH(&state->not_found, node.span);
   }
-  state->tree.nodes[state->elem.data.node_data.node_index].variable_index = index;
+  state->tree.nodes[state->elem.data.node_data.node_index].variable_index =
+    index;
 }
 
 resolution_errors resolve_bindings(parse_tree tree,

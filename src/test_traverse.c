@@ -46,6 +46,13 @@ static int count_traversal_elems(pt_traversal *traversal) {
   return res;
 }
 
+static void node_type_mismatch(test_state *state, int position, parse_node_type_all expected, parse_node_type_all got) {
+  failf(state, "Wrong node type at position %d. Expected: %s, got %s.", 
+    position,
+    parse_node_strings[expected],
+    parse_node_strings[got]);
+}
+
 static void test_elems_match(test_state *state, pt_traversal *traversal, test_traverse_elem *elems, int amount) {
   for (int i = 0; i < amount; i++) {
     pt_traverse_elem a = pt_scoped_traverse_next(traversal);
@@ -64,10 +71,7 @@ static void test_elems_match(test_state *state, pt_traversal *traversal, test_tr
       case TR_VISIT_OUT:
       case TR_NEW_BLOCK:
         if (b.node_type != a.data.node_data.node.type.all) {
-          failf(state, "Wrong node type at position %d. Expected: %s, got %s.", 
-            i,
-            parse_node_strings[b.node_type],
-            parse_node_strings[a.data.node_data.node.type.all]);
+          node_type_mismatch(state, i, b.node_type, a.data.node_data.node.type.all);
           return;
         }
         break;
@@ -83,8 +87,14 @@ static void test_elems_match(test_state *state, pt_traversal *traversal, test_tr
       case TR_END:
         // impossible
         break;
-      case TR_LINK_SIG:
+      case TR_LINK_SIG: {
+        parse_node_type_all at = traversal->nodes[a.data.link_sig_data.linked_index].type.all;
+        if (at != b.node_type) {
+          node_type_mismatch(state, i, b.node_type, at);
+          return;
+        }
         break;
+      }
     }
   }
   pt_traverse_elem b = pt_scoped_traverse_next(traversal);
@@ -95,11 +105,11 @@ static void test_elems_match(test_state *state, pt_traversal *traversal, test_tr
 }
 
 static void test_traversal(test_state *state, const char *input, traverse_mode mode, test_traverse_elem *elems, int amount) {
-  const parse_tree_res tres = test_upto_parse_tree(state, input);
-  if (!tres.succeeded) {
+  const parse_tree_res pres = test_upto_parse_tree(state, input);
+  if (!pres.type == PRT_SUCCESS) {
     return;
   }
-  pt_traversal traversal = pt_scoped_traverse(tres.tree, mode);
+  pt_traversal traversal = pt_scoped_traverse(pres.tree, mode);
   test_elems_match(state, &traversal, elems, amount);
 }
 

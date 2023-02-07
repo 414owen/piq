@@ -56,34 +56,26 @@ typedef enum {
 } traverse_mode;
 */
 
-static uint8_t traverse_patterns_in
-  = (1 << TRAVERSE_PRINT_TREE)
-  | (1 << TRAVERSE_RESOLVE_BINDINGS)
-  | (1 << TRAVERSE_TYPECHECK)
-  | (1 << TRAVERSE_CODEGEN);
+static uint8_t traverse_patterns_in =
+  (1 << TRAVERSE_PRINT_TREE) | (1 << TRAVERSE_RESOLVE_BINDINGS) |
+  (1 << TRAVERSE_TYPECHECK) | (1 << TRAVERSE_CODEGEN);
 
-static uint8_t traverse_patterns_out
-  = (1 << TRAVERSE_PRINT_TREE);
+static uint8_t traverse_patterns_out = (1 << TRAVERSE_PRINT_TREE);
 
-static uint8_t traverse_expressions_in
-  = (1 << TRAVERSE_PRINT_TREE)
-  | (1 << TRAVERSE_RESOLVE_BINDINGS)
-  | (1 << TRAVERSE_TYPECHECK);
+static uint8_t traverse_expressions_in = (1 << TRAVERSE_PRINT_TREE) |
+                                         (1 << TRAVERSE_RESOLVE_BINDINGS) |
+                                         (1 << TRAVERSE_TYPECHECK);
 
-static uint8_t traverse_expressions_out
-  = (1 << TRAVERSE_PRINT_TREE)
-  | (1 << TRAVERSE_CODEGEN);
+static uint8_t traverse_expressions_out =
+  (1 << TRAVERSE_PRINT_TREE) | (1 << TRAVERSE_CODEGEN);
 
-static uint8_t should_edit_environment
-  = (1 << TRAVERSE_RESOLVE_BINDINGS)
-  | (1 << TRAVERSE_TYPECHECK)
-  | (1 << TRAVERSE_CODEGEN);
+static uint8_t should_edit_environment = (1 << TRAVERSE_RESOLVE_BINDINGS) |
+                                         (1 << TRAVERSE_TYPECHECK) |
+                                         (1 << TRAVERSE_CODEGEN);
 
-static uint8_t should_link_sigs
-  = (1 << TRAVERSE_TYPECHECK);
+static uint8_t should_link_sigs = (1 << TRAVERSE_TYPECHECK);
 
-static uint8_t should_add_blocks
-  = (1 << TRAVERSE_CODEGEN);
+static uint8_t should_add_blocks = (1 << TRAVERSE_CODEGEN);
 
 static void push_scoped_traverse_action(pt_traversal *traversal,
                                         scoped_traverse_action action,
@@ -96,7 +88,8 @@ static bool test_should(uint8_t t, traverse_mode mode) {
   return t & (1 << mode);
 }
 
-static void traverse_push_block(pt_traversal *traversal, node_ind_t start, node_ind_t amount) {
+static void traverse_push_block(pt_traversal *traversal, node_ind_t start,
+                                node_ind_t amount) {
   for (node_ind_t i = 0; i < amount; i++) {
     const node_ind_t node_ind = traversal->inds[start + amount - 1 - i];
     VEC_PUSH(&traversal->node_stack, node_ind);
@@ -132,15 +125,16 @@ pt_traversal pt_scoped_traverse(parse_tree tree, traverse_mode mode) {
     .nodes = tree.nodes,
     .inds = tree.inds,
     .mode = mode,
-    .wanted_actions = {
-      .add_blocks = test_should(should_add_blocks, mode),
-      .edit_environment = test_should(should_edit_environment, mode),
-      .link_sigs = test_should(should_link_sigs, mode),
-      .traverse_expressions_in = test_should(traverse_expressions_in, mode),
-      .traverse_expressions_out = test_should(traverse_expressions_out, mode),
-      .traverse_patterns_in = test_should(traverse_patterns_in, mode),
-      .traverse_patterns_out = test_should(traverse_patterns_out, mode),
-    },
+    .wanted_actions =
+      {
+        .add_blocks = test_should(should_add_blocks, mode),
+        .edit_environment = test_should(should_edit_environment, mode),
+        .link_sigs = test_should(should_link_sigs, mode),
+        .traverse_expressions_in = test_should(traverse_expressions_in, mode),
+        .traverse_expressions_out = test_should(traverse_expressions_out, mode),
+        .traverse_patterns_in = test_should(traverse_patterns_in, mode),
+        .traverse_patterns_out = test_should(traverse_patterns_out, mode),
+      },
     // .path = VEC_NEW,
     .node_stack = VEC_NEW,
     .environment_amt = builtin_term_amount,
@@ -149,8 +143,7 @@ pt_traversal pt_scoped_traverse(parse_tree tree, traverse_mode mode) {
   // VEC_PUSH(&res.path, PT_ALL_LEN);
   const scoped_traverse_action act = TR_END;
   VEC_PUSH(&res.actions, act);
-  traverse_push_block(
-    &res, tree.root_subs_start, tree.root_subs_amt);
+  traverse_push_block(&res, tree.root_subs_start, tree.root_subs_amt);
   if (res.wanted_actions.edit_environment) {
     pt_scoped_traverse_push_letrec(
       &res, tree.root_subs_start, tree.root_subs_amt);
@@ -158,7 +151,7 @@ pt_traversal pt_scoped_traverse(parse_tree tree, traverse_mode mode) {
   return res;
 }
 
-static const uint64_t in_letrec = (((uint64_t) 1) << PT_ALL_LEN);
+static const uint64_t in_letrec = (((uint64_t)1) << PT_ALL_LEN);
 
 static traversal_node_data traverse_get_parse_node(pt_traversal *traversal) {
   traversal_node_data res;
@@ -168,7 +161,8 @@ static traversal_node_data traverse_get_parse_node(pt_traversal *traversal) {
 }
 
 // these could probably be made faster with lookups...
-static bool should_push_out(traversal_wanted_actions wanted_actions, parse_node_type_all type) {
+static bool should_push_out(traversal_wanted_actions wanted_actions,
+                            parse_node_type_all type) {
   bool res = true;
   switch (parse_node_categories[type]) {
     case PT_C_TYPE:
@@ -184,7 +178,8 @@ static bool should_push_out(traversal_wanted_actions wanted_actions, parse_node_
   return res;
 }
 
-static bool should_traverse_in(traversal_wanted_actions wanted_actions, parse_node_type_all type) {
+static bool should_traverse_in(traversal_wanted_actions wanted_actions,
+                               parse_node_type_all type) {
   bool res = true;
   switch (parse_node_categories[type]) {
     case PT_C_TYPE:
@@ -205,7 +200,7 @@ pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
   while (true) {
     scoped_traverse_action action;
     VEC_POP(&traversal->actions, &action);
-  
+
     pt_traverse_elem res = {
       .action = action,
     };
@@ -219,7 +214,8 @@ pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
         return res;
       case TR_VISIT_IN:
         res.data.node_data = traverse_get_parse_node(traversal);
-        if (should_push_out(traversal->wanted_actions, res.data.node_data.node.type.all)) {
+        if (should_push_out(traversal->wanted_actions,
+                            res.data.node_data.node.type.all)) {
           scoped_traverse_action act = TR_VISIT_OUT;
           VEC_PUSH(&traversal->actions, act);
           VEC_PUSH(&traversal->node_stack, res.data.node_data.node_index);
@@ -230,7 +226,8 @@ pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
             if (traversal->wanted_actions.link_sigs) {
               scoped_traverse_action act = TR_LINK_SIG;
               VEC_PUSH(&traversal->actions, act);
-              node_ind_t target = VEC_PEEK(traversal->node_stack);
+              vec_node_ind stack = traversal->node_stack;
+              node_ind_t target = VEC_GET(stack, stack.len - 2);
               VEC_PUSH(&traversal->node_stack, target);
               VEC_PUSH(&traversal->node_stack, res.data.node_data.node_index);
             }
@@ -258,26 +255,32 @@ pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal) {
             break;
         }
 
-        const tree_node_repr repr = pt_subs_type[res.data.node_data.node.type.all];
+        const tree_node_repr repr =
+          pt_subs_type[res.data.node_data.node.type.all];
 
         switch (repr) {
           case SUBS_EXTERNAL:
-            VEC_APPEND_REVERSE(&traversal->node_stack,
-                               res.data.node_data.node.sub_amt,
-                               &traversal->inds[res.data.node_data.node.subs_start]);
+            VEC_APPEND_REVERSE(
+              &traversal->node_stack,
+              res.data.node_data.node.sub_amt,
+              &traversal->inds[res.data.node_data.node.subs_start]);
             const scoped_traverse_action act = TR_VISIT_IN;
-            VEC_REPLICATE(&traversal->actions, res.data.node_data.node.sub_amt, act);
+            VEC_REPLICATE(
+              &traversal->actions, res.data.node_data.node.sub_amt, act);
             break;
           case SUBS_NONE:
             break;
           case SUBS_TWO:
-            push_scoped_traverse_action(traversal, TR_VISIT_IN, res.data.node_data.node.sub_b);
+            push_scoped_traverse_action(
+              traversal, TR_VISIT_IN, res.data.node_data.node.sub_b);
             HEDLEY_FALL_THROUGH;
           case SUBS_ONE:
-            push_scoped_traverse_action(traversal, TR_VISIT_IN, res.data.node_data.node.sub_a);
+            push_scoped_traverse_action(
+              traversal, TR_VISIT_IN, res.data.node_data.node.sub_a);
             break;
         }
-        if (should_traverse_in(traversal->wanted_actions, res.data.node_data.node.type.all)) {
+        if (should_traverse_in(traversal->wanted_actions,
+                               res.data.node_data.node.type.all)) {
           return res;
         }
         break;

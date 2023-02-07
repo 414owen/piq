@@ -10,7 +10,9 @@ void test_parse_tree(test_state *state) {
   test_start(state, "pt_subs_types");
   // Yes, this is meant to be 64. We use PT_ALL_LEN as a bitset index.
   if (PT_ALL_LEN >= 65) {
-    failf(state, "Too many parse node types. traverse.c uses a uint64_t as a note type bitset.");
+    failf(state,
+          "Too many parse node types. traverse.c uses a uint64_t as a note "
+          "type bitset.");
   }
   test_end(state);
 

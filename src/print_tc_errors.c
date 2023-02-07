@@ -15,8 +15,10 @@ static void print_tc_error(FILE *f, tc_res res, const char *restrict input,
       break;
     case TC_ERR_CONFLICT:
       fputs("Conflicting types:\nExpected:\n", f);
-      print_type(
-        f, res.types.tree.nodes, res.types.tree.inds, error.conflict.expected_ind);
+      print_type(f,
+                 res.types.tree.nodes,
+                 res.types.tree.inds,
+                 error.conflict.expected_ind);
       fputs("\n\nGot:\n", f);
       print_type(
         f, res.types.tree.nodes, res.types.tree.inds, error.conflict.got_ind);

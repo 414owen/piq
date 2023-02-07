@@ -334,8 +334,8 @@ static tc_constraints_res generate_constraints(const parse_tree tree,
     pt_trav_elem = pt_scoped_traverse_next(&traversal);
     switch (pt_trav_elem.action) {
       case TR_PUSH_SCOPE_VAR:
-        generate_constraints_push_environment(&builder,
-                                              pt_trav_elem.data.node_data.node_index);
+        generate_constraints_push_environment(
+          &builder, pt_trav_elem.data.node_data.node_index);
         continue;
       case TR_VISIT_IN:
         generate_constraints_visit(&builder, pt_trav_elem.data.node_data);
@@ -346,7 +346,8 @@ static tc_constraints_res generate_constraints(const parse_tree tree,
         builder.environment.len = pt_trav_elem.data.new_environment_amount;
         continue;
       case TR_LINK_SIG:
-        generate_constraints_link_sigs(&builder, pt_trav_elem.data.link_sig_data);
+        generate_constraints_link_sigs(&builder,
+                                       pt_trav_elem.data.link_sig_data);
         continue;
       case TR_END:
         break;
@@ -839,10 +840,11 @@ static type_info cleanup_types(node_ind_t parse_node_amt, type_builder *old) {
   type_info res = {
     .node_types = node_types,
     .type_amt = type_amt,
-    .tree = {
-      .nodes = VEC_FINALIZE(&builder.types),
-      .inds = VEC_FINALIZE(&builder.inds),
-    },
+    .tree =
+      {
+        .nodes = VEC_FINALIZE(&builder.types),
+        .inds = VEC_FINALIZE(&builder.inds),
+      },
   };
 
   return res;
@@ -916,10 +918,11 @@ tc_res typecheck(const parse_tree tree) {
     .types =
       {
         .type_amt = type_builder.types.len,
-        .tree = {
-          .nodes = VEC_FINALIZE(&type_builder.types),
-          .inds = VEC_FINALIZE(&type_builder.inds),
-        },
+        .tree =
+          {
+            .nodes = VEC_FINALIZE(&type_builder.types),
+            .inds = VEC_FINALIZE(&type_builder.inds),
+          },
         .node_types = VEC_FINALIZE(&type_builder.substitutions),
       },
 #ifdef TIME_TYPECHECK
