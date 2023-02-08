@@ -22,7 +22,7 @@ static void reply(char *input, FILE *out) {
 
   parse_tree_res pres = parse(tres.tokens, tres.token_amt);
   if (pres.type != PRT_SUCCESS) {
-    print_parse_error(stdout, input, tres.tokens, pres);
+    print_parse_errors(stdout, input, tres.tokens, pres);
     putc('\n', stdout);
     goto end_b;
   }
