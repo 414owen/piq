@@ -702,9 +702,9 @@ static void llvm_cg_module(LLVMContextRef ctx, LLVMModuleRef mod,
   llvm_init_builtins(&state);
 
   pt_traversal traversal = pt_scoped_traverse(tree, TRAVERSE_CODEGEN);
-  pt_traverse_elem elem = pt_scoped_traverse_next(&traversal);
 
   while (true) {
+    pt_traverse_elem elem = pt_scoped_traverse_next(&traversal);
     switch (elem.action) {
       case TR_END:
         break;
