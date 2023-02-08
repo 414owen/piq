@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
 UNDERLINE='-'
+PROGRESS_WIDTH=30
+
+CLEAR_LINE='\033[2K'
 
 NOCOLOR='\033[0m'
 RED='\033[0;31m'
@@ -21,14 +24,37 @@ WHITE='\033[1;37m'
 
 files="$(find src/ -type f)"
 
-function count_stats() {
-  total_lines=0
-  whitespace_lines=0
-  punctuation_lines=0
-  pragma_lines=0
+function replicate() {
+  printf "%${1}s" | tr " " "${2}"
+}
 
-  for file in $2; do
-    # echo "Counting $1 file ${file}"
+function progress() {
+  local numerator="$1"
+  local denominator="$2"
+  local current="$3"
+  local perc=$((100 * numerator / denominator))
+  local filled=$((PROGRESS_WIDTH * numerator / denominator))
+  local empty=$((PROGRESS_WIDTH - filled))
+  printf "\r${CLEAR_LINE}[$(replicate "${filled}" '#')$(replicate "${empty}" ' ')] %d%s %s" "${perc}" '%' "${current}"
+}
+
+function end_progress() {
+  echo -ne "\r${CLEAR_LINE}"
+}
+
+function count_stats() {
+  local files="${1}"
+  local file_amt=$(echo $files | wc -w)
+
+  local total_lines=0
+  local whitespace_lines=0
+  local punctuation_lines=0
+  local pragma_lines=0
+
+  local i=0
+  for file in $files; do
+    progress i file_amt "${file}"
+    i=$((i + 1))
     contents="$(cat $file)"
     file_line_amt=$(wc -l <<< "$contents")
     total_lines=$((total_lines + file_line_amt))
@@ -42,26 +68,27 @@ function count_stats() {
     file_pragma_line_amt=$((awk '/^\s*#/' | wc -l) <<< "${contents}")
     pragma_lines=$((pragma_lines + file_pragma_line_amt))
   done
+  end_progress
   echo "Total lines: ${total_lines}"
   echo "Whitespace lines: ${whitespace_lines}"
   echo "Punctuation lines: ${punctuation_lines}"
   echo "Pragma lines: ${pragma_lines}"
 }
 
-DOUBLEUNDER="${UNDERLINE}${UNDERLINE}"
+DOUBLE_UNDER="${UNDERLINE}${UNDERLINE}"
 
 function title() {
   echo -e "${RED}# ${1}"
   under="$(sed "s/./${UNDERLINE}/g" <<< "${1}")"
-  echo -e "${DOUBLEUNDER}${under}${NOCOLOR}"
+  echo -e "${DOUBLE_UNDER}${under}${NOCOLOR}"
 }
 
 title "Tests"
 test_files=$(grep 'test' <<< $files)
-count_stats "test" "$test_files"
+count_stats "$test_files"
 
 echo
 
 title "Source"
 non_test_files=$(grep -v 'test' <<< $files)
-count_stats "source" "$non_test_files"
+count_stats "$non_test_files"
