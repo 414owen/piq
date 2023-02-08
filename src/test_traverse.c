@@ -53,7 +53,7 @@ static char *print_ctx(test_traverse_elem *elems, int position) {
   fprintf(ss.stream, "Last five expected elements:\n");
   for (int i = MAX(0, position - 4); i <= position; i++) {
     test_traverse_elem elem = elems[i];
-    fprintf(ss.stream, "%s: ", action_names[elem.action]);
+    fprintf(ss.stream, "%d: %s: ", i, action_names[elem.action]);
     switch (elem.action) {
       case TR_PUSH_SCOPE_VAR:
       case TR_VISIT_IN:
@@ -164,6 +164,7 @@ static const char *input =
   "(sig a (Fn I8 (I8, I8) I8))\n"
   "(fun a (b (c, d))\n"
   "  (let e 23)\n"
+  "  (fun f () ())\n"
   "  (add ((fn () 2) ()) 3))";
 
 #define node_act(_action_type, _node_type) \
@@ -211,10 +212,19 @@ static test_traverse_elem print_mode_elems[] = {
   inout(PT_ALL_PAT_WILDCARD),
   out(PT_ALL_PAT_TUP),
   in(PT_ALL_EX_FUN_BODY),
+
   in(PT_ALL_STATEMENT_LET),
   inout(PT_ALL_MULTI_TERM_NAME),
   inout(PT_ALL_EX_INT),
   out(PT_ALL_STATEMENT_LET),
+
+  in(PT_ALL_STATEMENT_FUN),
+  inout(PT_ALL_MULTI_TERM_NAME),
+  in(PT_ALL_EX_FUN_BODY),
+  inout(PT_ALL_EX_UNIT),
+  out(PT_ALL_EX_FUN_BODY),
+  out(PT_ALL_STATEMENT_FUN),
+
   in(PT_ALL_EX_CALL),
   inout(PT_ALL_EX_TERM_NAME),
   in(PT_ALL_EX_CALL),
@@ -262,6 +272,15 @@ static test_traverse_elem resolve_bindings_elems[] = {
   in(PT_ALL_EX_INT),
   push_env(PT_ALL_STATEMENT_LET),
   out(PT_ALL_STATEMENT_LET),
+
+  // TODO This isn't being pushed to the environment!
+  in(PT_ALL_STATEMENT_FUN),
+  inout(PT_ALL_MULTI_TERM_NAME),
+  in(PT_ALL_EX_FUN_BODY),
+  in(PT_ALL_EX_UNIT),
+  pop_env_to(builtin_term_amount + 1 + 3 + 1),
+  out(PT_ALL_STATEMENT_FUN),
+
   in(PT_ALL_EX_CALL),
   in(PT_ALL_EX_TERM_NAME),
   in(PT_ALL_EX_CALL),
@@ -312,6 +331,14 @@ static test_traverse_elem typecheck_elems[] = {
   in(PT_ALL_EX_INT),
   push_env(PT_ALL_STATEMENT_LET),
   out(PT_ALL_STATEMENT_LET),
+
+  in(PT_ALL_STATEMENT_FUN),
+  inout(PT_ALL_MULTI_TERM_NAME),
+  in(PT_ALL_EX_FUN_BODY),
+  in(PT_ALL_EX_UNIT),
+  pop_env_to(builtin_term_amount + 1 + 3 + 1),
+  out(PT_ALL_STATEMENT_FUN),
+
   in(PT_ALL_EX_CALL),
   in(PT_ALL_EX_TERM_NAME),
   in(PT_ALL_EX_CALL),
@@ -356,11 +383,18 @@ static test_traverse_elem codegen_elems[] = {
   push_env(PT_ALL_PAT_WILDCARD),
 
   in(PT_ALL_STATEMENT_LET),
-  in(PT_ALL_MULTI_TERM_NAME),
-  out(PT_ALL_MULTI_TERM_NAME),
+  inout(PT_ALL_MULTI_TERM_NAME),
   out(PT_ALL_EX_INT),
   push_env(PT_ALL_STATEMENT_LET),
   out(PT_ALL_STATEMENT_LET),
+
+  in(PT_ALL_STATEMENT_FUN),
+  inout(PT_ALL_MULTI_TERM_NAME),
+  out(PT_ALL_EX_UNIT),
+  out(PT_ALL_EX_FUN_BODY),
+  pop_env_to(builtin_term_amount + 1 + 3 + 1),
+  out(PT_ALL_STATEMENT_FUN),
+
   out(PT_ALL_EX_TERM_NAME),
   out(PT_ALL_EX_INT),
   out(PT_ALL_EX_FUN_BODY),
