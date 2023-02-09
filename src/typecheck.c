@@ -726,9 +726,11 @@ static void check_ambiguities(node_ind_t parse_node_amt, type_builder *builder,
   for (node_ind_t node_ind = 0; node_ind < parse_node_amt; node_ind++) {
     if (type_contains_unsubstituted_typevar(
           builder, VEC_GET(builder->substitutions, node_ind))) {
+      node_ind_t type_ind = VEC_GET(builder->node_types, node_ind);
       tc_error err = {
         .type = TC_ERR_AMBIGUOUS,
         .pos = node_ind,
+        .ambiguous.index = type_ind,
       };
       VEC_PUSH(errors, err);
     }
@@ -747,6 +749,13 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
     VEC_POP(&stack, &type_ind);
     bool first_pass = bs_pop(&first_pass_stack);
     type t = VEC_GET(old->types, type_ind);
+
+    /*
+    printf("%d: %d: ", type_ind, first_pass);
+    print_type(stdout, VEC_DATA_PTR(&old->types), VEC_DATA_PTR(&old->inds), root_type);
+    puts("");
+    */
+
     if (t.check_tag == TC_VAR) {
       VEC_PUSH(&stack, VEC_GET(old->substitutions, t.type_var));
       bs_push(&first_pass_stack, first_pass);
