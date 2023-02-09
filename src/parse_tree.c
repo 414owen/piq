@@ -475,7 +475,9 @@ void free_parse_tree_res(parse_tree_res res) {
   }
 }
 
-static void print_honest_parse_error(FILE *f, const char *restrict input, const token *restrict tokens, const parse_tree_res pres) {
+static void print_honest_parse_error(FILE *f, const char *restrict input,
+                                     const token *restrict tokens,
+                                     const parse_tree_res pres) {
   fputs("Parsing failed:\n", f);
   token t = tokens[pres.error_pos];
   format_error_ctx(f, input, t.start, t.len);
@@ -484,8 +486,8 @@ static void print_honest_parse_error(FILE *f, const char *restrict input, const 
 }
 
 static void print_semantic_error(FILE *f, const char *restrict input,
-                            const parse_tree tree,
-                            const semantic_error err) {
+                                 const parse_tree tree,
+                                 const semantic_error err) {
   switch (err.type) {
     case SEMERR_OUT_OF_PLACE_SIG: {
       fprintf(f, "Expected binding to match signature:\n");
@@ -497,8 +499,7 @@ static void print_semantic_error(FILE *f, const char *restrict input,
 }
 
 static void print_semantic_errors(FILE *f, const char *restrict input,
-                            const token *restrict tokens,
-                            const parse_tree_res pres) {
+                                  const parse_tree_res pres) {
   for (uint32_t i = 0; i < pres.semantic_errors.len; i++) {
     print_semantic_error(f, input, pres.tree, VEC_GET(pres.semantic_errors, i));
   }
@@ -506,8 +507,8 @@ static void print_semantic_errors(FILE *f, const char *restrict input,
 
 // TODO add line/col number
 void print_parse_errors(FILE *f, const char *restrict input,
-                            const token *restrict tokens,
-                            const parse_tree_res pres) {
+                        const token *restrict tokens,
+                        const parse_tree_res pres) {
   switch (pres.type) {
     case PRT_SUCCESS:
       // impossible
@@ -516,15 +517,15 @@ void print_parse_errors(FILE *f, const char *restrict input,
       print_honest_parse_error(f, input, tokens, pres);
       break;
     case PRT_SEMANTIC_ERRORS:
-      print_semantic_errors(f, input, tokens, pres);
+      print_semantic_errors(f, input, pres);
       break;
   }
 }
 
 MALLOC_ATTR_2(free, 1)
 char *print_parse_errors_string(const char *restrict input,
-                                    const token *restrict tokens,
-                                    const parse_tree_res pres) {
+                                const token *restrict tokens,
+                                const parse_tree_res pres) {
   stringstream ss;
   ss_init_immovable(&ss);
   print_parse_errors(ss.stream, input, tokens, pres);
@@ -592,7 +593,7 @@ static void precalculate_scope_visit(scope_calculator_state *state) {
 
 resolution_errors resolve_bindings(parse_tree tree,
                                    const char *restrict input) {
-  pt_traversal traversal = pt_scoped_traverse(tree, TRAVERSE_RESOLVE_BINDINGS);
+  pt_traversal traversal = pt_traverse(tree, TRAVERSE_RESOLVE_BINDINGS);
   scope_calculator_state state = {
     .not_found = VEC_NEW,
     .tree = tree,
@@ -611,8 +612,9 @@ resolution_errors resolve_bindings(parse_tree tree,
     VEC_PUSH(&state.environment.bindings, s);
   }
   while (true) {
-    state.elem = pt_scoped_traverse_next(&traversal);
+    state.elem = pt_traverse_next(&traversal);
     switch (state.elem.action) {
+      case TR_NEW_BLOCK:
       case TR_LINK_SIG:
         break;
       case TR_POP_TO:

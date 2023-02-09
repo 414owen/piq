@@ -49,38 +49,35 @@ typedef enum {
 
 } traverse_mode;
 
-/*
 typedef enum {
+  TR_ACT_PUSH_SCOPE_VAR,
+  TR_ACT_NEW_BLOCK,
+  TR_ACT_VISIT_IN,
+  TR_ACT_VISIT_OUT,
+  TR_ACT_POP_TO,
+  TR_ACT_END,
+  TR_ACT_LINK_SIG,
   // first time we see a node
-  TR_ACT_INITIAL = 0,
-  TR_ACT_PUSH_SCOPE_VAR = 1,
-  TR_ACT_VISIT_IN = 2,
-  TR_ACT_VISIT_OUT = 3,
-  TR_ACT_POP_TO = 4,
-  TR_ACT_END = 5,
-  TR_ACT_LINK_SIG = 6,
-} scoped_traverse_internal_action;
-*/
+  TR_ACT_INITIAL,
+} traverse_action_internal;
 
 typedef enum {
-  TR_PUSH_SCOPE_VAR,
-  TR_NEW_BLOCK,
-  TR_VISIT_IN,
-  TR_VISIT_OUT,
-  TR_POP_TO,
-  TR_END,
-  TR_LINK_SIG,
-} scoped_traverse_action;
+  TR_PUSH_SCOPE_VAR = TR_ACT_PUSH_SCOPE_VAR,
+  TR_NEW_BLOCK = TR_ACT_NEW_BLOCK,
+  TR_VISIT_IN = TR_ACT_VISIT_IN,
+  TR_VISIT_OUT = TR_ACT_VISIT_OUT,
+  TR_POP_TO = TR_ACT_POP_TO,
+  TR_END = TR_ACT_END,
+  TR_LINK_SIG = TR_ACT_LINK_SIG,
+} traverse_action;
 
-/*
 typedef union {
-  scoped_traverse_action action;
-  scoped_traverse_internal_action action_internal;
+  traverse_action action;
+  traverse_action_internal action_internal;
 } traverse_action_union;
-*/
 
-// VEC_DECL_CUSTOM(traverse_action_union, vec_traverse_action);
-VEC_DECL_CUSTOM(scoped_traverse_action, vec_traverse_action);
+VEC_DECL_CUSTOM(traverse_action_union, vec_traverse_action);
+// VEC_DECL_CUSTOM(traverse_action, vec_traverse_action);
 
 typedef struct {
   uint8_t traverse_patterns_in : 1;
@@ -124,9 +121,9 @@ typedef union {
 } pt_trav_elem_data;
 
 typedef struct {
-  scoped_traverse_action action;
+  traverse_action action;
   pt_trav_elem_data data;
 } pt_traverse_elem;
 
-pt_traversal pt_scoped_traverse(parse_tree tree, traverse_mode mode);
-pt_traverse_elem pt_scoped_traverse_next(pt_traversal *traversal);
+pt_traversal pt_traverse(parse_tree tree, traverse_mode mode);
+pt_traverse_elem pt_traverse_next(pt_traversal *traversal);

@@ -327,11 +327,11 @@ static tc_constraints_res generate_constraints(const parse_tree tree,
 
   VEC_APPEND(&builder.environment, builtin_term_amount, builtin_type_inds);
 
-  pt_traversal traversal = pt_scoped_traverse(tree, TRAVERSE_TYPECHECK);
+  pt_traversal traversal = pt_traverse(tree, TRAVERSE_TYPECHECK);
   pt_traverse_elem pt_trav_elem;
 
   for (;;) {
-    pt_trav_elem = pt_scoped_traverse_next(&traversal);
+    pt_trav_elem = pt_traverse_next(&traversal);
     switch (pt_trav_elem.action) {
       case TR_PUSH_SCOPE_VAR:
         generate_constraints_push_environment(
