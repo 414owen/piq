@@ -545,21 +545,25 @@ typedef struct {
 static void precalculate_scope_push(scope_calculator_state *state) {
   switch (state->elem.data.node_data.node.type.binding) {
     case PT_BIND_FUN: {
-      binding b = state->tree
-                    .nodes[PT_FUN_BINDING_IND(state->tree.inds,
-                                              state->elem.data.node_data.node)]
-                    .span;
+      node_ind_t binding_ind = PT_FUN_BINDING_IND(state->tree.inds, state->elem.data.node_data.node);
+      parse_node *binding_node = &state->tree.nodes[binding_ind];
+      binding b = binding_node->span;
+      binding_node->variable_index = state->environment.bindings.len;
       scope_push(&state->environment, b);
       break;
     }
     case PT_BIND_WILDCARD: {
-      binding b = state->elem.data.node_data.node.span;
+      parse_node *node = &state->tree.nodes[state->elem.data.node_data.node_index];
+      node->variable_index = state->environment.bindings.len;
+      binding b = node->span;
       scope_push(&state->environment, b);
       break;
     }
     case PT_BIND_LET: {
-      binding b =
-        state->tree.nodes[PT_LET_BND_IND(state->elem.data.node_data.node)].span;
+      node_ind_t binding_ind = PT_LET_BND_IND(state->elem.data.node_data.node);
+      parse_node *node = &state->tree.nodes[binding_ind];
+      node->variable_index = state->environment.bindings.len;
+      binding b = node->span;
       scope_push(&state->environment, b);
       break;
     }

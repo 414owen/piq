@@ -509,7 +509,7 @@ static void test_typecheck_succeeds(test_state *state) {
     test_start(state, "Inner functions can be recursive");
     const char *input = "(sig test (Fn Bool))\n"
                         "(fun test ()\n"
-                        "  (fun a () a)\n"
+                        "  (fun a () (a))\n"
                         "  →(test)←)";
     test_type types[] = {
       bool_t,
@@ -644,6 +644,34 @@ static void test_errors(test_state *state) {
     test_typecheck_errors(state,
                           "(sig a (Fn String))\n"
                           "(fun a () →321←)",
+                          errors,
+                          STATIC_LEN(errors));
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Infinite type");
+    const tc_err_test errors[] = {
+      {
+        .type = TC_ERR_INFINITE,
+      },
+    };
+    test_typecheck_errors(state,
+                          "(fun a () →(a)←)",
+                          errors,
+                          STATIC_LEN(errors));
+    test_end(state);
+  }
+
+  {
+    test_start(state, "Exact infinite type");
+    const tc_err_test errors[] = {
+      {
+        .type = TC_ERR_INFINITE,
+      },
+    };
+    test_typecheck_errors(state,
+                          "(fun a () →a←)",
                           errors,
                           STATIC_LEN(errors));
     test_end(state);

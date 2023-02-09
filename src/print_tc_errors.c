@@ -32,7 +32,7 @@ static void print_tc_error(FILE *f, tc_res res, const char *restrict input,
   }
   parse_node node = tree.nodes[error.pos];
   position_info pos = find_line_and_col(input, node.span.start);
-  fprintf(f, "\nAt: %d:%d\n", pos.line, pos.column);
+  fprintf(f, "\nAt %s at %d:%d\n", parse_node_strings[node.type.all], pos.line, pos.column);
   format_error_ctx(f, input, node.span.start, node.span.len);
 }
 

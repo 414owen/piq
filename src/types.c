@@ -106,10 +106,7 @@ static exited_early type_contains_typevar_by(const type_builder *types,
   bool res = false;
   vec_type_ref stack = VEC_NEW;
   VEC_PUSH(&stack, root);
-  for (;;) {
-    if (stack.len == 0) {
-      break;
-    }
+  while (stack.len > 0) {
     type_ref node_ind;
     VEC_POP(&stack, &node_ind);
     type node = VEC_GET(types->types, node_ind);
@@ -156,7 +153,6 @@ static exited_early type_contains_typevar_by(const type_builder *types,
           &stack, node.sub_amt, VEC_GET_PTR(types->inds, node.subs_start));
         break;
     }
-    break;
   }
 
 end:
