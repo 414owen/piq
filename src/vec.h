@@ -213,3 +213,4 @@ VEC_DECL(u8);
 VEC_DECL(u32);
 VEC_DECL(char);
 VEC_DECL_CUSTOM(buf_ind_t, vec_buf_ind);
+VEC_DECL_CUSTOM(environment_ind_t, vec_environment_ind);

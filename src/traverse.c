@@ -4,6 +4,8 @@
 #include "parse_tree.h"
 #include "traverse.h"
 
+// TODO rename push_scope(function) to declare_function
+
 /*
 
 Notes on PUSH_SCOPE:
@@ -127,7 +129,7 @@ static void tr_maybe_link_sig(pt_traversal *traversal, node_ind_t node_index) {
     traverse_action act = TR_LINK_SIG;
     VEC_PUSH(&traversal->actions, act);
     vec_node_ind stack = traversal->node_stack;
-    node_ind_t target = VEC_GET(stack, stack.len - 2);
+    node_ind_t target = VEC_GET(stack, stack.len - 1);
     VEC_PUSH(&traversal->node_stack, target);
     VEC_PUSH(&traversal->node_stack, node_index);
   }
@@ -257,9 +259,15 @@ static void tr_push_inout(pt_traversal *traversal, node_ind_t node_index) {
 
 static void tr_maybe_restore_scope(pt_traversal *traversal) {
   if (traversal->wanted_actions.edit_environment) {
-    traverse_action act = TR_POP_TO;
+    traverse_action_internal act = TR_ACT_POP_TO;
     VEC_PUSH(&traversal->actions, act);
-    VEC_PUSH(&traversal->amt_stack, traversal->environment_amt);
+  }
+}
+
+static void tr_maybe_backup_scope(pt_traversal *traversal) {
+  if (traversal->wanted_actions.edit_environment) {
+    traverse_action_internal act = TR_ACT_BACKUP_SCOPE;
+    VEC_PUSH(&traversal->actions, act);
   }
 }
 
@@ -278,6 +286,7 @@ static void pt_traverse_push_letrec(pt_traversal *traversal, node_ind_t start,
       case PT_STATEMENT_FUN: {
         tr_maybe_restore_scope(traversal);
         tr_initial_external_sub_statement(traversal, data);
+        tr_maybe_backup_scope(traversal);
         break;
       }
       default:
@@ -307,6 +316,7 @@ static void tr_handle_initial(pt_traversal *traversal) {
       debug_assert(pt_subs_type[PT_ALL_EX_FN] == SUBS_EXTERNAL);
       tr_maybe_restore_scope(traversal);
       tr_initial_external_sub_expression(traversal, data);
+      tr_maybe_backup_scope(traversal);
       break;
     case PT_ALL_EX_CALL:
     case PT_ALL_EX_FUN_BODY:
@@ -361,6 +371,7 @@ static void tr_handle_initial(pt_traversal *traversal) {
       debug_assert(pt_subs_type[PT_ALL_STATEMENT_FUN] == SUBS_EXTERNAL);
       tr_maybe_restore_scope(traversal);
       tr_initial_external_sub_statement(traversal, data);
+      tr_maybe_backup_scope(traversal);
       tr_maybe_push_environment(traversal, data.node_index);
       break;
     case PT_ALL_STATEMENT_DATA_DECLARATION:
@@ -416,14 +427,16 @@ pt_traversal pt_traverse(parse_tree tree, traverse_mode mode) {
 
 // pre-then-postorder traversal
 pt_traverse_elem pt_traverse_next(pt_traversal *traversal) {
-  while (true) {
-    traverse_action_union action;
-    VEC_POP(&traversal->actions, &action);
+  pt_traverse_elem res;
+  while (traversal->actions.len > 0) {
+    traverse_action_internal act;
+    VEC_POP(&traversal->actions, &act);
+    res.action = (traverse_action) act;
 
-    pt_traverse_elem res = {
-      .action = action.action,
-    };
-    switch (action.action_internal) {
+    switch (act) {
+      case TR_ACT_BACKUP_SCOPE:
+        VEC_PUSH(&traversal->environment_len_stack, traversal->environment_amt);
+        break;
       case TR_ACT_PUSH_SCOPE_VAR:
         traversal->environment_amt++;
         HEDLEY_FALL_THROUGH;
@@ -438,7 +451,7 @@ pt_traverse_elem pt_traverse_next(pt_traversal *traversal) {
         tr_handle_initial(traversal);
         break;
       case TR_ACT_POP_TO:
-        VEC_POP(&traversal->amt_stack, &res.data.new_environment_amount);
+        VEC_POP(&traversal->environment_len_stack, &res.data.new_environment_amount);
         traversal->environment_amt = res.data.new_environment_amount;
         return res;
       case TR_ACT_END:
@@ -454,4 +467,6 @@ pt_traverse_elem pt_traverse_next(pt_traversal *traversal) {
       }
     }
   }
+  res.action = TR_END;
+  return res;
 }
