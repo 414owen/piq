@@ -690,6 +690,63 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
   }
 }
 
+static node_ind_t llvm_get_statement_binding_ind(node_ind_t *inds,
+                                                 parse_node node) {
+  switch (node.type.statement) {
+    case PT_STATEMENT_FUN:
+      return PT_FUN_BINDING_IND(inds, node);
+    case PT_STATEMENT_LET:
+      return PT_LET_BND_IND(node);
+    default:
+      return 0;
+  }
+}
+
+static environment_ind_t llvm_get_pushed_scope_ind(parse_tree tree,
+                                                   parse_node p) {
+  node_ind_t binding_ind = llvm_get_statement_binding_ind(tree.inds, p);
+  return tree.nodes[binding_ind].variable_index;
+}
+
+static void llvm_cg_push_scope(llvm_cg_state *state, traversal_node_data data) {
+  environment_ind_t binding_ind =
+    llvm_get_pushed_scope_ind(state->parse_tree, data.node);
+  if (binding_ind == state->environment_values.is_builtin.len) {
+    // We're pushing on the way in.
+    // This is root-level or in a letrec block.
+    switch (data.node.type.statement) {
+      case PT_STATEMENT_FUN: {
+        const parse_node binding = state->parse_tree.nodes[binding_ind];
+        LLVMTypeRef fn_type =
+          llvm_construct_type(state, state->types.node_types[data.node_index]);
+        buf_ind_t binding_len = binding.span.len;
+
+        // We should add this back at some point, I guess
+        // LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
+        LLVMFunctionRef fn =
+          LLVMAddFunctionCustom(state->module,
+                                &state->source.data[binding.span.start],
+                                binding_len,
+                                fn_type);
+        break;
+      }
+      default:
+        give_up("Can't use non-functions in letrec yet!");
+        break;
+    }
+  } else {
+    // We're pushing on the way out.
+    // This is a statement in a non-letrec block.
+    switch (data.node.type.statement) {
+      case PT_STATEMENT_FUN:
+        // TODO remove
+        give_up("Functions should be pushed to the environment on the way in, "
+                "so they can be recursive!");
+        break;
+    }
+  }
+}
+
 static void llvm_cg_module(LLVMContextRef ctx, LLVMModuleRef mod,
                            source_file source, parse_tree tree,
                            type_info types) {
@@ -701,14 +758,15 @@ static void llvm_cg_module(LLVMContextRef ctx, LLVMModuleRef mod,
   llvm_cg_state state = llvm_new_cg_state(ctx, mod, source, tree, types);
   llvm_init_builtins(&state);
 
-  pt_traversal traversal = pt_scoped_traverse(tree, TRAVERSE_CODEGEN);
+  pt_traversal traversal = pt_traverse(tree, TRAVERSE_CODEGEN);
 
   while (true) {
-    pt_traverse_elem elem = pt_scoped_traverse_next(&traversal);
+    pt_traverse_elem elem = pt_traverse_next(&traversal);
     switch (elem.action) {
       case TR_END:
         break;
       case TR_PUSH_SCOPE_VAR:
+        llvm_cg_push_scope(&state, elem.data.node_data);
         continue;
       case TR_VISIT_IN:
         llvm_cg_visit_in(&state, elem.data.node_data);

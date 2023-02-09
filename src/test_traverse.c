@@ -18,7 +18,7 @@
 */
 
 static const char *action_names[] = {
-  #define mk_entry(a) [a] = #a
+#define mk_entry(a) [a] = #a
   mk_entry(TR_PUSH_SCOPE_VAR),
   mk_entry(TR_NEW_BLOCK),
   mk_entry(TR_VISIT_IN),
@@ -26,11 +26,11 @@ static const char *action_names[] = {
   mk_entry(TR_POP_TO),
   mk_entry(TR_END),
   mk_entry(TR_LINK_SIG),
-  #undef mk_entry
+#undef mk_entry
 };
 
 typedef struct {
-  scoped_traverse_action action;
+  traverse_action action;
   union {
     parse_node_type_all node_type;
     uint32_t amount;
@@ -39,10 +39,10 @@ typedef struct {
 
 static int count_traversal_elems(pt_traversal *traversal) {
   int res = 0;
-  pt_traverse_elem a = pt_scoped_traverse_next(traversal);
+  pt_traverse_elem a = pt_traverse_next(traversal);
   while (a.action != TR_END) {
     res += 1;
-    a = pt_scoped_traverse_next(traversal);
+    a = pt_traverse_next(traversal);
   }
   return res;
 }
@@ -73,30 +73,38 @@ static char *print_ctx(test_traverse_elem *elems, int position) {
   return ss.string;
 }
 
-static void traversal_fail(test_state *state, char *err, test_traverse_elem *elems, int position) {
+static void traversal_fail(test_state *state, char *err,
+                           test_traverse_elem *elems, int position) {
   char *ctx = print_ctx(elems, position);
   failf(state, "At element %d: %s\n%s", position, err, ctx);
   free(ctx);
   free(err);
 }
 
-static void node_type_mismatch(test_state *state, int position, test_traverse_elem *elems, parse_node_type_all expected, parse_node_type_all got) {
+static void node_type_mismatch(test_state *state, int position,
+                               test_traverse_elem *elems,
+                               parse_node_type_all expected,
+                               parse_node_type_all got) {
   traversal_fail(
     state,
-    format_to_string("Wrong node type at position %d. Expected: %s, got %s", position, parse_node_strings[expected], parse_node_strings[got]),
+    format_to_string("Wrong node type at position %d. Expected: %s, got %s",
+                     position,
+                     parse_node_strings[expected],
+                     parse_node_strings[got]),
     elems,
-    position
-  );
+    position);
 }
 
-static void test_elems_match(test_state *state, pt_traversal *traversal, test_traverse_elem *elems, int amount) {
+static void test_elems_match(test_state *state, pt_traversal *traversal,
+                             test_traverse_elem *elems, int amount) {
   for (int i = 0; i < amount; i++) {
-    pt_traverse_elem a = pt_scoped_traverse_next(traversal);
+    pt_traverse_elem a = pt_traverse_next(traversal);
     test_traverse_elem b = elems[i];
     if (a.action == TR_END) {
       traversal_fail(
         state,
-        format_to_string("Not enough traversal items. Expected %d, got %d", amount, i),
+        format_to_string(
+          "Not enough traversal items. Expected %d, got %d", amount, i),
         elems,
         i);
       return;
@@ -105,7 +113,11 @@ static void test_elems_match(test_state *state, pt_traversal *traversal, test_tr
       char *ctx = print_ctx(elems, i);
       traversal_fail(
         state,
-        format_to_string("Traversal item mismatch on element %d. Expected '%s', got '%s'", i, action_names[b.action], action_names[a.action]),
+        format_to_string(
+          "Traversal item mismatch on element %d. Expected '%s', got '%s'",
+          i,
+          action_names[b.action],
+          action_names[a.action]),
         elems,
         i);
       free(ctx);
@@ -117,17 +129,21 @@ static void test_elems_match(test_state *state, pt_traversal *traversal, test_tr
       case TR_VISIT_OUT:
       case TR_NEW_BLOCK:
         if (b.node_type != a.data.node_data.node.type.all) {
-          node_type_mismatch(state, i, elems, b.node_type, a.data.node_data.node.type.all);
+          node_type_mismatch(
+            state, i, elems, b.node_type, a.data.node_data.node.type.all);
           return;
         }
         break;
       case TR_POP_TO:
         if (b.amount != a.data.new_environment_amount) {
-          traversal_fail(
-            state,
-            format_to_string("Wrong environment (pop) amount at position %d. Expected: %d, got %d", i, b.amount, a.data.new_environment_amount),
-            elems,
-            i);
+          traversal_fail(state,
+                         format_to_string("Wrong environment (pop) amount at "
+                                          "position %d. Expected: %d, got %d",
+                                          i,
+                                          b.amount,
+                                          a.data.new_environment_amount),
+                         elems,
+                         i);
           return;
         }
         break;
@@ -135,7 +151,8 @@ static void test_elems_match(test_state *state, pt_traversal *traversal, test_tr
         // impossible
         break;
       case TR_LINK_SIG: {
-        parse_node_type_all at = traversal->nodes[a.data.link_sig_data.linked_index].type.all;
+        parse_node_type_all at =
+          traversal->nodes[a.data.link_sig_data.linked_index].type.all;
         if (at != b.node_type) {
           node_type_mismatch(state, i, elems, b.node_type, at);
           return;
@@ -144,50 +161,46 @@ static void test_elems_match(test_state *state, pt_traversal *traversal, test_tr
       }
     }
   }
-  pt_traverse_elem b = pt_scoped_traverse_next(traversal);
+  pt_traverse_elem b = pt_traverse_next(traversal);
   if (b.action != TR_END) {
     const int traversal_elem_amt = count_traversal_elems(traversal) + amount;
-    failf(state, "Too many traversal items. Expected %d, got %d", amount, traversal_elem_amt);
+    failf(state,
+          "Too many traversal items. Expected %d, got %d",
+          amount,
+          traversal_elem_amt);
   }
 }
 
-static void test_traversal(test_state *state, const char *input, traverse_mode mode, test_traverse_elem *elems, int amount) {
+static void test_traversal(test_state *state, const char *input,
+                           traverse_mode mode, test_traverse_elem *elems,
+                           int amount) {
   const parse_tree_res pres = test_upto_parse_tree(state, input);
   if (pres.type != PRT_SUCCESS) {
     return;
   }
-  pt_traversal traversal = pt_scoped_traverse(pres.tree, mode);
+  pt_traversal traversal = pt_traverse(pres.tree, mode);
   test_elems_match(state, &traversal, elems, amount);
 }
 
-static const char *input =
-  "(sig a (Fn I8 (I8, I8) I8))\n"
-  "(fun a (b (c, d))\n"
-  "  (let e 23)\n"
-  "  (fun f () ())\n"
-  "  (add ((fn () 2) ()) 3))";
+static const char *input = "(sig a (Fn I8 (I8, I8) I8))\n"
+                           "(fun a (b (c, d))\n"
+                           "  (let e 23)\n"
+                           "  (fun f () ())\n"
+                           "  (add ((fn () 2) ()) 3))";
 
-#define node_act(_action_type, _node_type) \
-  { \
-    .action = (_action_type), \
-    .node_type = (_node_type), \
-  }
+#define node_act(_action_type, _node_type)                                     \
+  { .action = (_action_type), .node_type = (_node_type), }
 
 #define in(_node_type) node_act(TR_VISIT_IN, _node_type)
 
 #define out(_node_type) node_act(TR_VISIT_OUT, _node_type)
 
-#define inout(_node_type) \
-  in(_node_type), \
-  out(_node_type)
+#define inout(_node_type) in(_node_type), out(_node_type)
 
 #define push_env(_node_type) node_act(TR_PUSH_SCOPE_VAR, _node_type)
 
-#define pop_env_to(amt) \
-  { \
-    .action = TR_POP_TO, \
-    .amount = amt, \
-  }
+#define pop_env_to(amt)                                                        \
+  { .action = TR_POP_TO, .amount = amt, }
 
 #define link_sig(_node_type) node_act(TR_LINK_SIG, _node_type)
 
@@ -270,16 +283,17 @@ static test_traverse_elem resolve_bindings_elems[] = {
   in(PT_ALL_STATEMENT_LET),
   inout(PT_ALL_MULTI_TERM_NAME),
   in(PT_ALL_EX_INT),
-  push_env(PT_ALL_STATEMENT_LET),
   out(PT_ALL_STATEMENT_LET),
+  push_env(PT_ALL_STATEMENT_LET),
 
   // TODO This isn't being pushed to the environment!
+  push_env(PT_ALL_STATEMENT_FUN),
   in(PT_ALL_STATEMENT_FUN),
   inout(PT_ALL_MULTI_TERM_NAME),
   in(PT_ALL_EX_FUN_BODY),
   in(PT_ALL_EX_UNIT),
-  pop_env_to(builtin_term_amount + 1 + 3 + 1),
   out(PT_ALL_STATEMENT_FUN),
+  pop_env_to(builtin_term_amount + 1 + 3 + 1),
 
   in(PT_ALL_EX_CALL),
   in(PT_ALL_EX_TERM_NAME),
@@ -294,9 +308,8 @@ static test_traverse_elem resolve_bindings_elems[] = {
   in(PT_ALL_EX_INT),
 
   // outer function
-  pop_env_to(builtin_term_amount + 1),
-
   out(PT_ALL_STATEMENT_FUN),
+  pop_env_to(builtin_term_amount),
 };
 
 static test_traverse_elem typecheck_elems[] = {
@@ -427,21 +440,27 @@ static const int CODEGEN_ELEM_AMT = STATIC_LEN(codegen_elems);
 void test_traverse(test_state *state) {
   test_group_start(state, "AST Traversal");
 
-
   test_start(state, "Print tree mode");
-  test_traversal(state, input, TRAVERSE_PRINT_TREE, print_mode_elems, PRINT_ELEM_AMT);
+  test_traversal(
+    state, input, TRAVERSE_PRINT_TREE, print_mode_elems, PRINT_ELEM_AMT);
   test_end(state);
 
   test_start(state, "Resolve bindings");
-  test_traversal(state, input, TRAVERSE_RESOLVE_BINDINGS, resolve_bindings_elems, RESOLVE_BINDINGS_ELEM_AMT);
+  test_traversal(state,
+                 input,
+                 TRAVERSE_RESOLVE_BINDINGS,
+                 resolve_bindings_elems,
+                 RESOLVE_BINDINGS_ELEM_AMT);
   test_end(state);
 
   test_start(state, "Typecheck");
-  test_traversal(state, input, TRAVERSE_TYPECHECK, typecheck_elems, TYPECHECK_ELEM_AMT);
+  test_traversal(
+    state, input, TRAVERSE_TYPECHECK, typecheck_elems, TYPECHECK_ELEM_AMT);
   test_end(state);
 
   test_start(state, "Codegen");
-  test_traversal(state, input, TRAVERSE_CODEGEN, codegen_elems, CODEGEN_ELEM_AMT);
+  test_traversal(
+    state, input, TRAVERSE_CODEGEN, codegen_elems, CODEGEN_ELEM_AMT);
   test_end(state);
 
   test_group_end(state);
