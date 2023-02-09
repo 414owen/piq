@@ -57,8 +57,11 @@ typedef enum {
   TR_ACT_POP_TO,
   TR_ACT_END,
   TR_ACT_LINK_SIG,
-  // first time we see a node
+
+  // First time we see a node
   TR_ACT_INITIAL,
+  // When we enter a new block
+  TR_ACT_BACKUP_SCOPE,
 } traverse_action_internal;
 
 typedef enum {
@@ -76,7 +79,7 @@ typedef union {
   traverse_action_internal action_internal;
 } traverse_action_union;
 
-VEC_DECL_CUSTOM(traverse_action_union, vec_traverse_action);
+VEC_DECL_CUSTOM(traverse_action_internal, vec_traverse_action);
 // VEC_DECL_CUSTOM(traverse_action, vec_traverse_action);
 
 typedef struct {
@@ -92,10 +95,9 @@ typedef struct {
 typedef struct {
   const parse_node *nodes;
   const node_ind_t *inds;
-  vec_parse_node_type_all path;
-  // const node_ind_t node_amt;
   vec_traverse_action actions;
-  node_ind_t environment_amt;
+  environment_ind_t environment_amt;
+  vec_environment_ind environment_len_stack;
   union {
     vec_node_ind node_stack;
     vec_node_ind amt_stack;
