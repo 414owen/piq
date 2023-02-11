@@ -195,24 +195,34 @@ bool type_contains_specific_typevar(const type_builder *types, type_ref root,
 }
 
 typedef struct {
-  vec_typevar results;
-  const type_builder builder;
+  type_builder builder;
+  node_ind_t root_node;
+  node_ind_t parse_node_amount;
 } unsubstituted_check_data;
 
-static var_step_res collect_unsubstituted_typevars(typevar a, const void *data_p) {
-  unsubstituted_check_data *data = (unsubstituted_check_data *)data_p;
-  const type_builder *builder = &data->builder;
+/*
+static bool is_unsubstituted_typevar(typevar a, const type_builder *builder) {
   type_ref type_ind = VEC_GET(builder->substitutions, a);
   type t = VEC_GET(builder->types, type_ind);
-  if (t.check_tag == TC_VAR && a == t.type_var) {
-    var_step_res res = {
-      .early_exit = false,
-      .redirect_to_next = false,
+  return (t.check_tag == TC_VAR && a == t.type_var);
+}
+*/
+
+static var_step_res is_unsubstituted_typevar_step(typevar a, const void *data_p) {
+  const unsubstituted_check_data *data = (unsubstituted_check_data *)data_p;
+  const type_builder *builder = &data->builder;
+  const type_ref type_ind = VEC_GET(builder->substitutions, a);
+  const type t = VEC_GET(builder->types, type_ind);
+  // If this branch containsunsubstituted vars
+  // they'll be reported by their parse_node.
+  const bool is_node_var = a < data->parse_node_amount;
+  if (t.check_tag == TC_VAR && (a == t.type_var || !is_node_var || a == data->root_node)) {
+    const var_step_res res = {
+      .early_exit = true,
     };
-    VEC_PUSH(&data->results, )
     return res;
   }
-  var_step_res res = {
+  const var_step_res res = {
     .early_exit = false,
     .redirect_to_next = true,
     .next = type_ind,
@@ -221,13 +231,14 @@ static var_step_res collect_unsubstituted_typevars(typevar a, const void *data_p
 }
 
 bool type_contains_unsubstituted_typevar(const type_builder *builder,
-                                         type_ref root) {
+                                         type_ref root, node_ind_t parse_node_amount) {
   unsubstituted_check_data data = {
-    .results = VEC_NEW,
     .builder = *builder,
+    .parse_node_amount = parse_node_amount,
+    .root_node = root,
   };
   return type_contains_typevar_by(
-    builder, root, collect_unsubstituted_typevars, &data);
+    builder, root, is_unsubstituted_typevar_step, &data);
 }
 
 void free_type_builder(type_builder tb) {
