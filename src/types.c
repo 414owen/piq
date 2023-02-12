@@ -1,3 +1,5 @@
+#include <stb/stb_ds.h>
+
 #include "types.h"
 
 type_ref find_primitive_type(type_builder *tb, type_check_tag tag) {
