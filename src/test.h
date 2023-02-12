@@ -45,6 +45,7 @@
 
 typedef struct {
   bool junit;
+  bool bench;
   bool lite;
   int times;
   const char *filter_str;

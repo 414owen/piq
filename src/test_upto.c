@@ -175,3 +175,82 @@ tc_res test_upto_typecheck(test_state *state, const char *restrict input,
   }
   return tc;
 }
+
+LLVMModuleRef test_upto_codegen(test_state *state, const char *restrict input,
+                                bool *success_out) {
+  bool success = true;
+  parse_tree tree;
+  tc_res tc_res = test_upto_typecheck(state, input, &success, &tree);
+  if (!success) {
+    *success_out = false;
+    return NULL;
+  }
+
+  tc_res tc = test_upto_typecheck(state, input, &success, &tree);
+
+  if (tc.error_amt > 0)
+    return NULL;
+
+  LLVMOrcJITTargetAddress entry_addr = (LLVMOrcJITTargetAddress)NULL;
+
+  if (success) {
+    source_file test_file = {
+      .path = "test_jit",
+      .data = input,
+    };
+
+    llvm_res res =
+      llvm_gen_module(test_file.path, test_file, tree, tc.types, ctx->llvm_ctx);
+    add_codegen_timings(state, tree, res);
+
+    ctx->module_str = LLVMPrintModuleToString(res.module);
+    // puts(ctx->module_str);
+
+#ifdef TIME_CODEGEN
+    struct timespec start = get_monotonic_time();
+#endif
+    LLVMOrcThreadSafeModuleRef tsm =
+      LLVMOrcCreateNewThreadSafeModule(res.module, ctx->orc_ctx);
+    LLVMOrcLLJITAddLLVMIRModule(ctx->jit, ctx->dylib, tsm);
+    LLVMErrorRef error = LLVMOrcLLJITLookup(ctx->jit, &entry_addr, "test");
+
+#ifdef TIME_CODEGEN
+    struct timespec time_taken = time_since_monotonic(start);
+    state->total_codegen_time =
+      timespec_add(state->total_codegen_time, time_taken);
+#endif
+
+    if (error != LLVMErrorSuccess) {
+      char *msg = LLVMGetErrorMessage(error);
+      failf(state,
+            "LLVMLLJITLookup failed:\n%s\nIn module:\n%s",
+            msg,
+            ctx->module_str);
+      LLVMDisposeErrorMessage(msg);
+    }
+
+    free_parse_tree(tree);
+    free_tc_res(tc);
+  }
+  return (voidfn)entry_addr;
+    
+    add_typecheck_timings(state, tree_res.tree, tc);
+    if (tc.error_amt > 0) {
+      *success = false;
+      stringstream ss;
+      ss_init_immovable(&ss);
+      print_tc_errors(ss.stream, input, tree_res.tree, tc);
+      ss_finalize(&ss);
+      failf(state, "Typecheck failed:\n%s", ss.string);
+      free(ss.string);
+      free_tc_res(tc);
+      free_parse_tree(tree_res.tree);
+    } else {
+      *success = true;
+    }
+    *tree = tree_res.tree;
+  } else {
+    *success = false;
+  }
+  return tc;
+}
