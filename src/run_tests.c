@@ -5,7 +5,9 @@
 #include <unistd.h>
 
 #include "args.h"
+#include "benchmark.h"
 #include "initialise.h"
+#include "llvm.h"
 #include "test.h"
 #include "tests.h"
 
@@ -160,13 +162,15 @@ int main(int argc, const char **argv) {
 
   test_state state = test_state_new(conf);
 
+  llvm_init();
+
   switch (root.subcommand_chosen) {
     case SUB_NONE:
       run_tests(&state);
       break;
     case SUB_BENCH:
       run_benchmarks(&state);
-      return 0;
+      break;
   }
 
   test_state_finalize(&state);

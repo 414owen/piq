@@ -60,7 +60,6 @@ A language that does everything right
   * TODO...
 
 
-
 # Ideas
 
 * ~Search index arrays instead of adding to them?~
@@ -168,6 +167,7 @@ $ ./result/bin/lang
 
 ```
 $ nix develop
+$ tup dbconfig   # generate compile_commands.json so the language server works
 $ tup
 $ ./repl
 ```

@@ -11,141 +11,34 @@
 #include "test.h"
 #include "tests.h"
 #include "test_upto.h"
+#include "test_llvm.h"
 #include "util.h"
+#include "typedefs.h"
 
-typedef struct {
-  LLVMContextRef llvm_ctx;
-  LLVMOrcThreadSafeContextRef orc_ctx;
-  LLVMOrcLLJITRef jit;
-  char *module_str;
-  // LLVMOrcExecutionSessionRef session;
-  LLVMOrcJITDylibRef dylib;
-} jit_ctx;
-
-static jit_ctx jit_llvm_init(void) {
-  LLVMOrcLLJITBuilderRef builder = LLVMOrcCreateLLJITBuilder();
-
-  LLVMOrcLLJITRef jit;
-  {
-    LLVMErrorRef error = LLVMOrcCreateLLJIT(&jit, builder);
-
-    if (error != LLVMErrorSuccess) {
-      char *msg = LLVMGetErrorMessage(error);
-      give_up("LLVMOrcCreateLLJIT failed: %s", msg);
-    }
+static char *ensure_int_result_matches(int32_t expected, int32_t got) {
+  char *res = NULL;
+  if (HEDLEY_UNLIKELY(got != expected)) {
+    res = format_to_string("Expected: %d, Got: %d.", expected, got);
   }
-
-  // LLVMOrcExecutionSessionRef session = LLVMOrcLLJITGetExecutionSession(jit);
-  LLVMOrcJITDylibRef dylib = LLVMOrcLLJITGetMainJITDylib(jit);
-  LLVMOrcThreadSafeContextRef orc_ctx = LLVMOrcCreateNewThreadSafeContext();
-
-  jit_ctx state = {
-    .llvm_ctx = LLVMOrcThreadSafeContextGetContext(orc_ctx),
-    .orc_ctx = orc_ctx,
-    .jit = jit,
-    // .session = session,
-    .dylib = dylib,
-  };
-
-  return state;
+  return res;
 }
 
-static void jit_dispose(jit_ctx *ctx) {
-  LLVMDisposeMessage(ctx->module_str);
-  LLVMOrcDisposeLLJIT(ctx->jit);
-  LLVMOrcDisposeThreadSafeContext(ctx->orc_ctx);
-}
-
-typedef void (*voidfn)(void);
-
-static voidfn get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
-  parse_tree tree;
-  bool success = false;
-  tc_res tc = test_upto_typecheck(state, input, &success, &tree);
-
-  if (tc.error_amt > 0)
-    return NULL;
-
-  LLVMOrcJITTargetAddress entry_addr = (LLVMOrcJITTargetAddress)NULL;
-
-  if (success) {
-    source_file test_file = {
-      .path = "test_jit",
-      .data = input,
-    };
-
-    llvm_res res =
-      llvm_gen_module(test_file.path, test_file, tree, tc.types, ctx->llvm_ctx);
-    add_codegen_timings(state, tree, res);
-
-    ctx->module_str = LLVMPrintModuleToString(res.module);
-    // puts(ctx->module_str);
-
-#ifdef TIME_CODEGEN
-    struct timespec start = get_monotonic_time();
-#endif
-    LLVMOrcThreadSafeModuleRef tsm =
-      LLVMOrcCreateNewThreadSafeModule(res.module, ctx->orc_ctx);
-    LLVMOrcLLJITAddLLVMIRModule(ctx->jit, ctx->dylib, tsm);
-    LLVMErrorRef error = LLVMOrcLLJITLookup(ctx->jit, &entry_addr, "test");
-
-#ifdef TIME_CODEGEN
-    struct timespec time_taken = time_since_monotonic(start);
-    state->total_codegen_time =
-      timespec_add(state->total_codegen_time, time_taken);
-#endif
-
-    if (error != LLVMErrorSuccess) {
-      char *msg = LLVMGetErrorMessage(error);
-      failf(state,
-            "LLVMLLJITLookup failed:\n%s\nIn module:\n%s",
-            msg,
-            ctx->module_str);
-      LLVMDisposeErrorMessage(msg);
-    }
-
-    free_parse_tree(tree);
-    free_tc_res(tc);
-  }
-  return (voidfn)entry_addr;
-}
-
-static void ensure_int_result_matches(test_state *state, jit_ctx ctx,
-                                      int32_t expected, int32_t got) {
-  if (got != expected) {
-    failf(
-      state,
-      "Jit function returned wrong result. Expected: %d, Got: %d.\nModule:%s\n",
-      expected,
-      got,
-      ctx.module_str);
-  }
+typedef uint32_t (*unit_to_int)(void);
+char *test_produces_int_callback(unit_to_int f, uint32_t *expected) {
+  return ensure_int_result_matches(f(), *expected);
 }
 
 static void test_llvm_code_produces_int(test_state *state,
                                         const char *restrict input,
                                         int32_t expected) {
-  jit_ctx ctx = jit_llvm_init();
-  voidfn entry_addr = get_entry_fn(state, &ctx, input);
-  int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
-  if (entry) {
-    int32_t got = entry();
-    ensure_int_result_matches(state, ctx, expected, got);
-  }
-  jit_dispose(&ctx);
-}
-
-static void test_llvm_code_produces_bool(test_state *state,
-                                         const char *restrict input,
-                                         bool expected) {
-  jit_ctx ctx = jit_llvm_init();
-  voidfn entry_addr = get_entry_fn(state, &ctx, input);
-  bool (*entry)(void) = (bool (*)(void))entry_addr;
-  if (entry) {
-    bool got = entry();
-    ensure_int_result_matches(state, ctx, expected, got);
-  }
-  jit_dispose(&ctx);
+  llvm_symbol_test tests[] = {
+    {
+      .symbol_name = "test",
+      .test_callback = (voidfn) test_produces_int_callback,
+      .data = &expected,
+    },
+  };
+  test_upto_codegen_with(state, input, tests, STATIC_LEN(tests));
 }
 
 typedef struct {
@@ -153,30 +46,72 @@ typedef struct {
   int32_t expected;
 } i32_mapping_test_case;
 
-static void test_llvm_code_maps_int(test_state *state,
-                                    const char *restrict input, int case_amt,
-                                    i32_mapping_test_case *cases) {
-  jit_ctx ctx = jit_llvm_init();
-  voidfn entry_addr = get_entry_fn(state, &ctx, input);
-  int32_t (*entry)(int32_t) = (int32_t(*)(int32_t))entry_addr;
-  if (entry) {
-    for (int i = 0; i < case_amt; i++) {
-      i32_mapping_test_case tup = cases[i];
-      int32_t got = entry(tup.input);
-      ensure_int_result_matches(state, ctx, tup.expected, got);
+typedef struct {
+  int case_amt;
+  i32_mapping_test_case *cases;
+} i32_mapping_test_cases;
+
+typedef uint32_t (*int_to_int)(uint32_t);
+char *test_maps_int_callback(int_to_int f, i32_mapping_test_case *data) {
+  return ensure_int_result_matches(f(data->input), data->expected);
+}
+
+static char *test_maps_ints_callback(int_to_int f, i32_mapping_test_cases *data_p) {
+  i32_mapping_test_cases data = *data_p;
+  for (int i = 0; i < data.case_amt; i++) {
+    i32_mapping_test_case test_case = data.cases[i];
+    char *err = ensure_int_result_matches(f(test_case.input), test_case.expected);
+    if (err != NULL) {
+      return err;
     }
   }
-  jit_dispose(&ctx);
+  return NULL;
+}
+
+static void test_llvm_code_maps_ints(test_state *state,
+                                    const char *restrict input, int case_amt,
+                                    i32_mapping_test_case *cases) {
+  i32_mapping_test_cases test_cases = {
+    .case_amt = case_amt,
+    .cases = cases,
+  };
+  llvm_symbol_test tests[] = {
+    {
+      .symbol_name = "test",
+      .test_callback = (voidfn) test_maps_ints_callback,
+      .data = &test_cases,
+    },
+  };
+  test_upto_codegen_with(state, input, tests, STATIC_LEN(tests));
+}
+
+typedef bool (*unit_to_bool)(void);
+char *test_produces_bool_callback(unit_to_bool f, bool *data) {
+  return ensure_int_result_matches(f(), *data);
+}
+
+static void test_llvm_code_produces_bool(test_state *state,
+                                         const char *restrict input,
+                                         bool expected) {
+  llvm_symbol_test test = {
+    .symbol_name = "test",
+    .test_callback = (voidfn) test_produces_bool_callback,
+    .data = &expected
+  };
+  test_upto_codegen_with(state, input, &test, 1);
+}
+
+char *test_code_runs_callback(voidfn f, void *data) {
+  f();
+  return NULL;
 }
 
 static void test_llvm_code_runs(test_state *state, const char *restrict input) {
-  jit_ctx ctx = jit_llvm_init();
-  voidfn entry_addr = get_entry_fn(state, &ctx, input);
-  int32_t (*entry)(void) = (int32_t(*)(void))entry_addr;
-  if (entry) {
-    entry();
-  }
-  jit_dispose(&ctx);
+  llvm_symbol_test test = {
+    .symbol_name = "test",
+    .test_callback = (voidfn) test_code_runs_callback,
+  };
+  test_upto_codegen_with(state, input, &test, 1);
 }
 
 static void init() {
@@ -192,7 +127,7 @@ static void test_robustness(test_state *state) {
   {
     stringstream source_file;
     ss_init_immovable(&source_file);
-    static const size_t depth = 1;
+    static const size_t depth = 1000;
     const char *preamble = "(sig sndpar (Fn I32 I32 I32))\n"
                            "(fun sndpar (a b) b)\n"
                            "\n"
@@ -264,7 +199,7 @@ void test_llvm(test_state *state) {
         .expected = -500,
       },
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(test_cases), test_cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(test_cases), test_cases);
   }
   test_end(state);
 
@@ -346,7 +281,7 @@ void test_llvm(test_state *state) {
         .expected = 5,
       },
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
 
@@ -373,7 +308,7 @@ void test_llvm(test_state *state) {
         .expected = -5,
       },
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
 
@@ -396,7 +331,7 @@ void test_llvm(test_state *state) {
         .expected = INT32_MAX - 1,
       },
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
 
@@ -423,7 +358,7 @@ void test_llvm(test_state *state) {
         .expected = 9,
       },
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
     // TODO test overflow
   }
   test_end(state);
@@ -439,7 +374,7 @@ void test_llvm(test_state *state) {
       {.input = 3, .expected = -4},
       {.input = -4, .expected = 3},
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
 
@@ -455,7 +390,7 @@ void test_llvm(test_state *state) {
       {.input = -4, .expected = 2},
       {.input = -9, .expected = 1},
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   {
     const char *input = "(sig test (Fn I32 I32))\n"
@@ -470,7 +405,7 @@ void test_llvm(test_state *state) {
       {.input = -4, .expected = -2},
       {.input = -9, .expected = -1},
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
 
@@ -486,7 +421,7 @@ void test_llvm(test_state *state) {
       {.input = -4, .expected = -2},
       {.input = -9, .expected = -8},
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   {
     const char *input = "(sig test (Fn I32 I32))\n"
@@ -501,7 +436,7 @@ void test_llvm(test_state *state) {
       {.input = -4, .expected = -2},
       {.input = -9, .expected = -1},
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
 
@@ -529,7 +464,7 @@ void test_llvm(test_state *state) {
       {.input = 65, .expected = 43},
       {.input = 23, .expected = 54},
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
 
@@ -544,7 +479,7 @@ void test_llvm(test_state *state) {
       {.input = 12, .expected = 48},
       {.input = -7, .expected = -28},
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
 
@@ -560,7 +495,7 @@ void test_llvm(test_state *state) {
       {.input = 42, .expected = 52},
       {.input = 56, .expected = 66},
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   {
     const char *input = "(sig test (Fn I32 I32))\n"
@@ -572,7 +507,7 @@ void test_llvm(test_state *state) {
       {.input = 42, .expected = 32},
       {.input = 56, .expected = 46},
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   {
     const char *input = "(sig test (Fn I32 I32))\n"
@@ -584,7 +519,7 @@ void test_llvm(test_state *state) {
       {.input = 11, .expected = 7},
       {.input = 13, .expected = -1},
     };
-    test_llvm_code_maps_int(state, input, STATIC_LEN(cases), cases);
+    test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   test_end(state);
   test_group_end(state);

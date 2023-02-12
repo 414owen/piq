@@ -116,7 +116,8 @@ void print_resolution_errors(FILE *f, const char *restrict input,
     binding b = errs.bindings[i];
     position_info pos = find_line_and_col(input, b.start);
     fprintf(f,
-            "Unknown binding '%.*s' at %u:%u",
+            "%sUnknown binding '%.*s' at %u:%u",
+            i == 0 ? "" : "\n",
             b.len,
             input + b.start,
             pos.line,

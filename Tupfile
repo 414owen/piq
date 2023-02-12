@@ -58,6 +58,8 @@ common_objs += print_tc_errors.o
 test_objs += run_tests.o
 test_objs += span.o
 test_objs += test_bitset.o
+test_objs += benchmark.o
+test_objs += llvm_test_utils.o
 test_objs += test.o
 test_objs += test_ir.o
 test_objs += test_llvm.o
@@ -115,6 +117,8 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/test_bitset.c      |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test.c             |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_diagnostics.c |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/benchmark.c        |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/llvm_test_utils.c  |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_ir.c          |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_semantics.c   |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_strint.c      |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o

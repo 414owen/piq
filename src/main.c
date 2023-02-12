@@ -68,9 +68,8 @@ static void compile_llvm(compile_arguments args) {
   }
 
   LLVMContextRef ctx = LLVMContextCreate();
-  // llvm_res res = gen_module("my_module", source, tree, types, ctx);
-  llvm_res llvm_ir_res =
-    llvm_gen_module(args.input_file_path, file, pres.tree, tc_res.types, ctx);
+  LLVMModuleRef module = LLVMModuleCreateWithNameInContext("repl", ctx);
+  llvm_res llvm_ir_res = llvm_gen_module(file, pres.tree, tc_res.types, module);
   free_parse_tree_res(pres);
 
   if (args.llvm_dump_path != NULL) {
@@ -81,6 +80,7 @@ static void compile_llvm(compile_arguments args) {
       printf("Couldn't dump LLVM IR: %s\n", err != NULL ? err : "");
     }
   }
+  LLVMDisposeModule(module);
   LLVMContextDispose(ctx);
 
 end_c:

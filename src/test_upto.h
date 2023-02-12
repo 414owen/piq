@@ -5,6 +5,7 @@
 #include "test.h"
 #include "typecheck.h"
 #include "llvm.h"
+#include "typedefs.h"
 
 #define pass                                                                   \
   do {                                                                         \
@@ -58,5 +59,14 @@ upto_resolution_res test_upto_resolution(test_state *state,
 tc_res test_upto_typecheck(test_state *state, const char *input, bool *success,
                            parse_tree *tree);
 
-LLVMModuleRef test_upto_codegen(test_state *state, const char *input, bool *success,
-                           parse_tree *tree);
+typedef char* test_failure;
+typedef test_failure (*symbol_test)(voidfn f, void *data);
+
+typedef struct {
+  char *symbol_name;
+  symbol_test test_callback;
+  void *data;
+} llvm_symbol_test;
+
+void test_upto_codegen_with(test_state *state, const char *restrict input,
+                            llvm_symbol_test *tests, int num_tests);

@@ -2,6 +2,8 @@
 #include "diagnostic.h"
 #include "test.h"
 #include "test_upto.h"
+#include "test_llvm.h"
+#include "typedefs.h"
 
 #ifdef TIME_TOKENIZER
 // TODO use pre-known file sizes for non-tests
@@ -176,81 +178,87 @@ tc_res test_upto_typecheck(test_state *state, const char *restrict input,
   return tc;
 }
 
-LLVMModuleRef test_upto_codegen(test_state *state, const char *restrict input,
-                                bool *success_out) {
+// This one brackets the continuation, so it handles cleanup too
+// see [bracket](https://hackage.haskell.org/package/base-4.17.0.0/docs/Control-Exception.html#v:bracket)
+void test_upto_codegen_with(test_state *state, const char *restrict input,
+                            llvm_symbol_test *tests, int num_tests) {
   bool success = true;
   parse_tree tree;
   tc_res tc_res = test_upto_typecheck(state, input, &success, &tree);
   if (!success) {
-    *success_out = false;
-    return NULL;
+    return;
   }
 
-  tc_res tc = test_upto_typecheck(state, input, &success, &tree);
+  source_file test_file = {
+    .path = "test_jit",
+    .data = input,
+  };
 
-  if (tc.error_amt > 0)
-    return NULL;
+  llvm_jit_ctx ctx = llvm_jit_init();
 
+  LLVMModuleRef module = LLVMModuleCreateWithNameInContext(test_file.path, ctx.llvm_ctx);
+  llvm_res res = llvm_gen_module(test_file, tree, tc_res.types, module);
+  add_codegen_timings(state, tree, res);
+
+  // ctx->module_str = LLVMPrintModuleToString(res.module);
+  // puts(ctx->module_str);
+
+#ifdef TIME_CODEGEN
+  struct timespec start = get_monotonic_time();
+#endif
+
+  char *mod_str = LLVMPrintModuleToString(module);
+
+  LLVMOrcThreadSafeModuleRef tsm = LLVMOrcCreateNewThreadSafeModule(res.module, ctx.orc_ctx);
+  LLVMOrcLLJITAddLLVMIRModule(ctx.jit, ctx.dylib, tsm);
   LLVMOrcJITTargetAddress entry_addr = (LLVMOrcJITTargetAddress)NULL;
 
-  if (success) {
-    source_file test_file = {
-      .path = "test_jit",
-      .data = input,
-    };
-
-    llvm_res res =
-      llvm_gen_module(test_file.path, test_file, tree, tc.types, ctx->llvm_ctx);
-    add_codegen_timings(state, tree, res);
-
-    ctx->module_str = LLVMPrintModuleToString(res.module);
-    // puts(ctx->module_str);
-
-#ifdef TIME_CODEGEN
-    struct timespec start = get_monotonic_time();
-#endif
-    LLVMOrcThreadSafeModuleRef tsm =
-      LLVMOrcCreateNewThreadSafeModule(res.module, ctx->orc_ctx);
-    LLVMOrcLLJITAddLLVMIRModule(ctx->jit, ctx->dylib, tsm);
-    LLVMErrorRef error = LLVMOrcLLJITLookup(ctx->jit, &entry_addr, "test");
-
-#ifdef TIME_CODEGEN
-    struct timespec time_taken = time_since_monotonic(start);
-    state->total_codegen_time =
-      timespec_add(state->total_codegen_time, time_taken);
-#endif
-
-    if (error != LLVMErrorSuccess) {
+  char *module_preamble = "\nIn module:\n";
+  bool have_printed_module = false;
+  for (int i = 0; i < num_tests; i++) {
+    llvm_symbol_test test = tests[i];
+    LLVMErrorRef error = LLVMOrcLLJITLookup(ctx.jit, &entry_addr, test.symbol_name);
+    if (error == LLVMErrorSuccess) {
+      char *err = test.test_callback((voidfn) entry_addr, test.data);
+      if (err != NULL) {
+        failf(state,
+              "%s\nOn symbol: '%s'%s%s",
+              err,
+              test.symbol_name,
+              module_preamble,
+              mod_str);
+        if (!have_printed_module) {
+          have_printed_module = true;
+          module_preamble = "";
+          mod_str = "";
+        }
+      }
+    } else {
       char *msg = LLVMGetErrorMessage(error);
       failf(state,
-            "LLVMLLJITLookup failed:\n%s\nIn module:\n%s",
+            "LLVMLLJITLookup for symbol '%s' failed:\n%s%s%s",
+            test.symbol_name,
             msg,
-            ctx->module_str);
+            module_preamble,
+            mod_str);
+      if (!have_printed_module) {
+        have_printed_module = true;
+        module_preamble = "";
+        mod_str = "";
+      }
       LLVMDisposeErrorMessage(msg);
     }
+  }
+  LLVMDisposeMessage(mod_str);
 
-    free_parse_tree(tree);
-    free_tc_res(tc);
+#ifdef TIME_CODEGEN
+  struct timespec time_taken = time_since_monotonic(start);
+  if (!state->current_failed) {
+    state->total_codegen_time = timespec_add(state->total_codegen_time, time_taken);
   }
-  return (voidfn)entry_addr;
-    
-    add_typecheck_timings(state, tree_res.tree, tc);
-    if (tc.error_amt > 0) {
-      *success = false;
-      stringstream ss;
-      ss_init_immovable(&ss);
-      print_tc_errors(ss.stream, input, tree_res.tree, tc);
-      ss_finalize(&ss);
-      failf(state, "Typecheck failed:\n%s", ss.string);
-      free(ss.string);
-      free_tc_res(tc);
-      free_parse_tree(tree_res.tree);
-    } else {
-      *success = true;
-    }
-    *tree = tree_res.tree;
-  } else {
-    *success = false;
-  }
-  return tc;
+#endif
+
+  free_parse_tree(tree);
+  free_tc_res(tc_res);
+  llvm_jit_dispose(&ctx);
 }
