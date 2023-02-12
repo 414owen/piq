@@ -57,8 +57,6 @@ void run_benchmarks(test_state *state) {
 
   ss_finalize(&ss);
 
-  puts(ss.string);
-
   llvm_symbol_test test = {
     .symbol_name = "entry",
     .test_callback = do_nothing,
