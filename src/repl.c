@@ -38,7 +38,7 @@ static void reply(char *input, FILE *out) {
     goto end_c;
   }
 
-  gen_and_print_module(test_file, pres.tree, tc_res.types, out);
+  llvm_gen_and_print_module(test_file, pres.tree, tc_res.types, out);
   fflush(out);
 
 end_c:

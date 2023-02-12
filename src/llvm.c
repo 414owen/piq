@@ -790,10 +790,6 @@ static void llvm_cg_module(LLVMContextRef ctx, LLVMModuleRef mod,
                            source_file source, parse_tree tree,
                            type_info types) {
 
-  LLVMInitializeNativeTarget();
-  LLVMInitializeNativeAsmPrinter();
-  LLVMInitializeNativeAsmParser();
-
   llvm_cg_state state = llvm_new_cg_state(ctx, mod, source, tree, types);
   llvm_init_builtins(&state);
 
@@ -830,35 +826,44 @@ static void llvm_cg_module(LLVMContextRef ctx, LLVMModuleRef mod,
   destroy_cg_state(&state);
 }
 
-llvm_res llvm_gen_module(const char *module_name, source_file source,
-                         parse_tree tree, type_info types, LLVMContextRef ctx) {
+void llvm_init(void) {
+  LLVMInitializeNativeTarget();
+  LLVMInitializeNativeAsmPrinter();
+  LLVMInitializeNativeAsmParser();
+}
+
+llvm_res llvm_gen_module(source_file source, parse_tree tree, type_info types, LLVMModuleRef module) {
 #ifdef TIME_CODEGEN
   struct timespec start = get_monotonic_time();
 #endif
   llvm_res res = {
-    .module = LLVMModuleCreateWithNameInContext(module_name, ctx),
+    .module = module,
   };
-  llvm_cg_module(ctx, res.module, source, tree, types);
-  char *err;
-  bool broken = LLVMVerifyModule(res.module, LLVMPrintMessageAction, &err);
+  llvm_cg_module(LLVMGetModuleContext(module), res.module, source, tree, types);
+  // char *err;
+  // bool broken = LLVMVerifyModule(res.module, LLVMPrintMessageAction, &err);
   // char *mod_str = LLVMPrintModuleToString(res.module);
   // puts(mod_str);
   // free(mod_str);
-  fputs(err, stderr);
-  free(err);
-  if (broken) {
-    exit(1);
-  }
+  // fputs(err, stderr);
+  // free(err);
+  // if (broken) {
+  //   exit(1);
+  // }
 #ifdef TIME_CODEGEN
   res.time_taken = time_since_monotonic(start);
 #endif
   return res;
 }
 
-void gen_and_print_module(source_file source, parse_tree tree, type_info types,
+void llvm_gen_and_print_module(source_file source, parse_tree tree, type_info types,
                           FILE *out_f) {
   LLVMContextRef ctx = LLVMContextCreate();
-  llvm_res res = llvm_gen_module("my_module", source, tree, types, ctx);
-  fputs(LLVMPrintModuleToString(res.module), out_f);
+  LLVMModuleRef module = LLVMModuleCreateWithNameInContext("repl", ctx);
+  llvm_res res = llvm_gen_module(source, tree, types, module);
+  char *mod_str = LLVMPrintModuleToString(res.module);
+  fputs(mod_str, out_f);
+  LLVMDisposeMessage(mod_str);
+  LLVMDisposeModule(module);
   LLVMContextDispose(ctx);
 }
