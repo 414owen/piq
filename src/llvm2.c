@@ -1475,10 +1475,10 @@ llvm_res llvm_gen_module(const char *module_name, source_file source,
   llvm_res res = {
     .module = LLVMModuleCreateWithNameInContext(module_name, ctx),
   };
+  cg_llvm_module(ctx, res.module, source, tree, types);
   char *err;
   bool broken = LLVMVerifyModule(res.module, LLVMPrintMessageAction, &err);
   fputs(err, stderr);
-  cg_llvm_module(ctx, res.module, source, tree, types);
   free(err);
   if (broken) {
     exit(1);

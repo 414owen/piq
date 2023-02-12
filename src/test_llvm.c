@@ -79,6 +79,7 @@ static voidfn get_entry_fn(test_state *state, jit_ctx *ctx, const char *input) {
     add_codegen_timings(state, tree, res);
 
     ctx->module_str = LLVMPrintModuleToString(res.module);
+    // puts(ctx->module_str);
 
 #ifdef TIME_CODEGEN
     struct timespec start = get_monotonic_time();

@@ -102,6 +102,16 @@ void bs_push_false_n(bitset *bs, size_t amt) {
   bs->len += amt;
 }
 
+bitset bs_new_false_n(size_t n) {
+  size_t slots = BITNSLOTS(n);
+  bitset res = {
+    .data = calloc(slots, 1),
+    .cap = slots,
+    .len = n,
+  };
+  return res;
+}
+
 bool bs_pop(bitset *bs) {
   debug_assert(bs->len > 0);
   size_t len = --bs->len;

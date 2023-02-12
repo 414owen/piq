@@ -113,6 +113,8 @@ node_ind_t mk_type_inline(type_builder *tb, type_check_tag tag,
 node_ind_t mk_type(type_builder *tb, type_check_tag tag, const node_ind_t *subs,
                    node_ind_t sub_amt);
 node_ind_t mk_type_var(type_builder *tb, typevar value);
+void push_type_subs(vec_type_ref *restrict stack, const type_ref *restrict inds,
+                    type t);
 
 /*
 typedef struct {
@@ -132,4 +134,5 @@ type_traversal traverse_types(types);
 bool type_contains_specific_typevar(const type_builder *types, type_ref root,
                                     typevar a);
 bool type_contains_unsubstituted_typevar(const type_builder *builder,
-                                         type_ref root, node_ind_t parse_node_amount);
+                                         type_ref root,
+                                         node_ind_t parse_node_amount);

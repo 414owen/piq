@@ -43,8 +43,8 @@ static void test_parser_succeeds_on(test_state *state, const char *input,
         break;
       }
     }
-    free_parse_tree_res(pres);
   }
+  free_parse_tree_res(pres);
 }
 
 static void test_parser_succeeds_on_form(test_state *state, char *input,

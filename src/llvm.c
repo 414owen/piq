@@ -22,8 +22,8 @@ static const char *TUPLE_EXPRESSION_STR = "tup-expr";
 static const char *TUPLE_STR = "tuple";
 static const char *LAMBDA_STR = "lambda";
 static const char *ENTRY_STR = "fn-entry";
-static const char *THEN_STR = "if-then";
-static const char *ELSE_STR = "if-else";
+// static const char *THEN_STR = "if-then";
+// static const char *ELSE_STR = "if-else";
 
 // TODO deduplicate {i,u}<bitwidth>{add,sub,mul} exogenous functions
 
@@ -67,21 +67,13 @@ typedef struct {
   source_file source;
   parse_tree parse_tree;
   type_info types;
+
+  const struct {
+    const LLVMTypeRef ll_bool;
+    const LLVMValueRef ll_true;
+    const LLVMValueRef ll_false;
+  } llvm_cache;
 } llvm_cg_state;
-
-struct llvm_globals {
-  LLVMTypeRef bool_type;
-  LLVMValueRef true_value;
-  LLVMValueRef false_value;
-};
-
-struct llvm_globals llvm_globals;
-
-static void llvm_init(void) {
-  llvm_globals.bool_type = LLVMInt1Type();
-  llvm_globals.true_value = LLVMConstInt(llvm_globals.bool_type, 1, false);
-  llvm_globals.false_value = LLVMConstInt(llvm_globals.bool_type, 0, false);
-}
 
 static void llvm_gen_basic_block(llvm_cg_state *state, const char *name,
                                  LLVMFunctionRef fn) {
@@ -182,6 +174,18 @@ static LLVMTypeRef llvm_construct_type(llvm_cg_state *state,
     state->llvm_type_refs, state->types.tree, state->context, root_type_ind);
 }
 
+static LLVMTypeRef llvm_construct_passable_type(llvm_cg_state *state,
+                                                node_ind_t root_type_ind) {
+  LLVMTypeRef res = llvm_construct_type(state, root_type_ind);
+  type t = state->types.tree.nodes[root_type_ind];
+  switch (t.tag) {
+    case T_FN:
+      return LLVMPointerType(res, 0);
+    default:
+      return res;
+  }
+}
+
 static LLVMValueRef llvm_builtin_to_value(llvm_cg_state *state,
                                           builtin_term term) {
   LLVMValueRef res = state->builtin_values[term];
@@ -190,10 +194,10 @@ static LLVMValueRef llvm_builtin_to_value(llvm_cg_state *state,
 
   switch (term) {
     case true_builtin:
-      res = llvm_globals.true_value;
+      res = state->llvm_cache.ll_true;
       goto cache_and_ret;
     case false_builtin:
-      res = llvm_globals.false_value;
+      res = state->llvm_cache.ll_false;
       goto cache_and_ret;
     case BUILTIN_FUNCTION_CASES:
     case builtin_term_amount:
@@ -225,7 +229,8 @@ static LLVMValueRef llvm_builtin_to_value(llvm_cg_state *state,
   VEC_POP_(&state->block_stack);
   LLVMPositionBuilderAtEnd(state->builder, VEC_PEEK(state->block_stack));
   VEC_POP_(&state->function_stack);
-  res = LLVMConstBitCast(fn, LLVMPointerType(LLVMInt8Type(), 0));
+  // res = LLVMConstBitCast(fn, LLVMPointerType(LLVMInt8Type(), 0));
+  res = fn;
 cache_and_ret:
   state->builtin_values[term] = res;
 ret:
@@ -266,7 +271,7 @@ static llvm_lang_value llvm_pop_value(llvm_lang_values *values) {
 
 static LLVMValueRef llvm_to_exogenous_value(llvm_cg_state *state,
                                             llvm_lang_value value) {
-  return value.is_builtin ? llvm_builtin_to_value(state, value.is_builtin)
+  return value.is_builtin ? llvm_builtin_to_value(state, value.data.builtin)
                           : value.data.exogenous;
 }
 
@@ -305,8 +310,16 @@ llvm_lang_value value) { debug_assert(values->values.length > ind);
 }
 */
 
+static void free_lang_values(llvm_lang_values *values) {
+  VEC_FREE(&values->values);
+  bs_free(&values->is_builtin);
+}
+
 static void destroy_cg_state(llvm_cg_state *state) {
   LLVMDisposeBuilder(state->builder);
+  free(state->llvm_type_refs);
+  free_lang_values(&state->return_values);
+  free_lang_values(&state->environment_values);
   VEC_FREE(&state->block_stack);
   VEC_FREE(&state->function_stack);
 }
@@ -322,24 +335,29 @@ static llvm_lang_values llvm_empty_lang_values(void) {
 static llvm_cg_state llvm_new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
                                        source_file source, parse_tree tree,
                                        type_info types) {
-  llvm_cg_state state = {
-    .context = ctx,
-    .builder = LLVMCreateBuilderInContext(ctx),
-    .module = mod,
+  LLVMTypeRef bool_type = LLVMInt1TypeInContext(ctx);
+  llvm_cg_state state = {.context = ctx,
+                         .builder = LLVMCreateBuilderInContext(ctx),
+                         .module = mod,
 
-    .llvm_type_refs =
-      (LLVMTypeRef *)calloc(types.type_amt, sizeof(LLVMTypeRef)),
-    .return_values = llvm_empty_lang_values(),
-    .environment_values = llvm_empty_lang_values(),
-    .builtin_values = {NULL},
+                         .llvm_type_refs = (LLVMTypeRef *)calloc(
+                           types.type_amt, sizeof(LLVMTypeRef)),
+                         .return_values = llvm_empty_lang_values(),
+                         .environment_values = llvm_empty_lang_values(),
+                         .builtin_values = {NULL},
 
-    .block_stack = VEC_NEW,
-    .function_stack = VEC_NEW,
+                         .block_stack = VEC_NEW,
+                         .function_stack = VEC_NEW,
 
-    .source = source,
-    .parse_tree = tree,
-    .types = types,
-  };
+                         .source = source,
+                         .parse_tree = tree,
+                         .types = types,
+
+                         .llvm_cache = {
+                           .ll_bool = bool_type,
+                           .ll_true = LLVMConstInt(bool_type, 1, false),
+                           .ll_false = LLVMConstInt(bool_type, 0, false),
+                         }};
 
   // Sometimes we want to be nowhere
   VEC_PUSH(&state.block_stack, NULL);
@@ -352,6 +370,20 @@ static void llvm_init_builtins(llvm_cg_state *state) {
        builtin_term++) {
     llvm_push_builtin(values, builtin_term);
   }
+}
+
+typedef struct {
+  LLVMValueRef left;
+  LLVMValueRef right;
+} tuple_parts;
+
+static tuple_parts llvm_eliminate_tuple(llvm_cg_state *state,
+                                        LLVMValueRef tuple) {
+  tuple_parts res = {
+    .left = LLVMBuildExtractValue(state->builder, tuple, 0, "tuple-left"),
+    .right = LLVMBuildExtractValue(state->builder, tuple, 1, "tuple-right"),
+  };
+  return res;
 }
 
 static void llvm_cg_visit_in(llvm_cg_state *state, traversal_node_data data) {
@@ -391,8 +423,9 @@ static void llvm_cg_visit_in(llvm_cg_state *state, traversal_node_data data) {
 
     case PT_ALL_MULTI_TERM_NAME:
       break;
-    case PT_ALL_MULTI_TYPE_PARAMS:
+    case PT_ALL_MULTI_TYPE_PARAMS: {
       break;
+    }
     case PT_ALL_MULTI_TYPE_PARAM_NAME:
       break;
     case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME:
@@ -405,21 +438,41 @@ static void llvm_cg_visit_in(llvm_cg_state *state, traversal_node_data data) {
       break;
 
     case PT_ALL_PAT_WILDCARD:
+      // the thing on the stack will be pushed to the environment
       break;
-    case PT_ALL_PAT_TUP:
+    case PT_ALL_PAT_TUP: {
+      LLVMValueRef val = llvm_pop_exogenous_value(state, &state->return_values);
+      tuple_parts parts = llvm_eliminate_tuple(state, val);
+      llvm_push_exogenous_value(&state->return_values, parts.right);
+      llvm_push_exogenous_value(&state->return_values, parts.left);
       break;
+    }
     case PT_ALL_PAT_UNIT:
+      llvm_pop_value(&state->return_values);
       break;
     case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME:
+      // TODO
+      give_up("Destructureing user-defined data constructors is not "
+              "implemented yet.");
       break;
     case PT_ALL_PAT_CONSTRUCTION:
+      // TODO
+      give_up("Destructureing user-defined data constructors is not "
+              "implemented yet.");
       break;
     case PT_ALL_PAT_STRING:
       break;
     case PT_ALL_PAT_INT:
       break;
-    case PT_ALL_PAT_LIST:
+    case PT_ALL_PAT_LIST: {
+      LLVMValueRef val = llvm_pop_exogenous_value(state, &state->return_values);
+      for (node_ind_t i = 0; i < PT_LIST_SUB_AMT(data.node); i++) {
+        LLVMValueRef elem =
+          LLVMBuildExtractValue(state->builder, val, i, "list-pat-elem");
+        llvm_push_exogenous_value(&state->return_values, elem);
+      }
       break;
+    }
 
     case PT_ALL_STATEMENT_SIG:
       break;
@@ -427,27 +480,17 @@ static void llvm_cg_visit_in(llvm_cg_state *state, traversal_node_data data) {
       const node_ind_t binding_ind =
         PT_FUN_BINDING_IND(state->parse_tree.inds, data.node);
       const parse_node binding = state->parse_tree.nodes[binding_ind];
-      LLVMFunctionRef fn;
-      if (binding.variable_index < state->environment_values.values.len) {
-        // we've already predeclared this
-        fn = VEC_GET(state->environment_values.values, binding.variable_index)
-               .exogenous;
-      } else {
-        LLVMTypeRef fn_type =
-          llvm_construct_type(state, state->types.node_types[data.node_index]);
-        buf_ind_t binding_len = binding.span.len;
-
-        // We should add this back at some point, I guess
-        // LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
-        fn = LLVMAddFunctionCustom(state->module,
-                                   &state->source.data[binding.span.start],
-                                   binding_len,
-                                   fn_type);
-
-        LLVMSetLinkage(fn, LLVMExternalLinkage);
-      }
+      // we've already predeclared this
+      LLVMFunctionRef fn =
+        VEC_GET(state->environment_values.values, binding.variable_index)
+          .exogenous;
       VEC_PUSH(&state->function_stack, fn);
       llvm_gen_basic_block(state, ENTRY_STR, fn);
+      for (node_ind_t i = 0; i < PT_LIST_SUB_AMT(data.node); i++) {
+        node_ind_t j = PT_LIST_SUB_AMT(data.node) - 1 - i;
+        LLVMValueRef param = LLVMGetParam(fn, j);
+        llvm_push_exogenous_value(&state->return_values, param);
+      }
       break;
     }
     case PT_ALL_STATEMENT_LET:
@@ -539,31 +582,47 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
     }
     case PT_ALL_EX_IF: {
 
-      LLVMBasicBlockRef then_block;
-      VEC_POP(&state->block_stack, &then_block);
       LLVMBasicBlockRef else_block;
       VEC_POP(&state->block_stack, &else_block);
+      LLVMBasicBlockRef then_block;
+      VEC_POP(&state->block_stack, &then_block);
 
-      llvm_lang_value cond_val = llvm_pop_value(&state->return_values);
-      llvm_lang_value then_val = llvm_pop_value(&state->return_values);
       llvm_lang_value else_val = llvm_pop_value(&state->return_values);
+      llvm_lang_value then_val = llvm_pop_value(&state->return_values);
+      llvm_lang_value cond_val = llvm_pop_value(&state->return_values);
 
       if (HEDLEY_UNLIKELY(cond_val.is_builtin)) {
         LLVMBasicBlockRef block_to_delete;
+        LLVMBasicBlockRef block_to_branch_to;
         llvm_lang_value value_to_return;
         // TODO remove condition instructions?
         if (cond_val.data.builtin == true_builtin) {
+          block_to_branch_to = then_block;
           block_to_delete = else_block;
           value_to_return = then_val;
         } else {
+          block_to_branch_to = else_block;
           block_to_delete = then_block;
           value_to_return = else_val;
         }
+
+        LLVMBasicBlockRef end_block = LLVMAppendBasicBlockInContext(
+          state->context, VEC_PEEK(state->function_stack), "const-if-end");
+
+        // back to the original block
+        LLVMPositionBuilderAtEnd(state->builder, VEC_PEEK(state->block_stack));
+        LLVMBuildBr(state->builder, block_to_branch_to);
+
+        LLVMPositionBuilderAtEnd(state->builder, block_to_branch_to);
+        LLVMBuildBr(state->builder, end_block);
+
         LLVMDeleteBasicBlock(block_to_delete);
         llvm_push_value(&state->return_values, value_to_return);
+        LLVMPositionBuilderAtEnd(state->builder, end_block);
         break;
       }
-      LLVMValueRef cond_ex_val = cond_val.data.exogenous;
+
+      LLVMValueRef cond_ex_val = llvm_to_exogenous_value(state, cond_val);
       LLVMValueRef then_ex_val = llvm_to_exogenous_value(state, then_val);
       LLVMValueRef else_ex_val = llvm_to_exogenous_value(state, else_val);
 
@@ -582,8 +641,8 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
       LLVMPositionBuilderAtEnd(state->builder, then_block);
       LLVMBuildBr(state->builder, end_block);
 
-      LLVMTypeRef res_type =
-        llvm_construct_type(state, state->types.node_types[data.node_index]);
+      LLVMTypeRef res_type = llvm_construct_passable_type(
+        state, state->types.node_types[data.node_index]);
 
       LLVMPositionBuilderAtEnd(state->builder, end_block);
       LLVMValueRef phi = LLVMBuildPhi(state->builder, res_type, "if-result");
@@ -690,7 +749,7 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
   }
 }
 
-static node_ind_t llvm_get_statement_binding_ind(node_ind_t *inds,
+static node_ind_t llvm_get_statement_binding_ind(const node_ind_t *inds,
                                                  parse_node node) {
   switch (node.type.statement) {
     case PT_STATEMENT_FUN:
@@ -702,49 +761,29 @@ static node_ind_t llvm_get_statement_binding_ind(node_ind_t *inds,
   }
 }
 
-static environment_ind_t llvm_get_pushed_scope_ind(parse_tree tree,
-                                                   parse_node p) {
-  node_ind_t binding_ind = llvm_get_statement_binding_ind(tree.inds, p);
-  return tree.nodes[binding_ind].variable_index;
+static void llvm_cg_predeclare_fn(llvm_cg_state *state,
+                                  traversal_node_data data) {
+  const node_ind_t binding_ind =
+    llvm_get_statement_binding_ind(state->parse_tree.inds, data.node);
+  const parse_node binding = state->parse_tree.nodes[binding_ind];
+  const type_ref type_ref = state->types.node_types[data.node_index];
+  const LLVMTypeRef fn_type = llvm_construct_type(state, type_ref);
+  const buf_ind_t binding_len = binding.span.len;
+
+  // We should add this back at some point, I guess
+  // LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
+  const LLVMFunctionRef fn =
+    LLVMAddFunctionCustom(state->module,
+                          &state->source.data[binding.span.start],
+                          binding_len,
+                          fn_type);
+  LLVMSetLinkage(fn, LLVMExternalLinkage);
+  llvm_push_exogenous_value(&state->environment_values, fn);
 }
 
-static void llvm_cg_push_scope(llvm_cg_state *state, traversal_node_data data) {
-  environment_ind_t binding_ind =
-    llvm_get_pushed_scope_ind(state->parse_tree, data.node);
-  if (binding_ind == state->environment_values.is_builtin.len) {
-    // We're pushing on the way in.
-    // This is root-level or in a letrec block.
-    switch (data.node.type.statement) {
-      case PT_STATEMENT_FUN: {
-        const parse_node binding = state->parse_tree.nodes[binding_ind];
-        LLVMTypeRef fn_type =
-          llvm_construct_type(state, state->types.node_types[data.node_index]);
-        buf_ind_t binding_len = binding.span.len;
-
-        // We should add this back at some point, I guess
-        // LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
-        LLVMFunctionRef fn =
-          LLVMAddFunctionCustom(state->module,
-                                &state->source.data[binding.span.start],
-                                binding_len,
-                                fn_type);
-        break;
-      }
-      default:
-        give_up("Can't use non-functions in letrec yet!");
-        break;
-    }
-  } else {
-    // We're pushing on the way out.
-    // This is a statement in a non-letrec block.
-    switch (data.node.type.statement) {
-      case PT_STATEMENT_FUN:
-        // TODO remove
-        give_up("Functions should be pushed to the environment on the way in, "
-                "so they can be recursive!");
-        break;
-    }
-  }
+static void llvm_cg_push_scope(llvm_cg_state *state) {
+  llvm_lang_value val = llvm_pop_value(&state->return_values);
+  llvm_push_value(&state->environment_values, val);
 }
 
 static void llvm_cg_module(LLVMContextRef ctx, LLVMModuleRef mod,
@@ -763,10 +802,16 @@ static void llvm_cg_module(LLVMContextRef ctx, LLVMModuleRef mod,
   while (true) {
     pt_traverse_elem elem = pt_traverse_next(&traversal);
     switch (elem.action) {
+      case TR_NEW_BLOCK:
+        llvm_gen_basic_block(&state, "block", VEC_PEEK(state.function_stack));
+        continue;
       case TR_END:
         break;
+      case TR_PREDECLARE_FN:
+        llvm_cg_predeclare_fn(&state, elem.data.node_data);
+        continue;
       case TR_PUSH_SCOPE_VAR:
-        llvm_cg_push_scope(&state, elem.data.node_data);
+        llvm_cg_push_scope(&state);
         continue;
       case TR_VISIT_IN:
         llvm_cg_visit_in(&state, elem.data.node_data);
@@ -790,16 +835,16 @@ llvm_res llvm_gen_module(const char *module_name, source_file source,
 #ifdef TIME_CODEGEN
   struct timespec start = get_monotonic_time();
 #endif
-  if (llvm_globals.bool_type == NULL) {
-    llvm_init();
-  }
   llvm_res res = {
     .module = LLVMModuleCreateWithNameInContext(module_name, ctx),
   };
+  llvm_cg_module(ctx, res.module, source, tree, types);
   char *err;
   bool broken = LLVMVerifyModule(res.module, LLVMPrintMessageAction, &err);
+  // char *mod_str = LLVMPrintModuleToString(res.module);
+  // puts(mod_str);
+  // free(mod_str);
   fputs(err, stderr);
-  llvm_cg_module(ctx, res.module, source, tree, types);
   free(err);
   if (broken) {
     exit(1);
