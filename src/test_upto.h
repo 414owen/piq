@@ -57,3 +57,6 @@ upto_resolution_res test_upto_resolution(test_state *state,
 
 tc_res test_upto_typecheck(test_state *state, const char *input, bool *success,
                            parse_tree *tree);
+
+LLVMModuleRef test_upto_codegen(test_state *state, const char *input, bool *success,
+                           parse_tree *tree);

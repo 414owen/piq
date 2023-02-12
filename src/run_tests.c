@@ -94,16 +94,29 @@ static void run_tests(test_state *state) {
 HEDLEY_NEVER_INLINE
 static void newline(FILE *f) { putc('\n', f); }
 
+enum {
+  SUB_NONE = -1,
+  SUB_BENCH = 0,
+} subcommand;
+
 int main(int argc, const char **argv) {
   initialise();
   test_config conf = {
     .junit = false,
+    .bench = false,
     .lite = false,
     .filter_str = NULL,
     .times = 1,
   };
 
   argument args[] = {
+    [SUB_BENCH] = {
+      .tag = ARG_SUBCOMMAND,
+      .subcommand_name = "bench",
+      .short_name = 0,
+      .flag_data = &conf.bench,
+      .description = "Run benchmark suite",
+    },
     {
       .tag = ARG_FLAG,
       .long_name = "lite",
@@ -135,6 +148,7 @@ int main(int argc, const char **argv) {
   argument_bag root = {
     .amt = STATIC_LEN(args),
     .args = args,
+    .subcommand_chosen = SUB_NONE,
   };
 
   program_args pa = {
@@ -146,7 +160,14 @@ int main(int argc, const char **argv) {
 
   test_state state = test_state_new(conf);
 
-  run_tests(&state);
+  switch (root.subcommand_chosen) {
+    case SUB_NONE:
+      run_tests(&state);
+      break;
+    case SUB_BENCH:
+      run_benchmarks(&state);
+      return 0;
+  }
 
   test_state_finalize(&state);
 
