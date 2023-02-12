@@ -90,6 +90,13 @@ static void tr_push_initial(pt_traversal *traversal, node_ind_t node_index) {
   tr_push_action(traversal, TR_ACT_INITIAL, node_index);
 }
 
+static void tr_maybe_add_block(pt_traversal *traversal) {
+  if (traversal->wanted_actions.add_blocks) {
+    traverse_action_internal action = TR_ACT_NEW_BLOCK;
+    VEC_PUSH(&traversal->actions, action);
+  }
+}
+
 static void tr_push_in(pt_traversal *traversal, node_ind_t node_index) {
   tr_push_action(traversal, TR_ACT_VISIT_IN, node_index);
 }
@@ -135,10 +142,11 @@ static void tr_maybe_link_sig(pt_traversal *traversal, node_ind_t node_index) {
   }
 }
 
+// To be used with PUSH_SCOPE or PREDECLARE_FN
 static void tr_maybe_push_environment(pt_traversal *traversal,
-                                      node_ind_t node_index) {
+                                      node_ind_t node_index,
+                                      traverse_action_internal act) {
   if (traversal->wanted_actions.edit_environment) {
-    traverse_action act = TR_PUSH_SCOPE_VAR;
     VEC_PUSH(&traversal->actions, act);
     VEC_PUSH(&traversal->node_stack, node_index);
   }
@@ -299,7 +307,7 @@ static void pt_traverse_push_letrec(pt_traversal *traversal, node_ind_t start,
     const node_ind_t node_index = traversal->inds[start + i];
     const parse_node node = traversal->nodes[node_index];
     if (node.type.statement == PT_STATEMENT_FUN) {
-      tr_maybe_push_environment(traversal, node_index);
+      tr_maybe_push_environment(traversal, node_index, TR_ACT_PREDECLARE_FN);
     }
   }
 }
@@ -318,9 +326,22 @@ static void tr_handle_initial(pt_traversal *traversal) {
       tr_initial_external_sub_expression(traversal, data);
       tr_maybe_backup_scope(traversal);
       break;
+    case PT_ALL_EX_IF: {
+      debug_assert(pt_subs_type[data.node.type.all] == SUBS_EXTERNAL);
+      tr_maybe_push_expression_out(traversal, data.node_index);
+      node_ind_t cond_ind = PT_IF_COND_IND(traversal->inds, data.node);
+      node_ind_t then_ind = PT_IF_A_IND(traversal->inds, data.node);
+      node_ind_t else_ind = PT_IF_B_IND(traversal->inds, data.node);
+      tr_push_initial(traversal, else_ind);
+      tr_maybe_add_block(traversal);
+      tr_push_initial(traversal, then_ind);
+      tr_maybe_add_block(traversal);
+      tr_push_initial(traversal, cond_ind);
+      tr_maybe_push_expression_in(traversal, data.node_index);
+      break;
+    }
     case PT_ALL_EX_CALL:
     case PT_ALL_EX_FUN_BODY:
-    case PT_ALL_EX_IF:
     case PT_ALL_EX_INT:
     case PT_ALL_EX_AS:
     case PT_ALL_EX_TERM_NAME:
@@ -344,7 +365,8 @@ static void tr_handle_initial(pt_traversal *traversal) {
 
     case PT_ALL_PAT_WILDCARD:
       debug_assert(pt_subs_type[PT_ALL_PAT_WILDCARD] == SUBS_NONE);
-      tr_maybe_push_environment(traversal, data.node_index);
+      tr_maybe_push_environment(
+        traversal, data.node_index, TR_ACT_PUSH_SCOPE_VAR);
       HEDLEY_FALL_THROUGH;
     case PT_ALL_PAT_TUP:
     case PT_ALL_PAT_UNIT:
@@ -364,7 +386,8 @@ static void tr_handle_initial(pt_traversal *traversal) {
     case PT_ALL_STATEMENT_LET:
       debug_assert(pt_subs_type[PT_ALL_STATEMENT_LET] == SUBS_TWO);
       // push env after the fact
-      tr_maybe_push_environment(traversal, data.node_index);
+      tr_maybe_push_environment(
+        traversal, data.node_index, TR_ACT_PUSH_SCOPE_VAR);
       tr_initial_two_sub_statement(traversal, data);
       break;
     case PT_ALL_STATEMENT_FUN:
@@ -372,7 +395,7 @@ static void tr_handle_initial(pt_traversal *traversal) {
       tr_maybe_restore_scope(traversal);
       tr_initial_external_sub_statement(traversal, data);
       tr_maybe_backup_scope(traversal);
-      tr_maybe_push_environment(traversal, data.node_index);
+      tr_maybe_push_environment(traversal, data.node_index, TR_PREDECLARE_FN);
       break;
     case PT_ALL_STATEMENT_DATA_DECLARATION:
       tr_initial_generic(traversal, data);
@@ -431,16 +454,16 @@ pt_traverse_elem pt_traverse_next(pt_traversal *traversal) {
   while (traversal->actions.len > 0) {
     traverse_action_internal act;
     VEC_POP(&traversal->actions, &act);
-    res.action = (traverse_action) act;
+    res.action = (traverse_action)act;
 
     switch (act) {
       case TR_ACT_BACKUP_SCOPE:
         VEC_PUSH(&traversal->environment_len_stack, traversal->environment_amt);
         break;
+      case TR_ACT_PREDECLARE_FN:
       case TR_ACT_PUSH_SCOPE_VAR:
         traversal->environment_amt++;
         HEDLEY_FALL_THROUGH;
-      case TR_ACT_NEW_BLOCK:
       case TR_ACT_VISIT_OUT:
       case TR_ACT_VISIT_IN:
         res.data.node_data = traverse_get_parse_node(traversal);
@@ -451,10 +474,16 @@ pt_traverse_elem pt_traverse_next(pt_traversal *traversal) {
         tr_handle_initial(traversal);
         break;
       case TR_ACT_POP_TO:
-        VEC_POP(&traversal->environment_len_stack, &res.data.new_environment_amount);
+        VEC_POP(&traversal->environment_len_stack,
+                &res.data.new_environment_amount);
         traversal->environment_amt = res.data.new_environment_amount;
         return res;
       case TR_ACT_END:
+        VEC_FREE(&traversal->actions);
+        VEC_FREE(&traversal->environment_len_stack);
+        VEC_FREE(&traversal->node_stack);
+        HEDLEY_FALL_THROUGH;
+      case TR_ACT_NEW_BLOCK:
         return res;
       case TR_ACT_LINK_SIG: {
         node_ind_t node_index;

@@ -468,7 +468,7 @@ void free_parse_tree(parse_tree tree) {
 }
 
 void free_parse_tree_res(parse_tree_res res) {
-  if (res.type != PRT_SUCCESS) {
+  if (res.type == PRT_SUCCESS) {
     free_parse_tree(res.tree);
   } else {
     free(res.expected);
@@ -542,10 +542,14 @@ typedef struct {
   scope type_environment;
 } scope_calculator_state;
 
+// Setting the binding's bariable_index to the thing we're about to push
+// is theoretically unnecessary work, but it's nit to have a concreate
+// index to look things up with in eg. the llvm stage.
 static void precalculate_scope_push(scope_calculator_state *state) {
   switch (state->elem.data.node_data.node.type.binding) {
     case PT_BIND_FUN: {
-      node_ind_t binding_ind = PT_FUN_BINDING_IND(state->tree.inds, state->elem.data.node_data.node);
+      node_ind_t binding_ind =
+        PT_FUN_BINDING_IND(state->tree.inds, state->elem.data.node_data.node);
       parse_node *binding_node = &state->tree.nodes[binding_ind];
       binding b = binding_node->span;
       binding_node->variable_index = state->environment.bindings.len;
@@ -553,7 +557,8 @@ static void precalculate_scope_push(scope_calculator_state *state) {
       break;
     }
     case PT_BIND_WILDCARD: {
-      parse_node *node = &state->tree.nodes[state->elem.data.node_data.node_index];
+      parse_node *node =
+        &state->tree.nodes[state->elem.data.node_data.node_index];
       node->variable_index = state->environment.bindings.len;
       binding b = node->span;
       scope_push(&state->environment, b);
@@ -634,6 +639,7 @@ resolution_errors resolve_bindings(parse_tree tree,
         scope_free(state.type_environment);
         return res;
       }
+      case TR_PREDECLARE_FN:
       case TR_PUSH_SCOPE_VAR:
         precalculate_scope_push(&state);
         break;

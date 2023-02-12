@@ -100,12 +100,31 @@ typedef struct {
 typedef var_step_res (*typevar_step)(typevar a, const void *data);
 typedef bool exited_early;
 
+void push_type_subs(vec_type_ref *restrict stack, const type_ref *restrict inds,
+                    type t) {
+  switch (type_repr(t.check_tag)) {
+    case SUBS_NONE:
+      break;
+    case SUBS_TWO:
+      VEC_PUSH(stack, t.sub_b);
+      HEDLEY_FALL_THROUGH;
+    case SUBS_ONE:
+      VEC_PUSH(stack, t.sub_a);
+      break;
+    case SUBS_EXTERNAL:
+      VEC_APPEND(stack, t.sub_amt, &inds[t.subs_start]);
+      break;
+  }
+}
+
+// TODO this is only used once, we should just monomorphise it over the step.
 static exited_early type_contains_typevar_by(const type_builder *types,
                                              type_ref root, typevar_step step,
                                              const void *data) {
   bool exited_early = false;
   vec_type_ref stack = VEC_NEW;
   VEC_PUSH(&stack, root);
+  const type_ref *inds = VEC_DATA_PTR(&types->inds);
   while (stack.len > 0) {
     type_ref node_ind;
     VEC_POP(&stack, &node_ind);
@@ -139,20 +158,7 @@ static exited_early type_contains_typevar_by(const type_builder *types,
       case TC_CALL:
         break;
     }
-    switch (type_repr(node.check_tag)) {
-      case SUBS_NONE:
-        break;
-      case SUBS_TWO:
-        VEC_PUSH(&stack, node.sub_b);
-        HEDLEY_FALL_THROUGH;
-      case SUBS_ONE:
-        VEC_PUSH(&stack, node.sub_a);
-        break;
-      case SUBS_EXTERNAL:
-        VEC_APPEND(
-          &stack, node.sub_amt, VEC_GET_PTR(types->inds, node.subs_start));
-        break;
-    }
+    push_type_subs(&stack, inds, node);
   }
 
 end:
@@ -208,7 +214,8 @@ static bool is_unsubstituted_typevar(typevar a, const type_builder *builder) {
 }
 */
 
-static var_step_res is_unsubstituted_typevar_step(typevar a, const void *data_p) {
+static var_step_res is_unsubstituted_typevar_step(typevar a,
+                                                  const void *data_p) {
   const unsubstituted_check_data *data = (unsubstituted_check_data *)data_p;
   const type_builder *builder = &data->builder;
   const type_ref type_ind = VEC_GET(builder->substitutions, a);
@@ -216,7 +223,8 @@ static var_step_res is_unsubstituted_typevar_step(typevar a, const void *data_p)
   // If this branch containsunsubstituted vars
   // they'll be reported by their parse_node.
   const bool is_node_var = a < data->parse_node_amount;
-  if (t.check_tag == TC_VAR && (a == t.type_var || !is_node_var || a == data->root_node)) {
+  if (t.check_tag == TC_VAR &&
+      (a == t.type_var || !is_node_var || a == data->root_node)) {
     const var_step_res res = {
       .early_exit = true,
     };
@@ -231,7 +239,8 @@ static var_step_res is_unsubstituted_typevar_step(typevar a, const void *data_p)
 }
 
 bool type_contains_unsubstituted_typevar(const type_builder *builder,
-                                         type_ref root, node_ind_t parse_node_amount) {
+                                         type_ref root,
+                                         node_ind_t parse_node_amount) {
   unsubstituted_check_data data = {
     .builder = *builder,
     .parse_node_amount = parse_node_amount,

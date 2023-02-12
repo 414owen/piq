@@ -24,6 +24,7 @@ typedef struct {
 
 void bs_free(bitset *bs);
 bitset bs_new(void);
+bitset bs_new_false_n(size_t n);
 void bs_resize(bitset *bs, size_t size);
 void bs_grow(bitset *bs, size_t size);
 bool bs_data_get(bitset_data data, size_t ind);

@@ -50,6 +50,7 @@ typedef enum {
 } traverse_mode;
 
 typedef enum {
+  TR_ACT_PREDECLARE_FN,
   TR_ACT_PUSH_SCOPE_VAR,
   TR_ACT_NEW_BLOCK,
   TR_ACT_VISIT_IN,
@@ -65,6 +66,7 @@ typedef enum {
 } traverse_action_internal;
 
 typedef enum {
+  TR_PREDECLARE_FN = TR_ACT_PREDECLARE_FN,
   TR_PUSH_SCOPE_VAR = TR_ACT_PUSH_SCOPE_VAR,
   TR_NEW_BLOCK = TR_ACT_NEW_BLOCK,
   TR_VISIT_IN = TR_ACT_VISIT_IN,

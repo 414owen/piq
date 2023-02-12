@@ -355,6 +355,12 @@ static const test_type i32_t = {
   .subs = NULL,
 };
 
+static const test_type i64_t = {
+  .tag = TC_I64,
+  .sub_amt = 0,
+  .subs = NULL,
+};
+
 static const test_type any_int_type_arr[] = {
   {.tag = TC_I8, .sub_amt = 0, .subs = NULL},
   {.tag = TC_I16, .sub_amt = 0, .subs = NULL},
@@ -483,6 +489,43 @@ static void test_typecheck_succeeds(test_state *state) {
   }
 
   {
+    test_start(state, "heterogeneous fn");
+    const char *input = "(sig →het← (Fn →I8← →I16← →I32← →I64←))\n"
+                        "(fun →het← (→a← →b← →c←) →a← →b← →c← →64←)";
+    // params *and* return type
+    const test_type het_t_params[] = {
+      i8_t,
+      i16_t,
+      i32_t,
+      i64_t,
+    };
+
+    const test_type het_t = {
+      .tag = TC_FN,
+      .sub_amt = STATIC_LEN(het_t_params),
+      .subs = het_t_params,
+    };
+
+    test_type types[] = {
+      het_t,
+      i8_t,
+      i16_t,
+      i32_t,
+      i64_t,
+      het_t,
+      i8_t,
+      i16_t,
+      i32_t,
+      i8_t,
+      i16_t,
+      i32_t,
+      i64_t,
+    };
+    test_types_match(state, input, types, STATIC_LEN(types));
+    test_end(state);
+  }
+
+  {
     test_start(state, "Recognizes bools");
     const char *input = "(sig test (Fn Bool))\n"
                         "(fun test () (let a →False←) →True←)";
@@ -509,6 +552,7 @@ static void test_typecheck_succeeds(test_state *state) {
     test_start(state, "Inner functions can be recursive");
     const char *input = "(sig test (Fn Bool))\n"
                         "(fun test ()\n"
+                        "  (sig a (Fn I8))\n"
                         "  (fun a () (a))\n"
                         "  →(test)←)";
     test_type types[] = {
@@ -650,16 +694,14 @@ static void test_errors(test_state *state) {
   }
 
   {
-    test_start(state, "Infinite type");
+    test_start(state, "Infinite constraint => ambiguous type");
     const tc_err_test errors[] = {
       {
-        .type = TC_ERR_INFINITE,
+        .type = TC_ERR_AMBIGUOUS,
       },
     };
-    test_typecheck_errors(state,
-                          "(fun a () →(a)←)",
-                          errors,
-                          STATIC_LEN(errors));
+    test_typecheck_errors(
+      state, "(fun a () →(a)←)", errors, STATIC_LEN(errors));
     test_end(state);
   }
 
@@ -670,10 +712,7 @@ static void test_errors(test_state *state) {
         .type = TC_ERR_INFINITE,
       },
     };
-    test_typecheck_errors(state,
-                          "(fun a () →a←)",
-                          errors,
-                          STATIC_LEN(errors));
+    test_typecheck_errors(state, "(fun a () →a←)", errors, STATIC_LEN(errors));
     test_end(state);
   }
 

@@ -20,6 +20,7 @@
 static const char *action_names[] = {
 #define mk_entry(a) [a] = #a
   mk_entry(TR_PUSH_SCOPE_VAR),
+  mk_entry(TR_PREDECLARE_FN),
   mk_entry(TR_NEW_BLOCK),
   mk_entry(TR_VISIT_IN),
   mk_entry(TR_VISIT_OUT),
@@ -53,17 +54,20 @@ static char *print_ctx(test_traverse_elem *elems, int position) {
   fprintf(ss.stream, "Last five expected elements:\n");
   for (int i = MAX(0, position - 4); i <= position; i++) {
     test_traverse_elem elem = elems[i];
-    fprintf(ss.stream, "%d: %s: ", i, action_names[elem.action]);
+    fprintf(ss.stream, "%d %s", i, action_names[elem.action]);
     switch (elem.action) {
       case TR_PUSH_SCOPE_VAR:
       case TR_VISIT_IN:
       case TR_VISIT_OUT:
-      case TR_NEW_BLOCK:
+      case TR_PREDECLARE_FN:
       case TR_LINK_SIG:
-        fprintf(ss.stream, "%s\n", parse_node_strings[elem.node_type]);
+        fprintf(ss.stream, ": %s\n", parse_node_strings[elem.node_type]);
         break;
       case TR_POP_TO:
-        fprintf(ss.stream, "%d\n", elem.amount);
+        fprintf(ss.stream, ": %d\n", elem.amount);
+        break;
+      case TR_NEW_BLOCK:
+        fputc('\n', ss.stream);
         break;
       case TR_END:
         break;
@@ -124,10 +128,10 @@ static void test_elems_match(test_state *state, pt_traversal *traversal,
       return;
     }
     switch (a.action) {
+      case TR_PREDECLARE_FN:
       case TR_PUSH_SCOPE_VAR:
       case TR_VISIT_IN:
       case TR_VISIT_OUT:
-      case TR_NEW_BLOCK:
         if (b.node_type != a.data.node_data.node.type.all) {
           node_type_mismatch(
             state, i, elems, b.node_type, a.data.node_data.node.type.all);
@@ -149,6 +153,7 @@ static void test_elems_match(test_state *state, pt_traversal *traversal,
         break;
       case TR_END:
         // impossible
+      case TR_NEW_BLOCK:
         break;
       case TR_LINK_SIG: {
         parse_node_type_all at =
@@ -174,18 +179,19 @@ static void test_elems_match(test_state *state, pt_traversal *traversal,
 static void test_traversal(test_state *state, const char *input,
                            traverse_mode mode, test_traverse_elem *elems,
                            int amount) {
-  const parse_tree_res pres = test_upto_parse_tree(state, input);
+  parse_tree_res pres = test_upto_parse_tree(state, input);
   if (pres.type != PRT_SUCCESS) {
     return;
   }
   pt_traversal traversal = pt_traverse(pres.tree, mode);
   test_elems_match(state, &traversal, elems, amount);
+  free_parse_tree_res(pres);
 }
 
 static const char *input = "(sig a (Fn I8 (I8, I8) I8))\n"
-                           "(fun a (b (c, d))\n"            // env + 4
-                           "  (let e 23)\n"                 // env + 5
-                           "  (fun f () ())\n"              // env + 6
+                           "(fun a (b (c, d))\n"       // env + 4
+                           "  (let e (if True 2 1))\n" // env + 5
+                           "  (fun f () ())\n"         // env + 6
                            "  (add ((fn () 2) ()) 3))";
 
 #define node_act(_action_type, _node_type)                                     \
@@ -196,6 +202,11 @@ static const char *input = "(sig a (Fn I8 (I8, I8) I8))\n"
 #define out(_node_type) node_act(TR_VISIT_OUT, _node_type)
 
 #define inout(_node_type) in(_node_type), out(_node_type)
+
+#define add_block                                                              \
+  { .action = TR_NEW_BLOCK }
+
+#define predeclare_fn node_act(TR_PREDECLARE_FN, PT_ALL_STATEMENT_FUN)
 
 #define push_env(_node_type) node_act(TR_PUSH_SCOPE_VAR, _node_type)
 
@@ -228,7 +239,11 @@ static test_traverse_elem print_mode_elems[] = {
 
   in(PT_ALL_STATEMENT_LET),
   inout(PT_ALL_MULTI_TERM_NAME),
+  in(PT_ALL_EX_IF),
+  inout(PT_ALL_EX_UPPER_NAME),
   inout(PT_ALL_EX_INT),
+  inout(PT_ALL_EX_INT),
+  out(PT_ALL_EX_IF),
   out(PT_ALL_STATEMENT_LET),
 
   in(PT_ALL_STATEMENT_FUN),
@@ -263,7 +278,7 @@ static const char *input = "(sig a (Fn I8 (I8, I8) I8))\n"
 */
 
 static test_traverse_elem resolve_bindings_elems[] = {
-  push_env(PT_ALL_STATEMENT_FUN),
+  predeclare_fn,
 
   in(PT_ALL_STATEMENT_SIG),
   inout(PT_ALL_MULTI_TERM_NAME),
@@ -288,13 +303,17 @@ static test_traverse_elem resolve_bindings_elems[] = {
   push_env(PT_ALL_PAT_WILDCARD),
 
   in(PT_ALL_EX_FUN_BODY),
+
   in(PT_ALL_STATEMENT_LET),
   inout(PT_ALL_MULTI_TERM_NAME),
+  in(PT_ALL_EX_IF),
+  in(PT_ALL_EX_UPPER_NAME),
+  in(PT_ALL_EX_INT),
   in(PT_ALL_EX_INT),
   out(PT_ALL_STATEMENT_LET),
   push_env(PT_ALL_STATEMENT_LET),
 
-  push_env(PT_ALL_STATEMENT_FUN),
+  predeclare_fn,
   in(PT_ALL_STATEMENT_FUN),
   inout(PT_ALL_MULTI_TERM_NAME),
   in(PT_ALL_EX_FUN_BODY),
@@ -320,7 +339,7 @@ static test_traverse_elem resolve_bindings_elems[] = {
 };
 
 static test_traverse_elem typecheck_elems[] = {
-  push_env(PT_ALL_STATEMENT_FUN),
+  predeclare_fn,
 
   in(PT_ALL_STATEMENT_SIG),
   inout(PT_ALL_MULTI_TERM_NAME),
@@ -346,13 +365,17 @@ static test_traverse_elem typecheck_elems[] = {
   push_env(PT_ALL_PAT_WILDCARD),
 
   in(PT_ALL_EX_FUN_BODY),
+
   in(PT_ALL_STATEMENT_LET),
   inout(PT_ALL_MULTI_TERM_NAME),
+  in(PT_ALL_EX_IF),
+  in(PT_ALL_EX_UPPER_NAME),
+  in(PT_ALL_EX_INT),
   in(PT_ALL_EX_INT),
   out(PT_ALL_STATEMENT_LET),
   push_env(PT_ALL_STATEMENT_LET),
 
-  push_env(PT_ALL_STATEMENT_FUN),
+  predeclare_fn,
   in(PT_ALL_STATEMENT_FUN),
   inout(PT_ALL_MULTI_TERM_NAME),
   in(PT_ALL_EX_FUN_BODY),
@@ -377,7 +400,7 @@ static test_traverse_elem typecheck_elems[] = {
 };
 
 static test_traverse_elem codegen_elems[] = {
-  push_env(PT_ALL_STATEMENT_FUN),
+  predeclare_fn,
 
   in(PT_ALL_STATEMENT_SIG),
   inout(PT_ALL_MULTI_TERM_NAME),
@@ -403,11 +426,16 @@ static test_traverse_elem codegen_elems[] = {
 
   in(PT_ALL_STATEMENT_LET),
   inout(PT_ALL_MULTI_TERM_NAME),
+  out(PT_ALL_EX_UPPER_NAME),
+  add_block,
   out(PT_ALL_EX_INT),
+  add_block,
+  out(PT_ALL_EX_INT),
+  out(PT_ALL_EX_IF),
   out(PT_ALL_STATEMENT_LET),
   push_env(PT_ALL_STATEMENT_LET),
 
-  push_env(PT_ALL_STATEMENT_FUN),
+  predeclare_fn,
   in(PT_ALL_STATEMENT_FUN),
   inout(PT_ALL_MULTI_TERM_NAME),
   out(PT_ALL_EX_UNIT),
@@ -432,6 +460,7 @@ static test_traverse_elem codegen_elems[] = {
 
 #undef link_sigs
 #undef push_env
+#undef predeclare_fn
 #undef pop_env_to
 #undef inout
 #undef out

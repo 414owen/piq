@@ -333,6 +333,7 @@ static tc_constraints_res generate_constraints(const parse_tree tree,
   for (;;) {
     pt_trav_elem = pt_traverse_next(&traversal);
     switch (pt_trav_elem.action) {
+      case TR_PREDECLARE_FN:
       case TR_PUSH_SCOPE_VAR:
         generate_constraints_push_environment(
           &builder, pt_trav_elem.data.node_data.node_index);
@@ -349,6 +350,7 @@ static tc_constraints_res generate_constraints(const parse_tree tree,
         generate_constraints_link_sigs(&builder,
                                        pt_trav_elem.data.link_sig_data);
         continue;
+      case TR_NEW_BLOCK:
       case TR_END:
         break;
     }
@@ -723,20 +725,52 @@ void print_tyvar_parse_node(parse_tree tree, type *types, type_ref ref) {
 
 static void check_ambiguities(node_ind_t parse_node_amt, type_builder *builder,
                               vec_tc_error *errors) {
+  bitset visited = bs_new_false_n(builder->types.len);
+  type *types = VEC_DATA_PTR(&builder->types);
+  type_ref *inds = VEC_DATA_PTR(&builder->inds);
+  type_ref *node_type_inds = VEC_DATA_PTR(&builder->node_types);
+  node_ind_t *substitutions = VEC_DATA_PTR(&builder->substitutions);
   for (node_ind_t node_ind = 0; node_ind < parse_node_amt; node_ind++) {
-    if (type_contains_unsubstituted_typevar(
-          builder, VEC_GET(builder->substitutions, node_ind), parse_node_amt)) {
-      node_ind_t type_ind = VEC_GET(builder->node_types, node_ind);
-      tc_error err = {
-        .type = TC_ERR_AMBIGUOUS,
-        .pos = node_ind,
-        .ambiguous.index = type_ind,
-      };
-      VEC_PUSH(errors, err);
+    type_ref root_ind = node_type_inds[node_ind];
+    vec_type_ref stack = VEC_NEW;
+    VEC_PUSH(&stack, root_ind);
+    while (stack.len > 0) {
+      type_ref type_ind;
+      VEC_POP(&stack, &type_ind);
+      if (bs_get(visited, type_ind)) {
+        continue;
+      }
+      type t = types[type_ind];
+      if (t.check_tag == TC_VAR) {
+        node_ind_t target = substitutions[t.type_var];
+        if (t.type_var < parse_node_amt && target != root_ind) {
+          // report this at the other node
+          continue;
+        }
+        if (target == type_ind) {
+          tc_error err = {
+            .type = TC_ERR_AMBIGUOUS,
+            .pos = node_ind,
+            // TODO do we need this?
+            .ambiguous.index = type_ind,
+          };
+          VEC_PUSH(errors, err);
+        } else {
+          VEC_PUSH(&stack, target);
+        }
+      }
+      bs_set(visited, type_ind);
+      push_type_subs(&stack, inds, t);
     }
+    VEC_FREE(&stack);
   }
+  bs_free(&visited);
 }
 
+// Copy types form one type_builder to another.
+// This is sort of a custom garbage collection.
+// At the moment the only thing it gets rid of is the types
+// of the builtins we didn't end up using.
 static type_ref copy_type(const type_builder *old, type_builder *builder,
                           type_ref root_type) {
   bitset first_pass_stack = bs_new();
@@ -752,8 +786,8 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
 
     /*
     printf("%d: %d: ", type_ind, first_pass);
-    print_type(stdout, VEC_DATA_PTR(&old->types), VEC_DATA_PTR(&old->inds), root_type);
-    puts("");
+    print_type(stdout, VEC_DATA_PTR(&old->types), VEC_DATA_PTR(&old->inds),
+    root_type); puts("");
     */
 
     if (t.check_tag == TC_VAR) {
@@ -804,10 +838,9 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
           VEC_PUSH(&stack, type_ind);
           bs_push_false(&first_pass_stack);
           // first on stack = last processed = first on result stack
-          for (node_ind_t i = 0; i < t.sub_amt; i++) {
-            VEC_PUSH(&stack, VEC_GET(old->inds, t.subs_start + i));
-            bs_push_true(&first_pass_stack);
-          }
+          VEC_APPEND_REVERSE(
+            &stack, t.sub_amt, VEC_GET_PTR(old->inds, t.subs_start));
+          bs_push_true_n(&first_pass_stack, t.sub_amt);
         } else {
           type_ref *subs_ptr =
             &VEC_DATA_PTR(&return_stack)[return_stack.len - t.sub_amt];
