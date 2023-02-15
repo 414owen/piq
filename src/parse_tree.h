@@ -210,8 +210,8 @@ typedef union {
 #define PT_AS_TYPE_IND(node) node.sub_a
 #define PT_AS_VAL_IND(node) node.sub_b
 
-const char **parse_node_strings;
-const parse_node_category *parse_node_categories;
+extern const char **parse_node_strings;
+extern const parse_node_category *parse_node_categories;
 
 typedef struct {
   parse_node_type type;
@@ -293,7 +293,7 @@ char *print_parse_errors_string(const char *input, const token *tokens,
                                 const parse_tree_res pres);
 void free_parse_tree(parse_tree tree);
 void free_parse_tree_res(parse_tree_res res);
-const tree_node_repr *pt_subs_type;
+extern const tree_node_repr *pt_subs_type;
 
 typedef struct {
   binding *bindings;

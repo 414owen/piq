@@ -101,22 +101,65 @@ enum {
   SUB_BENCH = 0,
 } subcommand;
 
+typedef enum {
+  METRIC_H_TOKENIZER,
+  METRIC_H_PARSER,
+  METRIC_H_RESOLVE_BINDINGS,
+  METRIC_H_TYPECHECK,
+  METRIC_H_CODEGEN,
+} metric_heading;
+
+typedef enum {
+  METRIC_AMOUNT,
+  METRIC_TIME,
+} metric_type;
+
+typedef struct {
+  char *name;
+  // this is used to pretty-print spaces between stages
+  metric_heading heading;
+  metric_type type;
+  union {
+    struct timespec time;
+    uint64_t amount;
+  };
+} metric;
+
+VEC_DECL(metric);
+
 int main(int argc, const char **argv) {
   initialise();
+
   test_config conf = {
     .junit = false,
-    .bench = false,
     .lite = false,
     .filter_str = NULL,
     .times = 1,
+    .write_json = false,
+  };
+
+  argument bench_args[] = {
+    {
+      .tag = ARG_FLAG,
+      .long_name = "write-json",
+      .short_name = 'j',
+      .flag_data = &conf.write_json,
+      .description = "Write a json report (for continuous benchmarking CI)",
+    },
+  };
+  
+  argument_bag bench_arg_bag = {
+    .amt = STATIC_LEN(bench_args),
+    .args = bench_args,
+    .subcommand_chosen = SUB_NONE,
   };
 
   argument args[] = {
     [SUB_BENCH] = {
       .tag = ARG_SUBCOMMAND,
       .subcommand_name = "bench",
+      .subs = bench_arg_bag,
       .short_name = 0,
-      .flag_data = &conf.bench,
       .description = "Run benchmark suite",
     },
     {
@@ -187,12 +230,17 @@ int main(int argc, const char **argv) {
   puts("\n--- Timings:\n");
 #endif
 
+  vec_metric metrics = VEC_NEW;
+
 #ifdef TIME_TOKENIZER
   if (state.total_bytes_tokenized > 0) {
-    stringstream timing_ss;
-    ss_init_immovable(&timing_ss);
-
-    fputs("Time spent tokenizing: ", timing_ss.stream);
+    metric m = {
+      .name = "Time spent tokenizing",
+      .heading = METRIC_H_TOKENIZER,
+      .type = METRIC_TIME,
+    };
+    VEC_PUSH(metrics)
+    fputs(": ", timing_ss.stream);
     print_timespan_timespec(timing_ss.stream, state.total_tokenization_time);
     newline(timing_ss.stream);
 
