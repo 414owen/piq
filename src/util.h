@@ -72,6 +72,9 @@ typedef enum {
 } order;
 
 NON_NULL_PARAMS
+bool memeq(const char *a, const char *b, size_t n);
+
+NON_NULL_PARAMS
 bool multiset_eq(size_t el_size, size_t as_len, size_t bs_len,
                  const void *restrict as_v, const void *restrict bs_v);
 

@@ -49,6 +49,7 @@ typedef struct {
   bool lite;
   int times;
   const char *filter_str;
+  bool write_json;
 } test_config;
 
 typedef struct {

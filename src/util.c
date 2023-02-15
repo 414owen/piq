@@ -3,6 +3,7 @@
 #include <predef/predef.h>
 #include <pwd.h>
 #include <stdarg.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +16,13 @@
 #include "consts.h"
 #include "util.h"
 #include "vec.h"
+
+bool memeq(const char *restrict a, const char *restrict b, size_t n) {
+  for (size_t i = 0; i < n; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
 
 // Returns true iff every element in as_v has an element in bs_v
 // where duplicates of each matter.
@@ -32,7 +40,7 @@ static bool test_all_as_in_b(size_t el_size, size_t el_amt,
     void *a = as + el_size * i;
     for (node_ind_t j = 0; j < el_amt; j++) {
       void *b = bs + el_size * j;
-      if (memcmp(a, b, el_size) == 0 && !BITTEST(used, j)) {
+      if (memeq(a, b, el_size) && !BITTEST(used, j)) {
         has_match = true;
         BITSET(used, j);
         break;
