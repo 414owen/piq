@@ -26,6 +26,10 @@ jobs:
     - uses: webiny/action-conventional-commits@v1.1.0
     - run: sudo apt install -y tup re2c lemon
     - run: "[ -f .tup/db ] || tup init"
+    # *sigh*
+    # tup version on the github runner is out of date
+    # and complains about our usage of ^j^ flags
+    - run: sed -i 's/\^j\^//g' Tupfile
     - run: tup
     - run: ./test bench -j
     - name: Download previous benchmark data
