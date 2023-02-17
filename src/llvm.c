@@ -832,7 +832,8 @@ void llvm_init(void) {
   LLVMInitializeNativeAsmParser();
 }
 
-llvm_res llvm_gen_module(source_file source, parse_tree tree, type_info types, LLVMModuleRef module) {
+llvm_res llvm_gen_module(source_file source, parse_tree tree, type_info types,
+                         LLVMModuleRef module) {
 #ifdef TIME_CODEGEN
   struct timespec start = get_monotonic_time();
 #endif
@@ -856,8 +857,8 @@ llvm_res llvm_gen_module(source_file source, parse_tree tree, type_info types, L
   return res;
 }
 
-void llvm_gen_and_print_module(source_file source, parse_tree tree, type_info types,
-                          FILE *out_f) {
+void llvm_gen_and_print_module(source_file source, parse_tree tree,
+                               type_info types, FILE *out_f) {
   LLVMContextRef ctx = LLVMContextCreate();
   LLVMModuleRef module = LLVMModuleCreateWithNameInContext("repl", ctx);
   llvm_res res = llvm_gen_module(source, tree, types, module);

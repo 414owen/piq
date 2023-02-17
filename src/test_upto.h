@@ -59,7 +59,7 @@ upto_resolution_res test_upto_resolution(test_state *state,
 tc_res test_upto_typecheck(test_state *state, const char *input, bool *success,
                            parse_tree *tree);
 
-typedef char* test_failure;
+typedef char *test_failure;
 typedef test_failure (*symbol_test)(voidfn f, void *data);
 
 typedef struct {

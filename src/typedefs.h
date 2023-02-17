@@ -12,6 +12,6 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
-// casting to a function pointer is only defined behaviour from another function pointer
-// in the standard
+// casting to a function pointer is only defined behaviour from another function
+// pointer in the standard
 typedef void (*voidfn)(void);

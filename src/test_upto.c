@@ -179,7 +179,8 @@ tc_res test_upto_typecheck(test_state *state, const char *restrict input,
 }
 
 // This one brackets the continuation, so it handles cleanup too
-// see [bracket](https://hackage.haskell.org/package/base-4.17.0.0/docs/Control-Exception.html#v:bracket)
+// see
+// [bracket](https://hackage.haskell.org/package/base-4.17.0.0/docs/Control-Exception.html#v:bracket)
 void test_upto_codegen_with(test_state *state, const char *restrict input,
                             llvm_symbol_test *tests, int num_tests) {
   bool success = true;
@@ -196,7 +197,8 @@ void test_upto_codegen_with(test_state *state, const char *restrict input,
 
   llvm_jit_ctx ctx = llvm_jit_init();
 
-  LLVMModuleRef module = LLVMModuleCreateWithNameInContext(test_file.path, ctx.llvm_ctx);
+  LLVMModuleRef module =
+    LLVMModuleCreateWithNameInContext(test_file.path, ctx.llvm_ctx);
   llvm_res res = llvm_gen_module(test_file, tree, tc_res.types, module);
   add_codegen_timings(state, tree, res);
 
@@ -209,7 +211,8 @@ void test_upto_codegen_with(test_state *state, const char *restrict input,
 
   char *mod_str = LLVMPrintModuleToString(module);
 
-  LLVMOrcThreadSafeModuleRef tsm = LLVMOrcCreateNewThreadSafeModule(res.module, ctx.orc_ctx);
+  LLVMOrcThreadSafeModuleRef tsm =
+    LLVMOrcCreateNewThreadSafeModule(res.module, ctx.orc_ctx);
   LLVMOrcLLJITAddLLVMIRModule(ctx.jit, ctx.dylib, tsm);
   LLVMOrcJITTargetAddress entry_addr = (LLVMOrcJITTargetAddress)NULL;
 
@@ -217,9 +220,10 @@ void test_upto_codegen_with(test_state *state, const char *restrict input,
   bool have_printed_module = false;
   for (int i = 0; i < num_tests; i++) {
     llvm_symbol_test test = tests[i];
-    LLVMErrorRef error = LLVMOrcLLJITLookup(ctx.jit, &entry_addr, test.symbol_name);
+    LLVMErrorRef error =
+      LLVMOrcLLJITLookup(ctx.jit, &entry_addr, test.symbol_name);
     if (error == LLVMErrorSuccess) {
-      char *err = test.test_callback((voidfn) entry_addr, test.data);
+      char *err = test.test_callback((voidfn)entry_addr, test.data);
       if (err != NULL) {
         failf(state,
               "%s\nOn symbol: '%s'%s%s",
@@ -254,7 +258,8 @@ void test_upto_codegen_with(test_state *state, const char *restrict input,
 #ifdef TIME_CODEGEN
   struct timespec time_taken = time_since_monotonic(start);
   if (!state->current_failed) {
-    state->total_codegen_time = timespec_add(state->total_codegen_time, time_taken);
+    state->total_codegen_time =
+      timespec_add(state->total_codegen_time, time_taken);
   }
 #endif
 

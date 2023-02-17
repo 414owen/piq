@@ -19,7 +19,8 @@
 
 bool memeq(const char *restrict a, const char *restrict b, size_t n) {
   for (size_t i = 0; i < n; i++) {
-    if (a[i] != b[i]) return false;
+    if (a[i] != b[i])
+      return false;
   }
   return true;
 }

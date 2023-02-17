@@ -26,7 +26,7 @@ static void print_byte_amount(FILE *f, uint64_t bytes) {
     }
   }
 
-  fprintf(f, "%.02lf %s", dblBytes, byte_suffixes[i]);
+  fprintf(f, "%.02lf%s", dblBytes, byte_suffixes[i]);
 }
 
 const char *qualtity_suffixes[] = {"", "thousand", "million", "billion"};
@@ -52,7 +52,7 @@ static uint64_t timespec_to_nanos(struct timespec ts) {
 
 static void print_timespan_nanos(FILE *f, uint64_t ns) {
   if (ns < 1000) {
-    fprintf(f, "%luns", ns);
+    fprintf(f, "%" PRIu64 "ns", ns);
     return;
   }
   static const char *time_suffixes[] = {
@@ -75,6 +75,14 @@ static void print_timespan_nanos(FILE *f, uint64_t ns) {
 
 static void print_timespan_timespec(FILE *f, struct timespec ts) {
   print_timespan_nanos(f, timespec_to_nanos(ts));
+}
+
+static void print_timespan_float_nanos(FILE *f, double nanos) {
+  if (nanos < 1000) {
+    fprintf(f, "%.3fns", nanos);
+  } else {
+    print_timespan_nanos(f, (uint64_t)nanos);
+  }
 }
 
 static void run_tests(test_state *state) {
@@ -109,23 +117,126 @@ typedef enum {
   METRIC_H_CODEGEN,
 } metric_heading;
 
-typedef enum {
-  METRIC_AMOUNT,
-  METRIC_TIME,
-} metric_type;
+typedef struct {
+  struct {
+    bool print_json;
+    FILE *json_file;
+  } params;
+  bool start;
+  metric_heading heading;
+  metric_heading last_heading;
+} put_metric_state;
 
 typedef struct {
   char *name;
-  // this is used to pretty-print spaces between stages
-  metric_heading heading;
-  metric_type type;
-  union {
-    struct timespec time;
-    uint64_t amount;
-  };
-} metric;
+  uint64_t amount;
+} amount_metric;
 
-VEC_DECL(metric);
+typedef struct {
+  char *name;
+  struct timespec time;
+} time_metric;
+
+typedef struct {
+  char *name;
+  double nanoseconds;
+} float_time_metric;
+
+typedef struct {
+  char *name;
+  double amount;
+} float_metric;
+
+static void put_metric_preamble(put_metric_state *state, const char *name) {
+  if (!state->start && state->heading != state->last_heading) {
+    newline(stdout);
+  }
+  fputs(name, stdout);
+  fputs(": ", stdout);
+  if (state->params.print_json) {
+    if (!state->start) {
+      fputc(',', state->params.json_file);
+    }
+    fprintf(state->params.json_file,
+            "\n"
+            " {\n"
+            "  \"name\": \"%s\",",
+            name);
+  }
+  state->start = false;
+  state->last_heading = state->heading;
+}
+
+static void print_metric_postamble(put_metric_state *state) {
+  if (state->params.print_json) {
+    fputs("\n }", state->params.json_file);
+  }
+}
+
+static void put_metric_amount(put_metric_state *state, amount_metric m) {
+  put_metric_preamble(state, m.name);
+  print_amount(stdout, m.amount);
+  newline(stdout);
+  if (state->params.print_json) {
+    fprintf(state->params.json_file,
+            "  \"unit\": \"amount\",\n"
+            "  \"value\": %" PRIu64 "",
+            m.amount);
+  }
+  print_metric_postamble(state);
+}
+
+static void put_metric_byte_amount(put_metric_state *state, amount_metric m) {
+  put_metric_preamble(state, m.name);
+  print_byte_amount(stdout, m.amount);
+  newline(stdout);
+  if (state->params.print_json) {
+    fprintf(state->params.json_file,
+            "  \"unit\": \"bytes\",\n"
+            "  \"value\": %" PRIu64,
+            m.amount);
+  }
+  print_metric_postamble(state);
+}
+
+static void put_metric_time(put_metric_state *state, time_metric m) {
+  put_metric_preamble(state, m.name);
+  print_timespan_timespec(stdout, m.time);
+  newline(stdout);
+  if (state->params.print_json) {
+    fprintf(state->params.json_file,
+            "  \"unit\": \"ns\",\n"
+            "  \"value\": %" PRIu64,
+            timespec_to_nanos(m.time));
+  }
+  print_metric_postamble(state);
+}
+
+static void put_metric_time_float(put_metric_state *state,
+                                  float_time_metric m) {
+  put_metric_preamble(state, m.name);
+  print_timespan_float_nanos(stdout, m.nanoseconds);
+  newline(stdout);
+  if (state->params.print_json) {
+    fprintf(state->params.json_file,
+            "  \"unit\": \"ns\",\n"
+            "  \"value\": %.3f",
+            m.nanoseconds);
+  }
+  print_metric_postamble(state);
+}
+
+static void put_metric_float(put_metric_state *state, float_metric m) {
+  put_metric_preamble(state, m.name);
+  printf("%.3f\n", m.amount);
+  if (state->params.print_json) {
+    fprintf(state->params.json_file,
+            "  \"unit\": \"amount\",\n"
+            "  \"value\": %.3f",
+            m.amount);
+  }
+  print_metric_postamble(state);
+}
 
 int main(int argc, const char **argv) {
   initialise();
@@ -147,7 +258,7 @@ int main(int argc, const char **argv) {
       .description = "Write a json report (for continuous benchmarking CI)",
     },
   };
-  
+
   argument_bag bench_arg_bag = {
     .amt = STATIC_LEN(bench_args),
     .args = bench_args,
@@ -155,13 +266,14 @@ int main(int argc, const char **argv) {
   };
 
   argument args[] = {
-    [SUB_BENCH] = {
-      .tag = ARG_SUBCOMMAND,
-      .subcommand_name = "bench",
-      .subs = bench_arg_bag,
-      .short_name = 0,
-      .description = "Run benchmark suite",
-    },
+    [SUB_BENCH] =
+      {
+        .tag = ARG_SUBCOMMAND,
+        .subcommand_name = "bench",
+        .subs = bench_arg_bag,
+        .short_name = 0,
+        .description = "Run benchmark suite",
+      },
     {
       .tag = ARG_FLAG,
       .long_name = "lite",
@@ -225,158 +337,222 @@ int main(int argc, const char **argv) {
          state.tests_run);
 
 #ifdef TIME_ANY
-  vec_string timing_blocks = VEC_NEW;
-
   puts("\n--- Timings:\n");
-#endif
 
-  vec_metric metrics = VEC_NEW;
+  put_metric_state metric_state = {
+    .params =
+      {
+        .print_json = conf.write_json,
+        .json_file = conf.write_json ? fopen("bench.json", "w") : NULL,
+      },
+    .start = true,
+  };
+
+  if (metric_state.params.print_json) {
+    fputc('[', metric_state.params.json_file);
+  }
+#endif
 
 #ifdef TIME_TOKENIZER
   if (state.total_bytes_tokenized > 0) {
-    metric m = {
-      .name = "Time spent tokenizing",
-      .heading = METRIC_H_TOKENIZER,
-      .type = METRIC_TIME,
-    };
-    VEC_PUSH(metrics)
-    fputs(": ", timing_ss.stream);
-    print_timespan_timespec(timing_ss.stream, state.total_tokenization_time);
-    newline(timing_ss.stream);
-
-    fputs("Total bytes tokenized: ", timing_ss.stream);
-    print_byte_amount(timing_ss.stream, state.total_bytes_tokenized);
-    newline(timing_ss.stream);
-
-    fputs("Total tokens produced: ", timing_ss.stream);
-    print_amount(timing_ss.stream, state.total_tokens);
-    newline(timing_ss.stream);
+    metric_state.heading = METRIC_H_TOKENIZER;
 
     {
-      fputs("Tokenization time per token produced: ", timing_ss.stream);
+      time_metric m = {
+        .name = "Time spent tokenizing",
+        .time = state.total_tokenization_time,
+      };
+      put_metric_time(&metric_state, m);
+    }
+
+    {
+      amount_metric m = {
+        .name = "Total bytes tokenized",
+        .amount = state.total_bytes_tokenized,
+      };
+      put_metric_byte_amount(&metric_state, m);
+    }
+
+    {
+      amount_metric m = {
+        .name = "Total tokens produced",
+        .amount = state.total_tokens,
+      };
+      put_metric_amount(&metric_state, m);
+    }
+
+    {
       double nanos_per_token =
-        timespec_to_nanos(state.total_tokenization_time) / state.total_tokens;
-      print_timespan_nanos(timing_ss.stream, nanos_per_token);
-      newline(timing_ss.stream);
+        (double)timespec_to_nanos(state.total_tokenization_time) /
+        (double)state.total_tokens;
+      float_time_metric m = {
+        .name = "Tokenization time per token produced",
+        .nanoseconds = nanos_per_token,
+      };
+      put_metric_time_float(&metric_state, m);
     }
+
     {
-      fputs("Tokenization time per byte: ", timing_ss.stream);
-      double nanos_per_byte = timespec_to_nanos(state.total_tokenization_time) /
-                              state.total_bytes_tokenized;
-      print_timespan_nanos(timing_ss.stream, nanos_per_byte);
+      double nanos_per_byte =
+        (double)timespec_to_nanos(state.total_tokenization_time) /
+        (double)state.total_bytes_tokenized;
+      float_time_metric m = {
+        .name = "Tokenization time per byte",
+        .nanoseconds = nanos_per_byte,
+      };
+      put_metric_time_float(&metric_state, m);
     }
-    ss_finalize(&timing_ss);
-    VEC_PUSH(&timing_blocks, timing_ss.string);
   }
 #endif
 
 #ifdef TIME_PARSER
   if (state.total_parse_nodes_produced > 0) {
-    stringstream timing_ss;
-    ss_init_immovable(&timing_ss);
-    fputs("Time spent parsing: ", timing_ss.stream);
-    print_timespan_timespec(timing_ss.stream, state.total_parser_time);
-    newline(timing_ss.stream);
-
-    fputs("Total tokens parsed: ", timing_ss.stream);
-    print_amount(timing_ss.stream, state.total_tokens_parsed);
-    newline(timing_ss.stream);
-
-    fputs("Total parse nodes produced: ", timing_ss.stream);
-    print_amount(timing_ss.stream, state.total_parse_nodes_produced);
-    newline(timing_ss.stream);
-
-    fprintf(timing_ss.stream,
-            "Parse nodes produced per token: %.3f\n",
-            (double)state.total_parse_nodes_produced /
-              (double)state.total_tokens_parsed);
+    metric_state.heading = METRIC_H_PARSER;
+    {
+      time_metric m = {
+        .name = "Time spent parsing",
+        .time = state.total_parser_time,
+      };
+      put_metric_time(&metric_state, m);
+    }
 
     {
-      fputs("Parse time per token: ", timing_ss.stream);
+      amount_metric m = {
+        .name = "Total tokens parsed",
+        .amount = state.total_tokens_parsed,
+      };
+      put_metric_amount(&metric_state, m);
+    }
+
+    {
+      amount_metric m = {
+        .name = "Total parse nodes produced",
+        .amount = state.total_parse_nodes_produced,
+      };
+      put_metric_amount(&metric_state, m);
+    }
+
+    {
+      double ratio = (double)state.total_parse_nodes_produced /
+                     (double)state.total_tokens_parsed;
+      float_metric m = {
+        .name = "Parse nodes produced per token",
+        .amount = ratio,
+      };
+      put_metric_float(&metric_state, m);
+    }
+
+    {
       double nanos_per_token =
-        timespec_to_nanos(state.total_parser_time) / state.total_tokens_parsed;
-      print_timespan_nanos(timing_ss.stream, nanos_per_token);
-      newline(timing_ss.stream);
+        (double)timespec_to_nanos(state.total_parser_time) /
+        (double)state.total_tokens_parsed;
+      float_time_metric m = {
+        .name = "Parse time per token token",
+        .nanoseconds = nanos_per_token,
+      };
+      put_metric_time_float(&metric_state, m);
     }
+
     {
-      fputs("Parse time per parse node produced: ", timing_ss.stream);
-      double nanos_per_token = timespec_to_nanos(state.total_parser_time) /
-                               state.total_parse_nodes_produced;
-      print_timespan_nanos(timing_ss.stream, nanos_per_token);
+      double nanos_per_parse_node =
+        (double)timespec_to_nanos(state.total_parser_time) /
+        (double)state.total_parse_nodes_produced;
+      float_time_metric m = {
+        .name = "Parse time per parse node produced",
+        .nanoseconds = nanos_per_parse_node,
+      };
+      put_metric_time_float(&metric_state, m);
     }
-    ss_finalize(&timing_ss);
-    VEC_PUSH(&timing_blocks, timing_ss.string);
   }
 #endif
 
 #ifdef TIME_TYPECHECK
   if (state.total_parse_nodes_typechecked > 0) {
-    stringstream timing_ss;
-    ss_init_immovable(&timing_ss);
-    fputs("Time spent typechecking: ", timing_ss.stream);
-    print_timespan_timespec(timing_ss.stream, state.total_typecheck_time);
-    newline(timing_ss.stream);
-
-    fputs("Total parse nodes typechecked: ", timing_ss.stream);
-    print_amount(timing_ss.stream, state.total_parse_nodes_typechecked);
-    newline(timing_ss.stream);
+    metric_state.heading = METRIC_H_TYPECHECK;
+    {
+      time_metric m = {
+        .name = "Time spent typechecking",
+        .time = state.total_typecheck_time,
+      };
+      put_metric_time(&metric_state, m);
+    }
 
     {
-      fputs("Typecheck time per parse node: ", timing_ss.stream);
-      double nanos_per_token = timespec_to_nanos(state.total_typecheck_time) /
-                               state.total_parse_nodes_typechecked;
-      print_timespan_nanos(timing_ss.stream, nanos_per_token);
+      amount_metric m = {
+        .name = "Total parse nodes typechecked",
+        .amount = state.total_parse_nodes_typechecked,
+      };
+      put_metric_amount(&metric_state, m);
     }
-    ss_finalize(&timing_ss);
-    VEC_PUSH(&timing_blocks, timing_ss.string);
+
+    {
+      double nanos_per_parse_node =
+        (double)timespec_to_nanos(state.total_typecheck_time) /
+        (double)state.total_parse_nodes_typechecked;
+      float_time_metric m = {
+        .name = "Typecheck time per parse node",
+        .nanoseconds = nanos_per_parse_node,
+      };
+      put_metric_time_float(&metric_state, m);
+    }
   }
 #endif
 
 #ifdef TIME_CODEGEN
   if (state.total_parse_nodes_codegened > 0) {
-    stringstream timing_ss;
-    ss_init_immovable(&timing_ss);
-    fputs("Time spent building LLVM IR: ", timing_ss.stream);
-    print_timespan_timespec(timing_ss.stream,
-                            state.total_llvm_ir_generation_time);
-
-    newline(timing_ss.stream);
-    fputs("Time spent performing codegen: ", timing_ss.stream);
-    print_timespan_timespec(timing_ss.stream, state.total_codegen_time);
-    newline(timing_ss.stream);
-
-    fputs("Total parse nodes turned into IR: ", timing_ss.stream);
-    print_amount(timing_ss.stream, state.total_parse_nodes_codegened);
-    newline(timing_ss.stream);
+    metric_state.heading = METRIC_H_CODEGEN;
+    {
+      time_metric m = {
+        .name = "Time spent building LLVM IR",
+        .time = state.total_llvm_ir_generation_time,
+      };
+      put_metric_time(&metric_state, m);
+    }
 
     {
-      fputs("LLVM IR building time per parse node: ", timing_ss.stream);
-      double nanos_per_token =
-        timespec_to_nanos(state.total_llvm_ir_generation_time) /
-        state.total_parse_nodes_codegened;
-      print_timespan_nanos(timing_ss.stream, nanos_per_token);
-      newline(timing_ss.stream);
+      time_metric m = {
+        .name = "Time spent performing codegen",
+        .time = state.total_codegen_time,
+      };
+      put_metric_time(&metric_state, m);
     }
+
     {
-      fputs("Codegen time per parse node: ", timing_ss.stream);
-      double nanos_per_token = timespec_to_nanos(state.total_codegen_time) /
-                               state.total_parse_nodes_codegened;
-      print_timespan_nanos(timing_ss.stream, nanos_per_token);
+      amount_metric m = {
+        .name = "Total parse nodes turned into LLVM IR",
+        .amount = state.total_parse_nodes_codegened,
+      };
+      put_metric_amount(&metric_state, m);
     }
-    ss_finalize(&timing_ss);
-    VEC_PUSH(&timing_blocks, timing_ss.string);
+
+    {
+      double nanos_per_parse_node =
+        (double)timespec_to_nanos(state.total_llvm_ir_generation_time) /
+        (double)state.total_parse_nodes_codegened;
+      float_time_metric m = {
+        .name = "Time building LLVM IR per parse node",
+        .nanoseconds = nanos_per_parse_node,
+      };
+      put_metric_time_float(&metric_state, m);
+    }
+
+    {
+      double nanos_per_parse_node =
+        (double)timespec_to_nanos(state.total_codegen_time) /
+        (double)state.total_parse_nodes_codegened;
+      float_time_metric m = {
+        .name = "Codegen time per parse node",
+        .nanoseconds = nanos_per_parse_node,
+      };
+      put_metric_time_float(&metric_state, m);
+    }
   }
 #endif
 
 #ifdef TIME_ANY
-  for (unsigned i = 0; i < timing_blocks.len; i++) {
-    if (i > 0) {
-      newline(stdout);
-    }
-    puts(VEC_GET(timing_blocks, i));
-    free(VEC_GET(timing_blocks, i));
+  if (metric_state.params.print_json) {
+    fputs("\n]\n", metric_state.params.json_file);
   }
-  VEC_FREE(&timing_blocks);
 #endif
 
   if (conf.junit) {
