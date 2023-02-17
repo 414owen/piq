@@ -24,7 +24,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: webiny/action-conventional-commits@v1.1.0
-    - run: sudo apt install -y tup
+    - run: sudo apt install -y tup re2c lemon
+    - run: "[ -f .tup/db ] || tup init"
     - run: tup
     - run: ./test bench -j
     - name: Download previous benchmark data
