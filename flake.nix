@@ -72,7 +72,7 @@
             xxHash
           ];
 
-          CFLAGS = "-O2 -s -flto";
+          CFLAGS = "-Ofast -std=c99 -s -flto -DTIME_ALL";
 
           buildPhase = ''
             . ./scripts/environment.sh
@@ -97,6 +97,17 @@
         packages = {
           ${packageName} = app {};
           "${packageName}-tests" = app {test = true;};
+          "${packageName}-benchmark" = pkgs.stdenvNoCC.mkDerivation {
+            name = "benchmark";
+            unpackPhase = "true";
+            buildPhase = ''
+              ${packages."${packageName}-tests"}/bin/test bench -j
+            '';
+            installPhase = ''
+              mkdir -p $out
+              mv bench.json $out/bench.json
+            '';
+          };
         };
 
         checks = {

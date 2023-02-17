@@ -21,3 +21,20 @@ jobs:
       uses: cachix/install-nix-action@v17
     - run: nix build
     - run: nix flake check --impure
+    - name: Download previous benchmark data
+      uses: actions/cache@v1
+      with:
+        path: ./cache
+        key: ${{ runner.os }}-benchmark
+    - run: nix build .#lang-c-benchmark
+    - name: Store benchmark result
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        # What benchmark tool the output.txt came from
+        tool: 'customSmallerIsBetter'
+        # Where the output from the benchmark tool is stored
+        output-file-path: result/bench.json
+        # Where the previous data file is stored
+        external-data-json-path: ./cache/benchmark-data.json
+        # Workflow will fail when an alert happens
+        fail-on-alert: true
