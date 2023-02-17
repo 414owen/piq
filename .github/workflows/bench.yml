@@ -28,6 +28,10 @@ jobs:
     - run: |
         pushd /usr/include
         [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -o ./hedley.h
+        predef() {
+          sudo svn checkout https://github.com/natefoo/predef/trunk/predef
+        }
+        [ -d predef ] || predef
         popd
     - run: sudo apt install -y tup re2c lemon libxxhash-dev
     - run: "[ -f .tup/db ] || tup init"
