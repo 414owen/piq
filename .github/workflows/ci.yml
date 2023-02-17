@@ -11,6 +11,12 @@ defaults:
 env:
   NIXPKGS_ALLOW_BROKEN: 1
 
+permissions:
+  # deployments permission to deploy GitHub pages website
+  deployments: write
+  # contents permission to update benchmark contents in gh-pages branch
+  contents: write
+
 jobs:
   CI:
     runs-on: ubuntu-latest
@@ -30,6 +36,7 @@ jobs:
     - name: Store benchmark result
       uses: benchmark-action/github-action-benchmark@v1
       with:
+        name: Language Compiler Benchmark
         # What benchmark tool the output.txt came from
         tool: 'customSmallerIsBetter'
         # Where the output from the benchmark tool is stored
@@ -38,3 +45,5 @@ jobs:
         external-data-json-path: ./cache/benchmark-data.json
         # Workflow will fail when an alert happens
         fail-on-alert: true
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        auto-push: true
