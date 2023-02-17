@@ -29,7 +29,7 @@ jobs:
         pushd /usr/include
         [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -o ./hedley.h
         popd
-    - run: sudo apt install -y tup re2c lemon
+    - run: sudo apt install -y tup re2c lemon libxxhash-dev
     - run: "[ -f .tup/db ] || tup init"
     # *sigh*
     # tup version on the github runner is out of date
