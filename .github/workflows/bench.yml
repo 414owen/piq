@@ -27,7 +27,7 @@ jobs:
     - uses: webiny/action-conventional-commits@v1.1.0
     - run: |
         pushd /usr/include
-        [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -o ./hedley.h
+        [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -O ./hedley.h
         predef() {
           sudo svn checkout https://github.com/natefoo/predef/trunk/predef
         }
