@@ -33,7 +33,7 @@ jobs:
         }
         [ -d predef ] || predef
         popd
-    - run: sudo apt install -y tup re2c lemon libxxhash-dev
+    - run: sudo apt install -y tup re2c lemon libxxhash-dev llvm-dev
     - run: "[ -f .tup/db ] || tup init"
     # *sigh*
     # tup version on the github runner is out of date
