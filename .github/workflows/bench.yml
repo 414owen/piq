@@ -40,7 +40,9 @@ jobs:
     # tup version on the github runner is out of date
     # and complains about our usage of ^j^ flags
     - run: sed -i 's/\^j\^//g' Tupfile
-    - run: tup
+    - run: |
+        . scripts/environment.sh
+        tup
     - run: ./test bench -j
     - name: Download previous benchmark data
       uses: actions/cache@v1
