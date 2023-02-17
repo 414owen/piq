@@ -42,6 +42,7 @@ jobs:
     - run: sed -i 's/\^j\^//g' Tupfile
     - run: |
         . scripts/environment.sh
+        echo LLVM: $LLVM_CONFIG_FLAGS
         tup
     - run: ./test bench -j
     - name: Download previous benchmark data
