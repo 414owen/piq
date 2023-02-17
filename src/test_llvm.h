@@ -1,3 +1,5 @@
+#pragma once
+
 #include <llvm-c/LLJIT.h>
 
 typedef struct {

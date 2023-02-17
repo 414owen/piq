@@ -5,4 +5,5 @@ typedef struct trie_node {
 
 vec_trie_node
 
-uint32_t find_in_trie()
+  uint32_t
+  find_in_trie()

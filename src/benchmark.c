@@ -15,27 +15,27 @@ const int STATEMENT_AMT = 20;
 
 typedef uint32_t (*fn_type)(void);
 
-static char *do_nothing(fn_type f, void *data) {
-  return NULL;
-}
+static char *do_nothing(fn_type f, void *data) { return NULL; }
 
 void run_benchmarks(test_state *state) {
   stringstream ss;
   ss_init_immovable(&ss);
   for (int i = 0; i < FUNCTION_AMT; i++) {
-    fprintf(
-      ss.stream,
-      "(sig " FUNCTION_STR "%d (Fn I32 I32 I32))\n"
-      "(fun " FUNCTION_STR "%d (a b)\n"
-      INDENT_STR "(sig " BINDING_STR "0 I32)\n"
-      INDENT_STR "(let " BINDING_STR "0 0)\n", i, i);
+    fprintf(ss.stream,
+            "(sig " FUNCTION_STR "%d (Fn I32 I32 I32))\n"
+            "(fun " FUNCTION_STR "%d (a b)\n" INDENT_STR "(sig " BINDING_STR
+            "0 I32)\n" INDENT_STR "(let " BINDING_STR "0 0)\n",
+            i,
+            i);
     for (int j = 1; j < STATEMENT_AMT - 1; j++) {
       const int backref = abs(rand()) % j;
-      fprintf(
-        ss.stream,
-        "\n"
-        INDENT_STR "(sig " BINDING_STR "%d I32)\n"
-        INDENT_STR "(let " BINDING_STR "%d (i32-add " BINDING_STR "%d %d))\n", j, j, backref, j);
+      fprintf(ss.stream,
+              "\n" INDENT_STR "(sig " BINDING_STR "%d I32)\n" INDENT_STR
+              "(let " BINDING_STR "%d (i32-add " BINDING_STR "%d %d))\n",
+              j,
+              j,
+              backref,
+              j);
     }
     fputs(INDENT_STR "(let result\n", ss.stream);
     for (int j = 1; j < STATEMENT_AMT - 1; j++) {
@@ -53,7 +53,8 @@ void run_benchmarks(test_state *state) {
     }
     fputs(")\n\n", ss.stream);
   }
-  fprintf(ss.stream, "(fun entry () (" FUNCTION_STR "%d 42 101))", FUNCTION_AMT - 1);
+  fprintf(
+    ss.stream, "(fun entry () (" FUNCTION_STR "%d 42 101))", FUNCTION_AMT - 1);
 
   ss_finalize(&ss);
 
