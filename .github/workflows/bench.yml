@@ -25,6 +25,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: webiny/action-conventional-commits@v1.1.0
+    - run: |
+        pushd /usr/include
+        [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -o ./hedley.h
+        popd
     - run: sudo apt install -y tup re2c lemon
     - run: "[ -f .tup/db ] || tup init"
     # *sigh*
