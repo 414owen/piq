@@ -11,6 +11,7 @@ defaults:
 
 env:
   CFLAGS: -DTIME_ALL
+  CC: gcc
 
 permissions:
   # deployments permission to deploy GitHub pages website
