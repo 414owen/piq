@@ -3,7 +3,7 @@ name: Benchmarks
 on:
   push:
     branches:
-      - os/continuous-benchmarks
+      - os/master
 
 defaults:
   run:
