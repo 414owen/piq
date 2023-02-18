@@ -22,25 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: webiny/action-conventional-commits@v1.1.0
     - name: Install Nix
       uses: cachix/install-nix-action@v17
     - run: nix build
     - run: nix flake check --impure
-    - name: Download previous benchmark data
-      uses: actions/cache@v1
-      with:
-        path: ./cache
-        key: ${{ runner.os }}-benchmark
-    - run: nix build .#lang-c-benchmark
-    - name: Store benchmark result
-      uses: benchmark-action/github-action-benchmark@v1
-      with:
-        name: Language Compiler Benchmark
-        # What benchmark tool the output.txt came from
-        tool: 'customSmallerIsBetter'
-        # Where the output from the benchmark tool is stored
-        output-file-path: ./result/bench.json
-        # Workflow will fail when an alert happens
-        fail-on-alert: true
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        auto-push: true
