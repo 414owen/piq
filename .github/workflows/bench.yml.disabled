@@ -1,0 +1,66 @@
+name: Bench
+
+on:
+  push:
+    branches:
+      - os/continuous-benchmarks
+
+defaults:
+  run:
+    working-directory: ./
+
+env:
+  CFLAGS: -DTIME_ALL
+  CC: gcc
+  CXX: g++
+
+permissions:
+  # deployments permission to deploy GitHub pages website
+  deployments: write
+  # contents permission to update benchmark contents in gh-pages branch
+  contents: write
+
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: webiny/action-conventional-commits@v1.1.0
+    - run: |
+        pushd /usr/include
+        [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -O ./hedley.h
+        predef() {
+          sudo svn checkout https://github.com/natefoo/predef/trunk/predef
+        }
+        [ -d predef ] || predef
+        popd
+    - run: sudo apt install -y tup re2c lemon libxxhash-dev llvm-dev
+    - run: "[ -f .tup/db ] || tup init"
+    # *sigh*
+    # tup version on the github runner is out of date
+    # and complains about our usage of ^j^ flags
+    - run: sed -i 's/\^j\^//g' Tupfile
+    - run: |
+        . scripts/environment.sh
+        echo LLVM: $LLVM_CONFIG_FLAGS
+        tup generate build.sh
+        sed -i '1 s/$/\nset -x/' build.sh
+        ./build.sh
+    - run: ./test bench -j
+    - name: Download previous benchmark data
+      uses: actions/cache@v1
+      with:
+        path: ./cache
+        key: ${{ runner.os }}-benchmark
+    - name: Store benchmark result
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        name: Language Compiler Benchmark
+        # What benchmark tool the output.txt came from
+        tool: 'customSmallerIsBetter'
+        # Where the output from the benchmark tool is stored
+        output-file-path: ./bench.json
+        # Workflow will fail when an alert happens
+        fail-on-alert: true
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        auto-push: true
