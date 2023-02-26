@@ -74,6 +74,7 @@ VEC_DECL(type);
 typedef struct {
   vec_type types;
   vec_type_ref inds;
+  vec_type_ref suffix_array;
   union {
     vec_type_ref node_types;
     vec_type_ref substitutions;
@@ -115,6 +116,9 @@ node_ind_t mk_type(type_builder *tb, type_check_tag tag, const node_ind_t *subs,
 node_ind_t mk_type_var(type_builder *tb, typevar value);
 void push_type_subs(vec_type_ref *restrict stack, const type_ref *restrict inds,
                     type t);
+
+type_builder new_type_builder(void);
+type_builder new_type_builder_with_builtins(void);
 
 /*
 typedef struct {

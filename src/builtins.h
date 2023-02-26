@@ -156,10 +156,10 @@ typedef enum {
 
 extern const char *builtin_type_names[];
 extern const type builtin_types[];
-extern const node_ind_t named_builtin_type_amount;
-extern const node_ind_t builtin_type_amount;
-extern const node_ind_t builtin_type_inds[];
-extern const node_ind_t builtin_type_ind_amount;
+extern const type_ref named_builtin_type_amount;
+extern const type_ref builtin_type_amount;
+extern const type_ref builtin_type_inds[];
+extern const type_ref builtin_type_ind_amount;
 extern const char *builtin_term_names[];
 
 #define EACH_BUILTIN_BITWIDTH_CASE(prefix, suffix)                             \

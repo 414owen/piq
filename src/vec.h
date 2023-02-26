@@ -167,7 +167,7 @@ void __vec_append(vec_void *vec, void *els, VEC_LEN_T amt, size_t elemsize);
   {                                                                            \
     debug_assert(VEC_ELSIZE(vec) == sizeof((els)[0]));                         \
     debug_assert((amt) == 0 || (els) != NULL);                                 \
-    __vec_append((vec_void *)vec, (void *)(els), amt, sizeof((els)[0]));       \
+    __vec_append((vec_void *)(vec), (void *)(els), (amt), sizeof((els)[0]));       \
   }
 
 #define VEC_REVERSE(vec)                                                       \
