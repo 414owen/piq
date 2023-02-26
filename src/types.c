@@ -1,3 +1,4 @@
+#include "builtins.h"
 #include "types.h"
 
 type_ref find_primitive_type(type_builder *tb, type_check_tag tag) {
@@ -67,10 +68,12 @@ type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
   // debug_assert(sizeof(subs[0]) == sizeof(VEC_GET(state->types.type_inds,
   // 0))); size_t find_range(const void *haystack, size_t el_size, size_t
   // el_amt, const void *needle, size_t needle_els);
-  ind = find_range(
-    VEC_DATA_PTR(&tb->inds), sizeof(subs[0]), tb->inds.len, subs, sub_amt);
-  if (ind == tb->inds.len) {
-    VEC_APPEND(&tb->inds, sub_amt, subs);
+  suffix_arr_lookup_res suffix_res = find_range_with_suffix_array_u32(
+    VEC_DATA_PTR(&tb->inds), VEC_DATA_PTR(&tb->suffix_array), subs, tb->inds.len, sub_amt);
+  switch (suffix_res.type) {
+    case SUFF_NOTHING:
+      VEC_APPEND(&tb->inds, sub_amt, subs);
+      break;
   }
   type t = {
     .check_tag = tag,
@@ -248,6 +251,51 @@ bool type_contains_unsubstituted_typevar(const type_builder *builder,
   };
   return type_contains_typevar_by(
     builder, root, is_unsubstituted_typevar_step, &data);
+}
+
+type_builder new_type_builder(void) {
+  type_builder type_builder = {
+    .types = VEC_NEW,
+    .inds = VEC_NEW,
+    .suffix_array = VEC_NEW,
+    .substitutions = VEC_NEW,
+  };
+  return type_builder;
+}
+
+type_ref *builtin_suffixes = NULL;
+
+int cmp_builtin_suffixes(const void *a_par, const void *b_par) {
+  type_ref a = *((type_ref*) a_par);
+  type_ref b = *((type_ref*) b_par);
+  type_ref *a_suff = &builtin_type_inds[a];
+  type_ref *b_suff = &builtin_type_inds[b];
+  type_ref a_suff_len = builtin_type_ind_amount - a;
+  type_ref b_suff_len = builtin_type_ind_amount - b;
+  int res = memcmp(a_suff, b_suff, MIN(a_suff_len, b_suff_len));
+  if (res == 0) {
+    return a_suff_len < b_suff_len ? -1 : 1;
+  }
+  return res;
+}
+
+void initialise_types(void) {
+  builtin_suffixes = malloc(sizeof(type_ref) * builtin_type_ind_amount);
+  for (type_ref i = 0; i < builtin_type_ind_amount; i++) {
+    builtin_suffixes[i] = i;
+  }
+  // It's possible to do this in linear time and constant space.
+  // I'm using qsort for simplicity, as I don't expect this to ever show up on a profile.
+  qsort(builtin_suffixes, builtin_type_ind_amount, sizeof(type_ref), cmp_builtin_suffixes);
+}
+
+type_builder new_type_builder_with_builtins(void) {
+  type_builder res = new_type_builder();
+  // blit builtin types
+  VEC_APPEND(&res.types, builtin_type_amount, builtin_types);
+  VEC_APPEND(&res.inds, builtin_type_ind_amount, builtin_type_inds);
+  VEC_APPEND(&res.suffix_array, builtin_type_ind_amount, builtin_suffixes);
+  return res;
 }
 
 void free_type_builder(type_builder tb) {

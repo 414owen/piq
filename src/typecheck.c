@@ -896,15 +896,8 @@ tc_res typecheck(const parse_tree tree) {
 #ifdef TIME_TYPECHECK
   struct timespec start = get_monotonic_time();
 #endif
-  type_builder type_builder = {
-    .types = VEC_NEW,
-    .inds = VEC_NEW,
-    .substitutions = VEC_NEW,
-  };
 
-  // blit builtin types
-  VEC_APPEND(&type_builder.types, builtin_type_amount, builtin_types);
-  VEC_APPEND(&type_builder.inds, builtin_type_ind_amount, builtin_type_inds);
+  type_builder type_builder = new_type_builder_with_builtins();
 
   // every parse_node index has a corresponding entry in the substitutions
   annotate_parse_tree(tree, &type_builder);

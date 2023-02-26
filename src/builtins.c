@@ -255,12 +255,12 @@ enum {
   builtin_type_ind_amount_enum = builtin_term_amount + derived_type_amount,
 };
 
-const node_ind_t builtin_type_ind_amount = builtin_type_ind_amount_enum;
+const type_ref builtin_type_ind_amount = builtin_type_ind_amount_enum;
 
 // builtin_type_inds happens to map terms to their type inds
 // and at the end, contains everything we need to represent the
 // types at those indices
-const node_ind_t builtin_type_inds[builtin_type_ind_amount_enum] = {
+const type_ref builtin_type_inds[builtin_type_ind_amount_enum] = {
   [true_builtin] = bool_type_ind,
   [false_builtin] = bool_type_ind,
 

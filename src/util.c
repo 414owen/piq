@@ -99,8 +99,8 @@ void *memclone(void *restrict src, size_t bytes) {
 }
 
 NON_NULL_PARAMS
-size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
-                  const void *needle, size_t needle_els) {
+size_t find_range(const void *restrict haystack, size_t el_size, size_t el_amt,
+                  const void *restrict needle, size_t needle_els) {
   if (el_amt == 0 || needle_els > el_amt)
     return el_amt;
   for (size_t i = 0; i < el_amt - needle_els + 1; i++) {
@@ -120,6 +120,26 @@ size_t find_range(const void *haystack, size_t el_size, size_t el_amt,
     }
   }
   return el_amt;
+}
+
+typedef bool (*bsearcher)(uint32_t a, void *data);
+
+uint32_t binsearch_u32(uint32_t el_amt, bsearcher cmp, void *data) {
+  uint32_t res = 0;
+  uint32_t jmp = el_amt - 1;
+  while (jmp > 0) {
+    const uint32_t next = res + jmp;
+    while (next < el_amt) {
+      const int a = cmp(next, data);
+      if (a < 0) {
+        res += jmp;
+      } else {
+        jmp >>= 1;
+      }
+    }
+  }
+  res++;
+  return res;
 }
 
 struct timespec time_since_monotonic(const struct timespec start) {
