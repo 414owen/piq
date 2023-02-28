@@ -98,6 +98,7 @@ typedef struct {
 #define T_TUP_SUB_A(node) node.sub_a
 #define T_TUP_SUB_B(node) node.sub_b
 
+void initialise_types(void);
 void free_type_builder(type_builder tb);
 tree_node_repr type_repr(type_check_tag tag);
 bool inline_types_eq(type a, type b);

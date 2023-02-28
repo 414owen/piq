@@ -1,5 +1,6 @@
 #include "builtins.h"
 #include "types.h"
+#include "suffix_arr.h"
 
 type_ref find_primitive_type(type_builder *tb, type_check_tag tag) {
   for (type_ref i = 0; i < tb->types.len; i++) {

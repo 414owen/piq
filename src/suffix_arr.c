@@ -24,9 +24,15 @@ int cmp_suffixes_u32(const void *a_par, const void *b_par, const void *ctx_p) {
   uint32_t b_suff_len = ctx.len - b;
   int res = memcmp(a_suff, b_suff, MIN(a_suff_len, b_suff_len));
   if (res == 0) {
-    return a_suff_len < b_suff_len ? -1 : 1;
+    // 1 means b is longer
+    return SIGNUM(b_suff_len - a_suff_len);
   }
   return res;
+}
+
+NON_NULL_PARAMS
+void sort_suffix_arr_u32(const uint32_t *suffixes, const uint32_t amt, const uint32_t ) {
+  qsort(builtin_suffixes, builtin_type_ind_amount, sizeof(type_ref), cmp_builtin_suffixes);
 }
 
 NON_NULL_PARAMS
@@ -35,6 +41,7 @@ uint32_t upsert_with_suffix_arr_u32(
   vec_u32 *suffixes,
   uint32_t *elems,  // needle
   uint32_t elem_amt) {
+
   const uint32_t arr_len = arr->len;
   suffix_arr_lookup_res preexisting = find_range_with_suffix_array_u32(
     VEC_DATA_PTR(arr),
@@ -50,11 +57,11 @@ uint32_t upsert_with_suffix_arr_u32(
       uint32_t n_els_to_append = arr_len - preexisting.haystack_start;
       uint32_t *els_to_append = &elems[elem_amt - n_els_to_append];
       VEC_APPEND(arr, n_els_to_append, els_to_append);
-      break;
+      return preexisting.haystack_start;
     }
     case SUFF_NOTHING: {
       VEC_APPEND(arr, elem_amt, elems);
-      break;
+      return arr_len - elem_amt;
     }
   }
 }
