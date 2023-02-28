@@ -13,6 +13,8 @@
 
 #include "attrs.h"
 
+#define SIGNUM(x) (x > 0) - (x < 0)
+
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define STATIC_LEN(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -71,6 +73,8 @@ typedef enum {
   EQ = 0,
   GT = 1,
 } order;
+
+void initialise_util(void);
 
 NON_NULL_PARAMS
 bool memeq(const char *a, const char *b, size_t n);
