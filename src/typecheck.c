@@ -860,16 +860,8 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
 }
 
 // This is basically a bag-of-types specific tracing copying garbage collector,
-// which gets
 static type_info cleanup_types(node_ind_t parse_node_amt, type_builder *old) {
-  type_builder builder = {
-    .types = VEC_NEW,
-    .inds = VEC_NEW,
-    .substitutions = VEC_NEW,
-  };
-
-  VEC_APPEND(&builder.types, builtin_type_amount, builtin_types);
-  VEC_APPEND(&builder.inds, builtin_type_ind_amount, builtin_type_inds);
+  type_builder builder = new_type_builder_with_builtins();
 
   type_ref *node_types = malloc(sizeof(type_ref) * parse_node_amt);
 

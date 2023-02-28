@@ -1,4 +1,5 @@
 #include "builtins.h"
+#include "suffix_arr.h"
 #include "types.h"
 #include "suffix_arr.h"
 

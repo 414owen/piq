@@ -30,14 +30,27 @@ int cmp_suffixes_u32(const void *a_par, const void *b_par, const void *ctx_p) {
   return res;
 }
 
-NON_NULL_PARAMS
-void sort_suffix_arr_u32(const uint32_t *suffixes, const uint32_t amt, const uint32_t ) {
-  qsort(builtin_suffixes, builtin_type_ind_amount, sizeof(type_ref), cmp_builtin_suffixes);
+static
+void append_suffixes_u32(
+  uint32_t arr_amt,
+  vec_u32 *suffixes) {
+
+  u32 old_len = suffixes->len;
+  u32 amt_to_add = arr_amt - old_len;
+  VEC_RESERVE(suffixes, arr_amt);
+  size_t positions_nbytes = sizeof(u32) * amt_to_add;
+  u32 *positions = stalloc(positions_nbytes);
+
+  for (u32 i = 0; i < amt_to_add; i++) {
+    u32 suffix_start = old_len + i;
+    
+  }
+  stfree(positions, positions_nbytes);
 }
 
 NON_NULL_PARAMS
 uint32_t upsert_with_suffix_arr_u32(
-  vec_u32 *arr,      // haystack
+  vec_u32 *arr,     // haystack
   vec_u32 *suffixes,
   uint32_t *elems,  // needle
   uint32_t elem_amt) {
@@ -83,34 +96,46 @@ suffix_arr_lookup_res find_range_with_suffix_array_u32(
   uint32_t greatest_eq_suffix_arr_ind = 0;
   uint32_t suffix_arr_ind = 0;
   {
-    uint32_t jmp = haystack_el_amt;
-    while (jmp > 0 ) {
+    for (uint32_t jmp = haystack_el_amt; jmp >= 1; jmp >>= 1) {
+      /*
+      printf("suffix_arr_ind: %u\n", suffix_arr_ind);
+      printf("greatest_eq_suffix_arr_ind: %u\n", greatest_eq_suffix_arr_ind);
+      printf("smallest_gt_suffix_arr_ind: %u\n", smallest_gt_suffix_arr_ind);
+      */
       while (suffix_arr_ind + jmp < haystack_el_amt) {
         const uint32_t next_suffix_ind = suffix_arr_ind + jmp;
         const uint32_t next_suffix_start = suffix_array[next_suffix_ind];
         const int res = memcmp(&haystack[next_suffix_start], needle, MIN(needle_el_amt, haystack_el_amt - next_suffix_start));
         if (res < 0) {
-          suffix_arr_ind += jmp;
+          suffix_arr_ind = next_suffix_ind;
         } else {
-          jmp >>= 1;
           if (res == 0) {
             greatest_eq_suffix_arr_ind = MAX(greatest_eq_suffix_arr_ind, next_suffix_start);
           } else {
             smallest_gt_suffix_arr_ind = MIN(smallest_gt_suffix_arr_ind, next_suffix_start);
           }
+          break;
         }
       }
     }
   }
-  greatest_eq_suffix_arr_ind = MAX(greatest_eq_suffix_arr_ind, suffix_arr_ind);
-  uint32_t jmp = greatest_eq_suffix_arr_ind - smallest_gt_suffix_arr_ind - 1;
-  while (jmp > 0) {
-    while (greatest_eq_suffix_arr_ind + jmp < smallest_gt_suffix_arr_ind) {
+  greatest_eq_suffix_arr_ind = MAX(greatest_eq_suffix_arr_ind, suffix_array[suffix_arr_ind]);
+  /*
+  printf("FINAL\n");
+  printf("suffix_arr_ind: %u\n", suffix_arr_ind);
+  printf("greatest_eq_suffix_arr_ind: %u\n", greatest_eq_suffix_arr_ind);
+  printf("smallest_gt_suffix_arr_ind: %u\n", smallest_gt_suffix_arr_ind);
+  */
+  for (uint32_t jmp = smallest_gt_suffix_arr_ind - greatest_eq_suffix_arr_ind - 1;
+    jmp >= 1; jmp >>= 1) {
+    while (jmp > 0 && greatest_eq_suffix_arr_ind + jmp < smallest_gt_suffix_arr_ind) {
       const uint32_t next_suffix_ind = suffix_arr_ind + jmp;
       const uint32_t next_suffix_start = suffix_array[next_suffix_ind];
       const int res = memcmp(&haystack[next_suffix_start], needle, MIN(needle_el_amt, haystack_el_amt - next_suffix_start));
       if (res == 0) {
         greatest_eq_suffix_arr_ind += jmp;
+      } else {
+        jmp >>= 1;
       }
     }
   }
