@@ -22,4 +22,3 @@ suffix_arr_lookup_res find_range_with_suffix_array_u32(
   const uint32_t el_amt,
   const uint32_t needle_el_amt
 );
-
