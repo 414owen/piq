@@ -54,7 +54,6 @@ common_objs += traverse.o
 common_objs += initialise.o
 common_objs += types.o
 common_objs += print_tc_errors.o
-common_objs += suffix_arr.o
 
 test_objs += run_tests.o
 test_objs += span.o
@@ -100,7 +99,6 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/scope.c               |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/span.c                |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/strint.c              |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/suffix_arr.c          |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/typecheck.c           |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/type.c                |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/util.c                |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
@@ -108,7 +106,6 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/llvm.c                |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/traverse.c            |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/types.c               |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/suffix_arr.c          |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/llvm/construct_type.c |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> llvm_construct_type.o
 : src/llvm_shim.cpp         |> ^j^ $CXX -O2 $(CXXFLAGS) -c -o %o %f |> %B.o
 
