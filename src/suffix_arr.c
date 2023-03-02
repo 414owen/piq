@@ -129,7 +129,7 @@ suffix_arr_lookup_res find_range_with_suffix_array_u32(
   for (uint32_t jmp = smallest_gt_suffix_arr_ind - greatest_eq_suffix_arr_ind - 1;
     jmp >= 1; jmp >>= 1) {
     while (jmp > 0 && greatest_eq_suffix_arr_ind + jmp < smallest_gt_suffix_arr_ind) {
-      const uint32_t next_suffix_ind = suffix_arr_ind + jmp;
+      const uint32_t next_suffix_ind = greatest_eq_suffix_arr_ind + jmp;
       const uint32_t next_suffix_start = suffix_array[next_suffix_ind];
       const int res = memcmp(&haystack[next_suffix_start], needle, MIN(needle_el_amt, haystack_el_amt - next_suffix_start));
       if (res == 0) {
