@@ -69,6 +69,7 @@
             llvmPackages_14.libllvm
             hedley
             predef
+            stb
             xxHash
           ];
 
