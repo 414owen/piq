@@ -1,3 +1,5 @@
+#include <stb/stb_ds.h>
+
 #include "builtins.h"
 #include "types.h"
 
@@ -12,15 +14,6 @@ type_ref find_primitive_type(type_builder *tb, type_check_tag tag) {
 
 type_ref find_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
                    type_ref sub_amt) {
-  for (type_ref i = 0; i < tb->types.len; i++) {
-    type t = VEC_GET(tb->types, i);
-    if (t.check_tag != tag || t.sub_amt != sub_amt)
-      continue;
-    type_ref *p1 = &VEC_DATA_PTR(&tb->inds)[t.subs_start];
-    if (!memeq(p1, subs, sub_amt * sizeof(type_ref)))
-      continue;
-    return i;
-  }
   return tb->types.len;
 }
 

@@ -73,6 +73,34 @@ VEC_DECL(type);
 
 typedef struct {
   vec_type types;
+  uint32_t type_to_index;
+  // The indices here are going to have a lot of overlap.
+  // For example, the type builder
+  // .types = {
+  //   {
+  //     .tag = T_FN,
+  //     .subs_start = 0,
+  //     .sub_amt = 4,
+  //   },
+  //   {
+  //     .tag = T_FN,
+  //     .subs_start = 0,
+  //     .sub_amt = 3,
+  //   },
+  //   { .tag = T_I32, },
+  //   { .tag = T_I16, },
+  //   { .tag = T_I8,  },
+  //   { .tag = T_U8,  },
+  // }
+  // .inds = {
+  //   2, 3, 4, 5
+  // }
+  //
+  // Reuses indices 0-3 in two function types, and is perfectly valid.
+  // Unfortunately, we don't currently reuse runs of indices.
+  // I had a quick go at it using suffix arrays, but in the end I
+  // got fed up and deleted the work. See commit c23046ca2496f19ea165aaf9c078397db597d410
+  // if you want to revive the work.
   vec_type_ref inds;
   union {
     vec_type_ref node_types;
