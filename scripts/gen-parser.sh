@@ -3,8 +3,9 @@
 set -e
 
 lemon -c src/parser.y -q
-sed -i 's/^static \(const char \*.*yyTokenName\[\].*\)$/\1/g' src/parser.c
-sed -i 's/assert(/debug_assert(/g' src/parser.c
+sed -i 's/^static \(const char \*.*yyTokenName\[\].*\)$/\1/g
+  ; /defined(YYCOVERAGE) || !defined(NDEBUG)/d
+  ; s/assert(/debug_assert(/g' src/parser.c
 tmp="$(mktemp)"
 mv src/parser.c "$tmp"
 echo "#include <hedley.h>" > src/parser.c

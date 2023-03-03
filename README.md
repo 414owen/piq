@@ -275,3 +275,17 @@ To lookup:
 * https://github.com/springkim/OpenCSTL
 * https://github.com/LeoVen/C-Macro-Collections
 * https://github.com/nothings/stb
+
+# Flags
+
+## Debug
+
+```
+-std=c99 -pedantic -O0 -ggdb -Wall -Wextra -DDEBUG -DTIME_ALL
+```
+
+## Release
+
+```
+-std=c99 -pedantic -O2 -s -flto -Wall -Wextra -DNDEBUG
+```

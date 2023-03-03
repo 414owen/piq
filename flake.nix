@@ -2,7 +2,7 @@
   description = "Lang - A programming language";
 
   inputs = {
-    nixpkgs.url = "github:414owen/nixpkgs/os/lang-c-environment";
+    nixpkgs.url = "github:414owen/nixpkgs/os/lang-c-env-22.11";
     flake-utils.url = "github:numtide/flake-utils";
     hedley-src = {
       url = "github:nemequ/hedley/v15";
@@ -69,7 +69,6 @@
             llvmPackages_14.libllvm
             hedley
             predef
-            stb
             xxHash
           ];
 
