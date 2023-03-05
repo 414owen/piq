@@ -11,6 +11,12 @@ defaults:
 env:
   NIXPKGS_ALLOW_BROKEN: 1
 
+permissions:
+  # deployments permission to deploy GitHub pages website
+  deployments: write
+  # contents permission to update benchmark contents in gh-pages branch
+  contents: write
+
 jobs:
   CI:
     runs-on: ubuntu-latest
