@@ -122,26 +122,6 @@ size_t find_range(const void *restrict haystack, size_t el_size, size_t el_amt,
   return el_amt;
 }
 
-typedef bool (*bsearcher)(uint32_t a, void *data);
-
-uint32_t binsearch_u32(uint32_t el_amt, bsearcher cmp, void *data) {
-  uint32_t res = 0;
-  uint32_t jmp = el_amt - 1;
-  while (jmp > 0) {
-    const uint32_t next = res + jmp;
-    while (next < el_amt) {
-      const int a = cmp(next, data);
-      if (a < 0) {
-        res += jmp;
-      } else {
-        jmp >>= 1;
-      }
-    }
-  }
-  res++;
-  return res;
-}
-
 struct timespec time_since_monotonic(const struct timespec start) {
   struct timespec end = get_monotonic_time();
   return timespec_subtract(end, start);

@@ -10,8 +10,8 @@
 #define BINDING_STR "bndng"
 #define FUNCTION_STR "test-fn-"
 
-const int FUNCTION_AMT = 200;
-const int STATEMENT_AMT = 20;
+const int FUNCTION_AMT = 2;
+const int STATEMENT_AMT = 9;
 
 typedef uint32_t (*fn_type)(void);
 
@@ -57,6 +57,8 @@ void run_benchmarks(test_state *state) {
     ss.stream, "(fun entry () (" FUNCTION_STR "%d 42 101))", FUNCTION_AMT - 1);
 
   ss_finalize(&ss);
+
+  puts(ss.string);
 
   llvm_symbol_test test = {
     .symbol_name = "entry",

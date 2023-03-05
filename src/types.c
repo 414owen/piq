@@ -1,52 +1,78 @@
-#include <stb/stb_ds.h>
-
 #include "builtins.h"
+#include "hashmap.h"
 #include "types.h"
+#include "vec.h"
 
-type_ref find_primitive_type(type_builder *tb, type_check_tag tag) {
-  for (type_ref i = 0; i < tb->types.len; i++) {
-    type t = VEC_GET(tb->types, i);
-    if (t.check_tag == tag)
-      return i;
-  }
-  return tb->types.len;
-}
-
-type_ref find_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
-                   type_ref sub_amt) {
-  return tb->types.len;
-}
-
-type_ref mk_primitive_type(type_builder *tb, type_check_tag tag) {
-  debug_assert(type_repr(tag) == SUBS_NONE);
-  type_ref ind = find_primitive_type(tb, tag);
-  if (ind < tb->types.len)
-    return ind;
-  type t = {
-    .check_tag = tag,
-    .sub_amt = 0,
-    .subs_start = 0,
+typedef struct {
+  type_check_tag tag;
+  union {
+    struct {
+      type_ref sub_amt;
+      const type_ref *subs;
+    };
+    struct {
+      type_ref sub_a;
+      type_ref sub_b;
+    };
   };
-  VEC_PUSH(&tb->types, t);
-  return tb->types.len - 1;
+} type_key_with_ctx;
+
+NON_NULL_PARAMS
+static
+type_ref find_inline_type(type_builder *tb, type_check_tag tag, type_ref sub_a, type_ref sub_b) {
+  type_key_with_ctx key = {
+    .tag = tag,
+    .sub_a = sub_a,
+    .sub_b = sub_b,
+  };
+  uint32_t *ind = ahm_lookup(&tb->type_to_index, &key, tb);
+  // TODO remove this branch somehow
+  return ind == NULL ? tb->inds.len : *ind;
 }
 
-type_ref mk_type_inline(type_builder *tb, type_check_tag tag, type_ref sub_a,
+NON_NULL_PARAMS
+static type_ref find_type(type_builder *tb, const type_key_with_ctx *key) {
+  uint32_t *ind = ahm_lookup(&tb->type_to_index, key, tb);
+  // TODO remove this branch somehow
+  return ind == NULL ? tb->inds.len : *ind;
+}
+
+static
+type_ref insert_inline_type_to_hm(type_builder *tb, type_check_tag tag, type_ref sub_a,
                         type_ref sub_b) {
-  debug_assert(type_repr(tag) == SUBS_ONE || type_repr(tag) == SUBS_TWO);
   type t = {
     .check_tag = tag,
     .sub_a = sub_a,
     .sub_b = sub_b,
   };
-  for (size_t i = 0; i < tb->types.len; i++) {
-    type t2 = VEC_GET(tb->types, i);
-    if (inline_types_eq(t, t2)) {
-      return i;
-    }
-  }
+  type_key_with_ctx key = {
+    .tag = tag,
+    .sub_a = sub_a,
+    .sub_b = sub_b,
+  };
   VEC_PUSH(&tb->types, t);
+  type_ref res = tb->types.len - 1;
+  ahm_insert(&tb->type_to_index, &key, &t, &res, tb);
   return tb->types.len - 1;
+}
+
+type_ref __mk_type_inline(type_builder *tb, type_check_tag tag, type_ref sub_a,
+                        type_ref sub_b) {
+  type_ref ind = find_inline_type(tb, tag, sub_a, sub_b);
+  if (ind < tb->types.len)
+    return ind;
+  return insert_inline_type_to_hm(tb, tag, sub_a, sub_b);
+}
+
+type_ref mk_type_inline(type_builder *tb, type_check_tag tag, type_ref sub_a,
+                        type_ref sub_b) {
+  debug_assert(type_repr(tag) == SUBS_ONE || type_repr(tag) == SUBS_TWO);
+  return __mk_type_inline(tb, tag, sub_a, sub_b);
+}
+
+type_ref mk_primitive_type(type_builder *tb, type_check_tag tag) {
+  debug_assert(type_repr(tag) == SUBS_NONE);
+  return __mk_type_inline(tb, tag, 0, 0);
 }
 
 type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
@@ -55,7 +81,12 @@ type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
   if (subs == NULL) {
     return mk_primitive_type(tb, tag);
   }
-  type_ref ind = find_type(tb, tag, subs, sub_amt);
+  const type_key_with_ctx key = {
+    .tag = tag,
+    .sub_amt = sub_amt,
+    .subs = subs,
+  };
+  type_ref ind = find_type(tb, &key);
   if (ind < tb->types.len)
     return ind;
   VEC_APPEND(&tb->inds, sub_amt, subs);
@@ -65,7 +96,10 @@ type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
     .subs_start = tb->inds.len - sub_amt,
   };
   VEC_PUSH(&tb->types, t);
-  return tb->types.len - 1;
+  type_ref res = tb->types.len - 1;
+  // won't update
+  ahm_insert(&tb->type_to_index, &key, &t, &res, tb);
+  return res;
 }
 
 type_ref mk_type_var(type_builder *tb, typevar value) {
@@ -237,10 +271,60 @@ bool type_contains_unsubstituted_typevar(const type_builder *builder,
     builder, root, is_unsubstituted_typevar_step, &data);
 }
 
+static bool cmp_newtype_eq(const void *key_p, const void *stored_key, const void *ctx) {
+  type_key_with_ctx *key = (type_key_with_ctx*) key_p;
+  type *snd = (type*) stored_key;
+  type_builder *builder = (type_builder*) ctx;
+
+  if (key->tag == snd->tag) {
+    switch (type_repr(key->tag)) {
+      case SUBS_NONE:
+        return true;
+      case SUBS_TWO:
+        return key->sub_a == snd->sub_a
+          && key->sub_b == snd->sub_b;
+      case SUBS_ONE:
+        return key->sub_a == snd->sub_a;
+      case SUBS_EXTERNAL:
+        return key->sub_amt == snd->sub_amt
+          && memcmp(key->subs, &VEC_DATA_PTR(&builder->inds)[snd->subs_start], key->sub_amt * sizeof(type_ref));
+    }
+  }
+
+  return false;
+}
+
+static bool hash_newtype(const void *key_p, const void *ctx) {
+  type_key_with_ctx *key = (type_key_with_ctx*) key_p;
+  switch (type_repr(key->tag)) {
+    case SUBS_EXTERNAL: {
+      uint32_t hash = hash_eight_bytes(0, key->tag);
+      return hash_bytes(hash, (uint8_t*) key->subs, key->sub_amt * sizeof(type_ref));
+    }
+    default:
+      return hash_bytes(0, (uint8_t*) key, sizeof(type_key_with_ctx));
+  }
+}
+
+static bool hash_stored_type(const void *key_p, const void *ctx_p) {
+  type *key = (type*) key_p;
+  type_builder *builder = (type_builder*) ctx_p;
+  switch (type_repr(key->tag)) {
+    case SUBS_EXTERNAL: {
+      uint32_t hash = hash_eight_bytes(0, key->tag);
+      type_ref *subs = &VEC_DATA_PTR(&builder->inds)[key->subs_start];
+      return hash_bytes(hash, (uint8_t*) subs, key->sub_amt * sizeof(type_ref));
+    }
+    default:
+      return hash_bytes(0, (uint8_t*) key, sizeof(type_key_with_ctx));
+  }
+}
+
 type_builder new_type_builder(void) {
   type_builder type_builder = {
     .types = VEC_NEW,
     .inds = VEC_NEW,
+    .type_to_index = ahm_new(type, VEC_LEN_T, cmp_newtype_eq, hash_newtype, hash_stored_type),
     .substitutions = VEC_NEW,
   };
   return type_builder;

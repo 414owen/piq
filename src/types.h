@@ -5,6 +5,7 @@
 
 #include "ast_meta.h"
 #include "consts.h"
+#include "hashmap.h"
 #include "vec.h"
 
 typedef enum {
@@ -73,7 +74,7 @@ VEC_DECL(type);
 
 typedef struct {
   vec_type types;
-  uint32_t type_to_index;
+  a_hashmap type_to_index;
   // The indices here are going to have a lot of overlap.
   // For example, the type builder
   // .types = {
@@ -132,9 +133,6 @@ void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root);
 char *print_type_str(type *types, node_ind_t *inds, node_ind_t root);
 void print_type_head_placeholders(FILE *f, type_check_tag head);
 
-node_ind_t find_primitive_type(type_builder *tb, type_check_tag tag);
-node_ind_t find_type(type_builder *tb, type_check_tag tag,
-                     const node_ind_t *subs, node_ind_t sub_amt);
 node_ind_t mk_primitive_type(type_builder *tb, type_check_tag tag);
 node_ind_t mk_type_inline(type_builder *tb, type_check_tag tag,
                           node_ind_t sub_a, node_ind_t sub_b);
