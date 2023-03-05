@@ -60,7 +60,6 @@ A language that does everything right
   * TODO...
 
 
-
 # Ideas
 
 * ~Search index arrays instead of adding to them?~
@@ -168,6 +167,7 @@ $ ./result/bin/lang
 
 ```
 $ nix develop
+$ tup dbconfig   # generate compile_commands.json so the language server works
 $ tup
 $ ./repl
 ```
@@ -265,3 +265,27 @@ To lookup:
   * Use french quotes «because balanced is better»?
   * Or maybe something recognizable, but balanced, like <"this">?
 * Main arguments are command line arguments: https://lobste.rs/s/ilmbgu/microfeatures_i_d_like_see_more_languages#c_l56bvw
+
+# C container libraries
+
+* https://rurban.github.io/ctl/
+* https://github.com/ludocode/pottery
+* https://github.com/matrixjoeq/c_container
+* https://github.com/cher-nov/Gena
+* https://github.com/springkim/OpenCSTL
+* https://github.com/LeoVen/C-Macro-Collections
+* https://github.com/nothings/stb
+
+# Flags
+
+## Debug
+
+```
+-std=c99 -pedantic -O0 -ggdb -Wall -Wextra -DDEBUG -DTIME_ALL
+```
+
+## Release
+
+```
+-std=c99 -pedantic -O2 -s -flto -Wall -Wextra -DNDEBUG
+```

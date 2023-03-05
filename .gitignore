@@ -27,3 +27,4 @@ main
 compile_commands.json
 massif.out.*
 dhat.*
+bench.json
