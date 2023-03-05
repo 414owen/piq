@@ -205,6 +205,8 @@ void __vec_reserve(vec_void *vec, VEC_LEN_T amt, size_t elemsize);
 
 #define VEC_CLEAR(v) ((v)->len = 0)
 
+void *__vec_get_ptr(vec_void *vec, size_t elemsize, VEC_LEN_T ind);
+
 typedef char *string;
 
 VEC_DECL(string);

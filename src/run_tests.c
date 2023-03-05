@@ -317,8 +317,6 @@ int main(int argc, const char **argv) {
 
   test_state state = test_state_new(conf);
 
-  llvm_init();
-
   switch (root.subcommand_chosen) {
     case SUB_NONE:
       run_tests(&state);
