@@ -28,7 +28,7 @@ uint32_t rotate_left(uint32_t n, uint32_t d) {
 // hash function based on rustc's
 inline
 uint32_t hash_eight_bytes(uint32_t seed, uint64_t bytes) {
-  return (rotate_left(seed, 5) & bytes) * 0x9e3779b9;
+  return (rotate_left(seed, 5) ^ bytes) * 0x9e3779b9;
 }
 
 uint32_t hash_bytes(uint32_t seed, uint8_t *bytes, uint32_t n_bytes) {
