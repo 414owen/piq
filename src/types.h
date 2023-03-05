@@ -5,6 +5,7 @@
 
 #include "ast_meta.h"
 #include "consts.h"
+#include "hashmap.h"
 #include "vec.h"
 
 typedef enum {
@@ -73,6 +74,34 @@ VEC_DECL(type);
 
 typedef struct {
   vec_type types;
+  a_hashmap type_to_index;
+  // The indices here are going to have a lot of overlap.
+  // For example, the type builder
+  // .types = {
+  //   {
+  //     .tag = T_FN,
+  //     .subs_start = 0,
+  //     .sub_amt = 4,
+  //   },
+  //   {
+  //     .tag = T_FN,
+  //     .subs_start = 0,
+  //     .sub_amt = 3,
+  //   },
+  //   { .tag = T_I32, },
+  //   { .tag = T_I16, },
+  //   { .tag = T_I8,  },
+  //   { .tag = T_U8,  },
+  // }
+  // .inds = {
+  //   2, 3, 4, 5
+  // }
+  //
+  // Reuses indices 0-3 in two function types, and is perfectly valid.
+  // Unfortunately, we don't currently reuse runs of indices.
+  // I had a quick go at it using suffix arrays, but in the end I
+  // got fed up and deleted the work. See commit c23046ca2496f19ea165aaf9c078397db597d410
+  // if you want to revive the work.
   vec_type_ref inds;
   union {
     vec_type_ref node_types;
@@ -104,9 +133,6 @@ void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root);
 char *print_type_str(type *types, node_ind_t *inds, node_ind_t root);
 void print_type_head_placeholders(FILE *f, type_check_tag head);
 
-node_ind_t find_primitive_type(type_builder *tb, type_check_tag tag);
-node_ind_t find_type(type_builder *tb, type_check_tag tag,
-                     const node_ind_t *subs, node_ind_t sub_amt);
 node_ind_t mk_primitive_type(type_builder *tb, type_check_tag tag);
 node_ind_t mk_type_inline(type_builder *tb, type_check_tag tag,
                           node_ind_t sub_a, node_ind_t sub_b);
@@ -115,6 +141,9 @@ node_ind_t mk_type(type_builder *tb, type_check_tag tag, const node_ind_t *subs,
 node_ind_t mk_type_var(type_builder *tb, typevar value);
 void push_type_subs(vec_type_ref *restrict stack, const type_ref *restrict inds,
                     type t);
+
+type_builder new_type_builder(void);
+type_builder new_type_builder_with_builtins(void);
 
 /*
 typedef struct {
