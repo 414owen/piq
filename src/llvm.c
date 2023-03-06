@@ -841,9 +841,9 @@ llvm_res llvm_gen_module(const char *module_name, source_file source,
   llvm_cg_module(ctx, res.module, source, tree, types);
   char *err;
   bool broken = LLVMVerifyModule(res.module, LLVMPrintMessageAction, &err);
-  char *mod_str = LLVMPrintModuleToString(res.module);
-  puts(mod_str);
-  free(mod_str);
+  // char *mod_str = LLVMPrintModuleToString(res.module);
+  // puts(mod_str);
+  // free(mod_str);
   fputs(err, stderr);
   free(err);
   if (broken) {

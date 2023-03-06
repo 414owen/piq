@@ -103,6 +103,7 @@ static void ahm_append_kv(a_hashmap *hm, ahm_keys_and_vals *kvs, const void *key
 
   memcpy(keys + kvs->len * hm->keysize, key, hm->keysize);
   memcpy(vals + kvs->len * hm->valsize, val, hm->valsize);
+  kvs->len++;
 }
 
 static void rehash(a_hashmap *hm, uint32_t n_buckets, void *context) {
@@ -130,7 +131,7 @@ void *ahm_lookup(a_hashmap *hm, const void *key, void *context) {
   const char *vals = (char *) &data->keys;
 
   for (AHM_VEC_LEN_T i = 0; i < data->len; i++) {
-    if (hm->compare_newkey(key, keys + i * hm->keysize, hm->context)) {
+    if (hm->compare_newkey(key, keys + i * hm->keysize, context)) {
       return (void*) (vals + i * hm->valsize);
     }
   }
