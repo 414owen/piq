@@ -15,3 +15,4 @@ void test_strint(test_state *state);
 void test_diagnostics(test_state *state);
 void test_parse_tree(test_state *state);
 void test_traverse(test_state *state);
+void test_hashmap(test_state *state);
