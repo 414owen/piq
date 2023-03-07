@@ -86,8 +86,8 @@ ahm_keys_and_vals *ahm_get_kvs(a_hashmap *hm, const void *key, hasher hsh, void 
 }
 
 static void ahm_append_kv(a_hashmap *hm, ahm_keys_and_vals *kvs, const void *key, const void *val) {
-  char *keys = (char *) &kvs->keys;
-  char *vals = (char *) &kvs->keys;
+  char *keys = (char *) kvs->keys;
+  char *vals = (char *) kvs->vals;
 
   if (kvs->cap == kvs->len) {
     if (kvs->cap == 0) {
@@ -103,6 +103,8 @@ static void ahm_append_kv(a_hashmap *hm, ahm_keys_and_vals *kvs, const void *key
 
   memcpy(keys + kvs->len * hm->keysize, key, hm->keysize);
   memcpy(vals + kvs->len * hm->valsize, val, hm->valsize);
+  kvs->len++;
+  hm->n_elems++;
 }
 
 static void rehash(a_hashmap *hm, uint32_t n_buckets, void *context) {
@@ -113,9 +115,12 @@ static void rehash(a_hashmap *hm, uint32_t n_buckets, void *context) {
   hm->n_elems = 0;
   for (uint32_t i = 0; i < old_n_buckets; i++) {
     ahm_keys_and_vals kvs = prev[i];
+    const char *keys = (char *) kvs.keys;
+    const char *vals = (char *) kvs.vals;
     for (uint8_t j = 0; j < kvs.len; j++) {
-      ahm_keys_and_vals *bucket = ahm_get_kvs(hm, &kvs.keys[j], hm->hash_storedkey, context);
-      ahm_append_kv(hm, bucket, &kvs.keys[j], &kvs.vals[j]);
+      const char * k = keys + j * hm->keysize;
+      ahm_keys_and_vals *bucket = ahm_get_kvs(hm, k, hm->hash_storedkey, context);
+      ahm_append_kv(hm, bucket, k, vals + j * hm->valsize);
     }
     free(kvs.keys);
     free(kvs.vals);
@@ -126,11 +131,11 @@ static void rehash(a_hashmap *hm, uint32_t n_buckets, void *context) {
 void *ahm_lookup(a_hashmap *hm, const void *key, void *context) {
   ahm_keys_and_vals *data = ahm_get_kvs(hm, key, hm->hash_newkey, context);
 
-  const char *keys = (char *) &data->keys;
-  const char *vals = (char *) &data->keys;
+  const char *keys = (char *) data->keys;
+  const char *vals = (char *) data->vals;
 
   for (AHM_VEC_LEN_T i = 0; i < data->len; i++) {
-    if (hm->compare_newkey(key, keys + i * hm->keysize, hm->context)) {
+    if (hm->compare_newkey(key, keys + i * hm->keysize, context)) {
       return (void*) (vals + i * hm->valsize);
     }
   }
@@ -150,8 +155,8 @@ bool ahm_upsert(a_hashmap *hm, const void *key, const void *key_stored, const vo
   ahm_insert_prelude(hm, context);
   ahm_keys_and_vals *data = ahm_get_kvs(hm, key, hm->hash_newkey, context);
 
-  char *keys = (char *) &data->keys;
-  char *vals = (char *) &data->keys;
+  char *keys = (char *) data->keys;
+  char *vals = (char *) data->vals;
 
   for (AHM_VEC_LEN_T i = 0; i < data->len; i++) {
     if (hm->compare_newkey(key, keys + i * hm->keysize, context)) {
