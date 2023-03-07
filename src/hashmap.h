@@ -12,8 +12,8 @@
 
 #define AHM_BUCKET_GROWTH_FACTOR 2
 
-typedef bool (*eq_cmp)(const void *, const void *, void *);
-typedef uint32_t (*hasher)(const void *, void *);
+typedef bool (*eq_cmp)(const void *, const void *, const void *);
+typedef uint32_t (*hasher)(const void *, const void *);
 
 typedef struct {
   uint32_t len;
@@ -30,7 +30,6 @@ typedef struct {
   const eq_cmp compare_newkey;
   const hasher hash_newkey;
   const hasher hash_storedkey;
-  void *context;
   ahm_keys_and_vals *data;
 } a_hashmap;
 

@@ -75,6 +75,7 @@ test_objs += test_traverse.o
 test_objs += test_upto.o
 test_objs += test_utils.o
 test_objs += test_vec.o
+test_objs += test_hashmap.o
 
 main_objs += main.o
 main_objs += repl.o
@@ -129,6 +130,7 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/test_upto.c        |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_parse_tree.c  |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_traverse.c    |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_hashmap.c    |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/timespec.c         |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/token.c            |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/args.c             |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o

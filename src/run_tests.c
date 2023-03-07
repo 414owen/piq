@@ -88,6 +88,7 @@ static void print_timespan_float_nanos(FILE *f, double nanos) {
 static void run_tests(test_state *state) {
   test_vec(state);
   test_bitset(state);
+  test_hashmap(state);
   test_strint(state);
   test_utils(state);
   test_diagnostics(state);
