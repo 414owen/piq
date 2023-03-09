@@ -276,7 +276,7 @@ static bool cmp_newtype_eq(const void *key_p, const void *stored_key, const void
   type *snd = (type*) stored_key;
   type_builder *builder = (type_builder*) ctx;
 
-  if (key->tag == snd->tag) {
+  if (key->tag == snd->check_tag) {
     switch (type_repr(key->tag)) {
       case SUBS_NONE:
         return true;
