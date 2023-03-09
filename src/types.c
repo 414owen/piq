@@ -294,7 +294,7 @@ static bool cmp_newtype_eq(const void *key_p, const void *stored_key, const void
   return false;
 }
 
-static bool hash_newtype(const void *key_p, const void *ctx) {
+static uint32_t hash_newtype(const void *key_p, const void *ctx) {
   type_key_with_ctx *key = (type_key_with_ctx*) key_p;
   switch (type_repr(key->tag)) {
     case SUBS_EXTERNAL: {
@@ -306,10 +306,10 @@ static bool hash_newtype(const void *key_p, const void *ctx) {
   }
 }
 
-static bool hash_stored_type(const void *key_p, const void *ctx_p) {
+static uint32_t hash_stored_type(const void *key_p, const void *ctx_p) {
   type *key = (type*) key_p;
   type_builder *builder = (type_builder*) ctx_p;
-  switch (type_repr(key->tag)) {
+  switch (type_repr(key->check_tag)) {
     case SUBS_EXTERNAL: {
       uint32_t hash = hash_eight_bytes(0, key->tag);
       type_ref *subs = &VEC_DATA_PTR(&builder->inds)[key->subs_start];
