@@ -10,8 +10,8 @@
 #define BINDING_STR "bndng"
 #define FUNCTION_STR "test-fn-"
 
-const int FUNCTION_AMT = 2;
-const int STATEMENT_AMT = 9;
+const int FUNCTION_AMT = 200;
+const int STATEMENT_AMT = 200;
 
 typedef uint32_t (*fn_type)(void);
 

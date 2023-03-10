@@ -17,30 +17,6 @@ typedef struct {
   };
 } type_key_with_ctx;
 
-type_ref find_inline_type_slow(type_builder *tb, type_check_tag tag,
-                               type_ref sub_a, type_ref sub_b) {
-  for (type_ref i = 0; i < tb->types.len; i++) {
-    type t = VEC_GET(tb->types, i);
-    if (t.check_tag == tag && sub_a == t.sub_a && sub_b == t.sub_b)
-      return i;
-  }
-  return tb->types.len;
-}
-
-type_ref find_type_slow(type_builder *tb, type_check_tag tag,
-                        const type_ref *subs, type_ref sub_amt) {
-  for (type_ref i = 0; i < tb->types.len; i++) {
-    type t = VEC_GET(tb->types, i);
-    if (t.check_tag != tag || t.sub_amt != sub_amt)
-      continue;
-    type_ref *p1 = &VEC_DATA_PTR(&tb->inds)[t.subs_start];
-    if (memcmp(p1, subs, sub_amt * sizeof(type_ref)) != 0)
-      continue;
-    return i;
-  }
-  return tb->types.len;
-}
-
 NON_NULL_PARAMS
 static type_ref find_inline_type(type_builder *tb, type_check_tag tag,
                                  type_ref sub_a, type_ref sub_b) {
@@ -82,18 +58,6 @@ static type_ref insert_inline_type_to_hm(type_builder *tb, type_check_tag tag,
 type_ref __mk_type_inline(type_builder *tb, type_check_tag tag, type_ref sub_a,
                           type_ref sub_b) {
   type_ref ind = find_inline_type(tb, tag, sub_a, sub_b);
-  {
-    type_ref ind2 = find_inline_type_slow(tb, tag, sub_a, sub_b);
-    if (ind != ind2) {
-      if (ind >= tb->types.len) {
-        printf("erroneous unfound inline type\n");
-      } else {
-        printf("bad type inline index!\n");
-      }
-      find_inline_type_slow(tb, tag, sub_a, sub_b);
-      find_inline_type(tb, tag, sub_a, sub_b);
-    }
-  }
   if (ind < tb->types.len)
     return ind;
   return insert_inline_type_to_hm(tb, tag, sub_a, sub_b);
@@ -122,18 +86,6 @@ type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
     .subs = subs,
   };
   type_ref ind = find_type(tb, &key);
-  {
-    type_ref ind2 = find_type_slow(tb, tag, subs, sub_amt);
-    if (ind != ind2) {
-      if (ind >= tb->types.len) {
-        printf("erroneous unfound complex type\n");
-      } else {
-        printf("bad type complex index!\n");
-      }
-      find_type(tb, &key);
-      find_type_slow(tb, tag, subs, sub_amt);
-    }
-  }
   if (ind < tb->types.len)
     return ind;
   VEC_APPEND(&tb->inds, sub_amt, subs);
