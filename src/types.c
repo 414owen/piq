@@ -86,9 +86,9 @@ type_ref __mk_type_inline(type_builder *tb, type_check_tag tag, type_ref sub_a,
     type_ref ind2 = find_inline_type_slow(tb, tag, sub_a, sub_b);
     if (ind != ind2) {
       if (ind >= tb->types.len) {
-        printf("erroneous unfound type\n");
+        printf("erroneous unfound inline type\n");
       } else {
-        printf("bad type index!\n");
+        printf("bad type inline index!\n");
       }
       find_inline_type_slow(tb, tag, sub_a, sub_b);
       find_inline_type(tb, tag, sub_a, sub_b);
@@ -126,9 +126,9 @@ type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
     type_ref ind2 = find_type_slow(tb, tag, subs, sub_amt);
     if (ind != ind2) {
       if (ind >= tb->types.len) {
-        printf("erroneous unfound type\n");
+        printf("erroneous unfound complex type\n");
       } else {
-        printf("bad type index!\n");
+        printf("bad type complex index!\n");
       }
       find_type(tb, &key);
       find_type_slow(tb, tag, subs, sub_amt);
@@ -334,7 +334,8 @@ static bool cmp_newtype_eq(const void *key_p, const void *stored_key, const void
         return key->sub_a == snd->sub_a;
       case SUBS_EXTERNAL:
         return key->sub_amt == snd->sub_amt
-          && memcmp(key->subs, &VEC_DATA_PTR(&builder->inds)[snd->subs_start], key->sub_amt * sizeof(type_ref));
+          // TODO maybe benchmark with utils/memeq
+          && memcmp(key->subs, &VEC_DATA_PTR(&builder->inds)[snd->subs_start], key->sub_amt * sizeof(type_ref)) == 0;
     }
   }
 
