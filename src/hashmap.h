@@ -6,12 +6,6 @@
 
 #define HASH_TYPE uint32_t
 #define AHM_VEC_LEN_T uint32_t
-// max ratio of elems to buckets before rehash
-// eg. 4/5 is four elements for five buckets
-#define AHM_MAX_FILL_NUMERATOR 5
-#define AHM_MAX_FILL_DENOMINATOR 1
-
-#define AHM_BUCKET_GROWTH_FACTOR 2
 
 typedef bool (*eq_cmp)(const void *, const void *, const void *);
 typedef uint32_t (*hasher)(const void *, const void *);

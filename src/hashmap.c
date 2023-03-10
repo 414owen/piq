@@ -5,6 +5,14 @@
 
 #define N_BUCKETS_START 1000
 
+// max ratio of elems to buckets before rehash
+// eg. 4/5 is four elements for five buckets
+#define AHM_MAX_FILL_NUMERATOR 5
+#define AHM_MAX_FILL_DENOMINATOR 1
+
+#define AHM_BUCKET_GROWTH_FACTOR 2
+
+
 /**
 
   This is a hashmap whose API is specialised for looking up indexes of types,
@@ -108,7 +116,6 @@ static void ahm_append_kv(a_hashmap *hm, ahm_keys_and_vals *kvs, const void *key
 }
 
 static void rehash(a_hashmap *hm, uint32_t n_buckets, void *context) {
-  printf("Rehash\n");
   ahm_keys_and_vals *prev = hm->data;
   const uint32_t old_n_buckets = hm->n_buckets;
   hm->data = calloc(n_buckets, sizeof(ahm_keys_and_vals));
