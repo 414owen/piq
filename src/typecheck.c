@@ -871,6 +871,7 @@ static type_info cleanup_types(node_ind_t parse_node_amt, type_builder *old) {
   }
 
   type_ref type_amt = builder.types.len;
+  ahm_free(&builder.type_to_index);
   type_info res = {
     .node_types = node_types,
     .type_amt = type_amt,
@@ -956,6 +957,7 @@ tc_res typecheck(const parse_tree tree) {
     .time_taken = time_since_monotonic(start),
 #endif
   };
+  ahm_free(&type_builder.type_to_index);
   return res;
 }
 

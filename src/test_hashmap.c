@@ -5,16 +5,14 @@
 #include "typedefs.h"
 
 uint32_t hash_u64(const void *val, const void *context) {
-  return hash_eight_bytes(0, *((uint64_t*) val));
+  return hash_eight_bytes(0, *((uint64_t *)val));
 }
 
 bool cmp_u64(const void *a, const void *b, const void *context) {
-  return *((uint64_t*) a) == *((uint64_t*) b);
+  return *((uint64_t *)a) == *((uint64_t *)b);
 }
 
-a_hashmap mk_hm(void) {
-  return ahm_new(u64, u64, cmp_u64, hash_u64, hash_u64);
-}
+a_hashmap mk_hm(void) { return ahm_new(u64, u64, cmp_u64, hash_u64, hash_u64); }
 
 void test_hashmap(test_state *state) {
   test_group_start(state, "HashMap");
@@ -27,6 +25,7 @@ void test_hashmap(test_state *state) {
         failf(state, "Expected hashmap to be empty!");
       }
     }
+    ahm_free(&hm);
     test_end(state);
   }
 
@@ -47,6 +46,7 @@ void test_hashmap(test_state *state) {
         failf(state, "Wrong value %llu: %llu", i, *res);
       }
     }
+    ahm_free(&hm);
     test_end(state);
   }
 
@@ -70,6 +70,7 @@ void test_hashmap(test_state *state) {
         failf(state, "Wrong value %llu: %llu", i, *res);
       }
     }
+    ahm_free(&hm);
     test_end(state);
   }
 
