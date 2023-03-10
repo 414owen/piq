@@ -52,5 +52,30 @@ void test_hashmap(test_state *state) {
     test_group_end(state);
   }
 
+  {
+    const int n = 100;
+    test_group_start(state, "overwrites");
+    a_hashmap hm = mk_hm();
+    for (int j = 1; j <= n; j++) {
+      for (u64 i = 0; i < 1000; i++) {
+        u64 val = i + j;
+        ahm_upsert(&hm, &i, &i, &val, NULL);
+      }
+    }
+    for (u64 i = 0; i < 1000; i++) {
+      char *s = format_to_string("%lu", i);
+      test_start(state, s);
+      free(s);
+      u64 *res = ahm_lookup(&hm, &i, NULL);
+      if (res == NULL) {
+        failf(state, "Expected value %llu", i);
+      } else if (*res != i + n) {
+        failf(state, "Wrong value %llu: %llu", i, *res);
+      }
+      test_end(state);
+    }
+    test_group_end(state);
+  }
+
   test_group_end(state);
 }
