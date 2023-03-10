@@ -106,9 +106,9 @@ typedef struct {
 
 #define test_start(state, desc)                                                \
   {                                                                            \
-    const char *__test_name = desc;                                              \
-    if (test_matches(state, __test_name)) {                                      \
-      test_start_internal(state, __test_name);                                   \
+    const char *__test_name = desc;                                            \
+    if (test_matches(state, __test_name)) {                                    \
+      test_start_internal(state, __test_name);                                 \
       for (int __i = 0; __i < state->config.times; __i++) {
 
 #define test_end(state)                                                        \

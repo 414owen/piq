@@ -17,7 +17,8 @@ typedef struct {
   };
 } type_key_with_ctx;
 
-type_ref find_inline_type_slow(type_builder *tb, type_check_tag tag, type_ref sub_a, type_ref sub_b) {
+type_ref find_inline_type_slow(type_builder *tb, type_check_tag tag,
+                               type_ref sub_a, type_ref sub_b) {
   for (type_ref i = 0; i < tb->types.len; i++) {
     type t = VEC_GET(tb->types, i);
     if (t.check_tag == tag && sub_a == t.sub_a && sub_b == t.sub_b)
@@ -26,8 +27,8 @@ type_ref find_inline_type_slow(type_builder *tb, type_check_tag tag, type_ref su
   return tb->types.len;
 }
 
-type_ref find_type_slow(type_builder *tb, type_check_tag tag, const type_ref *subs,
-                   type_ref sub_amt) {
+type_ref find_type_slow(type_builder *tb, type_check_tag tag,
+                        const type_ref *subs, type_ref sub_amt) {
   for (type_ref i = 0; i < tb->types.len; i++) {
     type t = VEC_GET(tb->types, i);
     if (t.check_tag != tag || t.sub_amt != sub_amt)
@@ -41,8 +42,8 @@ type_ref find_type_slow(type_builder *tb, type_check_tag tag, const type_ref *su
 }
 
 NON_NULL_PARAMS
-static
-type_ref find_inline_type(type_builder *tb, type_check_tag tag, type_ref sub_a, type_ref sub_b) {
+static type_ref find_inline_type(type_builder *tb, type_check_tag tag,
+                                 type_ref sub_a, type_ref sub_b) {
   type_key_with_ctx key = {
     .tag = tag,
     .sub_a = sub_a,
@@ -60,9 +61,8 @@ static type_ref find_type(type_builder *tb, const type_key_with_ctx *key) {
   return ind == NULL ? tb->types.len : *ind;
 }
 
-static
-type_ref insert_inline_type_to_hm(type_builder *tb, type_check_tag tag, type_ref sub_a,
-                        type_ref sub_b) {
+static type_ref insert_inline_type_to_hm(type_builder *tb, type_check_tag tag,
+                                         type_ref sub_a, type_ref sub_b) {
   type t = {
     .check_tag = tag,
     .sub_a = sub_a,
@@ -80,7 +80,7 @@ type_ref insert_inline_type_to_hm(type_builder *tb, type_check_tag tag, type_ref
 }
 
 type_ref __mk_type_inline(type_builder *tb, type_check_tag tag, type_ref sub_a,
-                        type_ref sub_b) {
+                          type_ref sub_b) {
   type_ref ind = find_inline_type(tb, tag, sub_a, sub_b);
   {
     type_ref ind2 = find_inline_type_slow(tb, tag, sub_a, sub_b);
@@ -318,24 +318,26 @@ bool type_contains_unsubstituted_typevar(const type_builder *builder,
     builder, root, is_unsubstituted_typevar_step, &data);
 }
 
-static bool cmp_newtype_eq(const void *key_p, const void *stored_key, const void *ctx) {
-  type_key_with_ctx *key = (type_key_with_ctx*) key_p;
-  type *snd = (type*) stored_key;
-  type_builder *builder = (type_builder*) ctx;
+static bool cmp_newtype_eq(const void *key_p, const void *stored_key,
+                           const void *ctx) {
+  type_key_with_ctx *key = (type_key_with_ctx *)key_p;
+  type *snd = (type *)stored_key;
+  type_builder *builder = (type_builder *)ctx;
 
   if (key->tag == snd->check_tag) {
     switch (type_repr(key->tag)) {
       case SUBS_NONE:
         return true;
       case SUBS_TWO:
-        return key->sub_a == snd->sub_a
-          && key->sub_b == snd->sub_b;
+        return key->sub_a == snd->sub_a && key->sub_b == snd->sub_b;
       case SUBS_ONE:
         return key->sub_a == snd->sub_a;
       case SUBS_EXTERNAL:
         return key->sub_amt == snd->sub_amt
-          // TODO maybe benchmark with utils/memeq
-          && memcmp(key->subs, &VEC_DATA_PTR(&builder->inds)[snd->subs_start], key->sub_amt * sizeof(type_ref)) == 0;
+               // TODO maybe benchmark with utils/memeq
+               && memcmp(key->subs,
+                         &VEC_DATA_PTR(&builder->inds)[snd->subs_start],
+                         key->sub_amt * sizeof(type_ref)) == 0;
     }
   }
 
@@ -343,11 +345,12 @@ static bool cmp_newtype_eq(const void *key_p, const void *stored_key, const void
 }
 
 static uint32_t hash_newtype(const void *key_p, const void *ctx) {
-  type_key_with_ctx *key = (type_key_with_ctx*) key_p;
+  type_key_with_ctx *key = (type_key_with_ctx *)key_p;
   switch (type_repr(key->tag)) {
     case SUBS_EXTERNAL: {
       uint32_t hash = hash_eight_bytes(0, key->tag);
-      return hash_bytes(hash, (uint8_t*) key->subs, key->sub_amt * sizeof(type_ref));
+      return hash_bytes(
+        hash, (uint8_t *)key->subs, key->sub_amt * sizeof(type_ref));
     }
     default: {
       HASH_TYPE h1 = hash_eight_bytes(0, key->tag);
@@ -358,13 +361,13 @@ static uint32_t hash_newtype(const void *key_p, const void *ctx) {
 }
 
 static uint32_t hash_stored_type(const void *key_p, const void *ctx_p) {
-  type *key = (type*) key_p;
-  type_builder *builder = (type_builder*) ctx_p;
+  type *key = (type *)key_p;
+  type_builder *builder = (type_builder *)ctx_p;
   switch (type_repr(key->check_tag)) {
     case SUBS_EXTERNAL: {
       uint32_t hash = hash_eight_bytes(0, key->tag);
       type_ref *subs = &VEC_DATA_PTR(&builder->inds)[key->subs_start];
-      return hash_bytes(hash, (uint8_t*) subs, key->sub_amt * sizeof(type_ref));
+      return hash_bytes(hash, (uint8_t *)subs, key->sub_amt * sizeof(type_ref));
     }
     default: {
       HASH_TYPE h1 = hash_eight_bytes(0, key->tag);
@@ -378,7 +381,8 @@ type_builder new_type_builder(void) {
   type_builder type_builder = {
     .types = VEC_NEW,
     .inds = VEC_NEW,
-    .type_to_index = ahm_new(type, VEC_LEN_T, cmp_newtype_eq, hash_newtype, hash_stored_type),
+    .type_to_index =
+      ahm_new(type, VEC_LEN_T, cmp_newtype_eq, hash_newtype, hash_stored_type),
     .substitutions = VEC_NEW,
   };
   return type_builder;
@@ -399,4 +403,5 @@ void free_type_builder(type_builder tb) {
   VEC_FREE(&tb.inds);
   VEC_FREE(&tb.types);
   VEC_FREE(&tb.substitutions);
+  ahm_free(&tb.type_to_index);
 }
