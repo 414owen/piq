@@ -395,7 +395,8 @@ static void tr_handle_initial(pt_traversal *traversal) {
       tr_maybe_restore_scope(traversal);
       tr_initial_external_sub_statement(traversal, data);
       tr_maybe_backup_scope(traversal);
-      tr_maybe_push_environment(traversal, data.node_index, TR_ACT_PREDECLARE_FN);
+      tr_maybe_push_environment(
+        traversal, data.node_index, TR_ACT_PREDECLARE_FN);
       break;
     case PT_ALL_STATEMENT_DATA_DECLARATION:
       tr_initial_generic(traversal, data);
