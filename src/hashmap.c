@@ -3,7 +3,7 @@
 
 #include "hashmap.h"
 
-#define N_BUCKETS_START 50
+#define N_BUCKETS_START 1000
 
 /**
 
@@ -47,7 +47,7 @@ uint32_t hash_bytes(uint32_t seed, uint8_t *bytes, uint32_t n_bytes) {
     bytes += 2;
     n_bytes -= 2;
   }
-  if (n_bytes >= 1) {
+  if (n_bytes == 1) {
     seed = hash_eight_bytes(seed, (uint64_t) *((uint8_t*) bytes));
   }
   return seed;
@@ -108,6 +108,7 @@ static void ahm_append_kv(a_hashmap *hm, ahm_keys_and_vals *kvs, const void *key
 }
 
 static void rehash(a_hashmap *hm, uint32_t n_buckets, void *context) {
+  printf("Rehash\n");
   ahm_keys_and_vals *prev = hm->data;
   const uint32_t old_n_buckets = hm->n_buckets;
   hm->data = calloc(n_buckets, sizeof(ahm_keys_and_vals));
@@ -117,8 +118,8 @@ static void rehash(a_hashmap *hm, uint32_t n_buckets, void *context) {
     ahm_keys_and_vals kvs = prev[i];
     const char *keys = (char *) kvs.keys;
     const char *vals = (char *) kvs.vals;
-    for (uint8_t j = 0; j < kvs.len; j++) {
-      const char * k = keys + j * hm->keysize;
+    for (uint32_t j = 0; j < kvs.len; j++) {
+      const char *k = keys + j * hm->keysize;
       ahm_keys_and_vals *bucket = ahm_get_kvs(hm, k, hm->hash_storedkey, context);
       ahm_append_kv(hm, bucket, k, vals + j * hm->valsize);
     }
@@ -170,6 +171,12 @@ bool ahm_upsert(a_hashmap *hm, const void *key, const void *key_stored, const vo
 
   // inserted
   return false;
+}
+
+void ahm_insert_stored(a_hashmap *hm, const void *key_stored, const void *val, void *context) {
+  ahm_insert_prelude(hm, context);
+  ahm_keys_and_vals *data = ahm_get_kvs(hm, key_stored, hm->hash_storedkey, context);
+  ahm_append_kv(hm, data, key_stored, val);
 }
 
 /** WARNING: Can produce duplicates of a key. Use this if you're sure your

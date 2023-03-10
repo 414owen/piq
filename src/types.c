@@ -17,6 +17,29 @@ typedef struct {
   };
 } type_key_with_ctx;
 
+type_ref find_inline_type_slow(type_builder *tb, type_check_tag tag, type_ref sub_a, type_ref sub_b) {
+  for (type_ref i = 0; i < tb->types.len; i++) {
+    type t = VEC_GET(tb->types, i);
+    if (t.check_tag == tag && sub_a == t.sub_a && sub_b == t.sub_b)
+      return i;
+  }
+  return tb->types.len;
+}
+
+type_ref find_type_slow(type_builder *tb, type_check_tag tag, const type_ref *subs,
+                   type_ref sub_amt) {
+  for (type_ref i = 0; i < tb->types.len; i++) {
+    type t = VEC_GET(tb->types, i);
+    if (t.check_tag != tag || t.sub_amt != sub_amt)
+      continue;
+    type_ref *p1 = &VEC_DATA_PTR(&tb->inds)[t.subs_start];
+    if (memcmp(p1, subs, sub_amt * sizeof(type_ref)) != 0)
+      continue;
+    return i;
+  }
+  return tb->types.len;
+}
+
 NON_NULL_PARAMS
 static
 type_ref find_inline_type(type_builder *tb, type_check_tag tag, type_ref sub_a, type_ref sub_b) {
@@ -27,14 +50,14 @@ type_ref find_inline_type(type_builder *tb, type_check_tag tag, type_ref sub_a, 
   };
   uint32_t *ind = ahm_lookup(&tb->type_to_index, &key, tb);
   // TODO remove this branch somehow
-  return ind == NULL ? tb->inds.len : *ind;
+  return ind == NULL ? tb->types.len : *ind;
 }
 
 NON_NULL_PARAMS
 static type_ref find_type(type_builder *tb, const type_key_with_ctx *key) {
   uint32_t *ind = ahm_lookup(&tb->type_to_index, key, tb);
   // TODO remove this branch somehow
-  return ind == NULL ? tb->inds.len : *ind;
+  return ind == NULL ? tb->types.len : *ind;
 }
 
 static
@@ -59,6 +82,18 @@ type_ref insert_inline_type_to_hm(type_builder *tb, type_check_tag tag, type_ref
 type_ref __mk_type_inline(type_builder *tb, type_check_tag tag, type_ref sub_a,
                         type_ref sub_b) {
   type_ref ind = find_inline_type(tb, tag, sub_a, sub_b);
+  {
+    type_ref ind2 = find_inline_type_slow(tb, tag, sub_a, sub_b);
+    if (ind != ind2) {
+      if (ind >= tb->types.len) {
+        printf("erroneous unfound type\n");
+      } else {
+        printf("bad type index!\n");
+      }
+      find_inline_type_slow(tb, tag, sub_a, sub_b);
+      find_inline_type(tb, tag, sub_a, sub_b);
+    }
+  }
   if (ind < tb->types.len)
     return ind;
   return insert_inline_type_to_hm(tb, tag, sub_a, sub_b);
@@ -87,6 +122,18 @@ type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
     .subs = subs,
   };
   type_ref ind = find_type(tb, &key);
+  {
+    type_ref ind2 = find_type_slow(tb, tag, subs, sub_amt);
+    if (ind != ind2) {
+      if (ind >= tb->types.len) {
+        printf("erroneous unfound type\n");
+      } else {
+        printf("bad type index!\n");
+      }
+      find_type(tb, &key);
+      find_type_slow(tb, tag, subs, sub_amt);
+    }
+  }
   if (ind < tb->types.len)
     return ind;
   VEC_APPEND(&tb->inds, sub_amt, subs);
@@ -301,8 +348,11 @@ static uint32_t hash_newtype(const void *key_p, const void *ctx) {
       uint32_t hash = hash_eight_bytes(0, key->tag);
       return hash_bytes(hash, (uint8_t*) key->subs, key->sub_amt * sizeof(type_ref));
     }
-    default:
-      return hash_bytes(0, (uint8_t*) key, sizeof(type_key_with_ctx));
+    default: {
+      HASH_TYPE h1 = hash_eight_bytes(0, key->tag);
+      HASH_TYPE h2 = hash_eight_bytes(h1, key->sub_a);
+      return hash_eight_bytes(h2, key->sub_b);
+    }
   }
 }
 
@@ -315,8 +365,11 @@ static uint32_t hash_stored_type(const void *key_p, const void *ctx_p) {
       type_ref *subs = &VEC_DATA_PTR(&builder->inds)[key->subs_start];
       return hash_bytes(hash, (uint8_t*) subs, key->sub_amt * sizeof(type_ref));
     }
-    default:
-      return hash_bytes(0, (uint8_t*) key, sizeof(type_key_with_ctx));
+    default: {
+      HASH_TYPE h1 = hash_eight_bytes(0, key->tag);
+      HASH_TYPE h2 = hash_eight_bytes(h1, key->sub_a);
+      return hash_eight_bytes(h2, key->sub_b);
+    }
   }
 }
 
@@ -335,6 +388,9 @@ type_builder new_type_builder_with_builtins(void) {
   // blit builtin types
   VEC_APPEND(&res.types, builtin_type_amount, builtin_types);
   VEC_APPEND(&res.inds, builtin_type_ind_amount, builtin_type_inds);
+  for (VEC_LEN_T i = 0; i < res.types.len; i++) {
+    ahm_insert_stored(&res.type_to_index, VEC_GET_PTR(res.types, i), &i, &res);
+  }
   return res;
 }
 

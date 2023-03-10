@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#define HASH_TYPE uint32_t
 #define AHM_VEC_LEN_T uint32_t
 // max ratio of elems to buckets before rehash
 // eg. 4/5 is four elements for five buckets
@@ -49,4 +50,7 @@ uint32_t hash_bytes(uint32_t seed, uint8_t *bytes, uint32_t n_bytes);
 
 void *ahm_lookup(a_hashmap *hm, const void *key, void *context);
 bool ahm_upsert(a_hashmap *hm, const void *key, const void *key_stored, const void *val, void *context);
+
+// Don't use a proto-key, use a real key
+void ahm_insert_stored(a_hashmap *hm, const void *key_stored, const void *val, void *context);
 void ahm_insert(a_hashmap *hm, const void *key, const void *key_stored, const void *val, void *context);
