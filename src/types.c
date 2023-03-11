@@ -32,14 +32,9 @@ static type_ref insert_inline_type_to_hm(type_builder *tb, type_check_tag tag,
     .sub_a = sub_a,
     .sub_b = sub_b,
   };
-  type_key_with_ctx key = {
-    .tag = tag,
-    .sub_a = sub_a,
-    .sub_b = sub_b,
-  };
   VEC_PUSH(&tb->types, t);
   type_ref res = tb->types.len - 1;
-  ahm_insert(&tb->type_to_index, &key, &t, &res, tb);
+  ahm_insert_stored(&tb->type_to_index, &t, &res, tb);
   return tb->types.len - 1;
 }
 
@@ -85,7 +80,7 @@ type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
   VEC_PUSH(&tb->types, t);
   type_ref res = tb->types.len - 1;
   // won't update
-  ahm_insert(&tb->type_to_index, &key, &t, &res, tb);
+  ahm_insert_stored(&tb->type_to_index, &t, &res, tb);
   return res;
 }
 

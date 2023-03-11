@@ -2,13 +2,12 @@
 #include <string.h>
 
 #include "hashmap.h"
-
-#define N_BUCKETS_START 200
+#include "typedefs.h"
 
 // max ratio of elems to buckets before rehash
 // eg. 4/5 is four elements for five buckets
-#define AHM_MAX_FILL_NUMERATOR 5
-#define AHM_MAX_FILL_DENOMINATOR 1
+#define AHM_MAX_FILL_NUMERATOR 3
+#define AHM_MAX_FILL_DENOMINATOR 4
 
 // Keep me a power of two please
 #define AHM_GROWTH_FACTOR 2
@@ -28,17 +27,21 @@
 
 */
 
-a_hashmap __ahm_new(uint32_t keysize, uint32_t valsize, eq_cmp cmp_newkey,
-                    hasher hash_newkey, hasher hash_storedkey) {
+a_hashmap __ahm_new(uint32_t n_buckets, uint32_t keysize, uint32_t valsize,
+                    eq_cmp cmp_newkey, hasher hash_newkey,
+                    hasher hash_storedkey) {
   a_hashmap res = {
-    .data = calloc(N_BUCKETS_START, sizeof(ahm_keys_and_vals)),
-    .n_buckets = N_BUCKETS_START,
+    .keys = calloc(n_buckets, keysize),
+    .vals = calloc(n_buckets, valsize),
+    .n_buckets = n_buckets,
+    .mask = n_buckets - 1,
     .n_elems = 0,
     .valsize = valsize,
     .keysize = keysize,
     .compare_newkey = cmp_newkey,
     .hash_newkey = hash_newkey,
     .hash_storedkey = hash_storedkey,
+    .occupied = bs_new_false_n(n_buckets),
   };
   return res;
 }
@@ -46,72 +49,41 @@ a_hashmap __ahm_new(uint32_t keysize, uint32_t valsize, eq_cmp cmp_newkey,
 static uint32_t ahm_get_bucket_ind(a_hashmap *hm, const void *key, hasher hsh,
                                    void *context) {
   const uint32_t key_hash = hsh(key, context);
-  const uint32_t bucket_ind = key_hash & (hm->n_buckets - 1);
+  const uint32_t bucket_ind = key_hash & hm->mask;
   return bucket_ind;
 }
 
-static ahm_keys_and_vals *ahm_get_kvs(a_hashmap *hm, const void *key,
-                                      hasher hsh, void *context) {
-  const uint32_t bucket_ind = ahm_get_bucket_ind(hm, key, hsh, context);
-  ahm_keys_and_vals *res = &hm->data[bucket_ind];
-  return res;
-}
-
-static void ahm_append_kv(a_hashmap *hm, ahm_keys_and_vals *kvs,
-                          const void *key, const void *val) {
-  char *keys = (char *)kvs->keys;
-  char *vals = (char *)kvs->vals;
-
-  if (kvs->cap == kvs->len) {
-    if (kvs->cap == 0) {
-      kvs->cap = AHM_MAX_FILL_NUMERATOR;
-      keys = kvs->keys = malloc(kvs->cap * hm->keysize);
-      vals = kvs->vals = malloc(kvs->cap * hm->valsize);
-    } else {
-      kvs->cap *= 2;
-      keys = kvs->keys = realloc(keys, kvs->cap * hm->keysize);
-      vals = kvs->vals = realloc(vals, kvs->cap * hm->valsize);
+static void rehash(a_hashmap *hm, void *context) {
+  a_hashmap res = __ahm_new(hm->n_buckets * AHM_GROWTH_FACTOR,
+                            hm->keysize,
+                            hm->valsize,
+                            hm->compare_newkey,
+                            hm->hash_newkey,
+                            hm->hash_storedkey);
+  for (u32 i = 0; i < hm->n_buckets; i++) {
+    if (bs_get(hm->occupied, i)) {
+      ahm_insert_stored(
+        &res, hm->keys + i * hm->keysize, hm->vals + i * hm->valsize, context);
     }
   }
-
-  memcpy(keys + kvs->len * hm->keysize, key, hm->keysize);
-  memcpy(vals + kvs->len * hm->valsize, val, hm->valsize);
-  kvs->len++;
-  hm->n_elems++;
-}
-
-static void rehash(a_hashmap *hm, uint32_t n_buckets, void *context) {
-  ahm_keys_and_vals *prev = hm->data;
-  const uint32_t old_n_buckets = hm->n_buckets;
-  hm->data = calloc(n_buckets, sizeof(ahm_keys_and_vals));
-  hm->n_buckets = n_buckets;
-  hm->n_elems = 0;
-  for (uint32_t i = 0; i < old_n_buckets; i++) {
-    ahm_keys_and_vals kvs = prev[i];
-    const char *keys = (char *)kvs.keys;
-    const char *vals = (char *)kvs.vals;
-    for (uint32_t j = 0; j < kvs.len; j++) {
-      const char *k = keys + j * hm->keysize;
-      ahm_keys_and_vals *bucket =
-        ahm_get_kvs(hm, k, hm->hash_storedkey, context);
-      ahm_append_kv(hm, bucket, k, vals + j * hm->valsize);
-    }
-    free(kvs.keys);
-    free(kvs.vals);
-  }
-  free(prev);
+  ahm_free(hm);
+  hm->n_buckets = res.n_buckets;
+  hm->mask = res.mask;
+  hm->keys = res.keys;
+  hm->vals = res.vals;
+  hm->occupied = res.occupied;
 }
 
 void *ahm_lookup(a_hashmap *hm, const void *key, void *context) {
-  ahm_keys_and_vals *data = ahm_get_kvs(hm, key, hm->hash_newkey, context);
-
-  const char *keys = (char *)data->keys;
-  const char *vals = (char *)data->vals;
-
-  for (AHM_VEC_LEN_T i = 0; i < data->len; i++) {
+  uint32_t i = ahm_get_bucket_ind(hm, key, hm->hash_newkey, context);
+  char *keys = hm->keys;
+  while (bs_get(hm->occupied, i)) {
     if (hm->compare_newkey(key, keys + i * hm->keysize, context)) {
-      return (void *)(vals + i * hm->valsize);
+      return hm->vals + i * hm->valsize;
     }
+    i++;
+    // mod
+    i &= hm->n_buckets - 1;
   }
   return NULL;
 }
@@ -121,57 +93,57 @@ static void ahm_insert_prelude(a_hashmap *hm, void *context) {
   // we use >= to deal with the 0 bucket case
   if (hm->n_elems * AHM_MAX_FILL_DENOMINATOR >=
       hm->n_buckets * AHM_MAX_FILL_NUMERATOR) {
-    rehash(hm, hm->n_buckets * 2, context);
+    rehash(hm, context);
   }
 }
 
 bool ahm_upsert(a_hashmap *hm, const void *key, const void *key_stored,
                 const void *val, void *context) {
   ahm_insert_prelude(hm, context);
-  ahm_keys_and_vals *data = ahm_get_kvs(hm, key, hm->hash_newkey, context);
 
-  char *keys = (char *)data->keys;
-  char *vals = (char *)data->vals;
-
-  for (AHM_VEC_LEN_T i = 0; i < data->len; i++) {
+  uint32_t i = ahm_get_bucket_ind(hm, key, hm->hash_newkey, context);
+  char *keys = hm->keys;
+  const uint32_t mask = hm->mask;
+  while (bs_get(hm->occupied, i)) {
     if (hm->compare_newkey(key, keys + i * hm->keysize, context)) {
-      memcpy(vals + i * hm->valsize, val, hm->valsize);
-      // updated
+      memcpy(hm->vals + i * hm->valsize, val, hm->valsize);
       return true;
     }
+    i++;
+    // mod
+    i &= mask;
   }
 
-  ahm_append_kv(hm, data, key_stored, val);
+  memcpy(keys + i * hm->keysize, key_stored, hm->keysize);
+  memcpy(hm->vals + i * hm->valsize, val, hm->valsize);
+  bs_set(hm->occupied, i);
+  hm->n_elems += 1;
 
   // inserted
   return false;
 }
 
+/** WARNING: Can produce duplicates of a key. Use this if you're sure your
+    key isn't in here */
 void ahm_insert_stored(a_hashmap *hm, const void *key_stored, const void *val,
                        void *context) {
   ahm_insert_prelude(hm, context);
-  ahm_keys_and_vals *data =
-    ahm_get_kvs(hm, key_stored, hm->hash_storedkey, context);
-  ahm_append_kv(hm, data, key_stored, val);
-}
-
-/** WARNING: Can produce duplicates of a key. Use this if you're sure your
-    key isn't in here */
-void ahm_insert(a_hashmap *hm, const void *key, const void *key_stored,
-                const void *val, void *context) {
-  ahm_insert_prelude(hm, context);
-  ahm_keys_and_vals *data = ahm_get_kvs(hm, key, hm->hash_newkey, context);
-  ahm_append_kv(hm, data, key_stored, val);
+  uint32_t i = ahm_get_bucket_ind(hm, key_stored, hm->hash_storedkey, context);
+  char *keys = hm->keys;
+  const uint32_t mask = hm->mask;
+  while (bs_get(hm->occupied, i)) {
+    i++;
+    i &= mask;
+  }
+  memcpy(keys + i * hm->keysize, key_stored, hm->keysize);
+  memcpy(hm->vals + i * hm->valsize, val, hm->valsize);
+  bs_set(hm->occupied, i);
+  hm->n_elems += 1;
 }
 
 /** You're in charge of freeing the context, though */
 void ahm_free(a_hashmap *hm) {
-  for (uint32_t i = 0; i < hm->n_buckets; i++) {
-    ahm_keys_and_vals data = hm->data[i];
-    if (data.len > 0) {
-      free(data.keys);
-      free(data.vals);
-    }
-  }
-  free(hm->data);
+  bs_free(&hm->occupied);
+  free(hm->keys);
+  free(hm->vals);
 }
