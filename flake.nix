@@ -62,7 +62,6 @@
             lemon
             pkg-config
             readline81
-            flamegraph
             tup
           ];
 
@@ -170,6 +169,7 @@
               valgrind
               watchexec
               commitizen
+              flamegraph
             ]
           ];
 
