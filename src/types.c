@@ -214,14 +214,6 @@ typedef struct {
   node_ind_t parse_node_amount;
 } unsubstituted_check_data;
 
-/*
-static bool is_unsubstituted_typevar(typevar a, const type_builder *builder) {
-  type_ref type_ind = VEC_GET(builder->substitutions, a);
-  type t = VEC_GET(builder->types, type_ind);
-  return (t.check_tag == TC_VAR && a == t.type_var);
-}
-*/
-
 static var_step_res is_unsubstituted_typevar_step(typevar a,
                                                   const void *data_p) {
   const unsubstituted_check_data *data = (unsubstituted_check_data *)data_p;

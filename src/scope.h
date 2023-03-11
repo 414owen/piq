@@ -11,11 +11,6 @@ typedef struct {
   vec_str_ref bindings;
 } scope;
 
-order compare_bnds(const char *source_file, binding a, binding b);
-
-size_t lookup_bnd(const char *source_file, binding *bnds, node_ind_t bnd_amt,
-                  binding bnd);
-
 node_ind_t lookup_str_ref(const char *source_file, scope scope, binding bnd);
 
 scope scope_new(void);
