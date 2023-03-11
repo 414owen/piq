@@ -24,6 +24,19 @@ order compare_bnds(const char *restrict source_file, binding a, binding b) {
     source_file + a.start, source_file + b.start, MIN(a.len, b.len));
 }
 
+// This extremely simple string comparison improved compile time by about 3-4%
+static bool streq(const char *restrict a, const char *restrict b,
+                  buf_ind_t len) {
+  while (len--) {
+    if (*a != *b) {
+      return false;
+    }
+    a++;
+    b++;
+  }
+  return true;
+}
+
 // TODO consider separating builtins into separate array somehow
 // Find index of binding, return bindings.len if not found
 node_ind_t lookup_str_ref(const char *source_file, scope scope, binding bnd) {
@@ -38,7 +51,7 @@ node_ind_t lookup_str_ref(const char *source_file, scope scope, binding bnd) {
     } else {
       if (a.binding.len != bnd.len)
         continue;
-      if (strncmp(bndp, &source_file[a.binding.start], bnd.len) == 0)
+      if (streq(bndp, &source_file[a.binding.start], bnd.len))
         return ind;
     }
   }
