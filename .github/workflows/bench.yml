@@ -38,4 +38,4 @@ jobs:
         fail-on-alert: true
         github-token: ${{ secrets.GITHUB_TOKEN }}
         auto-push: true
-        benchmark-data-dir-path: /compiler-bench
+        benchmark-data-dir-path: compiler-bench
