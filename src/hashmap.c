@@ -10,8 +10,6 @@
 #define AHM_MAX_FILL_NUMERATOR 5
 #define AHM_MAX_FILL_DENOMINATOR 1
 
-#define AHM_BUCKET_GROWTH_FACTOR 2
-
 /**
 
   This is a hashmap whose API is specialised for looking up indexes of types,
@@ -45,7 +43,7 @@ a_hashmap __ahm_new(uint32_t keysize, uint32_t valsize, eq_cmp cmp_newkey,
 static uint32_t ahm_get_bucket_ind(a_hashmap *hm, const void *key, hasher hsh,
                                    void *context) {
   const uint32_t key_hash = hsh(key, context);
-  const uint32_t bucket_ind = key_hash % hm->n_buckets;
+  const uint32_t bucket_ind = key_hash & (hm->n_buckets - 1);
   return bucket_ind;
 }
 
@@ -120,7 +118,7 @@ static void ahm_insert_prelude(a_hashmap *hm, void *context) {
   // we use >= to deal with the 0 bucket case
   if (hm->n_elems * AHM_MAX_FILL_DENOMINATOR >=
       hm->n_buckets * AHM_MAX_FILL_NUMERATOR) {
-    rehash(hm, hm->n_buckets * AHM_BUCKET_GROWTH_FACTOR, context);
+    rehash(hm, hm->n_buckets * 2, context);
   }
 }
 
