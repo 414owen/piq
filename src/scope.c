@@ -19,11 +19,6 @@ static bool strn1eq(const char *a, const char *b, size_t alen) {
   return true;
 }
 
-order compare_bnds(const char *restrict source_file, binding a, binding b) {
-  return strncmp(
-    source_file + a.start, source_file + b.start, MIN(a.len, b.len));
-}
-
 // This extremely simple string comparison improved compile time by about 3-4%
 static bool streq(const char *restrict a, const char *restrict b,
                   buf_ind_t len) {
@@ -58,20 +53,6 @@ node_ind_t lookup_str_ref(const char *source_file, scope scope, binding bnd) {
   return scope.bindings.len;
 }
 
-// TODO remove? not currently used AFAIK
-size_t lookup_bnd(const char *source_file, binding *bnds, node_ind_t bnd_amt,
-                  binding bnd) {
-  const char *bndp = source_file + bnd.start;
-  for (size_t i = 0; i < bnd_amt; i++) {
-    size_t ind = bnd_amt - 1 - i;
-    binding a = bnds[ind];
-    if (strncmp(bndp, source_file + a.start, bnd.len) == 0) {
-      return ind;
-    }
-  }
-  return bnd_amt;
-}
-
 scope scope_new(void) {
   scope res = {
     .bindings = VEC_NEW,
@@ -92,69 +73,3 @@ void scope_free(scope s) {
   bs_free(&s.is_builtin);
   VEC_FREE(&s.bindings);
 }
-
-/*
-scopes_builder scopes_new_builder(const char *restrict input) {
-  scopes_builder res = {
-    .input = input,
-    .scopes = VEC_NEW,
-  };
-  return res;
-}
-
-scoped_binding_ref scopes_lookup_binding(const scopes_builder *restrict scopes,
-binding bnd) { vec_scope_builder builders = scopes->scopes; scope_ref scope_amt
-= builders.len; if (scope_amt == 0) { goto no_results;
-  }
-  scope_ref scope_ind = builders.len - 1;
-  scope_builder scope = VEC_GET(builders, scope_ind);
-  while (true) {
-    for (binding_ref i = 0; i < scope.bindings.len; i++) {
-      binding_ref j = scope.bindings.len - 1 - i;
-      binding b = VEC_GET(scope.bindings, j);
-      if (compare_bnds(scopes->input, b, bnd) == 0) {
-        scoped_binding_ref res = {
-          .scope_ref = scope_ind,
-          .binding_ind = j,
-        };
-        return res;
-      }
-    }
-    if (scope_ind == 0) {
-      goto no_results;
-    }
-    scope_ind = scope.parent;
-    VEC_GET(builders, scope_ind);
-  }
-  no_results: {
-    scoped_binding_ref res = {
-      .scope_ref = 0,
-      .binding_ind = 0,
-    };
-    return res;
-  }
-}
-
-void scopes_add_binding(scopes_builder *restrict scopes, binding bnd) {
-  scope_builder *scope = VEC_PEEK_PTR(scopes->scopes);
-  VEC_PUSH(&scope->bindings, bnd);
-}
-
-scope_ref scopes_push(scopes_builder *restrict scopes) {
-  scope_builder scope = {
-    .bindings = VEC_NEW,
-    .parent = scopes->scopes.len,
-  };
-  VEC_PUSH(&scopes->scopes, scope);
-  return scopes->scopes.len - 1;
-}
-
-// popping doesn't remove anything from the builder
-// it just adds a new scope with its parent the same as the current scope's
-parent scope_ref scopes_pop(scopes_builder *restrict scopes) { scope_builder
-scope = { .bindings = VEC_NEW, .parent = VEC_PEEK(scopes->scopes).parent,
-  };
-  VEC_PUSH(&scopes->scopes, scope);
-  return scopes->scopes.len - 1;
-}
-*/
