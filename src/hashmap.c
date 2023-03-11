@@ -149,8 +149,8 @@ void *ahm_lookup(a_hashmap *hm, const void *key, void *context) {
 static void ahm_insert_prelude(a_hashmap *hm, void *context) {
   // for simplicity, even if we end up updating an element, we grow
   // we use >= to deal with the 0 bucket case
-  if (hm->n_elems * AHM_MAX_FILL_NUMERATOR >=
-      hm->n_buckets * AHM_MAX_FILL_DENOMINATOR) {
+  if (hm->n_elems * AHM_MAX_FILL_DENOMINATOR >=
+      hm->n_buckets * AHM_MAX_FILL_NUMERATOR) {
     rehash(hm, hm->n_buckets * AHM_BUCKET_GROWTH_FACTOR, context);
   }
 }
