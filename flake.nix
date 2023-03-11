@@ -62,6 +62,7 @@
             lemon
             pkg-config
             readline81
+            flamegraph
             tup
           ];
 
