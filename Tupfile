@@ -38,7 +38,7 @@ common_objs += mkdir_p.o
 common_objs += parser.o
 common_objs += parse_tree.o
 common_objs += builtins.o
-common_objs += scope.o
+common_objs += resolve_scope.o
 common_objs += strint.o
 common_objs += tokenizer.o
 common_objs += token.o
@@ -99,7 +99,7 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/diagnostic.c          |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/dir_exists.c          |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/mkdir_p.c             |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/scope.c               |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/resolve_scope.c       |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/span.c                |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/strint.c              |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
 : src/typecheck.c           |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
