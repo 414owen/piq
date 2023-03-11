@@ -3,12 +3,15 @@
 
 #include "hashmap.h"
 
-#define N_BUCKETS_START 1000
+#define N_BUCKETS_START 200
 
 // max ratio of elems to buckets before rehash
 // eg. 4/5 is four elements for five buckets
 #define AHM_MAX_FILL_NUMERATOR 5
 #define AHM_MAX_FILL_DENOMINATOR 1
+
+// Keep me a power of two please
+#define AHM_GROWTH_FACTOR 2
 
 /**
 
