@@ -3,6 +3,14 @@
 # Possible names
 
 * YAMLLL - Yet Another Modern Low Level Language
+* FAFL - Fast and friendly language
+
+attributes:
+
+* fast
+* homoiconic
+* bootstrappable
+* minimal
 
 # Goal
 
