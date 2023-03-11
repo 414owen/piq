@@ -28,3 +28,5 @@ compile_commands.json
 massif.out.*
 dhat.*
 bench.json
+stacks.folded
+flamegraph.svg

@@ -62,6 +62,7 @@
             lemon
             pkg-config
             editline
+            flamegraph
             tup
           ];
 
