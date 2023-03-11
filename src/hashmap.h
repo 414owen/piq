@@ -34,10 +34,6 @@ typedef struct {
 a_hashmap __ahm_new(uint32_t keysize, uint32_t valsize, eq_cmp cmp_newkey,
                     hasher hash_newkey, hasher hash_storedkey);
 
-uint32_t rotate_left(uint32_t n, uint32_t d);
-uint32_t hash_eight_bytes(uint32_t seed, uint64_t bytes);
-uint32_t hash_bytes(uint32_t seed, uint8_t *bytes, uint32_t n_bytes);
-
 void *ahm_lookup(a_hashmap *hm, const void *key, void *context);
 bool ahm_upsert(a_hashmap *hm, const void *key, const void *key_stored,
                 const void *val, void *context);

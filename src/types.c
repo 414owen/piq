@@ -3,19 +3,7 @@
 #include "types.h"
 #include "vec.h"
 
-typedef struct {
-  type_check_tag tag;
-  union {
-    struct {
-      type_ref sub_amt;
-      const type_ref *subs;
-    };
-    struct {
-      type_ref sub_a;
-      type_ref sub_b;
-    };
-  };
-} type_key_with_ctx;
+#include "hashers.h"
 
 NON_NULL_PARAMS
 static type_ref find_inline_type(type_builder *tb, type_check_tag tag,
@@ -303,39 +291,6 @@ static bool cmp_newtype_eq(const void *key_p, const void *stored_key,
   }
 
   return false;
-}
-
-static uint32_t hash_newtype(const void *key_p, const void *ctx) {
-  type_key_with_ctx *key = (type_key_with_ctx *)key_p;
-  switch (type_repr(key->tag)) {
-    case SUBS_EXTERNAL: {
-      uint32_t hash = hash_eight_bytes(0, key->tag);
-      return hash_bytes(
-        hash, (uint8_t *)key->subs, key->sub_amt * sizeof(type_ref));
-    }
-    default: {
-      HASH_TYPE h1 = hash_eight_bytes(0, key->tag);
-      HASH_TYPE h2 = hash_eight_bytes(h1, key->sub_a);
-      return hash_eight_bytes(h2, key->sub_b);
-    }
-  }
-}
-
-static uint32_t hash_stored_type(const void *key_p, const void *ctx_p) {
-  type *key = (type *)key_p;
-  type_builder *builder = (type_builder *)ctx_p;
-  switch (type_repr(key->check_tag)) {
-    case SUBS_EXTERNAL: {
-      uint32_t hash = hash_eight_bytes(0, key->tag);
-      type_ref *subs = &VEC_DATA_PTR(&builder->inds)[key->subs_start];
-      return hash_bytes(hash, (uint8_t *)subs, key->sub_amt * sizeof(type_ref));
-    }
-    default: {
-      HASH_TYPE h1 = hash_eight_bytes(0, key->tag);
-      HASH_TYPE h2 = hash_eight_bytes(h1, key->sub_a);
-      return hash_eight_bytes(h2, key->sub_b);
-    }
-  }
 }
 
 type_builder new_type_builder(void) {

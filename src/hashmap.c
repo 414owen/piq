@@ -27,37 +27,6 @@
 
 */
 
-inline uint32_t rotate_left(uint32_t n, uint32_t d) {
-  return (n << d) | (n >> (32 - d));
-}
-
-// hash function based on rustc's
-inline uint32_t hash_eight_bytes(uint32_t seed, uint64_t bytes) {
-  return (rotate_left(seed, 5) ^ bytes) * 0x9e3779b9;
-}
-
-uint32_t hash_bytes(uint32_t seed, uint8_t *bytes, uint32_t n_bytes) {
-  while (n_bytes >= 8) {
-    seed = hash_eight_bytes(seed, *((uint64_t *)bytes));
-    bytes += 8;
-    n_bytes -= 8;
-  }
-  if (n_bytes >= 4) {
-    seed = hash_eight_bytes(seed, (uint64_t) * ((uint32_t *)bytes));
-    bytes += 4;
-    n_bytes -= 4;
-  }
-  if (n_bytes >= 2) {
-    seed = hash_eight_bytes(seed, (uint64_t) * ((uint16_t *)bytes));
-    bytes += 2;
-    n_bytes -= 2;
-  }
-  if (n_bytes == 1) {
-    seed = hash_eight_bytes(seed, (uint64_t) * ((uint8_t *)bytes));
-  }
-  return seed;
-}
-
 a_hashmap __ahm_new(uint32_t keysize, uint32_t valsize, eq_cmp cmp_newkey,
                     hasher hash_newkey, hasher hash_storedkey) {
   a_hashmap res = {
