@@ -160,6 +160,20 @@ typedef struct {
 type_traversal traverse_types(types);
 */
 
+typedef struct {
+  type_check_tag tag;
+  union {
+    struct {
+      type_ref sub_amt;
+      const type_ref *subs;
+    };
+    struct {
+      type_ref sub_a;
+      type_ref sub_b;
+    };
+  };
+} type_key_with_ctx;
+
 bool type_contains_specific_typevar(const type_builder *types, type_ref root,
                                     typevar a);
 bool type_contains_unsubstituted_typevar(const type_builder *builder,

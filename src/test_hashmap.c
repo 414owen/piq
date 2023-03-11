@@ -4,11 +4,22 @@
 #include "test.h"
 #include "typedefs.h"
 
-uint32_t hash_u64(const void *val, const void *context) {
+// These are copied here so that we don't need to compile
+// test hashers, or use CPP
+static uint32_t rotate_left(uint32_t n, uint32_t d) {
+  return (n << d) | (n >> (32 - d));
+}
+
+// hash function based on rustc's
+static uint32_t hash_eight_bytes(uint32_t seed, uint64_t bytes) {
+  return (rotate_left(seed, 5) ^ bytes) * 0x9e3779b9;
+}
+
+static uint32_t hash_u64(const void *val, const void *context) {
   return hash_eight_bytes(0, *((uint64_t *)val));
 }
 
-bool cmp_u64(const void *a, const void *b, const void *context) {
+static bool cmp_u64(const void *a, const void *b, const void *context) {
   return *((uint64_t *)a) == *((uint64_t *)b);
 }
 
