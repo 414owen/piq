@@ -259,7 +259,7 @@ bool type_contains_unsubstituted_typevar(const type_builder *builder,
 }
 
 static bool typeref_arrs_eq(const type_ref *restrict as,
-                            const type_ref *restrict bs, uint32_t len) {
+                            const type_ref *restrict bs, const uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
     if (as[i] != bs[i]) {
       return false;
