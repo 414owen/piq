@@ -77,7 +77,7 @@ typedef enum {
 void initialise_util(void);
 
 NON_NULL_PARAMS
-bool memeq(const char *a, const char *b, size_t n);
+bool memeq(const void *restrict a_p, const void *restrict b_p, size_t n);
 
 NON_NULL_PARAMS
 bool multiset_eq(size_t el_size, size_t as_len, size_t bs_len,

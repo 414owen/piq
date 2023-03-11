@@ -270,6 +270,16 @@ bool type_contains_unsubstituted_typevar(const type_builder *builder,
     builder, root, is_unsubstituted_typevar_step, &data);
 }
 
+static bool typeref_arrs_eq(const type_ref *restrict as,
+                            const type_ref *restrict bs, uint32_t len) {
+  for (uint32_t i = 0; i < len; i++) {
+    if (as[i] != bs[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 static bool cmp_newtype_eq(const void *key_p, const void *stored_key,
                            const void *ctx) {
   type_key_with_ctx *key = (type_key_with_ctx *)key_p;
@@ -285,11 +295,10 @@ static bool cmp_newtype_eq(const void *key_p, const void *stored_key,
       case SUBS_ONE:
         return key->sub_a == snd->sub_a;
       case SUBS_EXTERNAL:
-        return key->sub_amt == snd->sub_amt
-               // TODO maybe benchmark with utils/memeq
-               && memcmp(key->subs,
-                         &VEC_DATA_PTR(&builder->inds)[snd->subs_start],
-                         key->sub_amt * sizeof(type_ref)) == 0;
+        return key->sub_amt == snd->sub_amt &&
+               typeref_arrs_eq(key->subs,
+                               &VEC_DATA_PTR(&builder->inds)[snd->subs_start],
+                               key->sub_amt);
     }
   }
 

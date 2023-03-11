@@ -17,7 +17,10 @@
 #include "util.h"
 #include "vec.h"
 
-bool memeq(const char *restrict a, const char *restrict b, size_t n) {
+inline bool memeq(const void *restrict a_p, const void *restrict b_p,
+                  size_t n) {
+  const char *restrict a = (char *)a_p;
+  const char *restrict b = (char *)b_p;
   for (size_t i = 0; i < n; i++) {
     if (a[i] != b[i])
       return false;
