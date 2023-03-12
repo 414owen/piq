@@ -1,4 +1,4 @@
-name: CI (without nix)
+name: Tests
 
 on:
   - pull_request
@@ -24,6 +24,8 @@ jobs:
     - uses: webiny/action-conventional-commits@v1.1.0
     # - run: sudo add-apt-repository 'deb http://archive.ubuntu.com/ubuntu kinetic universe'
     - run: sudo apt-get install -y tup re2c lemon libxxhash-dev llvm-dev
+    - run: ./scripts/checks/formatting.sh
+    - run: ./scripts/checks/headers-have-pragmas.sh
     - run: |
         pushd /usr/include
         [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -O ./hedley.h
@@ -36,3 +38,5 @@ jobs:
     - run: "[ -f .tup/db ] || tup init"
     - run: ". scripts/environment.sh && tup"
     - run: ./test --lite
+    - run: valgrind --leak-check=full --error-exitcode=1 \
+        ${packages."${packageName}-tests"}/bin/test --lite
