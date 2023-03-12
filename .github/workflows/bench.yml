@@ -17,8 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    # - run: sudo add-apt-repository 'deb http://archive.ubuntu.com/ubuntu kinetic universe'
-    - run: sudo apt-get install -y tup re2c lemon libxxhash-dev llvm-dev valgrind
+    - uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: tup re2c lemon libxxhash-dev llvm-dev valgrind
+        version: 1.0
     - run: |
         pushd /usr/include
         [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -O ./hedley.h
