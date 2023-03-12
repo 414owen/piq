@@ -72,7 +72,7 @@
             xxHash
           ];
 
-          CFLAGS = "-Ofast -std=c99 -s -flto -DTIME_ALL";
+          CFLAGS = "-s -DTIME_ALL";
 
           buildPhase = ''
             . ./scripts/environment.sh
