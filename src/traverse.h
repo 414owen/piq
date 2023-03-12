@@ -95,8 +95,8 @@ typedef struct {
 } traversal_wanted_actions;
 
 typedef struct {
-  const parse_node *nodes;
-  const node_ind_t *inds;
+  const parse_node *restrict nodes;
+  const node_ind_t *restrict inds;
   vec_traverse_action actions;
   environment_ind_t environment_amt;
   vec_environment_ind environment_len_stack;
