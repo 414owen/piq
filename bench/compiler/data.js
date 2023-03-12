@@ -1787,9 +1787,7 @@ window.BENCHMARK_DATA = {
             "unit": "ns"
           }
         ]
-      }
-    ],
-    "Language Compiler Metrics": [
+      },
       {
         "commit": {
           "author": {
@@ -1802,7 +1800,7 @@ window.BENCHMARK_DATA = {
             "name": "Owen Shepherd",
             "username": "414owen"
           },
-          "distinct": false,
+          "distinct": true,
           "id": "b5cb3753ccdc7d01194e5081389bf1c332cf93ea",
           "message": "feat: Collect file size metrics",
           "timestamp": "2023-03-12T13:49:12+01:00",
