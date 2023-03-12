@@ -24,6 +24,15 @@ jobs:
     - uses: webiny/action-conventional-commits@v1.1.0
     - run: sudo add-apt-repository 'deb http://archive.ubuntu.com/ubuntu kinetic universe'
     - run: sudo apt-get install -y tup re2c lemon libxxhash-dev llvm-dev
+    - run: |
+        pushd /usr/include
+        [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -O ./hedley.h
+        predef() {
+          sudo svn checkout https://github.com/natefoo/predef/trunk/predef
+        }
+        [ -d predef ] || predef
+        popd
+      
     - run: sed -i 's/\^j\^//g' Tupfile
     - run: "[ -f .tup/db ] || tup init"
     - run: ". scripts/environment.sh && tup"
