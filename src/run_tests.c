@@ -446,7 +446,7 @@ int main(int argc, const char **argv) {
         (double)timespec_to_nanos(state.total_parser_time) /
         (double)state.total_tokens_parsed;
       float_time_metric m = {
-        .name = "Parse time per token token",
+        .name = "Parse time per token",
         .nanoseconds = nanos_per_token,
       };
       put_metric_time_float(&metric_state, m);
