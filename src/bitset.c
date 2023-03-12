@@ -17,7 +17,7 @@ bitset bs_new(void) {
   return res;
 }
 
-void bs_resize(bitset *bs, size_t bits) {
+void bs_resize(bitset *restrict bs, size_t bits) {
   size_t bytes_needed = BITNSLOTS(bits);
   bs->data = realloc(bs->data, bytes_needed);
   size_t cap = bs->cap;
@@ -25,7 +25,7 @@ void bs_resize(bitset *bs, size_t bits) {
   bs->cap = bytes_needed;
 }
 
-void bs_grow(bitset *bs, size_t bits) {
+void bs_grow(bitset *restrict bs, size_t bits) {
   if (bits > CHAR_BIT * bs->cap) {
     size_t new_size = CHAR_BIT * MAX(VEC_FIRST_SIZE, bs->cap * 2);
     new_size = MAX(bits, new_size);
@@ -112,17 +112,17 @@ bitset bs_new_false_n(size_t n) {
   return res;
 }
 
-bool bs_pop(bitset *bs) {
+bool bs_pop(bitset *restrict bs) {
   debug_assert(bs->len > 0);
   size_t len = --bs->len;
   return bs_data_get(bs->data, len);
 }
 
-bool bs_peek(bitset *bs) { return bs_data_get(bs->data, bs->len - 1); }
+bool bs_peek(bitset *restrict bs) { return bs_data_get(bs->data, bs->len - 1); }
 
-void bs_pop_n(bitset *bs, size_t n) { bs->len -= n; }
+void bs_pop_n(bitset *restrict bs, size_t n) { bs->len -= n; }
 
-void bs_free(bitset *bs) {
+void bs_free(bitset *restrict bs) {
   free(bs->data);
   bs->data = NULL;
 }
