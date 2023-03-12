@@ -25,15 +25,15 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install Nix
       uses: cachix/install-nix-action@v17
-    - run: nix build .#lang-c-benchmark
+    - run: nix build .#lang-c-metrics
     - name: Store benchmark result
       uses: benchmark-action/github-action-benchmark@v1
       with:
-        name: Language Compiler Benchmark
+        name: Language Compiler Metrics
         # What benchmark tool the output.txt came from
         tool: 'customSmallerIsBetter'
         # Where the output from the benchmark tool is stored
-        output-file-path: ./result/bench.json
+        output-file-path: ./result/metrics.json
         # Workflow will fail when an alert happens
         fail-on-alert: true
         github-token: ${{ secrets.GITHUB_TOKEN }}

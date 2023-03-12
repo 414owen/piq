@@ -31,3 +31,4 @@ bench.json
 stacks.folded
 flamegraph.svg
 callgrind*
+*.json

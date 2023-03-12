@@ -25,6 +25,7 @@
       let
         pkgs = import nixpkgs { inherit system; overlays = [ (import ./nix/overlays.nix) ]; };
         lib = pkgs.lib;
+        str = lib.strings;
         stdenv = pkgs.stdenv;
         packageName = "lang-c";
 
@@ -52,7 +53,7 @@
 
         src = pkgs.nix-gitignore.gitignoreSource [] ./.;
 
-        app = {test ? false}: stdenv.mkDerivation rec {
+        app = {files ? ["main"]}: stdenv.mkDerivation rec {
           name = packageName;
 
           inherit src;
@@ -82,9 +83,7 @@
 
           installPhase = ''
             mkdir -p $out/bin
-            ${if test
-              then "mv test $out/bin/test"
-              else "mv main $out/bin/lang"}
+            ${str.concatMapStrings (f: "mv ${f} $out/bin/${f}\n") files}
           '';
         };
 
@@ -96,16 +95,23 @@
       rec {
         packages = {
           ${packageName} = app {};
-          "${packageName}-tests" = app {test = true;};
-          "${packageName}-benchmark" = pkgs.stdenvNoCC.mkDerivation {
-            name = "benchmark";
+          "${packageName}-tests" = app {files = ["test"];};
+          "${packageName}-all" = app {files = ["main" "test"];};
+          "${packageName}-metrics" = pkgs.stdenvNoCC.mkDerivation {
+            name = "metrics";
             unpackPhase = "true";
+            buildInputs = [pkgs.jq];
             buildPhase = ''
-              ${packages."${packageName}-tests"}/bin/test bench -j
+              builddir=$PWD
+              ${packages."${packageName}-all"}/bin/test bench -j
+              pushd ${packages."${packageName}-all"}/bin
+              ${./scripts/collect-size-metrics.sh} > $builddir/sizes.json
+              popd
+              ${./scripts/merge-metrics.sh} sizes.json bench.json > metrics.json
             '';
             installPhase = ''
               mkdir -p $out
-              mv bench.json $out/bench.json
+              mv metrics.json $out/metrics.json
             '';
           };
         };
