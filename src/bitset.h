@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+// bits
+#define BITSET_INITIAL_SIZE 64
+// 1.5x
+#define BITSET_APPLY_GROWTH_FACTOR(cap) ((cap) + ((cap) >> 1))
+
 typedef char *restrict bitset_data;
 
 typedef struct {
