@@ -71,7 +71,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 59.252,
             "unit": "ns"
           },
@@ -190,7 +190,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 56.221,
             "unit": "ns"
           },
@@ -309,7 +309,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 64.326,
             "unit": "ns"
           },
@@ -428,7 +428,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 56.845,
             "unit": "ns"
           },
@@ -547,7 +547,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 55.99,
             "unit": "ns"
           },
@@ -666,7 +666,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 49.811,
             "unit": "ns"
           },
@@ -785,7 +785,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 55.889,
             "unit": "ns"
           },
@@ -904,7 +904,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 56.368,
             "unit": "ns"
           },
@@ -1023,7 +1023,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 71.288,
             "unit": "ns"
           },
@@ -1142,7 +1142,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 56.923,
             "unit": "ns"
           },
@@ -1261,7 +1261,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 50.456,
             "unit": "ns"
           },
@@ -1380,7 +1380,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 51.339,
             "unit": "ns"
           },
@@ -1499,7 +1499,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 70.55,
             "unit": "ns"
           },
@@ -1618,7 +1618,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 50.059,
             "unit": "ns"
           },
@@ -1737,7 +1737,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 50.338,
             "unit": "ns"
           },
@@ -1866,7 +1866,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 51.75,
             "unit": "ns"
           },
@@ -1995,7 +1995,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 54.704,
             "unit": "ns"
           },
@@ -2124,7 +2124,7 @@ window.BENCHMARK_DATA = {
             "unit": "amount"
           },
           {
-            "name": "Parse time per token token",
+            "name": "Parse time per token",
             "value": 48.169,
             "unit": "ns"
           },
