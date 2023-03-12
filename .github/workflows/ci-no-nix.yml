@@ -24,5 +24,6 @@ jobs:
     - uses: webiny/action-conventional-commits@v1.1.0
     - run: sudo add-apt-repository 'deb http://archive.ubuntu.com/ubuntu kinetic universe'
     - run: sudo apt-get install tup
+    - run: tup init
     - run: tup
     - run: ./test --lite
