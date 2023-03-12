@@ -25,12 +25,6 @@ jobs:
     - run: sudo add-apt-repository 'deb http://archive.ubuntu.com/ubuntu kinetic universe'
     - run: sudo apt-get install -y tup re2c lemon libxxhash-dev llvm-dev
     - run: sed -i 's/\^j\^//g' Tupfile
-    - run: |
-        . scripts/environment.sh
-        echo LLVM: $LLVM_CONFIG_FLAGS
-        tup generate build.sh
-        sed -i '1 s/$/\nset -x/' build.sh
-        ./build.sh
     - run: "[ -f .tup/db ] || tup init"
-    - run: tup
+    - run: ". scripts/environment.sh && tup"
     - run: ./test --lite
