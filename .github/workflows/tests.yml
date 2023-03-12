@@ -8,15 +8,18 @@ defaults:
     working-directory: ./
 
 jobs:
-  CI:
+  Checks:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: webiny/action-conventional-commits@v1.1.0
+    - run: ./scripts/checks/formatting.sh
+    - run: ./scripts/checks/headers-have-pragmas.sh
+  Tests:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - uses: webiny/action-conventional-commits@v1.1.0
     # - run: sudo add-apt-repository 'deb http://archive.ubuntu.com/ubuntu kinetic universe'
     - run: sudo apt-get install -y tup re2c lemon libxxhash-dev llvm-dev
-    - run: ./scripts/checks/formatting.sh
-    - run: ./scripts/checks/headers-have-pragmas.sh
     - run: |
         pushd /usr/include
         [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -O ./hedley.h
