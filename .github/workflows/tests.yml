@@ -7,6 +7,9 @@ defaults:
   run:
     working-directory: ./
 
+env:
+  CFLAGS: -O1 -g -DDEBUG
+
 jobs:
   Checks:
     runs-on: ubuntu-latest
