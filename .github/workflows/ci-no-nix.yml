@@ -23,7 +23,7 @@ jobs:
     - uses: actions/checkout@v2
     - uses: webiny/action-conventional-commits@v1.1.0
     - run: sudo add-apt-repository 'deb http://archive.ubuntu.com/ubuntu kinetic universe'
-    - run: sudo apt-get install tup
+    - run: sudo apt-get install -y tup re2c lemon libxxhash-dev llvm-dev
     - run: tup init
     - run: tup
     - run: ./test --lite
