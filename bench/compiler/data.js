@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1678636265882,
+  "lastUpdate": 1678647090692,
   "repoUrl": "https://github.com/414owen/lang-c",
   "entries": {
     "Language Compiler Benchmark": [
@@ -2042,6 +2042,137 @@ window.BENCHMARK_DATA = {
           {
             "name": "Codegen time per parse node",
             "value": 17.437,
+            "unit": "ns"
+          }
+        ]
+      }
+    ],
+    "Language Compiler Metrics": [
+      {
+        "commit": {
+          "author": {
+            "email": "owen@owen.cafe",
+            "name": "Owen Shepherd",
+            "username": "414owen"
+          },
+          "committer": {
+            "email": "owen@owen.cafe",
+            "name": "Owen Shepherd",
+            "username": "414owen"
+          },
+          "distinct": true,
+          "id": "ddb2ae1e51605addae06476247a88ab857d66f75",
+          "message": "ci: Run test/check workflows on master",
+          "timestamp": "2023-03-12T19:50:37+01:00",
+          "tree_id": "baa63a9c74987353b1210ad92934b0b9b554ce05",
+          "url": "https://github.com/414owen/lang-c/commit/ddb2ae1e51605addae06476247a88ab857d66f75"
+        },
+        "date": 1678647090019,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Main filesize",
+            "value": "96800",
+            "unit": "bytes"
+          },
+          {
+            "name": "Test filesize",
+            "value": "172768",
+            "unit": "bytes"
+          },
+          {
+            "name": "Time spent tokenizing",
+            "value": 22375046,
+            "unit": "ns"
+          },
+          {
+            "name": "Total bytes tokenized",
+            "value": 6772532,
+            "unit": "bytes"
+          },
+          {
+            "name": "Total tokens produced",
+            "value": 1440814,
+            "unit": "amount"
+          },
+          {
+            "name": "Tokenization time per token produced",
+            "value": 15.529,
+            "unit": "ns"
+          },
+          {
+            "name": "Tokenization time per byte",
+            "value": 3.304,
+            "unit": "ns"
+          },
+          {
+            "name": "Time spent parsing",
+            "value": 34701281,
+            "unit": "ns"
+          },
+          {
+            "name": "Total tokens parsed",
+            "value": 720407,
+            "unit": "amount"
+          },
+          {
+            "name": "Total parse nodes produced",
+            "value": 480004,
+            "unit": "amount"
+          },
+          {
+            "name": "Parse nodes produced per token",
+            "value": 0.666,
+            "unit": "amount"
+          },
+          {
+            "name": "Parse time per token token",
+            "value": 48.169,
+            "unit": "ns"
+          },
+          {
+            "name": "Parse time per parse node produced",
+            "value": 72.294,
+            "unit": "ns"
+          },
+          {
+            "name": "Time spent typechecking",
+            "value": 150497953,
+            "unit": "ns"
+          },
+          {
+            "name": "Total parse nodes typechecked",
+            "value": 480004,
+            "unit": "amount"
+          },
+          {
+            "name": "Typecheck time per parse node",
+            "value": 313.535,
+            "unit": "ns"
+          },
+          {
+            "name": "Time spent building LLVM IR",
+            "value": 44108284,
+            "unit": "ns"
+          },
+          {
+            "name": "Time spent performing codegen",
+            "value": 1615818,
+            "unit": "ns"
+          },
+          {
+            "name": "Total parse nodes turned into LLVM IR",
+            "value": 480004,
+            "unit": "amount"
+          },
+          {
+            "name": "Time building LLVM IR per parse node",
+            "value": 91.891,
+            "unit": "ns"
+          },
+          {
+            "name": "Codegen time per parse node",
+            "value": 3.366,
             "unit": "ns"
           }
         ]
