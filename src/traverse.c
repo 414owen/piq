@@ -133,9 +133,9 @@ static void tr_push_subs_external(pt_traversal *traversal, parse_node node) {
 
 static void tr_maybe_link_sig(pt_traversal *traversal, node_ind_t node_index) {
   if (traversal->wanted_actions.link_sigs) {
-    traverse_action act = TR_LINK_SIG;
+    const traverse_action act = TR_LINK_SIG;
     VEC_PUSH(&traversal->actions, act);
-    vec_node_ind stack = traversal->node_stack;
+    const vec_node_ind stack = traversal->node_stack;
     node_ind_t target = VEC_GET(stack, stack.len - 1);
     VEC_PUSH(&traversal->node_stack, target);
     VEC_PUSH(&traversal->node_stack, node_index);
@@ -267,14 +267,14 @@ static void tr_push_inout(pt_traversal *traversal, node_ind_t node_index) {
 
 static void tr_maybe_restore_scope(pt_traversal *traversal) {
   if (traversal->wanted_actions.edit_environment) {
-    traverse_action_internal act = TR_ACT_POP_TO;
+    const traverse_action_internal act = TR_ACT_POP_TO;
     VEC_PUSH(&traversal->actions, act);
   }
 }
 
 static void tr_maybe_backup_scope(pt_traversal *traversal) {
   if (traversal->wanted_actions.edit_environment) {
-    traverse_action_internal act = TR_ACT_BACKUP_SCOPE;
+    const traverse_action_internal act = TR_ACT_BACKUP_SCOPE;
     VEC_PUSH(&traversal->actions, act);
   }
 }
@@ -329,9 +329,9 @@ static void tr_handle_initial(pt_traversal *traversal) {
     case PT_ALL_EX_IF: {
       debug_assert(pt_subs_type[data.node.type.all] == SUBS_EXTERNAL);
       tr_maybe_push_expression_out(traversal, data.node_index);
-      node_ind_t cond_ind = PT_IF_COND_IND(traversal->inds, data.node);
-      node_ind_t then_ind = PT_IF_A_IND(traversal->inds, data.node);
-      node_ind_t else_ind = PT_IF_B_IND(traversal->inds, data.node);
+      const node_ind_t cond_ind = PT_IF_COND_IND(traversal->inds, data.node);
+      const node_ind_t then_ind = PT_IF_A_IND(traversal->inds, data.node);
+      const node_ind_t else_ind = PT_IF_B_IND(traversal->inds, data.node);
       tr_push_initial(traversal, else_ind);
       tr_maybe_add_block(traversal);
       tr_push_initial(traversal, then_ind);
