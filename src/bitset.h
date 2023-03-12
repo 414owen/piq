@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-typedef char *bitset_data;
+typedef char *restrict bitset_data;
 
 typedef struct {
   // TODO store stuff inline here and with cap
@@ -27,7 +27,7 @@ bitset bs_new(void);
 bitset bs_new_false_n(size_t n);
 void bs_resize(bitset *bs, size_t size);
 void bs_grow(bitset *bs, size_t size);
-bool bs_data_get(bitset_data data, size_t ind);
+// bool bs_data_get(bitset_data data, size_t ind);
 bool bs_get(bitset bs, size_t ind);
 void bs_data_set(bitset_data bs, size_t ind);
 void bs_data_update(bitset_data bs, size_t ind, bool b);
