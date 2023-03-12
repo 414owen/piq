@@ -32,5 +32,4 @@ jobs:
     - run: "[ -f .tup/db ] || tup init"
     - run: ". scripts/environment.sh && tup"
     - run: ./test --lite
-    - run: valgrind --leak-check=full --error-exitcode=1 \
-        ${packages."${packageName}-tests"}/bin/test --lite
+    - run: valgrind --leak-check=full --error-exitcode=1 test --lite
