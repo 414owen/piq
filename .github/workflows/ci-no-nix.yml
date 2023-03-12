@@ -23,6 +23,6 @@ jobs:
     - uses: actions/checkout@v2
     - uses: webiny/action-conventional-commits@v1.1.0
     - run: sudo add-apt-repository 'deb http://archive.ubuntu.com/ubuntu kinetic universe'
-    - run: apt install tup
+    - run: sudo apt-get install tup
     - run: tup
     - run: ./test --lite
