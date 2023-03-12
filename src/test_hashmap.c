@@ -32,7 +32,8 @@ void test_hashmap(test_state *state) {
     test_start(state, "empty");
     a_hashmap hm = mk_hm();
     for (u64 i = 0; i < 1000; i++) {
-      if (ahm_lookup(&hm, &i, NULL) != NULL) {
+      u32 res = ahm_lookup(&hm, &i, NULL);
+      if (res != hm.n_buckets) {
         failf(state, "Expected hashmap to be empty!");
       }
     }
@@ -50,11 +51,15 @@ void test_hashmap(test_state *state) {
     for (u64 i = 0; i < 1000; i++) {
       char *s = format_to_string("%lu", i);
       free(s);
-      u64 *res = ahm_lookup(&hm, &i, NULL);
-      if (res == NULL) {
+      u32 res_ind = ahm_lookup(&hm, &i, NULL);
+      u64 key_res = ((uint64_t *)hm.keys)[res_ind];
+      u64 val_res = ((uint64_t *)hm.vals)[res_ind];
+      if (res_ind == hm.n_buckets) {
         failf(state, "Expected value %llu", i);
-      } else if (*res != i + 1) {
-        failf(state, "Wrong value %llu: %llu", i, *res);
+      } else if (key_res != i) {
+        failf(state, "Wrong key %llu: %llu", i, key_res);
+      } else if (val_res != i + 1) {
+        failf(state, "Wrong value %llu: %llu", i, val_res);
       }
     }
     ahm_free(&hm);
@@ -74,11 +79,36 @@ void test_hashmap(test_state *state) {
     for (u64 i = 0; i < 1000; i++) {
       char *s = format_to_string("%lu", i);
       free(s);
-      u64 *res = ahm_lookup(&hm, &i, NULL);
-      if (res == NULL) {
+      u32 res_ind = ahm_lookup(&hm, &i, NULL);
+      u64 key_res = ((uint64_t *)hm.keys)[res_ind];
+      u64 val_res = ((uint64_t *)hm.vals)[res_ind];
+      if (res_ind == hm.n_buckets) {
         failf(state, "Expected value %llu", i);
-      } else if (*res != i + n) {
-        failf(state, "Wrong value %llu: %llu", i, *res);
+      } else if (key_res != i) {
+        failf(state, "Wrong key %llu: %llu", i, key_res);
+      } else if (val_res != i + n) {
+        failf(state, "Wrong value %llu: %llu", i, val_res);
+      }
+    }
+    ahm_free(&hm);
+    test_end(state);
+  }
+
+  {
+    test_start(state, "hashset");
+    a_hashmap hm = hashset_new(u64, cmp_u64, hash_u64, hash_u64);
+    for (u64 i = 0; i < 1000; i++) {
+      ahm_upsert(&hm, &i, &i, NULL, NULL);
+    }
+    for (u64 i = 0; i < 1000; i++) {
+      char *s = format_to_string("%lu", i);
+      free(s);
+      u32 res_ind = ahm_lookup(&hm, &i, NULL);
+      u64 key_res = ((uint64_t *)hm.keys)[res_ind];
+      if (res_ind == hm.n_buckets) {
+        failf(state, "Expected value %llu", i);
+      } else if (key_res != i) {
+        failf(state, "Wrong key %llu: %llu", i, key_res);
       }
     }
     ahm_free(&hm);

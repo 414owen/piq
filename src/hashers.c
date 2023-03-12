@@ -52,18 +52,19 @@ uint32_t hash_newtype(const void *key_p, const void *ctx) {
 }
 
 uint32_t hash_stored_type(const void *key_p, const void *ctx_p) {
-  type *key = (type *)key_p;
+  type_ref key_ind = *((type_ref *)key_p);
   type_builder *builder = (type_builder *)ctx_p;
-  switch (type_repr(key->check_tag)) {
+  type key = VEC_GET(builder->types, key_ind);
+  switch (type_repr(key.check_tag)) {
     case SUBS_EXTERNAL: {
-      uint32_t hash = hash_eight_bytes(0, key->tag);
-      type_ref *subs = &VEC_DATA_PTR(&builder->inds)[key->subs_start];
-      return hash_bytes(hash, (uint8_t *)subs, key->sub_amt * sizeof(type_ref));
+      uint32_t hash = hash_eight_bytes(0, key.tag);
+      type_ref *subs = &VEC_DATA_PTR(&builder->inds)[key.subs_start];
+      return hash_bytes(hash, (uint8_t *)subs, key.sub_amt * sizeof(type_ref));
     }
     default: {
-      HASH_TYPE h1 = hash_eight_bytes(0, key->tag);
-      HASH_TYPE h2 = hash_eight_bytes(h1, key->sub_a);
-      return hash_eight_bytes(h2, key->sub_b);
+      HASH_TYPE h1 = hash_eight_bytes(0, key.tag);
+      HASH_TYPE h2 = hash_eight_bytes(h1, key.sub_a);
+      return hash_eight_bytes(h2, key.sub_b);
     }
   }
 }
