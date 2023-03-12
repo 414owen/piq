@@ -2,7 +2,7 @@ window.BENCHMARK_DATA = {
   "lastUpdate": 1678647090692,
   "repoUrl": "https://github.com/414owen/lang-c",
   "entries": {
-    "Language Compiler Benchmark": [
+    "Language Compiler Metrics": [
       {
         "commit": {
           "author": {
@@ -2045,9 +2045,7 @@ window.BENCHMARK_DATA = {
             "unit": "ns"
           }
         ]
-      }
-    ],
-    "Language Compiler Metrics": [
+      },
       {
         "commit": {
           "author": {
