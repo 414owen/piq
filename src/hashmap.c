@@ -1,6 +1,9 @@
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
+#include "consts.h"
 #include "hashmap.h"
 #include "typedefs.h"
 
@@ -54,7 +57,18 @@ static uint32_t ahm_get_bucket_ind(a_hashmap *hm, const void *key, hasher hsh,
 }
 
 static void rehash(a_hashmap *hm, void *context) {
-  a_hashmap res = __ahm_new(hm->n_buckets * AHM_GROWTH_FACTOR,
+  u32 n_buckets = hm->n_buckets;
+  u32 new_num_buckets = n_buckets * AHM_GROWTH_FACTOR;
+  if (n_buckets > (UINT32_MAX >> 1)) {
+    if (n_buckets == UINT32_MAX) {
+      printf("Ran out of hashmap space.\n"
+             "Please report this, at %s\n",
+             issue_tracker_url);
+      exit(1);
+    }
+    new_num_buckets = UINT32_MAX;
+  }
+  a_hashmap res = __ahm_new(new_num_buckets,
                             hm->keysize,
                             hm->valsize,
                             hm->compare_newkey,

@@ -13,3 +13,4 @@ typedef uint32_t environment_ind_t;
 
 extern const char *const program_name;
 extern const char path_sep;
+extern const char *issue_tracker_url;
