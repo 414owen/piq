@@ -1,0 +1,41 @@
+name: Tests
+
+on:
+  - pull_request
+
+defaults:
+  run:
+    working-directory: ./
+
+env:
+  CFLAGS: -O1 -g -DDEBUG
+
+jobs:
+  Checks:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: webiny/action-conventional-commits@v1.1.0
+    - uses: actions/checkout@v2
+    - run: ./scripts/checks/formatting.sh
+    - run: ./scripts/checks/headers-have-pragmas.sh
+  Tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: tup re2c lemon libxxhash-dev llvm-dev valgrind
+        version: 1.0
+    - run: |
+        pushd /usr/include
+        [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -O ./hedley.h
+        predef() {
+          sudo svn checkout https://github.com/natefoo/predef/trunk/predef
+        }
+        [ -d predef ] || predef
+        popd
+    - run: sed -i 's/\^j\^//g' Tupfile
+    - run: "[ -f .tup/db ] || tup init"
+    - run: ". scripts/environment.sh && tup"
+    - run: ./test --lite
+    - run: valgrind --leak-check=full --error-exitcode=1 ./test --lite

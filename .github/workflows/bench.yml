@@ -1,4 +1,4 @@
-name: Benchmarks
+name: Bench
 
 on:
   push:
@@ -10,22 +10,32 @@ defaults:
     working-directory: ./
 
 env:
-  NIXPKGS_ALLOW_BROKEN: 1
-
-permissions:
-  # deployments permission to deploy GitHub pages website
-  deployments: write
-  # contents permission to update benchmark contents in gh-pages branch
-  contents: write
+  CFLAGS: -s -flto -DNDEBUG -DTIME_ALL
 
 jobs:
-  CI:
+  Bench:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Install Nix
-      uses: cachix/install-nix-action@v17
-    - run: nix build .#lang-c-metrics
+    - uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: tup re2c lemon libxxhash-dev llvm-dev valgrind
+        version: 1.0
+    - run: |
+        pushd /usr/include
+        [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -O ./hedley.h
+        predef() {
+          sudo svn checkout https://github.com/natefoo/predef/trunk/predef
+        }
+        [ -d predef ] || predef
+        popd
+    - run: sed -i 's/\^j\^//g' Tupfile
+    - run: "[ -f .tup/db ] || tup init"
+    - run: ". scripts/environment.sh && tup"
+    - run: git reset --hard
+    - run: ./test bench -j
+    - run: ./scripts/collect-size-metrics.sh > sizes.json
+    - run: ./scripts/merge-metrics.sh sizes.json bench.json > metrics.json
     - name: Store benchmark result
       uses: benchmark-action/github-action-benchmark@v1
       with:
@@ -33,7 +43,7 @@ jobs:
         # What benchmark tool the output.txt came from
         tool: 'customSmallerIsBetter'
         # Where the output from the benchmark tool is stored
-        output-file-path: ./result/metrics.json
+        output-file-path: ./metrics.json
         # Workflow will fail when an alert happens
         fail-on-alert: true
         github-token: ${{ secrets.GITHUB_TOKEN }}
