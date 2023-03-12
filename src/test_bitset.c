@@ -43,7 +43,7 @@ void test_bitset(test_state *state) {
     test_assert_eq(state, bs.cap, 1);
     bs_grow(&bs, 9);
     test_assert_eq(state, bs.len, 0);
-    test_assert_eq(state, bs.cap, VEC_FIRST_SIZE);
+    test_assert_eq(state, bs.cap, BITSET_INITIAL_SIZE);
     bs_free(&bs);
 
     test_end(state);
@@ -73,10 +73,10 @@ void test_bitset(test_state *state) {
     test_assert_eq(state, bs.cap, 0);
     bs_push(&bs, true);
     test_assert_eq(state, bs.len, 1);
-    test_assert_eq(state, bs.cap, VEC_FIRST_SIZE);
+    test_assert_eq(state, bs.cap, BITSET_INITIAL_SIZE);
     bs_push(&bs, false);
     test_assert_eq(state, bs.len, 2);
-    test_assert_eq(state, bs.cap, VEC_FIRST_SIZE);
+    test_assert_eq(state, bs.cap, BITSET_INITIAL_SIZE);
     test_assert_eq(state, bs_get(bs, 0), true);
     test_assert_eq(state, bs_get(bs, 1), false);
     bs_free(&bs);

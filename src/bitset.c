@@ -27,7 +27,8 @@ void bs_resize(bitset *restrict bs, size_t bits) {
 
 void bs_grow(bitset *restrict bs, size_t bits) {
   if (bits > CHAR_BIT * bs->cap) {
-    size_t new_size = CHAR_BIT * MAX(VEC_FIRST_SIZE, bs->cap * 2);
+    size_t new_size =
+      CHAR_BIT * MAX(BITSET_INITIAL_SIZE, BITSET_APPLY_GROWTH_FACTOR(bs->cap));
     new_size = MAX(bits, new_size);
     bs_resize(bs, new_size);
   }
