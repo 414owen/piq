@@ -30,6 +30,7 @@ jobs:
     - run: sed -i 's/\^j\^//g' Tupfile
     - run: "[ -f .tup/db ] || tup init"
     - run: ". scripts/environment.sh && tup"
+    - run: git reset --hard
     - run: ./test bench -j
     - run: ./scripts/collect-size-metrics.sh > sizes.json
     - run: ./scripts/merge-metrics.sh sizes.json bench.json > metrics.json
