@@ -8,12 +8,10 @@
 
 #include "consts.h"
 #include "util.h"
-
-typedef uint8_t u8;
-typedef uint32_t u32;
+#include "typedefs.h"
 
 #define VEC_LEN_T u32
-#define VEC_FIRST_SIZE 10
+#define VEC_FIRST_SIZE 8
 
 #ifndef INLINE_VEC_BYTES
 #define INLINE_VEC_BYTES 0

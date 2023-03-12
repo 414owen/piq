@@ -1,6 +1,13 @@
 #include "vec.h"
 #include "util.h"
 
+// This doesn't work for zero
+// so we ensure that zero length vectors get handled separately
+#define VEC_APPLY_GROWTH_FACTOR(cap, len, additional)                          \
+  MAX(((cap) + ((cap) >> 1)), len + additional)
+#define VEC_APPLY_GROWTH_FACTOR_WITH_MIN(cap, len, additional)                 \
+  MAX(VEC_APPLY_GROWTH_FACTOR(cap, len, additional), VEC_FIRST_SIZE)
+
 #if INLINE_VEC_BYTES > 0
 static void __vec_resize_internal_to_external(vec_void *vec, VEC_VEC_LEN_T cap,
                                               size_t elemsize) {
@@ -61,10 +68,9 @@ void __vec_push(vec_void *vec, void *el, size_t elemsize) {
   if (vec->len > inline_amt) {
     // we're external
     // predicated this way for the branch predictor
-    if (vec->len < vec->cap) {
-    } else {
+    if (HEDLEY_UNLIKELY(vec->len == vec->cap)) {
       __vec_resize_external_to_external(
-        vec, MAX((vec->len + 1) * 2, VEC_FIRST_SIZE), elemsize);
+        vec, VEC_APPLY_GROWTH_FACTOR(vec->cap, vec->len, 1), elemsize);
     }
     memcpy(((char *)vec->data) + elemsize * vec->len, el, elemsize);
   } else {
@@ -72,7 +78,7 @@ void __vec_push(vec_void *vec, void *el, size_t elemsize) {
     if (vec->len == inline_amt) {
       // going external
       __vec_resize_internal_to_external(
-        vec, MAX((vec->len + 1) * 2, VEC_FIRST_SIZE), elemsize);
+        vec, VEC_APPLY_GROWTH_FACTOR_WITH_MIN(vec->cap, vec->len, 1), elemsize);
       memcpy(((char *)vec->data) + elemsize * vec->len, el, elemsize);
     } else {
       memcpy(vec->inline_data + elemsize * vec->len, el, elemsize);
@@ -80,9 +86,9 @@ void __vec_push(vec_void *vec, void *el, size_t elemsize) {
   }
 #else
   // predicated this way for the branch predictor
-  if (HEDLEY_PREDICT_FALSE(vec->cap <= vec->len, 0.9)) {
+  if (HEDLEY_UNLIKELY(vec->cap == vec->len)) {
     __vec_resize_external_to_external(
-      vec, MAX(VEC_FIRST_SIZE, (vec->len + 1) * 2), elemsize);
+      vec, VEC_APPLY_GROWTH_FACTOR_WITH_MIN(vec->cap, vec->len, 1), elemsize);
   } else if (vec->cap == 0) {
     __vec_resize_null_to_external(vec, MAX(VEC_FIRST_SIZE, 1), elemsize);
   }
@@ -99,10 +105,9 @@ void __vec_append(vec_void *restrict vec, void *restrict els, VEC_LEN_T amt,
   if (vec->len > inline_amt) {
     // we're external
     // predicated this way for the branch predictor
-    if (vec->len + amt <= vec->cap) {
-    } else {
+    if (HEDLEY_UNLIKELY(vec->len + amt <= vec->cap)) {
       __vec_resize_external_to_external(
-        vec, MAX((vec->len + amt) * 2, VEC_FIRST_SIZE), elemsize);
+        vec, VEC_APPLY_GROWTH_FACTOR(vec->cap, vec->len, amt), elemsize);
     }
     memcpy(((char *)vec->data) + elemsize * vec->len, els, elemsize * amt);
   } else {
@@ -110,7 +115,9 @@ void __vec_append(vec_void *restrict vec, void *restrict els, VEC_LEN_T amt,
     if (vec->len + amt > inline_amt) {
       // going external
       __vec_resize_internal_to_external(
-        vec, MAX((vec->len + amt) * 2, VEC_FIRST_SIZE), elemsize);
+        vec,
+        VEC_APPLY_GROWTH_FACTOR_WITH_MIN(vec->cap, vec->len, amt),
+        elemsize);
       memcpy(((char *)vec->data) + elemsize * vec->len, els, elemsize * amt);
     } else {
       memcpy(vec->inline_data + elemsize * vec->len, els, elemsize * amt);
@@ -123,7 +130,7 @@ void __vec_append(vec_void *restrict vec, void *restrict els, VEC_LEN_T amt,
     __vec_resize_null_to_external(vec, MAX(VEC_FIRST_SIZE, amt), elemsize);
   } else {
     __vec_resize_external_to_external(
-      vec, MAX(VEC_FIRST_SIZE, (vec->len + amt) * 2), elemsize);
+      vec, VEC_APPLY_GROWTH_FACTOR(vec->cap, vec->len, amt), elemsize);
   }
   memcpy(((char *)vec->data) + elemsize * vec->len, els, elemsize * amt);
 
@@ -153,10 +160,9 @@ void __vec_replicate(vec_void *vec, void *el, VEC_LEN_T amt, size_t elemsize) {
   if (vec->len > inline_amt) {
     // we're external
     // predicated this way for the branch predictor
-    if (vec->len + amt <= vec->cap) {
-    } else {
+    if (HEDLEY_UNLIKELY(vec->len + amt <= vec->cap)) {
       __vec_resize_external_to_external(
-        vec, MAX((vec->len + amt) * 2, VEC_FIRST_SIZE), elemsize);
+        vec, VEC_APPLY_GROWTH_FACTOR(vec->cap, vec->len, amt), elemsize);
     }
     memset_arbitrary(
       (char *)vec->data + elemsize * vec->len, el, amt, elemsize);
@@ -165,7 +171,9 @@ void __vec_replicate(vec_void *vec, void *el, VEC_LEN_T amt, size_t elemsize) {
     if (vec->len + amt > inline_amt) {
       // going external
       __vec_resize_internal_to_external(
-        vec, MAX((vec->len + amt) * 2, VEC_FIRST_SIZE), elemsize);
+        vec,
+        VEC_APPLY_GROWTH_FACTOR_WITH_MIN(vec->cal, vec->len, amt),
+        elemsize);
       memset_arbitrary(
         (char *)vec->data + elemsize * vec->len, el, amt, elemsize);
     } else {
@@ -180,7 +188,7 @@ void __vec_replicate(vec_void *vec, void *el, VEC_LEN_T amt, size_t elemsize) {
     __vec_resize_null_to_external(vec, MAX(VEC_FIRST_SIZE, amt), elemsize);
   } else {
     __vec_resize_external_to_external(
-      vec, MAX(VEC_FIRST_SIZE, (vec->len + amt) * 2), elemsize);
+      vec, VEC_APPLY_GROWTH_FACTOR(vec->cap, vec->len, amt), elemsize);
   }
   memset_arbitrary(
     ((char *)vec->data) + elemsize * vec->len, el, amt, elemsize);
