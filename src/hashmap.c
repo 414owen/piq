@@ -74,18 +74,18 @@ static void rehash(a_hashmap *hm, void *context) {
   hm->occupied = res.occupied;
 }
 
-void *ahm_lookup(a_hashmap *hm, const void *key, void *context) {
+u32 ahm_lookup(a_hashmap *hm, const void *key, void *context) {
   uint32_t i = ahm_get_bucket_ind(hm, key, hm->hash_newkey, context);
   char *keys = hm->keys;
   while (bs_get(hm->occupied, i)) {
     if (hm->compare_newkey(key, keys + i * hm->keysize, context)) {
-      return hm->vals + i * hm->valsize;
+      return i;
     }
     i++;
     // mod
     i &= hm->n_buckets - 1;
   }
-  return NULL;
+  return hm->n_buckets;
 }
 
 static void ahm_insert_prelude(a_hashmap *hm, void *context) {

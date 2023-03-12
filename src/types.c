@@ -4,6 +4,7 @@
 #include "vec.h"
 
 #include "hashers.h"
+#include "typedefs.h"
 
 NON_NULL_PARAMS
 static type_ref find_inline_type(type_builder *tb, type_check_tag tag,
@@ -13,16 +14,20 @@ static type_ref find_inline_type(type_builder *tb, type_check_tag tag,
     .sub_a = sub_a,
     .sub_b = sub_b,
   };
-  uint32_t *ind = ahm_lookup(&tb->type_to_index, &key, tb);
+  u32 bucket_ind = ahm_lookup(&tb->type_to_index, &key, tb);
   // TODO remove this branch somehow
-  return ind == NULL ? tb->types.len : *ind;
+  return bucket_ind == tb->type_to_index.n_buckets
+           ? tb->types.len
+           : ((u32 *)tb->type_to_index.keys)[bucket_ind];
 }
 
 NON_NULL_PARAMS
 static type_ref find_type(type_builder *tb, const type_key_with_ctx *key) {
-  uint32_t *ind = ahm_lookup(&tb->type_to_index, key, tb);
+  u32 bucket_ind = ahm_lookup(&tb->type_to_index, key, tb);
   // TODO remove this branch somehow
-  return ind == NULL ? tb->types.len : *ind;
+  return bucket_ind == tb->type_to_index.n_buckets
+           ? tb->types.len
+           : ((u32 *)tb->type_to_index.keys)[bucket_ind];
 }
 
 static type_ref insert_inline_type_to_hm(type_builder *tb, type_check_tag tag,
@@ -34,7 +39,7 @@ static type_ref insert_inline_type_to_hm(type_builder *tb, type_check_tag tag,
   };
   VEC_PUSH(&tb->types, t);
   type_ref res = tb->types.len - 1;
-  ahm_insert_stored(&tb->type_to_index, &t, &res, tb);
+  ahm_insert_stored(&tb->type_to_index, &res, NULL, tb);
   return tb->types.len - 1;
 }
 
@@ -80,7 +85,7 @@ type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
   VEC_PUSH(&tb->types, t);
   type_ref res = tb->types.len - 1;
   // won't update
-  ahm_insert_stored(&tb->type_to_index, &t, &res, tb);
+  ahm_insert_stored(&tb->type_to_index, &res, &res, tb);
   return res;
 }
 
@@ -258,21 +263,22 @@ static bool typeref_arrs_eq(const type_ref *restrict as,
 static bool cmp_newtype_eq(const void *key_p, const void *stored_key,
                            const void *ctx) {
   type_key_with_ctx *key = (type_key_with_ctx *)key_p;
-  type *snd = (type *)stored_key;
+  const type_ref snd_ind = *((type_ref *)stored_key);
   type_builder *builder = (type_builder *)ctx;
+  type snd = VEC_GET(builder->types, snd_ind);
 
-  if (key->tag == snd->check_tag) {
+  if (key->tag == snd.check_tag) {
     switch (type_repr(key->tag)) {
       case SUBS_NONE:
         return true;
       case SUBS_TWO:
-        return key->sub_a == snd->sub_a && key->sub_b == snd->sub_b;
+        return key->sub_a == snd.sub_a && key->sub_b == snd.sub_b;
       case SUBS_ONE:
-        return key->sub_a == snd->sub_a;
+        return key->sub_a == snd.sub_a;
       case SUBS_EXTERNAL:
-        return key->sub_amt == snd->sub_amt &&
+        return key->sub_amt == snd.sub_amt &&
                typeref_arrs_eq(key->subs,
-                               &VEC_DATA_PTR(&builder->inds)[snd->subs_start],
+                               &VEC_DATA_PTR(&builder->inds)[snd.subs_start],
                                key->sub_amt);
     }
   }
@@ -285,7 +291,7 @@ type_builder new_type_builder(void) {
     .types = VEC_NEW,
     .inds = VEC_NEW,
     .type_to_index =
-      ahm_new(type, VEC_LEN_T, cmp_newtype_eq, hash_newtype, hash_stored_type),
+      hashset_new(type_ref, cmp_newtype_eq, hash_newtype, hash_stored_type),
     .substitutions = VEC_NEW,
   };
   return type_builder;
@@ -297,7 +303,7 @@ type_builder new_type_builder_with_builtins(void) {
   VEC_APPEND(&res.types, builtin_type_amount, builtin_types);
   VEC_APPEND(&res.inds, builtin_type_ind_amount, builtin_type_inds);
   for (VEC_LEN_T i = 0; i < res.types.len; i++) {
-    ahm_insert_stored(&res.type_to_index, VEC_GET_PTR(res.types, i), &i, &res);
+    ahm_insert_stored(&res.type_to_index, &i, NULL, &res);
   }
   return res;
 }
