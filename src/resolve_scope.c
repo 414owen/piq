@@ -24,12 +24,10 @@ static bool strn1eq(const char *a, const char *b, size_t alen) {
 // This extremely simple string comparison improved compile time by about 3-4%
 static bool streq(const char *restrict a, const char *restrict b,
                   buf_ind_t len) {
-  while (len--) {
-    if (*a != *b) {
+  for (size_t i = 0; i < len; i++) {
+    if (a[i] != b[i]) {
       return false;
     }
-    a++;
-    b++;
   }
   return true;
 }
@@ -48,13 +46,12 @@ static node_ind_t lookup_str_ref(const char *source_file, scope scope,
     size_t ind = scope.bindings.len - 1 - i;
     str_ref a = VEC_GET(scope.bindings, ind);
     if (bs_get(scope.is_builtin, ind)) {
-      if (strn1eq(bndp, a.builtin, bnd.len)) {
+      if (*bndp == *a.builtin && strn1eq(bndp, a.builtin, bnd.len)) {
         return ind;
       }
     } else {
-      if (a.binding.len != bnd.len)
-        continue;
-      if (streq(bndp, &source_file[a.binding.start], bnd.len))
+      const char *b = &source_file[a.binding.start];
+      if (a.binding.len == bnd.len && *bndp == *b && streq(bndp, b, bnd.len))
         return ind;
     }
   }
