@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  - pull_request
+
+defaults:
+  run:
+    working-directory: ./
+
+env:
+  NIXPKGS_ALLOW_BROKEN: 1
+
+permissions:
+  # deployments permission to deploy GitHub pages website
+  deployments: write
+  # contents permission to update benchmark contents in gh-pages branch
+  contents: write
+
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: webiny/action-conventional-commits@v1.1.0
+    - run: sudo add-apt-repository 'deb http://archive.ubuntu.com/ubuntu kinetic universe'
+    - run: apt install tup
+    - run: tup
+    - run: ./test --lite
