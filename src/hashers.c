@@ -1,5 +1,6 @@
 #include <stdint.h>
 
+#include "resolve_scope.h"
 #include "types.h"
 
 HEDLEY_INLINE
@@ -13,26 +14,31 @@ static uint32_t hash_eight_bytes(uint32_t seed, uint64_t bytes) {
   return (rotate_left(seed, 5) ^ bytes) * 0x9e3779b9;
 }
 
-static uint32_t hash_bytes(uint32_t seed, uint8_t *bytes, uint32_t n_bytes) {
+static uint32_t hash_bytes(uint32_t seed, const uint8_t *bytes,
+                           uint32_t n_bytes) {
   while (n_bytes >= 8) {
     seed = hash_eight_bytes(seed, *((uint64_t *)bytes));
     bytes += 8;
     n_bytes -= 8;
   }
   if (n_bytes >= 4) {
-    seed = hash_eight_bytes(seed, (uint64_t) * ((uint32_t *)bytes));
+    seed = hash_eight_bytes(seed, (uint64_t)(*((uint32_t *)bytes)));
     bytes += 4;
     n_bytes -= 4;
   }
   if (n_bytes >= 2) {
-    seed = hash_eight_bytes(seed, (uint64_t) * ((uint16_t *)bytes));
+    seed = hash_eight_bytes(seed, (uint64_t)(*((uint16_t *)bytes)));
     bytes += 2;
     n_bytes -= 2;
   }
   if (n_bytes == 1) {
-    seed = hash_eight_bytes(seed, (uint64_t) * ((uint8_t *)bytes));
+    seed = hash_eight_bytes(seed, (uint64_t)(*((uint8_t *)bytes)));
   }
   return seed;
+}
+
+static uint32_t hash_string(uint32_t seed, const char *str) {
+  return hash_bytes(seed, (uint8_t *)str, strlen(str));
 }
 
 uint32_t hash_newtype(const void *key_p, const void *ctx) {
@@ -49,6 +55,22 @@ uint32_t hash_newtype(const void *key_p, const void *ctx) {
       return hash_eight_bytes(h2, key->sub_b);
     }
   }
+}
+
+uint32_t hash_binding(const void *binding_p, const void *ctx_p) {
+  const binding bnd = *((binding *)binding_p);
+  const char *source_file = ((resolve_map_ctx *)ctx_p)->source_file;
+  return hash_bytes(0, (u8 *)source_file + bnd.start, bnd.len);
+}
+
+uint32_t hash_stored_binding(const void *binding_ind_p, const void *ctx_p) {
+  const node_ind_t bnd_ind = *((node_ind_t *)binding_ind_p);
+  const resolve_map_ctx ctx = *((resolve_map_ctx *)ctx_p);
+  str_ref sref = VEC_GET(ctx.scope->bindings, bnd_ind);
+  return bs_get(ctx.scope->is_builtin, bnd_ind)
+           ? hash_string(0, sref.builtin)
+           : hash_bytes(
+               0, (u8 *)ctx.source_file + sref.binding.start, sref.binding.len);
 }
 
 uint32_t hash_stored_type(const void *key_p, const void *ctx_p) {
