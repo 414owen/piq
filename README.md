@@ -12,6 +12,10 @@ attributes:
 * bootstrappable
 * minimal
 
+# Links
+
+[benchmarks](https://lang-c.pages.dev/bench/compiler/)
+
 # Goal
 
 A language that does everything right
