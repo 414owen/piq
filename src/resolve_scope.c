@@ -86,6 +86,7 @@ typedef struct {
   pt_traverse_elem elem;
   scope environment;
   scope type_environment;
+  u32 num_names_looked_up;
 } scope_calculator_state;
 
 // Setting the binding's bariable_index to the thing we're about to push
@@ -138,6 +139,7 @@ static void precalculate_scope_visit(scope_calculator_state *state) {
     default:
       return;
   }
+  state->num_names_looked_up++;
   node_ind_t index = lookup_str_ref(state->input, scope, node.span);
   if (index == scope.bindings.len) {
     VEC_PUSH(&state->not_found, node.span);
@@ -146,8 +148,7 @@ static void precalculate_scope_visit(scope_calculator_state *state) {
     index;
 }
 
-resolution_errors resolve_bindings(parse_tree tree,
-                                   const char *restrict input) {
+resolution_res resolve_bindings(parse_tree tree, const char *restrict input) {
   pt_traversal traversal = pt_traverse(tree, TRAVERSE_RESOLVE_BINDINGS);
   scope_calculator_state state = {
     .not_found = VEC_NEW,
@@ -155,7 +156,13 @@ resolution_errors resolve_bindings(parse_tree tree,
     .input = input,
     .environment = scope_new(),
     .type_environment = scope_new(),
+    .num_names_looked_up = 0,
   };
+
+#ifdef TIME_NAME_RESOLUTION
+  struct timespec start = get_monotonic_time();
+#endif
+
   bs_push_true_n(&state.type_environment.is_builtin, named_builtin_type_amount);
   bs_push_true_n(&state.environment.is_builtin, builtin_term_amount);
   for (node_ind_t i = 0; i < named_builtin_type_amount; i++) {
@@ -177,9 +184,16 @@ resolution_errors resolve_bindings(parse_tree tree,
         break;
       case TR_END: {
         const VEC_LEN_T len = state.not_found.len;
-        resolution_errors res = {
-          .binding_amt = len,
-          .bindings = VEC_FINALIZE(&state.not_found),
+        resolution_res res = {
+          .not_found =
+            {
+              .binding_amt = len,
+              .bindings = VEC_FINALIZE(&state.not_found),
+            },
+#ifdef TIME_NAME_RESOLUTION
+          .time_taken = time_since_monotonic(start),
+          .num_names_looked_up = state.num_names_looked_up,
+#endif
         };
         scope_free(state.environment);
         scope_free(state.type_environment);

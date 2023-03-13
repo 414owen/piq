@@ -300,7 +300,15 @@ typedef struct {
   node_ind_t binding_amt;
 } resolution_errors;
 
-resolution_errors resolve_bindings(parse_tree tree, const char *restrict input);
+typedef struct {
+  resolution_errors not_found;
+#ifdef TIME_NAME_RESOLUTION
+  struct timespec time_taken;
+  u32 num_names_looked_up;
+#endif
+} resolution_res;
+
+resolution_res resolve_bindings(parse_tree tree, const char *restrict input);
 
 #define PT_EXPRESSION_CASES                                                    \
   PT_ALL_EX_CALL:                                                              \

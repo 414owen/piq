@@ -28,9 +28,9 @@ static void reply(char *input, FILE *out) {
     goto end_b;
   }
 
-  resolution_errors res_res = resolve_bindings(pres.tree, input);
-  if (res_res.binding_amt > 0) {
-    print_resolution_errors(stdout, input, res_res);
+  resolution_res res_res = resolve_bindings(pres.tree, input);
+  if (res_res.not_found.binding_amt > 0) {
+    print_resolution_errors(stdout, input, res_res.not_found);
   }
   tc_res tc_res = typecheck(pres.tree);
   if (tc_res.error_amt > 0) {

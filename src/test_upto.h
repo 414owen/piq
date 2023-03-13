@@ -13,36 +13,42 @@
 
 #ifdef TIME_TOKENIZER
 #define add_scanner_timings(...) add_scanner_timings_internal(__VA_ARGS__)
+void add_scanner_timings_internal(test_state *state, const char *restrict input,
+                                  tokens_res tres);
 #else
 #define add_scanner_timings(...) pass
 #endif
 
 #ifdef TIME_PARSER
 #define add_parser_timings(...) add_parser_timings_internal(__VA_ARGS__)
+void add_parser_timings_internal(test_state *state, tokens_res tres,
+                                 parse_tree_res pres);
 #else
 #define add_parser_timings(...) pass
 #endif
 
+#ifdef TIME_NAME_RESOLUTION
+#define add_name_resolution_timings(...) add_name_resolution_timings_internal(__VA_ARGS__)
+void add_name_resolution_timings_internal(test_state *state, resolution_res res);
+#else
+#define add_name_resolution_timings(...) pass
+#endif
+
 #ifdef TIME_TYPECHECK
 #define add_typecheck_timings(...) add_typecheck_timings_internal(__VA_ARGS__)
+void add_typecheck_timings_internal(test_state *state, parse_tree tree,
+                                    tc_res tc_res);
 #else
 #define add_typecheck_timings(...) pass
 #endif
 
 #ifdef TIME_CODEGEN
 #define add_codegen_timings(...) add_codegen_timings_internal(__VA_ARGS__)
+void add_codegen_timings_internal(test_state *state, parse_tree tree,
+                                  llvm_res llres);
 #else
 #define add_codegen_timings(...) pass
 #endif
-
-void add_scanner_timings_internal(test_state *state, const char *restrict input,
-                                  tokens_res tres);
-void add_parser_timings_internal(test_state *state, tokens_res tres,
-                                 parse_tree_res pres);
-void add_typecheck_timings_internal(test_state *state, parse_tree tree,
-                                    tc_res tc_res);
-void add_codegen_timings_internal(test_state *state, parse_tree tree,
-                                  llvm_res llres);
 
 tokens_res test_upto_tokens(test_state *state, const char *input);
 

@@ -113,7 +113,7 @@ enum {
 typedef enum {
   METRIC_H_TOKENIZER,
   METRIC_H_PARSER,
-  METRIC_H_RESOLVE_BINDINGS,
+  METRIC_H_RESOLVE_NAMES,
   METRIC_H_TYPECHECK,
   METRIC_H_CODEGEN,
 } metric_heading;
@@ -459,6 +459,38 @@ int main(int argc, const char **argv) {
       float_time_metric m = {
         .name = "Parse time per parse node produced",
         .nanoseconds = nanos_per_parse_node,
+      };
+      put_metric_time_float(&metric_state, m);
+    }
+  }
+#endif
+
+#ifdef TIME_NAME_RESOLUTION
+  if (state.total_names_looked_up > 0) {
+    metric_state.heading = METRIC_H_RESOLVE_NAMES;
+    {
+      time_metric m = {
+        .name = "Time spent resolving names",
+        .time = state.total_name_resolution_time,
+      };
+      put_metric_time(&metric_state, m);
+    }
+
+    {
+      amount_metric m = {
+        .name = "Total names looked up",
+        .amount = state.total_names_looked_up,
+      };
+      put_metric_amount(&metric_state, m);
+    }
+
+    {
+      double nanos_per_lookup =
+        (double)timespec_to_nanos(state.total_name_resolution_time) /
+        (double)state.total_names_looked_up;
+      float_time_metric m = {
+        .name = "Time per name lookup",
+        .nanoseconds = nanos_per_lookup,
       };
       put_metric_time_float(&metric_state, m);
     }

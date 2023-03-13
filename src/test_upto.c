@@ -58,17 +58,14 @@ void add_codegen_timings_internal(test_state *state, parse_tree tree,
 }
 #endif
 
-/*
-#ifdef TIME_TYPECHECK
-void add_typecheck_timings_internal(test_state *state, tokens_res tres,
-parse_tree_res pres) { if (pres.succeeded) { state->total_tokens_parsed +=
-tres.token_amt; } else { state->total_tokens_parsed += pres.error_pos;
-  }
-  state->total_parser_time = timespec_add(state->total_parser_time,
-pres.time_taken); state->total_parse_nodes_produced += pres.tree.node_amt;
+#ifdef TIME_NAME_RESOLUTION
+void add_name_resolution_timings_internal(test_state *state,
+                                          resolution_res res) {
+  state->total_name_resolution_time =
+    timespec_add(state->total_name_resolution_time, res.time_taken);
+  state->total_names_looked_up += res.num_names_looked_up;
 }
 #endif
-*/
 
 tokens_res test_upto_tokens(test_state *state, const char *restrict input) {
   source_file test_file = {.path = "parser-test", .data = input};
@@ -128,15 +125,18 @@ upto_resolution_res test_upto_resolution(test_state *state,
     };
     return res;
   }
-  const resolution_errors errs = resolve_bindings(tree_res.tree, input);
-  if (errs.binding_amt > 0) {
+  const resolution_res res_res = resolve_bindings(tree_res.tree, input);
+
+  add_name_resolution_timings(state, res_res);
+
+  if (res_res.not_found.binding_amt > 0) {
     const upto_resolution_res res = {
       .success = false,
     };
-    char *error_str = print_resolution_errors_string(input, errs);
+    char *error_str = print_resolution_errors_string(input, res_res.not_found);
     failf(state, "Resolution failed:\n%s", error_str);
     free(error_str);
-    free(errs.bindings);
+    free(res_res.not_found.bindings);
     free_parse_tree_res(tree_res);
     return res;
   } else {

@@ -80,6 +80,10 @@ typedef struct {
   uint64_t total_tokens_parsed;
   uint64_t total_parse_nodes_produced;
 #endif
+#ifdef TIME_NAME_RESOLUTION
+  struct timespec total_name_resolution_time;
+  uint64_t total_names_looked_up;
+#endif
 #ifdef TIME_TYPECHECK
   struct timespec total_typecheck_time;
   uint64_t total_parse_nodes_typechecked;
