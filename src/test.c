@@ -131,6 +131,10 @@ test_state test_state_new(test_config config) {
     .total_tokens_parsed = 0,
     .total_parse_nodes_produced = 0,
 #endif
+#ifdef TIME_NAME_RESOLUTION
+    .total_name_resolution_time = zero,
+    .total_names_looked_up = 0,
+#endif
 #ifdef TIME_TYPECHECK
     .total_typecheck_time = zero,
     .total_parse_nodes_typechecked = 0,

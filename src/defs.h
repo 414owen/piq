@@ -10,6 +10,10 @@
 #define TIME_PARSER
 #endif
 
+#ifndef TIME_NAME_RESOLUTION
+#define TIME_NAME_RESOLUTION
+#endif
+
 #ifndef TIME_TYPECHECK
 #define TIME_TYPECHECK
 #endif
@@ -22,7 +26,7 @@
 #define TIME_ANY
 #endif
 
-#else
+#endif
 
 #ifdef TIME_TOKENIZER
 #ifndef TIME_ANY
@@ -31,6 +35,12 @@
 #endif
 
 #ifdef TIME_PARSER
+#ifndef TIME_ANY
+#define TIME_ANY
+#endif
+#endif
+
+#ifdef TIME_NAME_RESOLUTION
 #ifndef TIME_ANY
 #define TIME_ANY
 #endif
@@ -46,6 +56,4 @@
 #ifndef TIME_ANY
 #define TIME_ANY
 #endif
-#endif
-
 #endif
