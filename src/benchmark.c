@@ -58,6 +58,9 @@ void run_benchmarks(test_state *state) {
 
   ss_finalize(&ss);
 
+  // FILE *f = fopen("bench.prog", "w");
+  // fputs(ss.string, f);
+  // fclose(f);
   // puts(ss.string);
 
   llvm_symbol_test test = {
