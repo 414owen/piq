@@ -58,7 +58,7 @@ void run_benchmarks(test_state *state) {
 
   ss_finalize(&ss);
 
-  puts(ss.string);
+  // puts(ss.string);
 
   llvm_symbol_test test = {
     .symbol_name = "entry",
@@ -67,7 +67,7 @@ void run_benchmarks(test_state *state) {
 
   test_group_start(state, "Benchmark");
   test_start(state, "Benchmark");
-  test_upto_codegen_with(state, ss.string, &test, 0);
+  test_upto_codegen_with(state, ss.string, &test, 1);
   test_end(state);
   test_group_end(state);
 }
