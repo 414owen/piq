@@ -1,3 +1,4 @@
+#include <hedley.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,6 +7,7 @@
 #include "consts.h"
 #include "hashmap.h"
 #include "typedefs.h"
+#include "util.h"
 
 // max ratio of elems to buckets before rehash
 // eg. 4/5 is four elements for five buckets
@@ -44,19 +46,23 @@ a_hashmap __ahm_new(uint32_t n_buckets, uint32_t keysize, uint32_t valsize,
     .compare_newkey = cmp_newkey,
     .hash_newkey = hash_newkey,
     .hash_storedkey = hash_storedkey,
+    // TODO manage these ourselves to avoid duplicate `length`, `capacity` etc.
     .occupied = bs_new_false_n(n_buckets),
+    // if this is true, occupied is false
+    .tombstoned = bs_new_false_n(n_buckets),
   };
   return res;
 }
 
 static uint32_t ahm_get_bucket_ind(a_hashmap *hm, const void *key, hasher hsh,
-                                   void *context) {
+                                   const void *context) {
   const uint32_t key_hash = hsh(key, context);
   const uint32_t bucket_ind = key_hash & hm->mask;
   return bucket_ind;
 }
 
 static void rehash(a_hashmap *hm, void *context) {
+  // printf("\n\nrehash\n");
   u32 n_buckets = hm->n_buckets;
   u32 new_num_buckets = n_buckets * AHM_GROWTH_FACTOR;
   if (n_buckets > (UINT32_MAX >> 1)) {
@@ -86,25 +92,54 @@ static void rehash(a_hashmap *hm, void *context) {
   hm->keys = res.keys;
   hm->vals = res.vals;
   hm->occupied = res.occupied;
+  hm->tombstoned = res.tombstoned;
+}
+
+static bool ahm_memcmp_keys(const void *key1, const void *key2,
+                            const void *keysize_p) {
+  uint32_t keysize = *((uint32_t *)keysize_p);
+  return memcmp(key1, key2, keysize) == 0;
+}
+
+static u32 ahm_lookup_internal(a_hashmap *hm, const void *key, const hasher hsh,
+                               const eq_cmp cmp, const void *hash_ctx,
+                               const void *cmp_ctx) {
+  uint32_t i = ahm_get_bucket_ind(hm, key, hsh, hash_ctx);
+  uint32_t mask = hm->mask;
+  char *keys = hm->keys;
+  do {
+    while (bs_get(hm->occupied, i)) {
+      if (cmp(key, keys + i * hm->keysize, cmp_ctx)) {
+        return i;
+      }
+      i++;
+      // mod
+      i &= mask;
+    }
+    if (bs_get(hm->tombstoned, i)) {
+      i++;
+      i &= mask;
+    } else {
+      return hm->n_buckets;
+    }
+  } while (true);
+}
+
+static u32 ahm_lookup_stored(a_hashmap *hm, const void *key, void *context) {
+  return ahm_lookup_internal(
+    hm, key, hm->hash_storedkey, ahm_memcmp_keys, context, &hm->keysize);
 }
 
 u32 ahm_lookup(a_hashmap *hm, const void *key, void *context) {
-  uint32_t i = ahm_get_bucket_ind(hm, key, hm->hash_newkey, context);
-  char *keys = hm->keys;
-  while (bs_get(hm->occupied, i)) {
-    if (hm->compare_newkey(key, keys + i * hm->keysize, context)) {
-      return i;
-    }
-    i++;
-    // mod
-    i &= hm->n_buckets - 1;
-  }
-  return hm->n_buckets;
+  return ahm_lookup_internal(
+    hm, key, hm->hash_newkey, hm->compare_newkey, context, context);
 }
 
 static void ahm_insert_prelude(a_hashmap *hm, void *context) {
   // for simplicity, even if we end up updating an element, we grow
   // we use >= to deal with the 0 bucket case
+
+  // TODO store these values in hashmap struct
   if (hm->n_elems * AHM_MAX_FILL_DENOMINATOR >=
       hm->n_buckets * AHM_MAX_FILL_NUMERATOR) {
     rehash(hm, context);
@@ -115,25 +150,37 @@ bool ahm_upsert(a_hashmap *hm, const void *key, const void *key_stored,
                 const void *val, void *context) {
   ahm_insert_prelude(hm, context);
 
-  uint32_t i = ahm_get_bucket_ind(hm, key, hm->hash_newkey, context);
   char *keys = hm->keys;
   const uint32_t mask = hm->mask;
-  while (bs_get(hm->occupied, i)) {
-    if (hm->compare_newkey(key, keys + i * hm->keysize, context)) {
-      memcpy(hm->vals + i * hm->valsize, val, hm->valsize);
-      return true;
-    }
-    i++;
-    // mod
-    i &= mask;
+  uint32_t first_empty = UINT32_MAX;
+  {
+    uint32_t i = ahm_get_bucket_ind(hm, key, hm->hash_newkey, context);
+    do {
+      while (bs_get(hm->occupied, i)) {
+        if (hm->compare_newkey(key, keys + i * hm->keysize, context)) {
+          // Why do we need to copy the key?
+          // Well because our idea of equality isn't byte-equality
+          // and people can look up keys.
+          ahm_insert_at(hm, i, key_stored, val);
+          return true;
+        }
+        i++;
+        // mod
+        i &= mask;
+      }
+      first_empty = MIN(first_empty, i);
+      if (bs_get(hm->tombstoned, i)) {
+        i++;
+        i &= mask;
+      } else {
+        break;
+      }
+    } while (true);
   }
 
-  memcpy(keys + i * hm->keysize, key_stored, hm->keysize);
-  memcpy(hm->vals + i * hm->valsize, val, hm->valsize);
-  bs_set(hm->occupied, i);
-  hm->n_elems += 1;
+  ahm_insert_at(hm, first_empty, key_stored, val);
 
-  // inserted
+  // replaced
   return false;
 }
 
@@ -143,21 +190,48 @@ void ahm_insert_stored(a_hashmap *hm, const void *key_stored, const void *val,
                        void *context) {
   ahm_insert_prelude(hm, context);
   uint32_t i = ahm_get_bucket_ind(hm, key_stored, hm->hash_storedkey, context);
-  char *keys = hm->keys;
   const uint32_t mask = hm->mask;
   while (bs_get(hm->occupied, i)) {
     i++;
     i &= mask;
   }
-  memcpy(keys + i * hm->keysize, key_stored, hm->keysize);
-  memcpy(hm->vals + i * hm->valsize, val, hm->valsize);
-  bs_set(hm->occupied, i);
-  hm->n_elems += 1;
+  ahm_insert_at(hm, i, key_stored, val);
+}
+
+void ahm_insert_at(a_hashmap *hm, u32 index, const void *key_stored,
+                   const void *val) {
+  memcpy(hm->keys + index * hm->keysize, key_stored, hm->keysize);
+  memcpy(hm->vals + index * hm->valsize, val, hm->valsize);
+  bs_set(hm->occupied, index);
+  bs_clear(hm->tombstoned, index);
+  hm->n_elems++;
+}
+
+static uint32_t ahm_remove_epilogue(a_hashmap *hm, uint32_t ind) {
+  if (HEDLEY_LIKELY(ind < hm->n_buckets)) {
+    bs_set(hm->tombstoned, ind);
+    bs_clear(hm->occupied, ind);
+    hm->n_elems--;
+  } else {
+    // printf("Tried to remove non-existant elem\n");
+  }
+  return ind;
+}
+
+u32 ahm_remove(a_hashmap *hm, const void *key, void *context) {
+  const u32 ind = ahm_lookup(hm, key, context);
+  return ahm_remove_epilogue(hm, ind);
+}
+
+u32 ahm_remove_stored(a_hashmap *hm, const void *key, void *context) {
+  const u32 ind = ahm_lookup_stored(hm, key, context);
+  return ahm_remove_epilogue(hm, ind);
 }
 
 /** You're in charge of freeing the context, though */
 void ahm_free(a_hashmap *hm) {
   bs_free(&hm->occupied);
+  bs_free(&hm->tombstoned);
   free(hm->keys);
   free(hm->vals);
 }

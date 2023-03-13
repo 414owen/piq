@@ -27,6 +27,7 @@ typedef struct {
   char *restrict keys;
   char *restrict vals;
   bitset occupied;
+  bitset tombstoned;
 } a_hashmap;
 
 #define ahm_new(keytype, valtype, ...)                                         \
@@ -40,8 +41,11 @@ a_hashmap __ahm_new(uint32_t n_buckets, uint32_t keysize, uint32_t valsize,
                     hasher hash_storedkey);
 
 u32 ahm_lookup(a_hashmap *hm, const void *key, void *context);
+u32 ahm_remove(a_hashmap *hm, const void *key, void *context);
+u32 ahm_remove_stored(a_hashmap *hm, const void *key, void *context);
 bool ahm_upsert(a_hashmap *hm, const void *key, const void *key_stored,
                 const void *val, void *context);
+void ahm_insert_at(a_hashmap *hm, u32 index, const void *key_stored, const void *val);
 
 // Don't use a proto-key, use a real key
 void ahm_insert_stored(a_hashmap *hm, const void *key_stored, const void *val,
