@@ -6,6 +6,7 @@
 #define PRBI PRId32
 #define ERROR_LINES_CTX 2
 
+// TODO move to typedefs.h?
 typedef uint32_t buf_ind_t;
 typedef uint16_t token_len_t;
 typedef uint32_t node_ind_t;

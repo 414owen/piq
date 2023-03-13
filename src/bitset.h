@@ -37,6 +37,7 @@ bool bs_get(bitset bs, size_t ind);
 void bs_data_set(bitset_data bs, size_t ind);
 void bs_data_update(bitset_data bs, size_t ind, bool b);
 void bs_set(bitset bs, size_t ind);
+void bs_clear(bitset bs, size_t ind);
 void bs_update(bitset bs, size_t ind, bool b);
 void bs_push_true(bitset *bs);
 void bs_push_true_n(bitset *bs, size_t amt);

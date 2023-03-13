@@ -115,5 +115,35 @@ void test_hashmap(test_state *state) {
     test_end(state);
   }
 
+  {
+    const int n = 50;
+    test_start(state, "rehashing and deletion");
+    a_hashmap hm =
+      __ahm_new(2, sizeof(u64), sizeof(u64), cmp_u64, hash_u64, hash_u64);
+    ahm_upsert(&hm, &n, &n, &n, NULL);
+    {
+      u32 ind = ahm_lookup(&hm, &n, NULL);
+      if (ind >= hm.n_buckets) {
+        failf(state, "Couldn't find key");
+      }
+    }
+    u32 rm_ind = ahm_remove(&hm, &n, NULL);
+    {
+      u32 ind = ahm_lookup(&hm, &n, NULL);
+      if (ind != hm.n_buckets) {
+        failf(state, "Unexpected key");
+      }
+    }
+    ahm_insert_at(&hm, rm_ind, &n, &n);
+    {
+      u32 ind = ahm_lookup(&hm, &n, NULL);
+      if (ind >= hm.n_buckets) {
+        failf(state, "Couldn't find key");
+      }
+    }
+    ahm_free(&hm);
+    test_end(state);
+  }
+
   test_group_end(state);
 }

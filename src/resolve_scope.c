@@ -4,9 +4,12 @@
 #include "binding.h"
 #include "bitset.h"
 #include "builtins.h"
+#include "hashmap.h"
+#include "hashers.h"
 #include "parse_tree.h"
 #include "traverse.h"
 #include "util.h"
+#include "vec.h"
 
 // For a known-length, and a null-terminated string
 static bool strn1eq(const char *a, const char *b, size_t alen) {
@@ -35,48 +38,81 @@ static bool streq(const char *restrict a, const char *restrict b,
 typedef struct {
   bitset is_builtin;
   vec_str_ref bindings;
+  vec_environment_ind shadows;
+  a_hashmap map;
 } scope;
+
+typedef struct {
+  scope *scope;
+  const char *source_file;
+} resolve_map_ctx;
 
 // TODO consider separating builtins into separate array somehow
 // Find index of binding, return bindings.len if not found
 static node_ind_t lookup_str_ref(const char *source_file, scope scope,
                                  binding bnd) {
-  const char *bndp = source_file + bnd.start;
-  for (size_t i = 0; i < scope.bindings.len; i++) {
-    size_t ind = scope.bindings.len - 1 - i;
-    str_ref a = VEC_GET(scope.bindings, ind);
-    if (bs_get(scope.is_builtin, ind)) {
-      if (*bndp == *a.builtin && strn1eq(bndp, a.builtin, bnd.len)) {
-        return ind;
-      }
-    } else {
-      const char *b = &source_file[a.binding.start];
-      if (a.binding.len == bnd.len && *bndp == *b && streq(bndp, b, bnd.len))
-        return ind;
+  resolve_map_ctx ctx = {
+    .scope = &scope,
+    .source_file = source_file,
+  };
+  u32 bucket_ind = ahm_lookup(&scope.map, &bnd, &ctx);
+  return bucket_ind == scope.map.n_buckets
+           ? scope.bindings.len
+           : ((environment_ind_t *)scope.map.keys)[bucket_ind];
+}
+
+static bool cmp_bnd(const void *bnd_p, const void *ind_p, const void *ctx_p) {
+  const binding bnd = *((binding *)bnd_p);
+  const environment_ind_t bnd_ind = *((environment_ind_t *)ind_p);
+  resolve_map_ctx ctx = *((resolve_map_ctx *)ctx_p);
+  const char *bndp = ctx.source_file + bnd.start;
+  str_ref a = VEC_GET(ctx.scope->bindings, bnd_ind);
+  bool res = false;
+  if (bs_get(ctx.scope->is_builtin, bnd_ind)) {
+    if (*bndp == *a.builtin && strn1eq(bndp, a.builtin, bnd.len)) {
+      res = true;
+    }
+  } else {
+    const char *b = &ctx.source_file[a.binding.start];
+    if (a.binding.len == bnd.len && *bndp == *b && streq(bndp, b, bnd.len)) {
+      res = true;
     }
   }
-  return scope.bindings.len;
+  return res;
 }
 
 static scope scope_new(void) {
   scope res = {
     .bindings = VEC_NEW,
     .is_builtin = bs_new(),
+    .shadows = VEC_NEW,
+    .map = hashset_new(
+      environment_ind_t, cmp_bnd, hash_binding, hash_stored_binding),
   };
   return res;
 }
 
-static void scope_push(scope *s, binding b) {
+static void scope_push(const char *source_file, scope *s, binding b) {
   str_ref str = {
     .binding = b,
   };
+  node_ind_t prev = lookup_str_ref(source_file, *s, b);
   bs_push_false(&s->is_builtin);
   VEC_PUSH(&s->bindings, str);
+  VEC_PUSH(&s->shadows, prev);
+  resolve_map_ctx ctx = {
+    .scope = s,
+    .source_file = source_file,
+  };
+  const environment_ind_t key_stored = s->bindings.len - 1;
+  ahm_upsert(&s->map, &b, &key_stored, NULL, &ctx);
 }
 
 static void scope_free(scope s) {
   bs_free(&s.is_builtin);
   VEC_FREE(&s.bindings);
+  VEC_FREE(&s.shadows);
+  ahm_free(&s.map);
 }
 
 typedef struct {
@@ -100,7 +136,7 @@ static void precalculate_scope_push(scope_calculator_state *state) {
       parse_node *binding_node = &state->tree.nodes[binding_ind];
       binding b = binding_node->span;
       binding_node->variable_index = state->environment.bindings.len;
-      scope_push(&state->environment, b);
+      scope_push(state->input, &state->environment, b);
       break;
     }
     case PT_BIND_WILDCARD: {
@@ -108,7 +144,7 @@ static void precalculate_scope_push(scope_calculator_state *state) {
         &state->tree.nodes[state->elem.data.node_data.node_index];
       node->variable_index = state->environment.bindings.len;
       binding b = node->span;
-      scope_push(&state->environment, b);
+      scope_push(state->input, &state->environment, b);
       break;
     }
     case PT_BIND_LET: {
@@ -116,7 +152,7 @@ static void precalculate_scope_push(scope_calculator_state *state) {
       parse_node *node = &state->tree.nodes[binding_ind];
       node->variable_index = state->environment.bindings.len;
       binding b = node->span;
-      scope_push(&state->environment, b);
+      scope_push(state->input, &state->environment, b);
       break;
     }
   }
@@ -124,28 +160,47 @@ static void precalculate_scope_push(scope_calculator_state *state) {
 
 static void precalculate_scope_visit(scope_calculator_state *state) {
   parse_node node = state->elem.data.node_data.node;
-  scope scope;
+  scope *scope_p;
   switch (node.type.all) {
     case PT_ALL_TY_PARAM_NAME:
     case PT_ALL_TY_CONSTRUCTOR_NAME: {
-      scope = state->type_environment;
+      scope_p = &state->type_environment;
       break;
     }
     case PT_ALL_EX_TERM_NAME:
     case PT_ALL_EX_UPPER_NAME: {
-      scope = state->environment;
+      scope_p = &state->environment;
       break;
     }
     default:
       return;
   }
+  scope scope = *scope_p;
   state->num_names_looked_up++;
-  node_ind_t index = lookup_str_ref(state->input, scope, node.span);
+  VEC_LEN_T index = lookup_str_ref(state->input, scope, node.span);
   if (index == scope.bindings.len) {
     VEC_PUSH(&state->not_found, node.span);
   }
   state->tree.nodes[state->elem.data.node_data.node_index].variable_index =
     index;
+}
+
+static void resolve_pop_env(scope_calculator_state *state) {
+  scope *env = &state->environment;
+  resolve_map_ctx ctx = {
+    .scope = env,
+    .source_file = state->input,
+  };
+  VEC_LEN_T vec_ind = env->bindings.len - 1;
+  const u32 bucket_ind = ahm_remove_stored(&env->map, &vec_ind, &ctx);
+  bs_pop(&env->is_builtin);
+  str_ref ref;
+  VEC_POP(&env->bindings, &ref);
+  environment_ind_t prev;
+  VEC_POP(&env->shadows, &prev);
+  if (prev < env->bindings.len) {
+    ahm_insert_at(&env->map, bucket_ind, &prev, NULL);
+  }
 }
 
 resolution_res resolve_bindings(parse_tree tree, const char *restrict input) {
@@ -165,23 +220,49 @@ resolution_res resolve_bindings(parse_tree tree, const char *restrict input) {
 
   bs_push_true_n(&state.type_environment.is_builtin, named_builtin_type_amount);
   bs_push_true_n(&state.environment.is_builtin, builtin_term_amount);
-  for (node_ind_t i = 0; i < named_builtin_type_amount; i++) {
-    str_ref s = {.builtin = builtin_type_names[i]};
-    VEC_PUSH(&state.type_environment.bindings, s);
+
+  {
+    resolve_map_ctx ctx = {
+      .scope = &state.type_environment,
+      .source_file = state.input,
+    };
+
+    for (environment_ind_t i = 0; i < named_builtin_type_amount; i++) {
+      str_ref s = {.builtin = builtin_type_names[i]};
+      VEC_PUSH(&state.type_environment.shadows, i);
+      VEC_PUSH(&state.type_environment.bindings, s);
+      ahm_insert_stored(&state.type_environment.map, &i, NULL, &ctx);
+    }
   }
-  for (node_ind_t i = 0; i < builtin_term_amount; i++) {
-    str_ref s = {.builtin = builtin_term_names[i]};
-    VEC_PUSH(&state.environment.bindings, s);
+
+  {
+    resolve_map_ctx ctx = {
+      .scope = &state.environment,
+      .source_file = state.input,
+    };
+
+    for (node_ind_t i = 0; i < builtin_term_amount; i++) {
+      str_ref s = {.builtin = builtin_term_names[i]};
+      VEC_PUSH(&state.environment.shadows, i);
+      VEC_PUSH(&state.environment.bindings, s);
+      ahm_insert_stored(&state.environment.map, &i, NULL, &ctx);
+    }
   }
+
   while (true) {
     state.elem = pt_traverse_next(&traversal);
     switch (state.elem.action) {
       case TR_NEW_BLOCK:
       case TR_LINK_SIG:
         break;
-      case TR_POP_TO:
-        state.environment.bindings.len = state.elem.data.new_environment_amount;
+      case TR_POP_TO: {
+        const u32 to_pop = state.environment.bindings.len -
+                           state.elem.data.new_environment_amount;
+        for (u32 i = 0; i < to_pop; i++) {
+          resolve_pop_env(&state);
+        }
         break;
+      }
       case TR_END: {
         const VEC_LEN_T len = state.not_found.len;
         resolution_res res = {
