@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1678720801792,
+  "lastUpdate": 1678824210619,
   "repoUrl": "https://github.com/414owen/lang-c",
   "entries": {
     "Language Compiler Metrics": [
@@ -3089,6 +3089,150 @@ window.BENCHMARK_DATA = {
           {
             "name": "Codegen time per parse node",
             "value": 1057.506,
+            "unit": "ns"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "owen@owen.cafe",
+            "name": "Owen Shepherd",
+            "username": "414owen"
+          },
+          "committer": {
+            "email": "owen@owen.cafe",
+            "name": "Owen Shepherd",
+            "username": "414owen"
+          },
+          "distinct": false,
+          "id": "4ade87d675534eb87cb3eca248d42d0593fd492d",
+          "message": "fix: Separate function to trigger hashmap rehash",
+          "timestamp": "2023-03-14T21:00:06+01:00",
+          "tree_id": "7900c391b277e8e98b84d9805ed037b8d9ea4d52",
+          "url": "https://github.com/414owen/lang-c/commit/4ade87d675534eb87cb3eca248d42d0593fd492d"
+        },
+        "date": 1678824209800,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Main filesize",
+            "value": "100896",
+            "unit": "bytes"
+          },
+          {
+            "name": "Test filesize",
+            "value": "180960",
+            "unit": "bytes"
+          },
+          {
+            "name": "Time spent tokenizing",
+            "value": 23084402,
+            "unit": "ns"
+          },
+          {
+            "name": "Total bytes tokenized",
+            "value": 6772532,
+            "unit": "bytes"
+          },
+          {
+            "name": "Total tokens produced",
+            "value": 1440814,
+            "unit": "amount"
+          },
+          {
+            "name": "Tokenization time per token produced",
+            "value": 16.022,
+            "unit": "ns"
+          },
+          {
+            "name": "Tokenization time per byte",
+            "value": 3.409,
+            "unit": "ns"
+          },
+          {
+            "name": "Time spent parsing",
+            "value": 35938827,
+            "unit": "ns"
+          },
+          {
+            "name": "Total tokens parsed",
+            "value": 720407,
+            "unit": "amount"
+          },
+          {
+            "name": "Total parse nodes produced",
+            "value": 480004,
+            "unit": "amount"
+          },
+          {
+            "name": "Parse nodes produced per token",
+            "value": 0.666,
+            "unit": "amount"
+          },
+          {
+            "name": "Parse time per token",
+            "value": 49.887,
+            "unit": "ns"
+          },
+          {
+            "name": "Parse time per parse node produced",
+            "value": 74.872,
+            "unit": "ns"
+          },
+          {
+            "name": "Time spent resolving names",
+            "value": 74960708,
+            "unit": "ns"
+          },
+          {
+            "name": "Total names looked up",
+            "value": 199200,
+            "unit": "amount"
+          },
+          {
+            "name": "Time per name lookup",
+            "value": 376.309,
+            "unit": "ns"
+          },
+          {
+            "name": "Time spent typechecking",
+            "value": 159141975,
+            "unit": "ns"
+          },
+          {
+            "name": "Total parse nodes typechecked",
+            "value": 480004,
+            "unit": "amount"
+          },
+          {
+            "name": "Typecheck time per parse node",
+            "value": 331.543,
+            "unit": "ns"
+          },
+          {
+            "name": "Time spent building LLVM IR",
+            "value": 44990285,
+            "unit": "ns"
+          },
+          {
+            "name": "Time spent performing codegen",
+            "value": 776735747,
+            "unit": "ns"
+          },
+          {
+            "name": "Total parse nodes turned into LLVM IR",
+            "value": 480004,
+            "unit": "amount"
+          },
+          {
+            "name": "Time building LLVM IR per parse node",
+            "value": 93.729,
+            "unit": "ns"
+          },
+          {
+            "name": "Codegen time per parse node",
+            "value": 1618.186,
             "unit": "ns"
           }
         ]
