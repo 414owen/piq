@@ -16,6 +16,11 @@ typedef bool (*eq_cmp)(const void *, const void *, const void *);
 typedef uint32_t (*hasher)(const void *, const void *);
 
 typedef struct {
+  uint32_t grow_at;
+  char *restrict keys;
+  char *restrict vals;
+  bitset occupied;
+  bitset tombstoned;
   uint32_t n_buckets;
   uint32_t n_elems;
   uint32_t mask;
@@ -24,10 +29,6 @@ typedef struct {
   const eq_cmp compare_newkey;
   const hasher hash_newkey;
   const hasher hash_storedkey;
-  char *restrict keys;
-  char *restrict vals;
-  bitset occupied;
-  bitset tombstoned;
 } a_hashmap;
 
 #define ahm_new(keytype, valtype, ...)                                         \
