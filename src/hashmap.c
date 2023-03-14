@@ -104,9 +104,10 @@ static bool ahm_memcmp_keys(const void *key1, const void *key2,
 static u32 ahm_lookup_internal(a_hashmap *hm, const void *key, const hasher hsh,
                                const eq_cmp cmp, const void *hash_ctx,
                                const void *cmp_ctx) {
+  const uint32_t mask = hm->mask;
+  const char *keys = hm->keys;
   uint32_t i = ahm_get_bucket_ind(hm, key, hsh, hash_ctx);
-  uint32_t mask = hm->mask;
-  char *keys = hm->keys;
+  uint32_t first_empty = UINT32_MAX;
   do {
     while (bs_get(hm->occupied, i)) {
       if (cmp(key, keys + i * hm->keysize, cmp_ctx)) {
@@ -116,23 +117,26 @@ static u32 ahm_lookup_internal(a_hashmap *hm, const void *key, const hasher hsh,
       // mod
       i &= mask;
     }
+    first_empty = MIN(first_empty, i);
     if (bs_get(hm->tombstoned, i)) {
       i++;
       i &= mask;
     } else {
-      return hm->n_buckets;
+      return first_empty;
     }
   } while (true);
 }
 
 static u32 ahm_lookup_stored(a_hashmap *hm, const void *key, void *context) {
-  return ahm_lookup_internal(
+  const u32 bucket_ind = ahm_lookup_internal(
     hm, key, hm->hash_storedkey, ahm_memcmp_keys, context, &hm->keysize);
+  return bs_get(hm->occupied, bucket_ind) ? bucket_ind : hm->n_buckets;
 }
 
 u32 ahm_lookup(a_hashmap *hm, const void *key, void *context) {
-  return ahm_lookup_internal(
+  const u32 bucket_ind = ahm_lookup_internal(
     hm, key, hm->hash_newkey, hm->compare_newkey, context, context);
+  return bs_get(hm->occupied, bucket_ind) ? bucket_ind : hm->n_buckets;
 }
 
 static void ahm_insert_prelude(a_hashmap *hm, void *context) {
@@ -146,42 +150,12 @@ static void ahm_insert_prelude(a_hashmap *hm, void *context) {
   }
 }
 
-bool ahm_upsert(a_hashmap *hm, const void *key, const void *key_stored,
+void ahm_upsert(a_hashmap *hm, const void *key, const void *key_stored,
                 const void *val, void *context) {
   ahm_insert_prelude(hm, context);
-
-  char *keys = hm->keys;
-  const uint32_t mask = hm->mask;
-  uint32_t first_empty = UINT32_MAX;
-  {
-    uint32_t i = ahm_get_bucket_ind(hm, key, hm->hash_newkey, context);
-    do {
-      while (bs_get(hm->occupied, i)) {
-        if (hm->compare_newkey(key, keys + i * hm->keysize, context)) {
-          // Why do we need to copy the key?
-          // Well because our idea of equality isn't byte-equality
-          // and people can look up keys.
-          ahm_insert_at(hm, i, key_stored, val);
-          return true;
-        }
-        i++;
-        // mod
-        i &= mask;
-      }
-      first_empty = MIN(first_empty, i);
-      if (bs_get(hm->tombstoned, i)) {
-        i++;
-        i &= mask;
-      } else {
-        break;
-      }
-    } while (true);
-  }
-
-  ahm_insert_at(hm, first_empty, key_stored, val);
-
-  // replaced
-  return false;
+  const u32 bucket_ind = ahm_lookup_internal(
+    hm, key, hm->hash_newkey, hm->compare_newkey, context, context);
+  ahm_insert_at(hm, bucket_ind, key_stored, val);
 }
 
 /** WARNING: Can produce duplicates of a key. Use this if you're sure your
