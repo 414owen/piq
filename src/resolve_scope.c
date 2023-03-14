@@ -56,9 +56,9 @@ static node_ind_t lookup_str_ref(const char *source_file, scope scope,
     .source_file = source_file,
   };
   u32 bucket_ind = ahm_lookup(&scope.map, &bnd, &ctx);
-  return bucket_ind == scope.map.n_buckets
-           ? scope.bindings.len
-           : ((environment_ind_t *)scope.map.keys)[bucket_ind];
+  return bs_get(scope.map.occupied, bucket_ind)
+           ? ((environment_ind_t *)scope.map.keys)[bucket_ind]
+           : scope.bindings.len;
 }
 
 static bool cmp_bnd(const void *bnd_p, const void *ind_p, const void *ctx_p) {

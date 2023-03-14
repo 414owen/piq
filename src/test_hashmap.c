@@ -33,7 +33,7 @@ void test_hashmap(test_state *state) {
     a_hashmap hm = mk_hm();
     for (u64 i = 0; i < 1000; i++) {
       u32 res = ahm_lookup(&hm, &i, NULL);
-      if (res != hm.n_buckets) {
+      if (bs_get(hm.occupied, res)) {
         failf(state, "Expected hashmap to be empty!");
       }
     }
@@ -54,7 +54,7 @@ void test_hashmap(test_state *state) {
       u32 res_ind = ahm_lookup(&hm, &i, NULL);
       u64 key_res = ((uint64_t *)hm.keys)[res_ind];
       u64 val_res = ((uint64_t *)hm.vals)[res_ind];
-      if (res_ind == hm.n_buckets) {
+      if (!bs_get(hm.occupied, res_ind)) {
         failf(state, "Expected value %llu", i);
       } else if (key_res != i) {
         failf(state, "Wrong key %llu: %llu", i, key_res);
@@ -82,7 +82,7 @@ void test_hashmap(test_state *state) {
       u32 res_ind = ahm_lookup(&hm, &i, NULL);
       u64 key_res = ((uint64_t *)hm.keys)[res_ind];
       u64 val_res = ((uint64_t *)hm.vals)[res_ind];
-      if (res_ind == hm.n_buckets) {
+      if (!bs_get(hm.occupied, res_ind)) {
         failf(state, "Expected value %llu", i);
       } else if (key_res != i) {
         failf(state, "Wrong key %llu: %llu", i, key_res);
@@ -105,7 +105,7 @@ void test_hashmap(test_state *state) {
       free(s);
       u32 res_ind = ahm_lookup(&hm, &i, NULL);
       u64 key_res = ((uint64_t *)hm.keys)[res_ind];
-      if (res_ind == hm.n_buckets) {
+      if (!bs_get(hm.occupied, res_ind)) {
         failf(state, "Expected value %llu", i);
       } else if (key_res != i) {
         failf(state, "Wrong key %llu: %llu", i, key_res);
@@ -123,21 +123,21 @@ void test_hashmap(test_state *state) {
     ahm_upsert(&hm, &n, &n, &n, NULL);
     {
       u32 ind = ahm_lookup(&hm, &n, NULL);
-      if (ind >= hm.n_buckets) {
+      if (!bs_get(hm.occupied, ind)) {
         failf(state, "Couldn't find key");
       }
     }
     u32 rm_ind = ahm_remove(&hm, &n, NULL);
     {
       u32 ind = ahm_lookup(&hm, &n, NULL);
-      if (ind != hm.n_buckets) {
+      if (bs_get(hm.occupied, ind)) {
         failf(state, "Unexpected key");
       }
     }
     ahm_insert_at(&hm, rm_ind, &n, &n);
     {
       u32 ind = ahm_lookup(&hm, &n, NULL);
-      if (ind >= hm.n_buckets) {
+      if (!bs_get(hm.occupied, ind)) {
         failf(state, "Couldn't find key");
       }
     }
