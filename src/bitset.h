@@ -20,6 +20,7 @@ typedef struct {
   size_t cap;
 } bitset;
 
+// gcc turns this into an & 7
 #define BITMASK(b) (1 << ((b) % CHAR_BIT))
 #define BITSLOT(b) ((b) / CHAR_BIT)
 #define BITSET(a, b) ((a)[BITSLOT(b)] |= BITMASK(b))

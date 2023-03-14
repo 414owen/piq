@@ -40,6 +40,7 @@ a_hashmap __ahm_new(uint32_t n_buckets, uint32_t keysize, uint32_t valsize,
                     eq_cmp cmp_newkey, hasher hash_newkey,
                     hasher hash_storedkey);
 
+void ahm_maybe_rehash(a_hashmap *hm, void *context);
 u32 ahm_lookup(a_hashmap *hm, const void *key, void *context);
 u32 ahm_remove(a_hashmap *hm, const void *key, void *context);
 u32 ahm_remove_stored(a_hashmap *hm, const void *key, void *context);
