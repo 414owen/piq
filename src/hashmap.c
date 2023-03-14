@@ -62,7 +62,7 @@ static uint32_t ahm_get_bucket_ind(a_hashmap *hm, const void *key, hasher hsh,
   return bucket_ind;
 }
 
-static void rehash(a_hashmap *hm, void *context) {
+static void ahm_rehash(a_hashmap *hm, void *context) {
   // printf("\n\nrehash\n");
   u32 n_buckets = hm->n_buckets;
   u32 new_num_buckets = n_buckets * AHM_GROWTH_FACTOR;
@@ -145,7 +145,7 @@ void ahm_maybe_rehash(a_hashmap *hm, void *context) {
 
   // TODO store these values in hashmap struct
   if (hm->n_elems >= hm->grow_at) {
-    rehash(hm, context);
+    ahm_rehash(hm, context);
   }
 }
 
