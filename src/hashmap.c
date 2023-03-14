@@ -38,6 +38,7 @@ a_hashmap __ahm_new(uint32_t n_buckets, uint32_t keysize, uint32_t valsize,
   a_hashmap res = {
     .keys = calloc(n_buckets, keysize),
     .vals = calloc(n_buckets, valsize),
+    .grow_at = n_buckets * AHM_MAX_FILL_NUMERATOR / AHM_MAX_FILL_DENOMINATOR,
     .n_buckets = n_buckets,
     .mask = n_buckets - 1,
     .n_elems = 0,
@@ -88,6 +89,7 @@ static void rehash(a_hashmap *hm, void *context) {
   }
   ahm_free(hm);
   hm->n_buckets = res.n_buckets;
+  hm->grow_at = res.grow_at;
   hm->mask = res.mask;
   hm->keys = res.keys;
   hm->vals = res.vals;
@@ -142,8 +144,7 @@ void ahm_maybe_rehash(a_hashmap *hm, void *context) {
   // we use >= to deal with the 0 bucket case
 
   // TODO store these values in hashmap struct
-  if (hm->n_elems * AHM_MAX_FILL_DENOMINATOR >=
-      hm->n_buckets * AHM_MAX_FILL_NUMERATOR) {
+  if (hm->n_elems >= hm->grow_at) {
     rehash(hm, context);
   }
 }
