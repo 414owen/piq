@@ -101,5 +101,55 @@ void test_bitset(test_state *state) {
   }
   test_group_end(state);
 
+  {
+    test_start(state, "clear");
+
+    const int n = 1000;
+    bitset bs = bs_new();
+    for (int i = 0; i < n; i++) {
+      bs_push_true(&bs);
+    }
+    for (int i = 0; i < 8; i++) {
+      bs_clear(bs, i * 8 + i);
+      bs_clear(bs, i * 8 + i + 1);
+    }
+    int res = 0;
+    for (int i = 0; i < n; i++) {
+      res += bs_get(bs, i);
+    }
+    const int exp = n - 8 * 2;
+    if (res != exp) {
+      failf(state, "Expected %d, found %d", exp, res);
+    }
+    bs_free(&bs);
+
+    test_end(state);
+  }
+
+  {
+    test_start(state, "set");
+
+    const int n = 100;
+    bitset bs = bs_new();
+    for (int i = 0; i < n; i++) {
+      bs_push_false(&bs);
+    }
+    for (int i = 0; i < 8; i++) {
+      bs_set(bs, i * 8 + i);
+      bs_set(bs, i * 8 + i + 1);
+    }
+    int res = 0;
+    for (int i = 0; i < n; i++) {
+      res += bs_get(bs, i);
+    }
+    const int exp = 8 * 2;
+    if (res != exp) {
+      failf(state, "Expected %d, found %d", exp, res);
+    }
+    bs_free(&bs);
+
+    test_end(state);
+  }
+
   test_group_end(state);
 }
