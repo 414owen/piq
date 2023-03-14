@@ -189,13 +189,12 @@ void ahm_insert_at(a_hashmap *hm, u32 index, const void *key_stored,
 }
 
 static uint32_t ahm_remove_epilogue(a_hashmap *hm, uint32_t ind) {
-  u32 res = to_end_bucket(hm, ind);
   if (HEDLEY_LIKELY(bs_get(hm->occupied, ind))) {
     bs_set(hm->tombstoned, ind);
     bs_clear(hm->occupied, ind);
     hm->n_elems--;
   }
-  return res;
+  return ind;
 }
 
 u32 ahm_remove(a_hashmap *hm, const void *key, void *context) {
