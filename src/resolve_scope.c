@@ -96,16 +96,20 @@ static void scope_push(const char *source_file, scope *s, binding b) {
   str_ref str = {
     .binding = b,
   };
-  node_ind_t prev = lookup_str_ref(source_file, *s, b);
-  bs_push_false(&s->is_builtin);
-  VEC_PUSH(&s->bindings, str);
-  VEC_PUSH(&s->shadows, prev);
   resolve_map_ctx ctx = {
     .scope = s,
     .source_file = source_file,
   };
+  ahm_maybe_rehash(&s->map, &ctx);
+  u32 bucket_ind = ahm_lookup(&s->map, &b, &ctx);
+  u32 prev = bs_get(s->map.occupied, bucket_ind)
+               ? ((environment_ind_t *)s->map.keys)[bucket_ind]
+               : s->bindings.len;
+  bs_push_false(&s->is_builtin);
+  VEC_PUSH(&s->bindings, str);
+  VEC_PUSH(&s->shadows, prev);
   const environment_ind_t key_stored = s->bindings.len - 1;
-  ahm_upsert(&s->map, &b, &key_stored, NULL, &ctx);
+  ahm_insert_at(&s->map, bucket_ind, &key_stored, NULL);
 }
 
 static void scope_free(scope s) {

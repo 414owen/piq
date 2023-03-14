@@ -137,7 +137,7 @@ u32 ahm_lookup(a_hashmap *hm, const void *key, void *context) {
     hm, key, hm->hash_newkey, hm->compare_newkey, context, context);
 }
 
-static void ahm_insert_prelude(a_hashmap *hm, void *context) {
+void ahm_maybe_rehash(a_hashmap *hm, void *context) {
   // for simplicity, even if we end up updating an element, we grow
   // we use >= to deal with the 0 bucket case
 
@@ -150,7 +150,7 @@ static void ahm_insert_prelude(a_hashmap *hm, void *context) {
 
 void ahm_upsert(a_hashmap *hm, const void *key, const void *key_stored,
                 const void *val, void *context) {
-  ahm_insert_prelude(hm, context);
+  ahm_maybe_rehash(hm, context);
   const u32 bucket_ind = ahm_lookup_internal(
     hm, key, hm->hash_newkey, hm->compare_newkey, context, context);
   ahm_insert_at(hm, bucket_ind, key_stored, val);
@@ -160,7 +160,7 @@ void ahm_upsert(a_hashmap *hm, const void *key, const void *key_stored,
     key isn't in here */
 void ahm_insert_stored(a_hashmap *hm, const void *key_stored, const void *val,
                        void *context) {
-  ahm_insert_prelude(hm, context);
+  ahm_maybe_rehash(hm, context);
   uint32_t i = ahm_get_bucket_ind(hm, key_stored, hm->hash_storedkey, context);
   const uint32_t mask = hm->mask;
   while (bs_get(hm->occupied, i)) {
@@ -170,6 +170,9 @@ void ahm_insert_stored(a_hashmap *hm, const void *key_stored, const void *val,
   ahm_insert_at(hm, i, key_stored, val);
 }
 
+/** Warning, doesn't trigger rehash, so you'll want to call ahm_maybe_rehash
+   unless you've actually removed something
+*/
 void ahm_insert_at(a_hashmap *hm, u32 index, const void *key_stored,
                    const void *val) {
   memcpy(hm->keys + index * hm->keysize, key_stored, hm->keysize);
