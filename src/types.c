@@ -16,18 +16,18 @@ static type_ref find_inline_type(type_builder *tb, type_check_tag tag,
   };
   u32 bucket_ind = ahm_lookup(&tb->type_to_index, &key, tb);
   // TODO remove this branch somehow
-  return bucket_ind == tb->type_to_index.n_buckets
-           ? tb->types.len
-           : ((u32 *)tb->type_to_index.keys)[bucket_ind];
+  return bs_get(tb->type_to_index.occupied, bucket_ind)
+           ? ((u32 *)tb->type_to_index.keys)[bucket_ind]
+           : tb->types.len;
 }
 
 NON_NULL_PARAMS
 static type_ref find_type(type_builder *tb, const type_key_with_ctx *key) {
   u32 bucket_ind = ahm_lookup(&tb->type_to_index, key, tb);
   // TODO remove this branch somehow
-  return bucket_ind == tb->type_to_index.n_buckets
-           ? tb->types.len
-           : ((u32 *)tb->type_to_index.keys)[bucket_ind];
+  return bs_get(tb->type_to_index.occupied, bucket_ind)
+           ? ((u32 *)tb->type_to_index.keys)[bucket_ind]
+           : tb->types.len;
 }
 
 static type_ref insert_inline_type_to_hm(type_builder *tb, type_check_tag tag,

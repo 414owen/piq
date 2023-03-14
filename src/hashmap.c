@@ -127,23 +127,14 @@ static u32 ahm_lookup_internal(a_hashmap *hm, const void *key, const hasher hsh,
   } while (true);
 }
 
-static u32 to_end_bucket(a_hashmap *hm, u32 ind) {
-  return bs_get(hm->occupied, ind) ? ind : hm->n_buckets;
-}
-
 static u32 ahm_lookup_stored(a_hashmap *hm, const void *key, void *context) {
   return ahm_lookup_internal(
     hm, key, hm->hash_storedkey, ahm_memcmp_keys, context, &hm->keysize);
 }
 
-static u32 __ahm_lookup(a_hashmap *hm, const void *key, void *context) {
+u32 ahm_lookup(a_hashmap *hm, const void *key, void *context) {
   return ahm_lookup_internal(
     hm, key, hm->hash_newkey, hm->compare_newkey, context, context);
-}
-
-u32 ahm_lookup(a_hashmap *hm, const void *key, void *context) {
-  const u32 bucket_ind = __ahm_lookup(hm, key, context);
-  return to_end_bucket(hm, bucket_ind);
 }
 
 static void ahm_insert_prelude(a_hashmap *hm, void *context) {
