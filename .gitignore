@@ -32,3 +32,5 @@ stacks.folded
 flamegraph.svg
 callgrind*
 *.json
+analysis.txt
+cachegrind*
