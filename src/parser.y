@@ -84,7 +84,7 @@
 
   static parse_tree_res parse_internal(token *tokens, size_t token_amt, bool get_expected);
 
-  #ifdef DEBUG
+  #ifndef NDEBUG
     void break_parser(void) {}
     #define BREAK_PARSER break_parser()
   #else

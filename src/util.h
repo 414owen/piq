@@ -22,7 +22,7 @@
 #define STRINGIZE_DETAIL(x) #x
 #define STRINGIZE(x) STRINGIZE_DETAIL(x)
 
-#ifdef DEBUG
+#ifndef NDEBUG
 #define debug_assert(b) debug_assert_internal(b, __FILE__, __LINE__)
 #else
 #define debug_assert(b)                                                        \
