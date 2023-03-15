@@ -293,7 +293,7 @@ To lookup:
 ## Debug
 
 ```
--std=c99 -pedantic -O0 -ggdb -Wall -Wextra -DDEBUG -DTIME_ALL
+-std=c99 -pedantic -O0 -ggdb -Wall -Wextra -DTIME_ALL
 ```
 
 ## Release
