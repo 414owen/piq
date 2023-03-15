@@ -64,9 +64,9 @@ static node_ind_t lookup_str_ref(const char *source_file, scope scope,
 static bool cmp_bnd(const void *bnd_p, const void *ind_p, const void *ctx_p) {
   const binding bnd = *((binding *)bnd_p);
   const environment_ind_t bnd_ind = *((environment_ind_t *)ind_p);
-  resolve_map_ctx ctx = *((resolve_map_ctx *)ctx_p);
+  const resolve_map_ctx ctx = *((resolve_map_ctx *)ctx_p);
   const char *bndp = ctx.source_file + bnd.start;
-  str_ref a = VEC_GET(ctx.scope->bindings, bnd_ind);
+  const str_ref a = VEC_GET(ctx.scope->bindings, bnd_ind);
   bool res = false;
   if (bs_get(ctx.scope->is_builtin, bnd_ind)) {
     if (*bndp == *a.builtin && strn1eq(bndp, a.builtin, bnd.len)) {
