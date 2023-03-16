@@ -9,7 +9,25 @@
 #include "source.h"
 #include "vec.h"
 
-typedef unsigned char token_type;
+typedef enum {
+  TKN_EOF,
+  TKN_AS,
+  TKN_CLOSE_BRACKET,
+  TKN_CLOSE_PAREN,
+  TKN_COMMA,
+  TKN_FN,
+  TKN_FN_TYPE,
+  TKN_FUN,
+  TKN_IF,
+  TKN_INT,
+  TKN_LOWER_NAME,
+  TKN_OPEN_BRACKET,
+  TKN_OPEN_PAREN,
+  TKN_SIG,
+  TKN_UPPER_NAME,
+  TKN_LET,
+  TKN_DATA,
+} token_type;
 
 VEC_DECL(token_type);
 
