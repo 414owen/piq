@@ -132,6 +132,7 @@ parse_tree_res parse(token *restrict tokens) {
   vec_node_ind inds = VEC_NEW;
   parse_node *nodep;
   parse_node staging;
+  struct timespec start = get_monotonic_time();
 
   // consuming empty, setting PEEK to the first token
   parser_consume(&state);
@@ -414,14 +415,28 @@ S_ERROR:
     // This is allocated so we don't segfault on free...
     res.expected = malloc(0);
     res.expected_amt = 0;
-    return res;
+    res.tree.node_amt = nodes.len;
+    VEC_FREE(&nodes);
+    VEC_FREE(&inds);
+    goto S_END;
 
 S_SUCCESS:
+    // should just have toplevel label
+    debug_assert(state.labels.len == 1);
     res.type = PRT_SUCCESS;
     res.tree.nodes = VEC_FINALIZE(&nodes);
     res.tree.inds = VEC_FINALIZE(&inds);
+    res.tree.node_amt = nodes.len;
     res.tree.root_subs_start = 0;
     res.tree.root_subs_amt = 0;
+    goto S_END;
+
+S_END:
+    VEC_FREE(&state.labels);
+    // shouldn't have leaks here
+    // debug_assert(state.node_inds.len == 1);
+    VEC_FREE(&state.node_inds);
+    res.time_taken = time_since_monotonic(start);
     return res;
   }
 }
