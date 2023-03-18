@@ -6,7 +6,6 @@
 
 #include "consts.h"
 #include "defs.h"
-#include "parser.h"
 #include "source.h"
 #include "term.h"
 #include "token.h"
@@ -59,33 +58,33 @@ static token_res scan(source_file file, buf_ind_t start) {
   upper_ident = upperAlpha (alpha | digit | [-])*;
   int = [-]?[0-9]+;
 
-  // "type"  { return mk_token(TK_TYPE, start, pos);        }
-  // "match" { return mk_token(TK_MATCH, start, pos);       }
-  // "do"    { return mk_token(TK_DO, start, pos)}
+  // "type"  { return mk_token(TKN_TYPE, start, pos);        }
+  // "match" { return mk_token(TKN_MATCH, start, pos);       }
+  // "do"    { return mk_token(TKN_DO, start, pos)}
 
   str = ["]([^"\\\n] | "\\" [^\n])*["];
-  str     { return mk_token(TK_STRING, start, pos);         }
-  "if"    { return mk_token(TK_IF, start, pos);             }
-  "Fn"    { return mk_token(TK_FN_TYPE, start, pos);             }
-  "fn"    { return mk_token(TK_FN, start, pos);             }
-  "fun"   { return mk_token(TK_FUN, start, pos);            }
-  "sig"   { return mk_token(TK_SIG, start, pos);            }
-  "let"   { return mk_token(TK_LET, start, pos);            }
-  "as"    { return mk_token(TK_AS, start, pos);             }
-  "data"  { return mk_token(TK_DATA, start, pos);           }
-  lower_ident { return mk_token(TK_LOWER_NAME, start, pos); }
-  upper_ident { return mk_token(TK_UPPER_NAME, start, pos); }
-  "["     { return mk_token(TK_OPEN_BRACKET, start, pos);   }
-  "]"     { return mk_token(TK_CLOSE_BRACKET, start, pos);  }
+  str     { return mk_token(TKN_STRING, start, pos);         }
+  "if"    { return mk_token(TKN_IF, start, pos);             }
+  "Fn"    { return mk_token(TKN_FN_TYPE, start, pos);             }
+  "fn"    { return mk_token(TKN_FN, start, pos);             }
+  "fun"   { return mk_token(TKN_FUN, start, pos);            }
+  "sig"   { return mk_token(TKN_SIG, start, pos);            }
+  "let"   { return mk_token(TKN_LET, start, pos);            }
+  "as"    { return mk_token(TKN_AS, start, pos);             }
+  "data"  { return mk_token(TKN_DATA, start, pos);           }
+  lower_ident { return mk_token(TKN_LOWER_NAME, start, pos); }
+  upper_ident { return mk_token(TKN_UPPER_NAME, start, pos); }
+  "["     { return mk_token(TKN_OPEN_BRACKET, start, pos);   }
+  "]"     { return mk_token(TKN_CLOSE_BRACKET, start, pos);  }
 
   // parsed here, because allowing spaces between parens
   // can be used to obfuscate
-  "()"    { return mk_token(TK_UNIT, start, pos);  }
-  [(]     { return mk_token(TK_OPEN_PAREN, start, pos);     }
-  [)]     { return mk_token(TK_CLOSE_PAREN, start, pos);    }
-  [,]     { return mk_token(TK_COMMA, start, pos);          }
-  int     { return mk_token(TK_INT, start, pos);            }
-  [\x00]  { return mk_token(TK_EOF, start, pos);            }
+  "()"    { return mk_token(TKN_UNIT, start, pos);  }
+  [(]     { return mk_token(TKN_OPEN_PAREN, start, pos);     }
+  [)]     { return mk_token(TKN_CLOSE_PAREN, start, pos);    }
+  [,]     { return mk_token(TKN_COMMA, start, pos);          }
+  int     { return mk_token(TKN_INT, start, pos);            }
+  [\x00]  { return mk_token(TKN_EOF, start, pos);            }
   *       { return (token_res) {.succeeded = false, .tok.start = start}; }
 */
 }
@@ -107,7 +106,7 @@ tokens_res scan_all(source_file file) {
       break;
     }
     VEC_PUSH(&tokens, tres.tok);
-    if (tres.tok.type == TK_EOF) {
+    if (tres.tok.type == TKN_EOF) {
       res.token_amt = tokens.len;
       res.tokens = VEC_FINALIZE(&tokens);
       break;

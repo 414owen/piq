@@ -24,11 +24,10 @@ void add_scanner_timings_internal(test_state *state, const char *restrict input,
 void add_parser_timings_internal(test_state *state, tokens_res tres,
                                  parse_tree_res pres) {
   switch (pres.type) {
-    case PRT_SEMANTIC_ERRORS:
+    case PRT_PARSE_ERROR:
       state->total_tokens_parsed += pres.error_pos;
       break;
     case PRT_SUCCESS:
-    case PRT_PARSE_ERROR:
       state->total_tokens_parsed += tres.token_amt;
       break;
   }
@@ -92,7 +91,7 @@ parse_tree_res test_upto_parse_tree(test_state *state,
   add_scanner_timings(state, input, tres);
   if (!tres.succeeded) {
     parse_tree_res res = {
-      .type = PRT_SEMANTIC_ERRORS,
+      .type = PRT_PARSE_ERROR,
       .error_pos = 0,
       .expected_amt = 0,
       .expected = NULL,
@@ -102,7 +101,7 @@ parse_tree_res test_upto_parse_tree(test_state *state,
     return res;
   }
 
-  const parse_tree_res pres = parse(tres.tokens, tres.token_amt);
+  const parse_tree_res pres = parse(tres.tokens);
 
   add_parser_timings(state, tres, pres);
 

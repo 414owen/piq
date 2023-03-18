@@ -5,7 +5,6 @@
 #include "defs.h"
 #include "diagnostic.h"
 #include "parse_tree.h"
-#include "parser.h"
 #include "test.h"
 #include "test_upto.h"
 #include "tests.h"
@@ -70,12 +69,11 @@ static void test_parser_fails_on(test_state *state, char *input, buf_ind_t pos,
   if (!tres.succeeded)
     return;
 
-  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
+  parse_tree_res pres = parse(tres.tokens);
 
   add_parser_timings(state, tres, pres);
 
   switch (pres.type) {
-    case PRT_SEMANTIC_ERRORS:
     case PRT_SUCCESS: {
       char *parse_tree_str = print_parse_tree_str(input, pres.tree);
       failf(state,
@@ -207,14 +205,14 @@ static void test_parser_succeeds_kitchen_sink(test_state *state) {
 }
 
 static const token_type comma_or_expression_start[] = {
-  TK_COMMA,
-  TK_INT,
-  TK_LOWER_NAME,
-  TK_OPEN_BRACKET,
-  TK_OPEN_PAREN,
-  TK_UPPER_NAME,
-  TK_STRING,
-  TK_UNIT,
+  TKN_COMMA,
+  TKN_INT,
+  TKN_LOWER_NAME,
+  TKN_OPEN_BRACKET,
+  TKN_OPEN_PAREN,
+  TKN_UPPER_NAME,
+  TKN_STRING,
+  TKN_UNIT,
 };
 
 #define expression_start (&comma_or_expression_start[1])
@@ -246,7 +244,7 @@ static void test_if_failures(test_state *state) {
 
   {
     test_start(state, "Four form");
-    static token_type expected[] = {TK_CLOSE_PAREN};
+    static token_type expected[] = {TKN_CLOSE_PAREN};
     test_parser_fails_on_form(
       state, "(if 1 2 3 4)", 5, STATIC_LEN(expected), expected);
     test_end(state);
@@ -262,8 +260,12 @@ static void test_if_failures(test_state *state) {
   test_group_end(state);
 }
 
-static token_type start_pattern[] = {
-  TK_OPEN_PAREN, TK_UNIT, TK_INT, TK_LOWER_NAME, TK_OPEN_BRACKET, TK_STRING};
+static token_type start_pattern[] = {TKN_OPEN_PAREN,
+                                     TKN_UNIT,
+                                     TKN_INT,
+                                     TKN_LOWER_NAME,
+                                     TKN_OPEN_BRACKET,
+                                     TKN_STRING};
 
 static void test_fn_failures(test_state *state) {
   test_group_start(state, "Fn");
@@ -283,7 +285,7 @@ static void test_fn_failures(test_state *state) {
 
   {
     test_start(state, "Nested unit param");
-    static const token_type just_comma = TK_COMMA;
+    static const token_type just_comma = TKN_COMMA;
     test_parser_fails_on_form(state, "(fn ((())) 1)", 5, 1, &just_comma);
     test_end(state);
   }
@@ -397,33 +399,33 @@ static void test_parser_succeeds_compound(test_state *state) {
 }
 
 static token_type inside_expression[] = {
-  TK_AS,
-  TK_FN,
-  TK_FUN,
-  TK_IF,
-  TK_INT,
-  TK_LOWER_NAME,
-  TK_OPEN_BRACKET,
-  TK_OPEN_PAREN,
-  TK_UPPER_NAME,
-  TK_UNIT,
-  TK_STRING,
+  TKN_AS,
+  TKN_FN,
+  TKN_FUN,
+  TKN_IF,
+  TKN_INT,
+  TKN_LOWER_NAME,
+  TKN_OPEN_BRACKET,
+  TKN_OPEN_PAREN,
+  TKN_UPPER_NAME,
+  TKN_UNIT,
+  TKN_STRING,
 };
 
 static token_type inside_block_el[] = {
-  TK_AS,
-  TK_FN,
-  TK_FUN,
-  TK_IF,
-  TK_INT,
-  TK_LOWER_NAME,
-  TK_OPEN_BRACKET,
-  TK_OPEN_PAREN,
-  TK_SIG,
-  TK_UPPER_NAME,
-  TK_LET,
-  TK_UNIT,
-  TK_STRING,
+  TKN_AS,
+  TKN_FN,
+  TKN_FUN,
+  TKN_IF,
+  TKN_INT,
+  TKN_LOWER_NAME,
+  TKN_OPEN_BRACKET,
+  TKN_OPEN_PAREN,
+  TKN_SIG,
+  TKN_UPPER_NAME,
+  TKN_LET,
+  TKN_UNIT,
+  TKN_STRING,
 };
 
 static const size_t inside_expression_amt = STATIC_LEN(inside_expression);

@@ -9,27 +9,36 @@
 #include "source.h"
 #include "vec.h"
 
+#define TOKENS \
+  X(EOF) \
+  X(AS) \
+  X(CLOSE_BRACKET) \
+  X(CLOSE_PAREN) \
+  X(COMMA) \
+  X(FN) \
+  X(FN_TYPE) \
+  X(FUN) \
+  X(IF) \
+  X(INT) \
+  X(LOWER_NAME) \
+  X(OPEN_BRACKET) \
+  X(OPEN_PAREN) \
+  X(SIG) \
+  X(UPPER_NAME) \
+  X(LET) \
+  X(DATA) \
+  X(STRING) \
+  X(UNIT) \
+
+#define X(a) TKN ## _ ## a,
 typedef enum {
-  TKN_EOF,
-  TKN_AS,
-  TKN_CLOSE_BRACKET,
-  TKN_CLOSE_PAREN,
-  TKN_COMMA,
-  TKN_FN,
-  TKN_FN_TYPE,
-  TKN_FUN,
-  TKN_IF,
-  TKN_INT,
-  TKN_LOWER_NAME,
-  TKN_OPEN_BRACKET,
-  TKN_OPEN_PAREN,
-  TKN_SIG,
-  TKN_UPPER_NAME,
-  TKN_LET,
-  TKN_DATA,
+  TOKENS
 } token_type;
+#undef X
 
 VEC_DECL(token_type);
+
+extern const char *tokenNames[];
 
 typedef struct {
   token_type type;

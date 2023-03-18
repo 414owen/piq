@@ -249,41 +249,25 @@ typedef struct {
   node_ind_t node_amt;
 } parse_tree;
 
-typedef struct {
-  enum {
-    SEMERR_OUT_OF_PLACE_SIG,
-  } type;
-  union {
-    struct {
-      node_ind_t sig_index;
-      node_ind_t next_index;
-    };
-  };
-} semantic_error;
-
-VEC_DECL(semantic_error);
-
 typedef enum {
   PRT_SUCCESS,
   PRT_PARSE_ERROR,
-  PRT_SEMANTIC_ERRORS,
 } parse_result_type;
 
 typedef struct {
-  parse_tree tree;
   union {
+    parse_tree tree;
     struct {
       token_type *expected;
       node_ind_t error_pos;
       uint8_t expected_amt;
     };
-    vec_semantic_error semantic_errors;
   };
   parse_result_type type;
   struct timespec time_taken;
 } parse_tree_res;
 
-parse_tree_res parse(token *tokens, size_t token_amt);
+parse_tree_res parse(token *tokens);
 
 void print_parse_tree(FILE *f, const char *input, const parse_tree tree);
 char *print_parse_tree_str(const char *input, const parse_tree tree);

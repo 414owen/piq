@@ -5,7 +5,6 @@
 
 #include "diagnostic.h"
 #include "llvm.h"
-#include "parser.h"
 #include "parse_tree.h"
 #include "token.h"
 #include "typecheck.h"
@@ -21,7 +20,7 @@ static void reply(char *input, FILE *out) {
     goto end_a;
   }
 
-  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
+  parse_tree_res pres = parse(tres.tokens);
   if (pres.type != PRT_SUCCESS) {
     print_parse_errors(stdout, input, tres.tokens, pres);
     putc('\n', stdout);

@@ -3,7 +3,6 @@
 #include "consts.h"
 #include "defs.h"
 #include "diagnostic.h"
-#include "parser.h"
 #include "test.h"
 #include "tests.h"
 #include "test_upto.h"
@@ -15,10 +14,14 @@ static source_file test_file(const char *restrict input) {
 }
 
 static void test_token_layout(test_state *restrict state) {
-  test_group_start(state, "Token");
   test_start(state, "Is small");
   test_assert_eq(state, sizeof(token), 8);
   test_end(state);
+}
+
+static void test_token(test_state *restrict state) {
+  test_group_start(state, "Token");
+  test_token_layout(state);
   test_group_end(state);
 }
 
@@ -86,28 +89,29 @@ static void test_scanner_accepts(test_state *restrict state) {
 
   {
     test_start(state, "Open Paren");
-    static const token_type tokens[] = {TK_OPEN_PAREN};
+    static const token_type tokens[] = {TKN_OPEN_PAREN};
     test_scanner_tokens(state, "(", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Close Paren");
-    static const token_type tokens[] = {TK_CLOSE_PAREN};
+    static const token_type tokens[] = {TKN_CLOSE_PAREN};
     test_scanner_tokens(state, ")", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Unit");
-    static const token_type tokens[] = {TK_UNIT};
+    static const token_type tokens[] = {TKN_UNIT};
     test_scanner_tokens(state, "()", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Nested Parens");
-    static const token_type tokens[] = {TK_OPEN_PAREN, TK_UNIT, TK_CLOSE_PAREN};
+    static const token_type tokens[] = {
+      TKN_OPEN_PAREN, TKN_UNIT, TKN_CLOSE_PAREN};
     test_scanner_tokens(state, "(())", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
@@ -115,14 +119,14 @@ static void test_scanner_accepts(test_state *restrict state) {
   {
     test_start(state, "Mismatching Parens");
     static const token_type tokens[] = {
-      TK_CLOSE_PAREN, TK_CLOSE_PAREN, TK_OPEN_PAREN, TK_OPEN_PAREN};
+      TKN_CLOSE_PAREN, TKN_CLOSE_PAREN, TKN_OPEN_PAREN, TKN_OPEN_PAREN};
     test_scanner_tokens(state, "))((", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Name");
-    static const token_type tokens[] = {TK_LOWER_NAME};
+    static const token_type tokens[] = {TKN_LOWER_NAME};
     test_scanner_tokens(state, "abc", STATIC_LEN(tokens), tokens);
 
     // These exercise some branches for code coverage, as well as testing close
@@ -137,28 +141,28 @@ static void test_scanner_accepts(test_state *restrict state) {
 
   {
     test_start(state, "Names");
-    static const token_type tokens[] = {TK_LOWER_NAME, TK_LOWER_NAME};
+    static const token_type tokens[] = {TKN_LOWER_NAME, TKN_LOWER_NAME};
     test_scanner_tokens(state, "abc def", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Fun");
-    static const token_type tokens[] = {TK_FUN};
+    static const token_type tokens[] = {TKN_FUN};
     test_scanner_tokens(state, "fun", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "Sig");
-    static const token_type tokens[] = {TK_SIG};
+    static const token_type tokens[] = {TKN_SIG};
     test_scanner_tokens(state, "sig", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
 
   {
     test_start(state, "If");
-    static const token_type tokens[] = {TK_IF};
+    static const token_type tokens[] = {TKN_IF};
     test_scanner_tokens(state, "if", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
@@ -166,14 +170,14 @@ static void test_scanner_accepts(test_state *restrict state) {
   {
     test_start(state, "Kitchen Sink");
     static const token_type tokens[] = {
-      TK_LOWER_NAME,
-      TK_CLOSE_PAREN,
-      TK_LOWER_NAME,
-      TK_OPEN_PAREN,
-      TK_UPPER_NAME,
-      TK_COMMA,
-      TK_INT,
-      TK_LOWER_NAME,
+      TKN_LOWER_NAME,
+      TKN_CLOSE_PAREN,
+      TKN_LOWER_NAME,
+      TKN_OPEN_PAREN,
+      TKN_UPPER_NAME,
+      TKN_COMMA,
+      TKN_INT,
+      TKN_LOWER_NAME,
     };
     test_scanner_tokens(state, "abc)b3(Aef,234a", STATIC_LEN(tokens), tokens);
     test_end(state);
@@ -181,7 +185,7 @@ static void test_scanner_accepts(test_state *restrict state) {
 
   {
     test_start(state, "String");
-    static const token_type tokens[] = {TK_STRING};
+    static const token_type tokens[] = {TKN_STRING};
     test_scanner_tokens(state, "\"hi\"", STATIC_LEN(tokens), tokens);
     test_end(state);
   }
@@ -247,7 +251,7 @@ static void test_scanner_rejects(test_state *restrict state) {
 
 void test_scanner(test_state *state) {
   test_group_start(state, "Scanner");
-  test_token_layout(state);
+  test_token(state);
   test_scanner_accepts(state);
   test_scanner_rejects(state);
   test_scan_all(state);

@@ -3,9 +3,11 @@
 #include "token.h"
 #include "util.h"
 
-extern char *yyTokenName[];
+#define X(a) [TKN##_##a] = #a,
+const char *tokenNames[] = {TOKENS};
+#undef a
 
-void print_token(FILE *f, token_type t) { fputs(yyTokenName[t], f); }
+void print_token(FILE *f, token_type t) { fputs(tokenNames[t], f); }
 
 void print_tokens(FILE *f, const token_type *restrict tokens,
                   unsigned token_amt) {

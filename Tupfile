@@ -38,7 +38,7 @@ common_objs += llvm_construct_type.o
 common_objs += diagnostic.o
 common_objs += dir_exists.o
 common_objs += mkdir_p.o
-common_objs += parser.o
+common_objs += hand_parser.o
 common_objs += parse_tree.o
 common_objs += builtins.o
 common_objs += resolve_scope.o
@@ -91,12 +91,11 @@ COMPILE_C_FAST = "$CC -O2 $(CFLAGS) -c -o %o %f"
 COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f 
 
 : src/tokenizer.re |> re2c $(RE2C_OPTIONS) -o %o %f |> src/tokenizer.c
-: src/parser.y |> ./scripts/gen-parser.sh |> src/parser.c src/parser.h
 
-: src/parser.c     | src/parser.h |> ^j^ $CC $(OPT_LEVEL) $(CFLAGS) -c -o %o %f |> %B.o
-: src/parse_tree.c | src/parser.h |> ^j^ $CC $(OPT_LEVEL) $(CFLAGS) -c -o %o %f |> %B.o
-: src/repl.c       | src/parser.h |> ^j^ $CC $(OPT_LEVEL) $(CFLAGS) -c -o %o %f |> %B.o
-: src/tokenizer.c  | src/parser.h |> ^j^ $CC $(OPT_LEVEL) $(CFLAGS) -c -o %o %f |> %B.o
+: src/hand_parser.c         |> ^j^ $CC $(OPT_LEVEL) $(CFLAGS) -c -o %o %f |> %B.o
+: src/parse_tree.c          |> ^j^ $CC $(OPT_LEVEL) $(CFLAGS) -c -o %o %f |> %B.o
+: src/repl.c                |> ^j^ $CC $(OPT_LEVEL) $(CFLAGS) -c -o %o %f |> %B.o
+: src/tokenizer.c           |> ^j^ $CC $(OPT_LEVEL) $(CFLAGS) -c -o %o %f |> %B.o
 : src/bitset.c              |> ^j^ $CC $(OPT_LEVEL) $(CFLAGS) -c -o %o %f |> %B.o
 : src/consts.c              |> ^j^ $CC $(OPT_LEVEL) $(CFLAGS) -c -o %o %f |> %B.o
 : src/diagnostic.c          |> ^j^ $CC $(OPT_LEVEL) $(CFLAGS) -c -o %o %f |> %B.o
@@ -117,10 +116,10 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/llvm/construct_type.c |> ^j^ $CC $(OPT_LEVEL) $(CFLAGS) -c -o %o %f |> llvm_construct_type.o
 : src/llvm_shim.cpp         |> ^j^ $CXX $(OPT_LEVEL) $(CXXFLAGS) -c -o %o %f |> %B.o
 
-: src/test_llvm.c      | src/parser.h |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/test_parser.c    | src/parser.h |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/test_typecheck.c | src/parser.h |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/test_scanner.c   | src/parser.h |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_llvm.c        |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_parser.c      |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_typecheck.c   |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test_scanner.c     |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/run_tests.c        |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_bitset.c      |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test.c             |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
