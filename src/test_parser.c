@@ -24,7 +24,7 @@ typedef struct {
 static void test_parser_succeeds_on(test_state *state, const char *input,
                                     expected_output output) {
   parse_tree_res pres = test_upto_parse_tree(state, input);
-  if (pres.type != PRT_SUCCESS) {
+  if (pres.type == PRT_SUCCESS) {
     switch (output.tag) {
       case ANY:
         break;
@@ -47,17 +47,18 @@ static void test_parser_succeeds_on(test_state *state, const char *input,
 }
 
 static void test_parser_succeeds_on_form(test_state *state, char *input,
-                                         expected_output output) {
-  char *new_input;
-  char *old_str = output.str;
+                                         const expected_output output) {
+  expected_output new_exp = {
+    .tag = output.tag,
+  };
   if (output.tag == STRING) {
-    asprintf(&output.str, "(Fun (TermName a) (Body %s))", old_str);
+    new_exp.str = format_to_string("(Fun (TermName a) (Body %s))", output.str);
   }
-  asprintf(&new_input, "(fun a () %s)", input);
+  char *new_input = format_to_string("(fun a () %s)", input);
   test_parser_succeeds_on(state, new_input, output);
   free(new_input);
   if (output.tag == STRING) {
-    free(output.str);
+    free(new_exp.str);
   }
 }
 
