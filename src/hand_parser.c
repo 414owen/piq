@@ -21,7 +21,10 @@ typedef struct {
   // token index
   node_ind_t token_ind;
   token t;
+  // used to return positions in the node vec
   vec_node_ind ind_stack;
+  // backups of the above stack length, to be able to pop runs of indices
+  vec_node_ind ind_run_stack;
   vec_ptr labels;
 
   // parse node data
@@ -82,7 +85,8 @@ static span span_from_token(token t) {
 #define parser_push_primitive(nodes, t, node_type)                             \
   staging.type.all = node_type;                                                \
   staging.span = span_from_token(t);                                           \
-  VEC_PUSH(nodes, staging);
+  VEC_PUSH(nodes, staging); \
+  parser_consume(&state);
 #else
 static void parser_push_primitive(vec_parse_node *nodes, token t,
                                   parse_node_type_all type) {
@@ -91,14 +95,9 @@ static void parser_push_primitive(vec_parse_node *nodes, token t,
     .span = span_from_token(t),
   };
   VEC_PUSH(nodes, node);
+  parser_consume(&state);
 }
 #endif
-
-#define PARSER_RETURN_PRIMITIVE(node_type) \
-  VEC_PUSH(&state.node_inds, state.nodes.len); \
-  parser_push_primitive(&state.nodes, PEEK, node_type); \
-  parser_consume(&state); \
-  parser_ret;
 
 #define TYPE_CASES_GENERIC(stmt)                                               \
   case TKN_OPEN_PAREN:                                                         \
@@ -136,6 +135,34 @@ static void parser_push_primitive(vec_parse_node *nodes, token t,
     nodep = &VEC_DATA_PTR(&state.nodes)[node_ind];                                   \
   }
 
+static void parser_pop_node_and_ind_and_run(parser_state *state) {
+  VEC_POP_(&state->ind_stack);
+  VEC_POP_(&state->nodes);
+  VEC_POP_(&state->ind_run_stack);
+}
+
+#define S_EXPR_CASES_COMPOUND \
+  case TKN_OPEN_PAREN: \
+    ON_COMPOUND(S_EXPR_IN_PAREN) \
+  case TKN_OPEN_BRACKET: \
+    ON_COMPOUND(S_EXPR_LIST)
+
+#define S_EXPR_CASES_PRIMITIVE \
+  case TKN_INT: \
+    ON_PRIMITIVE(PT_ALL_EX_INT); \
+  case TKN_UNIT: \
+    ON_PRIMITIVE(PT_ALL_EX_UNIT); \
+  case TKN_STRING: \
+    ON_PRIMITIVE(PT_ALL_EX_STRING); \
+  case TKN_LOWER_NAME: \
+    ON_PRIMITIVE(PT_ALL_EX_TERM_NAME); \
+  case TKN_UPPER_NAME: \
+    ON_PRIMITIVE(PT_ALL_EX_UPPER_NAME);
+
+#define S_EXPR_CASES \
+  S_EXPR_CASES_COMPOUND \
+  S_EXPR_CASES_PRIMITIVE
+
 parse_tree_res parse(token *restrict tokens) {
   parser_state state = {
     .tokens = tokens,
@@ -143,6 +170,7 @@ parse_tree_res parse(token *restrict tokens) {
     .token_ind = 0,
     // stack to restore working node
     .ind_stack = VEC_NEW,
+    .ind_run_stack = VEC_NEW,
     .labels = VEC_NEW,
 
     // parse tree data
@@ -153,6 +181,7 @@ parse_tree_res parse(token *restrict tokens) {
   parse_node *nodep;
   parse_node staging;
   struct timespec start = get_monotonic_time();
+  parse_node_type_all node_type;
 
   // consuming empty, setting PEEK to the first token
   parser_consume(&state);
@@ -174,19 +203,27 @@ S_BLOCK:
       goto S_ERROR;
   }
 
-S_STMT_INSIDE_PAREN:
-  staging.span.start = PEEK.start;
-  // paren
-  parser_consume(&state);
-  switch (PEEK.type) {
-    case TKN_FUN:
-      goto S_FUN_STMT_START;
-    case TKN_SIG:
-      goto S_SIG_STMT_START;
-    case TKN_LET:
-      goto S_LET_STMT_START;
-    default:
-      goto S_ERROR;
+  {
+    parse_node_type_all t;
+  S_STMT_INSIDE_PAREN:
+    staging.span.start = PEEK.start;
+    // paren
+    parser_consume(&state);
+    switch (PEEK.type) {
+      case TKN_FUN:
+        goto S_FUN_STMT_START;
+      case TKN_SIG:
+        goto S_SIG_STMT_START;
+      case TKN_LET:
+        goto S_LET_STMT_START;
+  #define ON_COMPOUND(label) goto label;
+  #define ON_PRIMITIVE(pt_type) t = pt_type; break;
+        S_EXPR_CASES;
+  #undef ON_COMPOUND
+  #undef ON_PRIMITIVE
+      default:
+        goto S_ERROR;
+    }
   }
 
 // returns node
@@ -221,46 +258,19 @@ S_LET_STMT_AT_NAME:
   staging.sub_a = state.nodes.len;
   VEC_PUSH(&state.nodes, staging);
   parser_push_primitive(&state.nodes, PEEK, PT_ALL_MULTI_TERM_NAME);
-  // name
-  parser_consume(&state);
   goto S_EXPR;
 
-#define S_EXPR_CASES_COMPOUND \
-  case TKN_OPEN_PAREN: \
-    ON_COMPOUND(S_EXPR_IN_PAREN) \
-  case TKN_OPEN_BRACKET: \
-    ON_COMPOUND(S_EXPR_LIST)
-
-#define S_EXPR_CASES_PRIMITIVE \
-  case TKN_INT: \
-    ON_PRIMITIVE(PT_ALL_EX_INT); \
-  case TKN_UNIT: \
-    ON_PRIMITIVE(PT_ALL_EX_UNIT); \
-  case TKN_STRING: \
-    ON_PRIMITIVE(PT_ALL_EX_STRING); \
-  case TKN_LOWER_NAME: \
-    ON_PRIMITIVE(PT_ALL_EX_TERM_NAME); \
-  case TKN_UPPER_NAME: \
-    ON_PRIMITIVE(PT_ALL_EX_UPPER_NAME);
-
-#define S_EXPR_CASES \
-  S_EXPR_CASES_COMPOUND \
-  S_EXPR_CASES_PRIMITIVE
-
-  {
-    parse_node_type_all t;
   S_EXPR:
-    switch (PEEK.type) {
+  switch (PEEK.type) {
 #define ON_COMPOUND(label) goto label;
-#define ON_PRIMITIVE(pt_type) t = pt_type; break;
-      S_EXPR_CASES;
+#define ON_PRIMITIVE(pt_type) node_type = pt_type; break;
+    S_EXPR_CASES;
 #undef ON_COMPOUND
 #undef ON_PRIMITIVE
-      default:
-        goto S_ERROR;
-    }
-    PARSER_RETURN_PRIMITIVE(t);
+    default:
+      goto S_ERROR;
   }
+  goto PARSER_RETURN_PRIMITIVE;
 
 S_EXPR_LIST:
   staging.type.all = PT_ALL_EX_LIST;
@@ -286,7 +296,6 @@ S_EXPR_LIST_NEXT:
     }
     VEC_PUSH(&state.ind_stack, state.nodes.len);
     parser_push_primitive(&state.nodes, PEEK, t);
-    parser_consume(&state);
     goto S_EXPR_LIST_NEXT;
   }
 
@@ -304,18 +313,20 @@ S_EXPR_LIST_END:
     staging.type.all = PT_ALL_EX_CALL;
     VEC_PUSH(&state.ind_stack, state.nodes.len);
     VEC_PUSH(&state.nodes, staging);
+
+    // pushed for compounds
+    VEC_PUSH(&state.labels, &&S_CALL);
+    VEC_PUSH(&state.ind_run_stack, state.ind_stack.len);
+
     switch (PEEK.type) {
       case TKN_AS:
-        VEC_POP_(&state.ind_stack);
-        VEC_POP_(&state.nodes);
+        parser_pop_node_and_ind_and_run(&state);
         goto S_AS_EXPR;
       case TKN_FN:
-        VEC_POP_(&state.ind_stack);
-        VEC_POP_(&state.nodes);
+        parser_pop_node_and_ind_and_run(&state);
         goto S_FN_EXPR;
       case TKN_IF:
-        VEC_POP_(&state.ind_stack);
-        VEC_POP_(&state.nodes);
+        parser_pop_node_and_ind_and_run(&state);
         goto S_IF_EXPR;
 #define ON_COMPOUND(label) goto label;
 #define ON_PRIMITIVE(pt_type) t = pt_type; break;
@@ -326,20 +337,41 @@ S_EXPR_LIST_END:
         goto S_ERROR;
     }
 
+S_CALL_EXPR_PRIM:
+    VEC_POP_(&state.labels);
+    // for return
+    VEC_PUSH(&state.ind_stack, state.nodes.len);
     parser_push_primitive(&state.nodes, PEEK, t);
-    parser_consume(&state);
-    goto S_CALL_AFTER_FIRST;
+
+  S_CALL:
+    parser_return_to(&state.labels, &&S_CALL);
+    switch (PEEK.type) {
+      case TKN_CLOSE_PAREN:
+        VEC_POP_(&state.labels);
+        goto S_CALL_END;
+#define ON_COMPOUND(label) goto label;
+#define ON_PRIMITIVE(pt_type) t = pt_type; goto S_CALL_EXPR_PRIM;
+      S_EXPR_CASES;
+#undef ON_COMPOUND
+#undef ON_PRIMITIVE
+      default:
+        goto S_ERROR;
+    }
   }
 
   {
-    node_ind_t node_ind;
-  S_CALL_AFTER_FIRST:
-    VEC_POP(&state.ind_stack, &node_ind);
-    switch (PEEK.type) {
-      
-    }
+    node_ind_t ind_stack_start;
+S_CALL_END:
+    // close paren
+    parser_consume(&state);
+    VEC_POP(&state.ind_run_stack, &ind_stack_start);
+    node_ind_t ind_amt = state.ind_stack.len - ind_stack_start;
+    VEC_APPEND(&state.node_inds, ind_amt, &VEC_DATA_PTR(&state.ind_stack)[ind_stack_start]);
+    VEC_POP_N(&state.ind_stack, ind_amt);
+    PARSER_PEEK_NODEP;
+    nodep->sub_amt = ind_amt;
+    nodep->subs_start = state.node_inds.len - ind_amt;
   }
-  
 
 S_IF_EXPR:
   // if
@@ -427,7 +459,6 @@ S_SIG_STMT_START:
   }
 
 S_SIG_AT_BINDING:
-  parser_push_primitive(&state.nodes, PEEK, PT_ALL_STATEMENT_SIG);
   // TODO
   // binding
   parser_consume(&state);
@@ -442,20 +473,14 @@ S_TYPE:
 
 S_TYPE_UNIT:
   parser_push_primitive(&state.nodes, PEEK, PT_ALL_TY_UNIT);
-  // unit
-  parser_consume(&state);
   parser_ret;
 
 S_TYPE_CONSTRUCTOR:
   parser_push_primitive(&state.nodes, PEEK, PT_ALL_TY_CONSTRUCTOR_NAME);
-  // binding
-  parser_consume(&state);
   parser_ret;
 
 S_TYPE_VARIABLE:
   parser_push_primitive(&state.nodes, PEEK, PT_ALL_TY_PARAM_NAME);
-  // binding
-  parser_consume(&state);
   parser_ret;
 
 S_TYPE_AT_OPEN_PAREN:
@@ -652,6 +677,11 @@ S_PAT_WILDCARD:
   staging.type.all = PT_ALL_PAT_WILDCARD;
   staging.span = span_from_token(PEEK);
   VEC_PUSH(&state.nodes, staging);
+  parser_ret;
+
+PARSER_RETURN_PRIMITIVE:
+  VEC_PUSH(&state.node_inds, state.nodes.len);
+  parser_push_primitive(&state.nodes, PEEK, node_type);
   parser_ret;
 
   {
