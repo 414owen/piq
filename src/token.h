@@ -29,6 +29,7 @@
   X(DATA) \
   X(STRING) \
   X(UNIT) \
+  X(TUP)
 
 #define X(a) TKN ## _ ## a,
 typedef enum {

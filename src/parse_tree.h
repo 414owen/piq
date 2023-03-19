@@ -36,7 +36,9 @@ typedef enum {
   PT_ALL_EX_IF,
   PT_ALL_EX_INT,
   PT_ALL_EX_AS,
+  // TODO this is badly named because constructor names are also terms
   PT_ALL_EX_TERM_NAME,
+  // constructor names
   PT_ALL_EX_UPPER_NAME,
   PT_ALL_EX_LIST,
   PT_ALL_EX_STRING,

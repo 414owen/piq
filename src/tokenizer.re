@@ -68,6 +68,7 @@ static token_res scan(source_file file, buf_ind_t start) {
   "Fn"    { return mk_token(TKN_FN_TYPE, start, pos);             }
   "fn"    { return mk_token(TKN_FN, start, pos);             }
   "fun"   { return mk_token(TKN_FUN, start, pos);            }
+  "tup"   { return mk_token(TKN_TUP, start, pos);            }
   "sig"   { return mk_token(TKN_SIG, start, pos);            }
   "let"   { return mk_token(TKN_LET, start, pos);            }
   "as"    { return mk_token(TKN_AS, start, pos);             }
