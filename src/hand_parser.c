@@ -7,11 +7,11 @@
 #define STACKLESS_SPANS 1
 #define STACKLESS_PUSH 1
 
-#define parser_ret                          \
-  {                                         \
-    void *next_label;                       \
-    VEC_POP(&state.labels, &next_label);    \
-    goto *next_label;                       \
+#define parser_ret                                                             \
+  {                                                                            \
+    void *next_label;                                                          \
+    VEC_POP(&state.labels, &next_label);                                       \
+    goto *next_label;                                                          \
   }
 
 VEC_DECL_CUSTOM(void *, vec_ptr);
@@ -89,32 +89,40 @@ static void parser_push_primitive(vec_parse_node *nodes, token t,
 }
 #endif
 
-#define TYPE_CASES_GENERIC(stmt) \
-  case TKN_OPEN_PAREN: \
-    stmt; \
-    goto S_TYPE_AT_OPEN_PAREN; \
-  case TKN_LOWER_NAME: \
-    stmt; \
-    goto S_TYPE_VARIABLE; \
-  case TKN_UPPER_NAME: \
-    stmt; \
-    goto S_TYPE_CONSTRUCTOR; \
-  case TKN_UNIT: \
-    stmt; \
+#define TYPE_CASES_GENERIC(stmt)                                               \
+  case TKN_OPEN_PAREN:                                                         \
+    stmt;                                                                      \
+    goto S_TYPE_AT_OPEN_PAREN;                                                 \
+  case TKN_LOWER_NAME:                                                         \
+    stmt;                                                                      \
+    goto S_TYPE_VARIABLE;                                                      \
+  case TKN_UPPER_NAME:                                                         \
+    stmt;                                                                      \
+    goto S_TYPE_CONSTRUCTOR;                                                   \
+  case TKN_UNIT:                                                               \
+    stmt;                                                                      \
     goto S_TYPE_UNIT;
 
-#define TYPE_CASES_WITH_RETURN(return_label) \
+#define TYPE_CASES_WITH_RETURN(return_label)                                   \
   TYPE_CASES_GENERIC(parser_return_to(&state.labels, return_label))
 
-#define PASS do {} while(false)
+#define PASS                                                                   \
+  do {                                                                         \
+  } while (false)
 
 #define TYPE_CASES TYPE_CASES_GENERIC(PASS)
 
-#define PARSER_RESTORE_NODEP \
-  { \
-    node_ind_t node_ind; \
-    VEC_POP(&state.node_inds, &node_ind); \
-    nodep = &VEC_DATA_PTR(&nodes)[node_ind]; \
+#define PARSER_RESTORE_NODEP                                                   \
+  {                                                                            \
+    node_ind_t node_ind;                                                       \
+    VEC_POP(&state.node_inds, &node_ind);                                      \
+    nodep = &VEC_DATA_PTR(&nodes)[node_ind];                                   \
+  }
+
+#define PARSER_PEEK_NODEP                                                      \
+  {                                                                            \
+    node_ind_t node_ind = VEC_PEEK(state.node_inds);                           \
+    nodep = &VEC_DATA_PTR(&nodes)[node_ind];                                   \
   }
 
 parse_tree_res parse(token *restrict tokens) {
@@ -139,14 +147,17 @@ parse_tree_res parse(token *restrict tokens) {
 
 S_STATE_TOPLEVEL:
   parser_return_to(&state.labels, &&S_STATE_TOPLEVEL);
-  goto S_BLOCK;
+  switch (PEEK.type) {
+    case TKN_EOF:
+      goto S_SUCCESS;
+    default:
+      goto S_BLOCK;
+  }
 
 S_BLOCK:
   switch (PEEK.type) {
     case TKN_OPEN_PAREN:
       goto S_STMT_INSIDE_PAREN;
-    case TKN_EOF:
-      goto S_SUCCESS;
     default:
       goto S_ERROR;
   }
@@ -160,10 +171,13 @@ S_STMT_INSIDE_PAREN:
       goto S_FUN_STMT_START;
     case TKN_SIG:
       goto S_SIG_STMT_START;
+    case TKN_LET:
+      goto S_LET_STMT_START;
     default:
       goto S_ERROR;
   }
 
+// returns node
 S_FUN_STMT_START:
   // fun
   parser_consume(&state);
@@ -180,8 +194,138 @@ S_FUN_STMT_START:
       goto S_ERROR;
   }
 
+S_LET_STMT_START:
+  // let
+  parser_consume(&state);
+  switch (PEEK.type) {
+    case TKN_LOWER_NAME:
+      goto S_LET_STMT_AT_NAME;
+    default:
+      goto S_ERROR;
+  }
+
+S_LET_STMT_AT_NAME:
+  parser_return_to_with_node(&state, nodes.len, &&S_LET_STMT_END);
+  staging.sub_a = nodes.len;
+  VEC_PUSH(&nodes, staging);
+  parser_push_primitive(&nodes, PEEK, PT_ALL_MULTI_TERM_NAME);
+  // name
+  parser_consume(&state);
+  goto S_EXPR;
+
+  {
+    parse_node_type_all t;
+  S_EXPR:
+    switch (PEEK.type) {
+      case TKN_INT:
+        t = PT_ALL_EX_INT;
+        break;
+      case TKN_OPEN_PAREN:
+        goto S_EXPR_IN_PAREN;
+      case TKN_UNIT:
+        t = PT_ALL_EX_UNIT;
+        break;
+      case TKN_STRING:
+        t = PT_ALL_EX_STRING;
+        break;
+      // TODO other cases
+      default:
+        goto S_ERROR;
+    }
+    parser_push_primitive(&nodes, PEEK, t);
+    parser_consume(&state);
+    parser_ret;
+  }
+
+S_EXPR_IN_PAREN:
+  staging.span.start = PEEK.start;
+  // open paren
+  parser_consume(&state);
+  switch (PEEK.type) {
+    case TKN_AS:
+      goto S_AS_EXPR;
+    case TKN_FN:
+      goto S_FN_EXPR;
+    case TKN_IF:
+      goto S_IF_EXPR;
+  }
+
+S_IF_EXPR:
+  // if
+  parser_consume(&state);
+  staging.type.all = PT_ALL_EX_IF;
+  parser_return_to_with_node(&state, nodes.len, &&S_IF_EXPR_END);
+  VEC_PUSH(&nodes, staging);
+  // else
+  parser_return_to(&state.labels, &&S_EXPR);
+  // then
+  parser_return_to(&state.labels, &&S_EXPR);
+  // cond
+  parser_return_to(&state.labels, &&S_EXPR);
+  goto S_EXPR;
+
+  {
+    node_ind_t cond_ind;
+    node_ind_t then_ind;
+    node_ind_t else_ind;
+  S_IF_EXPR_END:
+    // TODO replace with a VEC_POP_N type thing
+    VEC_POP(&state.node_inds, &else_ind);
+    VEC_POP(&state.node_inds, &then_ind);
+    VEC_POP(&state.node_inds, &cond_ind);
+    PARSER_PEEK_NODEP;
+    nodep->span.len = PEEK.start + PEEK.len - nodep->span.start;
+    nodep->subs_start = inds.len;
+    nodep->sub_amt = 3;
+    VEC_PUSH(&inds, cond_ind);
+    VEC_PUSH(&inds, then_ind);
+    VEC_PUSH(&inds, else_ind);
+    parser_ret;
+  }
+
+S_AS_EXPR:
+  parser_return_to_with_node(&state, nodes.len, &&S_AS_EXPR_END);
+  VEC_PUSH(&state.labels, &&S_EXPR);
+  staging.sub_a = nodes.len;
+  staging.type.all = PT_ALL_EX_AS;
+  VEC_PUSH(&nodes, staging);
+  goto S_TYPE;
+
+  {
+    node_ind_t expr_ind;
+  S_LET_STMT_END:
+    VEC_POP(&state.node_inds, &expr_ind);
+    PARSER_PEEK_NODEP;
+    nodep->sub_b = expr_ind;
+    nodep->span.len = PEEK.start + PEEK.len - nodep->span.start;
+    // close paren
+    parser_consume(&state);
+    parser_ret;
+  }
+
+  {
+    node_ind_t expr_ind;
+    node_ind_t type_ind;
+  S_AS_EXPR_END:
+    VEC_POP(&state.node_inds, &expr_ind);
+    VEC_POP(&state.node_inds, &type_ind);
+    PARSER_PEEK_NODEP;
+    nodep->sub_a = type_ind;
+    nodep->sub_b = expr_ind;
+    nodep->span.len = PEEK.start + PEEK.len - nodep->span.start;
+    // close paren
+    parser_consume(&state);
+    parser_ret;
+  }
+
+S_FN_EXPR:
+  parser_return_to_with_node(&state, nodes.len, &&S_FN_EXPR_END);
+  // TODO
+  goto S_FUNLIKE_AT_PARAMS;
+
 S_SIG_STMT_START:
   parser_return_to_with_node(&state, nodes.len, &&S_SIG_END);
+  // TODO
   // sig
   parser_consume(&state);
   switch (PEEK.type) {
@@ -193,6 +337,7 @@ S_SIG_STMT_START:
 
 S_SIG_AT_BINDING:
   parser_push_primitive(&nodes, PEEK, PT_ALL_STATEMENT_SIG);
+  // TODO
   // binding
   parser_consume(&state);
   goto S_TYPE;
@@ -228,7 +373,7 @@ S_TYPE_AT_OPEN_PAREN:
   switch (PEEK.type) {
     case TKN_FN_TYPE:
       goto S_FN_TYPE;
-    TYPE_CASES_WITH_RETURN(&&S_TYPE_CALL_OR_TUP)
+      TYPE_CASES_WITH_RETURN(&&S_TYPE_CALL_OR_TUP)
     default:
       goto S_ERROR;
   }
@@ -238,7 +383,7 @@ S_TYPE_CALL_OR_TUP:
   switch (PEEK.type) {
     case TKN_COMMA:
       goto S_TYPE_TUPLE_AT_COMMA;
-    TYPE_CASES_WITH_RETURN(&&S_CONSTRUCTION_NEXT);
+      TYPE_CASES_WITH_RETURN(&&S_CONSTRUCTION_NEXT);
     case TKN_CLOSE_PAREN:
       goto S_TYPE_CONSTRUCTION_END;
     default:
@@ -270,11 +415,11 @@ S_TYPE_TUPLE_AT_COMMA:
 
 S_TYPE_TUPLE_NEXT:
   switch (PEEK.type) {
-    case TKN_COMMA:
-      goto S_TYPE_TUPLE_AT_COMMA;
+  case TKN_COMMA:
+    goto S_TYPE_TUPLE_AT_COMMA;
     case TKN_CLOSE_PAREN:
-      goto S_TYPE_TUPLE_END;
-    default:
+    goto S_TYPE_TUPLE_END;
+  default:
       goto S_ERROR;
   }
 
@@ -312,15 +457,15 @@ S_FUN_STMT_END:
 S_FUN_STMT_AFTER_NAME:
   // name
   parser_consume(&state);
-  goto S_FUNLIKE_FROM_PARAMS;
+  goto S_FUNLIKE_AT_PARAMS;
 
 // Either a function statement or a lambda expression
-S_FUNLIKE_FROM_PARAMS:
+S_FUNLIKE_AT_PARAMS:
   switch (PEEK.type) {
     case TKN_UNIT:
       goto S_FUNLIKE_AFTER_PARAMS;
     case TKN_OPEN_PAREN:
-      goto S_FUNLIKE_CONSUME_THEN_PARAMETER;
+      goto S_NEXT_PARAM;
     default:
       goto S_ERROR;
   }
@@ -331,36 +476,41 @@ S_FUNLIKE_AFTER_PARAMS:
   // TODO
   parser_ret;
 
-S_NEXT_PARAM:
+S_NEXT_PARAM : {
+  parse_node_type_all node_type;
+  parser_return_to(&state.labels, &&S_NEXT_PARAM);
+  // comma or open paren
   parser_consume(&state);
+
+#define PRIMITIVE_PATTERN(token, prim_type)                                    \
+  case token:                                                                  \
+    node_type = prim_type;                                                     \
+    break;
+
+#define PRIMITIVE_PATTERN_CASES                                                \
+  PRIMITIVE_PATTERN(TKN_LOWER_NAME, PT_ALL_PAT_WILDCARD);                      \
+  PRIMITIVE_PATTERN(TKN_UNIT, PT_ALL_PAT_UNIT);                                \
+  PRIMITIVE_PATTERN(TKN_INT, PT_ALL_PAT_INT);
+
   switch (PEEK.type) {
-    case TKN_COMMA:
-      goto S_FUNLIKE_CONSUME_THEN_PARAMETER;
+    PRIMITIVE_PATTERN_CASES;
+    PRIMITIVE_PATTERN(TKN_UPPER_NAME, PT_ALL_PAT_DATA_CONSTRUCTOR_NAME);
     case TKN_CLOSE_BRACKET:
       goto S_FUNLIKE_AFTER_PARAMS;
     default:
       goto S_ERROR;
   }
+  parser_push_primitive(&nodes, PEEK, node_type);
+  goto S_NEXT_PARAM;
+}
 
-S_FUNLIKE_CONSUME_THEN_PARAMETER:
-  parser_return_to(&state.labels, &&S_NEXT_PARAM);
-  // comma or open paren
-  parser_consume(&state);
-  goto S_PATTERN;
-
-S_PATTERN:
-{
+S_PATTERN : {
   parse_node_type_all node_type;
+
   switch (PEEK.type) {
-#define PRIMITIVE_PATTERN(token, prim_type) \
-    case token: \
-      node_type = prim_type; \
-      break;
-    PRIMITIVE_PATTERN(TKN_LOWER_NAME, PT_ALL_PAT_WILDCARD);
+    PRIMITIVE_PATTERN_CASES;
     case TKN_UPPER_NAME:
       goto S_PATTERN_DATA_CONSTRUCTOR;
-    PRIMITIVE_PATTERN(TKN_UNIT, PT_ALL_PAT_UNIT);
-    PRIMITIVE_PATTERN(TKN_INT, PT_ALL_PAT_INT);
     case TKN_OPEN_PAREN:
       goto S_PATTERN_AT_OPEN_PAREN;
     default:
@@ -380,6 +530,14 @@ S_SIG_END:
 S_AT_CLOSE_PAREN:
   PARSER_RESTORE_NODEP;
   nodep->span.len = PEEK.start + PEEK.len - nodep->span.start;
+  // close paren
+  parser_consume(&state);
+  parser_ret;
+
+S_FN_EXPR_END:
+  PARSER_RESTORE_NODEP;
+  nodep->span.len = PEEK.start + PEEK.len - nodep->span.start;
+  // TODO add params and expr
   // close paren
   parser_consume(&state);
   parser_ret;
@@ -408,7 +566,7 @@ S_PAT_WILDCARD:
   {
     parse_tree_res res;
 
-S_ERROR:
+  S_ERROR:
     res.type = PRT_PARSE_ERROR;
     res.error_pos = state.token_ind - 1;
     // TODO expected tokens
@@ -420,7 +578,7 @@ S_ERROR:
     VEC_FREE(&inds);
     goto S_END;
 
-S_SUCCESS:
+  S_SUCCESS:
     // should just have toplevel label
     debug_assert(state.labels.len == 1);
     res.type = PRT_SUCCESS;
@@ -431,7 +589,7 @@ S_SUCCESS:
     res.tree.root_subs_amt = 0;
     goto S_END;
 
-S_END:
+  S_END:
     VEC_FREE(&state.labels);
     // shouldn't have leaks here
     // debug_assert(state.node_inds.len == 1);
