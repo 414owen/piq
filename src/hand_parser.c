@@ -85,7 +85,7 @@ static span span_from_token(token t) {
 #define parser_push_primitive(nodes, t, node_type)                             \
   staging.type.all = node_type;                                                \
   staging.span = span_from_token(t);                                           \
-  VEC_PUSH(nodes, staging); \
+  VEC_PUSH(nodes, staging);                                                    \
   parser_consume(&state);
 #else
 static void parser_push_primitive(vec_parse_node *nodes, token t,
@@ -126,13 +126,13 @@ static void parser_push_primitive(vec_parse_node *nodes, token t,
   {                                                                            \
     node_ind_t node_ind;                                                       \
     VEC_POP(&state.ind_stack, &node_ind);                                      \
-    nodep = &VEC_DATA_PTR(&state.nodes)[node_ind];                                   \
+    nodep = &VEC_DATA_PTR(&state.nodes)[node_ind];                             \
   }
 
 #define PARSER_PEEK_NODEP                                                      \
   {                                                                            \
     node_ind_t node_ind = VEC_PEEK(state.ind_stack);                           \
-    nodep = &VEC_DATA_PTR(&state.nodes)[node_ind];                                   \
+    nodep = &VEC_DATA_PTR(&state.nodes)[node_ind];                             \
   }
 
 static void parser_pop_node_and_ind_and_run(parser_state *state) {
@@ -141,26 +141,26 @@ static void parser_pop_node_and_ind_and_run(parser_state *state) {
   VEC_POP_(&state->ind_run_stack);
 }
 
-#define S_EXPR_CASES_COMPOUND \
-  case TKN_OPEN_PAREN: \
-    ON_COMPOUND(S_EXPR_IN_PAREN) \
-  case TKN_OPEN_BRACKET: \
+#define S_EXPR_CASES_COMPOUND                                                  \
+  case TKN_OPEN_PAREN:                                                         \
+    ON_COMPOUND(S_EXPR_IN_PAREN)                                               \
+  case TKN_OPEN_BRACKET:                                                       \
     ON_COMPOUND(S_EXPR_LIST)
 
-#define S_EXPR_CASES_PRIMITIVE \
-  case TKN_INT: \
-    ON_PRIMITIVE(PT_ALL_EX_INT); \
-  case TKN_UNIT: \
-    ON_PRIMITIVE(PT_ALL_EX_UNIT); \
-  case TKN_STRING: \
-    ON_PRIMITIVE(PT_ALL_EX_STRING); \
-  case TKN_LOWER_NAME: \
-    ON_PRIMITIVE(PT_ALL_EX_TERM_NAME); \
-  case TKN_UPPER_NAME: \
+#define S_EXPR_CASES_PRIMITIVE                                                 \
+  case TKN_INT:                                                                \
+    ON_PRIMITIVE(PT_ALL_EX_INT);                                               \
+  case TKN_UNIT:                                                               \
+    ON_PRIMITIVE(PT_ALL_EX_UNIT);                                              \
+  case TKN_STRING:                                                             \
+    ON_PRIMITIVE(PT_ALL_EX_STRING);                                            \
+  case TKN_LOWER_NAME:                                                         \
+    ON_PRIMITIVE(PT_ALL_EX_TERM_NAME);                                         \
+  case TKN_UPPER_NAME:                                                         \
     ON_PRIMITIVE(PT_ALL_EX_UPPER_NAME);
 
-#define S_EXPR_CASES \
-  S_EXPR_CASES_COMPOUND \
+#define S_EXPR_CASES                                                           \
+  S_EXPR_CASES_COMPOUND                                                        \
   S_EXPR_CASES_PRIMITIVE
 
 parse_tree_res parse(token *restrict tokens) {
@@ -216,11 +216,13 @@ S_BLOCK:
         goto S_SIG_STMT_START;
       case TKN_LET:
         goto S_LET_STMT_START;
-  #define ON_COMPOUND(label) goto label;
-  #define ON_PRIMITIVE(pt_type) t = pt_type; break;
+#define ON_COMPOUND(label) goto label;
+#define ON_PRIMITIVE(pt_type)                                                  \
+  t = pt_type;                                                                 \
+  break;
         S_EXPR_CASES;
-  #undef ON_COMPOUND
-  #undef ON_PRIMITIVE
+#undef ON_COMPOUND
+#undef ON_PRIMITIVE
       default:
         goto S_ERROR;
     }
@@ -260,10 +262,12 @@ S_LET_STMT_AT_NAME:
   parser_push_primitive(&state.nodes, PEEK, PT_ALL_MULTI_TERM_NAME);
   goto S_EXPR;
 
-  S_EXPR:
+S_EXPR:
   switch (PEEK.type) {
 #define ON_COMPOUND(label) goto label;
-#define ON_PRIMITIVE(pt_type) node_type = pt_type; break;
+#define ON_PRIMITIVE(pt_type)                                                  \
+  node_type = pt_type;                                                         \
+  break;
     S_EXPR_CASES;
 #undef ON_COMPOUND
 #undef ON_PRIMITIVE
@@ -282,13 +286,17 @@ S_EXPR_LIST:
 
   {
     parse_node_type_all t;
-S_EXPR_LIST_NEXT:
+  S_EXPR_LIST_NEXT:
     switch (PEEK.type) {
       case TKN_CLOSE_BRACKET:
         goto S_EXPR_LIST_END;
-#define ON_COMPOUND(label) parser_return_to(&state.labels, &&S_EXPR_LIST_NEXT); goto label;
-#define ON_PRIMITIVE(pt_type) t = pt_type; break;
-      S_EXPR_CASES;
+#define ON_COMPOUND(label)                                                     \
+  parser_return_to(&state.labels, &&S_EXPR_LIST_NEXT);                         \
+  goto label;
+#define ON_PRIMITIVE(pt_type)                                                  \
+  t = pt_type;                                                                 \
+  break;
+        S_EXPR_CASES;
 #undef ON_COMPOUND
 #undef ON_PRIMITIVE
       default:
@@ -329,15 +337,17 @@ S_EXPR_LIST_END:
         parser_pop_node_and_ind_and_run(&state);
         goto S_IF_EXPR;
 #define ON_COMPOUND(label) goto label;
-#define ON_PRIMITIVE(pt_type) t = pt_type; break;
-      S_EXPR_CASES;
+#define ON_PRIMITIVE(pt_type)                                                  \
+  t = pt_type;                                                                 \
+  break;
+        S_EXPR_CASES;
 #undef ON_COMPOUND
 #undef ON_PRIMITIVE
       default:
         goto S_ERROR;
     }
 
-S_CALL_EXPR_PRIM:
+  S_CALL_EXPR_PRIM:
     VEC_POP_(&state.labels);
     // for return
     VEC_PUSH(&state.ind_stack, state.nodes.len);
@@ -350,8 +360,10 @@ S_CALL_EXPR_PRIM:
         VEC_POP_(&state.labels);
         goto S_CALL_END;
 #define ON_COMPOUND(label) goto label;
-#define ON_PRIMITIVE(pt_type) t = pt_type; goto S_CALL_EXPR_PRIM;
-      S_EXPR_CASES;
+#define ON_PRIMITIVE(pt_type)                                                  \
+  t = pt_type;                                                                 \
+  goto S_CALL_EXPR_PRIM;
+        S_EXPR_CASES;
 #undef ON_COMPOUND
 #undef ON_PRIMITIVE
       default:
@@ -361,12 +373,14 @@ S_CALL_EXPR_PRIM:
 
   {
     node_ind_t ind_stack_start;
-S_CALL_END:
+  S_CALL_END:
     // close paren
     parser_consume(&state);
     VEC_POP(&state.ind_run_stack, &ind_stack_start);
     node_ind_t ind_amt = state.ind_stack.len - ind_stack_start;
-    VEC_APPEND(&state.node_inds, ind_amt, &VEC_DATA_PTR(&state.ind_stack)[ind_stack_start]);
+    VEC_APPEND(&state.node_inds,
+               ind_amt,
+               &VEC_DATA_PTR(&state.ind_stack)[ind_stack_start]);
     VEC_POP_N(&state.ind_stack, ind_amt);
     PARSER_PEEK_NODEP;
     nodep->sub_amt = ind_amt;
@@ -531,11 +545,11 @@ S_TYPE_TUPLE_AT_COMMA:
 
 S_TYPE_TUPLE_NEXT:
   switch (PEEK.type) {
-  case TKN_COMMA:
-    goto S_TYPE_TUPLE_AT_COMMA;
+    case TKN_COMMA:
+      goto S_TYPE_TUPLE_AT_COMMA;
     case TKN_CLOSE_PAREN:
-    goto S_TYPE_TUPLE_END;
-  default:
+      goto S_TYPE_TUPLE_END;
+    default:
       goto S_ERROR;
   }
 
