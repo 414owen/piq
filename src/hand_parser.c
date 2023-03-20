@@ -141,11 +141,17 @@ static void parser_pop_node_and_ind_and_run(parser_state *state) {
   VEC_POP_(&state->ind_run_stack);
 }
 
-#define S_EXPR_CASES_COMPOUND                                                  \
+#define S_EXPR_OPEN_PAREN_CASE \
   case TKN_OPEN_PAREN:                                                         \
     ON_COMPOUND(S_EXPR_IN_PAREN)                                               \
+
+#define S_EXPR_OPEN_BRACKET_CASE \
   case TKN_OPEN_BRACKET:                                                       \
     ON_COMPOUND(S_EXPR_LIST)
+
+#define S_EXPR_CASES_COMPOUND                                                  \
+  S_EXPR_OPEN_PAREN_CASE \
+  S_EXPR_OPEN_BRACKET_CASE
 
 #define S_EXPR_CASES_PRIMITIVE                                                 \
   case TKN_INT:                                                                \
@@ -162,6 +168,10 @@ static void parser_pop_node_and_ind_and_run(parser_state *state) {
 #define S_EXPR_CASES                                                           \
   S_EXPR_CASES_COMPOUND                                                        \
   S_EXPR_CASES_PRIMITIVE
+
+#define S_EXPR_CASES_WITHOUT_OPEN_PAREN \
+  S_EXPR_CASES_PRIMITIVE \
+  S_EXPR_OPEN_BRACKET_CASE
 
 parse_tree_res parse(token *restrict tokens) {
   parser_state state = {
@@ -196,34 +206,36 @@ S_STATE_TOPLEVEL:
   }
 
 S_BLOCK:
+
+S_STMT:
   switch (PEEK.type) {
     case TKN_OPEN_PAREN:
       goto S_STMT_INSIDE_PAREN;
-    default:
-      goto S_ERROR;
-  }
-
-S_STMT_INSIDE_PAREN:
-  staging.span.start = PEEK.start;
-  // paren
-  parser_consume(&state);
-  switch (PEEK.type) {
-    case TKN_FUN:
-      goto S_FUN_STMT_START;
-    case TKN_SIG:
-      goto S_SIG_STMT_START;
-    case TKN_LET:
-      goto S_LET_STMT_START;
 #define ON_COMPOUND(label) goto label;
 #define ON_PRIMITIVE(pt_type)                                                  \
-  node_type = pt_type;                                                         \
+  node_type = pt_type;                                                                 \
   break;
-      S_EXPR_CASES;
+    S_EXPR_CASES_WITHOUT_OPEN_PAREN;
 #undef ON_COMPOUND
 #undef ON_PRIMITIVE
     default:
       goto S_ERROR;
   }
+
+  S_STMT_INSIDE_PAREN:
+    staging.span.start = PEEK.start;
+    // paren
+    parser_consume(&state);
+    switch (PEEK.type) {
+      case TKN_FUN:
+        goto S_FUN_STMT_START;
+      case TKN_SIG:
+        goto S_SIG_STMT_START;
+      case TKN_LET:
+        goto S_LET_STMT_START;
+      default:
+        goto S_ERROR;
+    }
 
 // returns node
 S_FUN_STMT_START:
@@ -281,85 +293,85 @@ S_EXPR_LIST:
   parser_consume(&state);
   goto S_EXPR_LIST_NEXT;
 
-S_EXPR_LIST_NEXT:
-  switch (PEEK.type) {
-    case TKN_CLOSE_BRACKET:
-      goto S_EXPR_LIST_END;
+  S_EXPR_LIST_NEXT:
+    switch (PEEK.type) {
+      case TKN_CLOSE_BRACKET:
+        goto S_EXPR_LIST_END;
 #define ON_COMPOUND(label)                                                     \
   parser_return_to(&state.labels, &&S_EXPR_LIST_NEXT);                         \
   goto label;
 #define ON_PRIMITIVE(pt_type)                                                  \
-  node_type = pt_type;                                                         \
+  node_type = pt_type;                                                                 \
   break;
-      S_EXPR_CASES;
+        S_EXPR_CASES;
 #undef ON_COMPOUND
 #undef ON_PRIMITIVE
-    default:
-      goto S_ERROR;
-  }
-  VEC_PUSH(&state.ind_stack, state.nodes.len);
-  parser_push_primitive(&state.nodes, PEEK, node_type);
-  goto S_EXPR_LIST_NEXT;
+      default:
+        goto S_ERROR;
+    }
+    VEC_PUSH(&state.ind_stack, state.nodes.len);
+    parser_push_primitive(&state.nodes, PEEK, node_type);
+    goto S_EXPR_LIST_NEXT;
 
 S_EXPR_LIST_END:
   // TODO
   parser_ret;
 
-S_EXPR_IN_PAREN:
-  staging.span.start = PEEK.start;
-  // open paren
-  parser_consume(&state);
-  staging.type.all = PT_ALL_EX_CALL;
-  VEC_PUSH(&state.ind_stack, state.nodes.len);
-  VEC_PUSH(&state.nodes, staging);
+  S_EXPR_IN_PAREN:
+    staging.span.start = PEEK.start;
+    // open paren
+    parser_consume(&state);
+    staging.type.all = PT_ALL_EX_CALL;
+    VEC_PUSH(&state.ind_stack, state.nodes.len);
+    VEC_PUSH(&state.nodes, staging);
 
-  // pushed for compounds
-  VEC_PUSH(&state.labels, &&S_CALL);
-  VEC_PUSH(&state.ind_run_stack, state.ind_stack.len);
+    // pushed for compounds
+    VEC_PUSH(&state.labels, &&S_CALL);
+    VEC_PUSH(&state.ind_run_stack, state.ind_stack.len);
 
-  switch (PEEK.type) {
-    case TKN_AS:
-      parser_pop_node_and_ind_and_run(&state);
-      goto S_AS_EXPR;
-    case TKN_FN:
-      parser_pop_node_and_ind_and_run(&state);
-      goto S_FN_EXPR;
-    case TKN_IF:
-      parser_pop_node_and_ind_and_run(&state);
-      goto S_IF_EXPR;
+    switch (PEEK.type) {
+      case TKN_AS:
+        parser_pop_node_and_ind_and_run(&state);
+        goto S_AS_EXPR;
+      case TKN_FN:
+        parser_pop_node_and_ind_and_run(&state);
+        goto S_FN_EXPR;
+      case TKN_IF:
+        parser_pop_node_and_ind_and_run(&state);
+        goto S_IF_EXPR;
 #define ON_COMPOUND(label) goto label;
 #define ON_PRIMITIVE(pt_type)                                                  \
-  node_type = pt_type;                                                         \
+  node_type = pt_type;                                                                 \
   break;
-      S_EXPR_CASES;
+        S_EXPR_CASES;
 #undef ON_COMPOUND
 #undef ON_PRIMITIVE
-    default:
-      goto S_ERROR;
-  }
+      default:
+        goto S_ERROR;
+    }
 
-S_CALL_EXPR_PRIM:
-  VEC_POP_(&state.labels);
-  // for return
-  VEC_PUSH(&state.ind_stack, state.nodes.len);
-  parser_push_primitive(&state.nodes, PEEK, node_type);
+  S_CALL_EXPR_PRIM:
+    VEC_POP_(&state.labels);
+    // for return
+    VEC_PUSH(&state.ind_stack, state.nodes.len);
+    parser_push_primitive(&state.nodes, PEEK, node_type);
 
-S_CALL:
-  parser_return_to(&state.labels, &&S_CALL);
-  switch (PEEK.type) {
-    case TKN_CLOSE_PAREN:
-      VEC_POP_(&state.labels);
-      goto S_CALL_END;
+  S_CALL:
+    parser_return_to(&state.labels, &&S_CALL);
+    switch (PEEK.type) {
+      case TKN_CLOSE_PAREN:
+        VEC_POP_(&state.labels);
+        goto S_CALL_END;
 #define ON_COMPOUND(label) goto label;
 #define ON_PRIMITIVE(pt_type)                                                  \
-  node_type = pt_type;                                                         \
+  node_type = pt_type;                                                                 \
   goto S_CALL_EXPR_PRIM;
-      S_EXPR_CASES;
+        S_EXPR_CASES;
 #undef ON_COMPOUND
 #undef ON_PRIMITIVE
-    default:
-      goto S_ERROR;
-  }
+      default:
+        goto S_ERROR;
+    }
 
   {
     node_ind_t ind_stack_start;
