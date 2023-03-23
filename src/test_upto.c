@@ -3,6 +3,8 @@
 #include "test.h"
 #include "test_upto.h"
 #include "test_llvm.h"
+#include "timing.h"
+#include "timespec.h"
 #include "typedefs.h"
 
 #ifdef TIME_TOKENIZER

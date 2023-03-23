@@ -6,6 +6,8 @@
 #include "diagnostic.h"
 #include "test.h"
 #include "tests.h"
+#include "timespec.h"
+#include "timing.h"
 #include "token.h"
 #include "util.h"
 

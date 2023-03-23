@@ -52,6 +52,7 @@
 
   #include "defs.h"
   #include "parse_tree.h"
+  #include "timing.h"
   #include "token.h"
   #include "util.h"
   #include "vec.h"

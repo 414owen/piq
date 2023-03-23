@@ -6,6 +6,7 @@
 #include "consts.h"
 #include "parse_tree.h"
 #include "term.h"
+#include "timing.h"
 #include "traverse.h"
 #include "typecheck.h"
 
