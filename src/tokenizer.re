@@ -93,7 +93,7 @@ static token_res scan(source_file file, buf_ind_t start) {
 
 tokens_res scan_all(source_file file) {
 #ifdef TIME_TOKENIZER
-  struct timespec start = get_monotonic_time();
+  perf_state perf_state = perf_start();
 #endif
   buf_ind_t ind = 0;
   vec_token tokens = VEC_NEW;
@@ -116,7 +116,7 @@ tokens_res scan_all(source_file file) {
     ind = tres.tok.start + tres.tok.len;
   }
 #ifdef TIME_TOKENIZER
-  res.time_taken = time_since_monotonic(start);
+  res.perf_values = perf_end(perf_state);
 #endif
   return res;
 }

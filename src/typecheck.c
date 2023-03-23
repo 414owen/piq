@@ -888,7 +888,7 @@ static type_info cleanup_types(node_ind_t parse_node_amt, type_builder *old) {
 
 tc_res typecheck(const parse_tree tree) {
 #ifdef TIME_TYPECHECK
-  struct timespec start = get_monotonic_time();
+  perf_state perf_state = perf_start();
 #endif
 
   type_builder type_builder = new_type_builder_with_builtins();
@@ -933,7 +933,7 @@ tc_res typecheck(const parse_tree tree) {
       .errors = NULL,
       .types = clean_types,
 #ifdef TIME_TYPECHECK
-      .time_taken = time_since_monotonic(start),
+      .perf_values = perf_end(perf_state),
 #endif
     };
     return res;
@@ -955,7 +955,7 @@ tc_res typecheck(const parse_tree tree) {
         .node_types = VEC_FINALIZE(&type_builder.substitutions),
       },
 #ifdef TIME_TYPECHECK
-    .time_taken = time_since_monotonic(start),
+    .perf_values = perf_end(perf_state),
 #endif
   };
   ahm_free(&type_builder.type_to_index);

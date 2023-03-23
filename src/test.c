@@ -116,46 +116,39 @@ void failf_(test_state *state, char *file, size_t line, const char *fmt, ...) {
   fail_with(state, ss.string);
 }
 
-const struct timespec zero = {
-  .tv_sec = 0,
-  .tv_nsec = 0,
-};
-
 test_state test_state_new(test_config config) {
   test_state res = {
 #ifdef TIME_TOKENIZER
     .total_bytes_tokenized = 0,
-    .total_tokenization_time = zero,
-    .total_tokens = 0,
+    .total_tokenization_perf = perf_zero,
+    .total_tokens_produced = 0,
 #endif
 #ifdef TIME_PARSER
-    .total_parser_time = zero,
+    .total_parser_perf = perf_zero,
     .total_tokens_parsed = 0,
     .total_parse_nodes_produced = 0,
 #endif
 #ifdef TIME_NAME_RESOLUTION
-    .total_name_resolution_time = zero,
+    .total_name_resolution_perf = perf_zero,
     .total_names_looked_up = 0,
 #endif
 #ifdef TIME_TYPECHECK
-    .total_typecheck_time = zero,
+    .total_typecheck_perf = perf_zero,
     .total_parse_nodes_typechecked = 0,
 #endif
 #ifdef TIME_CODEGEN
-    .total_llvm_ir_generation_time = zero,
-    .total_codegen_time = zero,
+    .total_llvm_ir_generation_perf = perf_zero,
+    .total_codegen_perf = perf_zero,
     .total_parse_nodes_codegened = 0,
 #endif
     .config = config,
     .path = VEC_NEW,
     .tests_passed = 0,
     .tests_run = 0,
-    .end_time = {0},
     .current_name = NULL,
     .current_failed = false,
     .failures = VEC_NEW,
     .filter_str = config.filter_str,
-    .start_time = get_monotonic_time(),
   };
   return res;
 }

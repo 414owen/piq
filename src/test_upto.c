@@ -3,8 +3,7 @@
 #include "test.h"
 #include "test_upto.h"
 #include "test_llvm.h"
-#include "timing.h"
-#include "timespec.h"
+#include "perf.h"
 #include "typedefs.h"
 
 #ifdef TIME_TOKENIZER
@@ -16,9 +15,9 @@ void add_scanner_timings_internal(test_state *state, const char *restrict input,
   } else {
     state->total_bytes_tokenized += tres.error_pos;
   }
-  state->total_tokenization_time =
-    timespec_add(state->total_tokenization_time, tres.time_taken);
-  state->total_tokens += tres.token_amt;
+  state->total_tokenization_perf =
+    perf_add(state->total_tokenization_perf, tres.perf_values);
+  state->total_tokens_produced += tres.token_amt;
 }
 #endif
 
@@ -34,8 +33,8 @@ void add_parser_timings_internal(test_state *state, tokens_res tres,
       state->total_tokens_parsed += tres.token_amt;
       break;
   }
-  state->total_parser_time =
-    timespec_add(state->total_parser_time, pres.time_taken);
+  state->total_parser_perf =
+    perf_add(state->total_parser_perf, pres.perf_values);
   state->total_parse_nodes_produced += pres.tree.node_amt;
 }
 #endif
@@ -44,8 +43,8 @@ void add_parser_timings_internal(test_state *state, tokens_res tres,
 void add_typecheck_timings_internal(test_state *state, parse_tree tree,
                                     tc_res tc_res) {
   if (tc_res.error_amt == 0) {
-    state->total_typecheck_time =
-      timespec_add(state->total_typecheck_time, tc_res.time_taken);
+    state->total_typecheck_perf =
+      perf_add(state->total_typecheck_perf, tc_res.perf_values);
     state->total_parse_nodes_typechecked += tree.node_amt;
   }
 }
@@ -54,8 +53,8 @@ void add_typecheck_timings_internal(test_state *state, parse_tree tree,
 #ifdef TIME_CODEGEN
 void add_codegen_timings_internal(test_state *state, parse_tree tree,
                                   llvm_res llres) {
-  state->total_llvm_ir_generation_time =
-    timespec_add(state->total_llvm_ir_generation_time, llres.time_taken);
+  state->total_llvm_ir_generation_perf =
+    perf_add(state->total_llvm_ir_generation_perf, llres.perf_values);
   state->total_parse_nodes_codegened += tree.node_amt;
 }
 #endif
@@ -63,8 +62,8 @@ void add_codegen_timings_internal(test_state *state, parse_tree tree,
 #ifdef TIME_NAME_RESOLUTION
 void add_name_resolution_timings_internal(test_state *state,
                                           resolution_res res) {
-  state->total_name_resolution_time =
-    timespec_add(state->total_name_resolution_time, res.time_taken);
+  state->total_name_resolution_perf =
+    perf_add(state->total_name_resolution_perf, res.perf_values);
   state->total_names_looked_up += res.num_names_looked_up;
 }
 #endif
@@ -208,7 +207,7 @@ void test_upto_codegen_with(test_state *state, const char *restrict input,
   // puts(ctx->module_str);
 
 #ifdef TIME_CODEGEN
-  struct timespec start = get_monotonic_time();
+  perf_state perf_state = perf_start();
 #endif
 
   char *mod_str = LLVMPrintModuleToString(module);
@@ -258,10 +257,10 @@ void test_upto_codegen_with(test_state *state, const char *restrict input,
   LLVMDisposeMessage(mod_str);
 
 #ifdef TIME_CODEGEN
-  struct timespec time_taken = time_since_monotonic(start);
+  perf_values perf_values = perf_end(perf_state);
   if (!state->current_failed) {
-    state->total_codegen_time =
-      timespec_add(state->total_codegen_time, time_taken);
+    state->total_codegen_perf =
+      perf_add(state->total_codegen_perf, perf_values);
   }
 #endif
 
