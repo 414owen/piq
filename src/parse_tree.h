@@ -280,7 +280,7 @@ typedef struct {
     vec_semantic_error semantic_errors;
   };
   parse_result_type type;
-  struct timespec time_taken;
+  perf_values perf_values;
 } parse_tree_res;
 
 parse_tree_res parse(token *tokens, size_t token_amt);
@@ -303,7 +303,7 @@ typedef struct {
 typedef struct {
   resolution_errors not_found;
 #ifdef TIME_NAME_RESOLUTION
-  struct timespec time_taken;
+  perf_values perf_values;
   u32 num_names_looked_up;
 #endif
 } resolution_res;

@@ -220,7 +220,7 @@ resolution_res resolve_bindings(parse_tree tree, const char *restrict input) {
   };
 
 #ifdef TIME_NAME_RESOLUTION
-  struct timespec start = get_monotonic_time();
+  perf_state perf_state = perf_start();
 #endif
 
   bs_push_true_n(&state.type_environment.is_builtin, named_builtin_type_amount);
@@ -277,7 +277,7 @@ resolution_res resolve_bindings(parse_tree tree, const char *restrict input) {
               .bindings = VEC_FINALIZE(&state.not_found),
             },
 #ifdef TIME_NAME_RESOLUTION
-          .time_taken = time_since_monotonic(start),
+          .perf_values = perf_end(perf_state),
           .num_names_looked_up = state.num_names_looked_up,
 #endif
         };

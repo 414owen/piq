@@ -7,7 +7,7 @@
 typedef struct {
   LLVMModuleRef module;
 #ifdef TIME_CODEGEN
-  struct timespec time_taken;
+  perf_values perf_values;
 #endif
 } llvm_res;
 

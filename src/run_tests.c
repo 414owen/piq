@@ -8,6 +8,7 @@
 #include "benchmark.h"
 #include "initialise.h"
 #include "llvm.h"
+#include "perf.h"
 #include "test.h"
 #include "tests.h"
 
@@ -239,6 +240,121 @@ static void put_metric_float(put_metric_state *state, float_metric m) {
   print_metric_postamble(state);
 }
 
+static void put_perf_timings(put_metric_state *state, const char *operation,
+                             perf_values values) {
+  {
+    char *desc = format_to_string("Time spent in %s", operation);
+    time_metric m = {
+      .name = desc,
+      .time = values.time_taken,
+    };
+    put_metric_time(state, m);
+    free(desc);
+  }
+#ifdef PREDEF_OS_LINUX
+  {
+    char *desc = format_to_string("Cycles spent in %s", operation);
+    amount_metric m = {
+      .name = desc,
+      .amount = values.hw_cpu_cycles,
+    };
+    put_metric_amount(state, m);
+    free(desc);
+  }
+  {
+    char *desc = format_to_string("Instructions retired in %s", operation);
+    amount_metric m = {
+      .name = desc,
+      .amount = values.hw_retired_instructions,
+    };
+    put_metric_amount(state, m);
+    free(desc);
+  }
+  {
+    char *desc = format_to_string("Branch mispredictions in %s", operation);
+    amount_metric m = {
+      .name = desc,
+      .amount = values.hw_branch_mispredictions,
+    };
+    put_metric_amount(state, m);
+    free(desc);
+  }
+  {
+    char *desc = format_to_string("Cache misses in %s", operation);
+    amount_metric m = {
+      .name = desc,
+      .amount = values.hw_cache_misses,
+    };
+    put_metric_amount(state, m);
+    free(desc);
+  }
+#endif
+}
+
+static void put_perf_per_thing(put_metric_state *state, const char *operation,
+                               const char *object, uint64_t number,
+                               perf_values values) {
+
+  {
+    double nanos_per_parse_node =
+      (double)timespec_to_nanos(values.time_taken) / (double)number;
+    char *desc = format_to_string("%s time per %s", operation, object);
+    float_time_metric m = {
+      .name = desc,
+      .nanoseconds = nanos_per_parse_node,
+    };
+    put_metric_time_float(state, m);
+    free(desc);
+  }
+#ifdef PREDEF_OS_LINUX
+  {
+    double cycles_per_parse_node =
+      (double)values.hw_cpu_cycles / (double)number;
+    char *desc = format_to_string("%s cycles per %s", operation, object);
+    float_metric m = {
+      .name = desc,
+      .amount = cycles_per_parse_node,
+    };
+    put_metric_float(state, m);
+    free(desc);
+  }
+  {
+    double instructions_retired_per_parse_node =
+      (double)values.hw_retired_instructions / (double)number;
+    char *desc =
+      format_to_string("%s instructions retired per %s", operation, object);
+    float_metric m = {
+      .name = desc,
+      .amount = instructions_retired_per_parse_node,
+    };
+    put_metric_float(state, m);
+    free(desc);
+  }
+  {
+    double cache_misses_per_parse_node =
+      (double)values.hw_cache_misses / (double)number;
+    char *desc = format_to_string("%s cache misses per %s", operation, object);
+    float_metric m = {
+      .name = desc,
+      .amount = cache_misses_per_parse_node,
+    };
+    put_metric_float(state, m);
+    free(desc);
+  }
+  {
+    double branch_mispredictions_per_parse_node =
+      (double)values.hw_branch_mispredictions / (double)number;
+    char *desc = format_to_string("%s branch misses per %s", operation, object);
+    float_metric m = {
+      .name = desc,
+      .amount = branch_mispredictions_per_parse_node,
+    };
+    put_metric_float(state, m);
+    free(desc);
+  }
+#endif
+}
+
 int main(int argc, const char **argv) {
   initialise();
 
@@ -356,13 +472,7 @@ int main(int argc, const char **argv) {
   if (state.total_bytes_tokenized > 0) {
     metric_state.heading = METRIC_H_TOKENIZER;
 
-    {
-      time_metric m = {
-        .name = "Time spent tokenizing",
-        .time = state.total_tokenization_time,
-      };
-      put_metric_time(&metric_state, m);
-    }
+    put_perf_timings(&metric_state, "tokenizer", state.total_tokenization_perf);
 
     {
       amount_metric m = {
@@ -375,31 +485,23 @@ int main(int argc, const char **argv) {
     {
       amount_metric m = {
         .name = "Total tokens produced",
-        .amount = state.total_tokens,
+        .amount = state.total_tokens_produced,
       };
       put_metric_amount(&metric_state, m);
     }
 
     {
-      double nanos_per_token =
-        (double)timespec_to_nanos(state.total_tokenization_time) /
-        (double)state.total_tokens;
-      float_time_metric m = {
-        .name = "Tokenization time per token produced",
-        .nanoseconds = nanos_per_token,
-      };
-      put_metric_time_float(&metric_state, m);
-    }
-
-    {
-      double nanos_per_byte =
-        (double)timespec_to_nanos(state.total_tokenization_time) /
-        (double)state.total_bytes_tokenized;
-      float_time_metric m = {
-        .name = "Tokenization time per byte",
-        .nanoseconds = nanos_per_byte,
-      };
-      put_metric_time_float(&metric_state, m);
+      const char *name = "Tokenizer";
+      put_perf_per_thing(&metric_state,
+                         name,
+                         "byte",
+                         state.total_bytes_tokenized,
+                         state.total_tokenization_perf);
+      put_perf_per_thing(&metric_state,
+                         name,
+                         "token produced",
+                         state.total_tokens_produced,
+                         state.total_tokenization_perf);
     }
   }
 #endif
@@ -407,13 +509,8 @@ int main(int argc, const char **argv) {
 #ifdef TIME_PARSER
   if (state.total_parse_nodes_produced > 0) {
     metric_state.heading = METRIC_H_PARSER;
-    {
-      time_metric m = {
-        .name = "Time spent parsing",
-        .time = state.total_parser_time,
-      };
-      put_metric_time(&metric_state, m);
-    }
+
+    put_perf_timings(&metric_state, "parser", state.total_parser_perf);
 
     {
       amount_metric m = {
@@ -442,25 +539,17 @@ int main(int argc, const char **argv) {
     }
 
     {
-      double nanos_per_token =
-        (double)timespec_to_nanos(state.total_parser_time) /
-        (double)state.total_tokens_parsed;
-      float_time_metric m = {
-        .name = "Parse time per token",
-        .nanoseconds = nanos_per_token,
-      };
-      put_metric_time_float(&metric_state, m);
-    }
-
-    {
-      double nanos_per_parse_node =
-        (double)timespec_to_nanos(state.total_parser_time) /
-        (double)state.total_parse_nodes_produced;
-      float_time_metric m = {
-        .name = "Parse time per parse node produced",
-        .nanoseconds = nanos_per_parse_node,
-      };
-      put_metric_time_float(&metric_state, m);
+      const char *name = "Parser";
+      put_perf_per_thing(&metric_state,
+                         name,
+                         "byte",
+                         state.total_tokens_parsed,
+                         state.total_parser_perf);
+      put_perf_per_thing(&metric_state,
+                         name,
+                         "token produced",
+                         state.total_parse_nodes_produced,
+                         state.total_parser_perf);
     }
   }
 #endif
@@ -468,13 +557,9 @@ int main(int argc, const char **argv) {
 #ifdef TIME_NAME_RESOLUTION
   if (state.total_names_looked_up > 0) {
     metric_state.heading = METRIC_H_RESOLVE_NAMES;
-    {
-      time_metric m = {
-        .name = "Time spent resolving names",
-        .time = state.total_name_resolution_time,
-      };
-      put_metric_time(&metric_state, m);
-    }
+
+    put_perf_timings(
+      &metric_state, "name resolver", state.total_name_resolution_perf);
 
     {
       amount_metric m = {
@@ -485,14 +570,15 @@ int main(int argc, const char **argv) {
     }
 
     {
-      double nanos_per_lookup =
-        (double)timespec_to_nanos(state.total_name_resolution_time) /
-        (double)state.total_names_looked_up;
-      float_time_metric m = {
-        .name = "Time per name lookup",
-        .nanoseconds = nanos_per_lookup,
-      };
-      put_metric_time_float(&metric_state, m);
+      const char *name = "Name resolver";
+      put_perf_per_thing(&metric_state,
+                         name,
+                         "name looked up",
+                         state.total_names_looked_up,
+                         state.total_name_resolution_perf);
+      // TODO add
+      // put_perf_per_thing(&metric_state, name, "parse node",
+      // state.total_parse_nodes_resolved, state.total_name_resolution_time);
     }
   }
 #endif
@@ -500,13 +586,8 @@ int main(int argc, const char **argv) {
 #ifdef TIME_TYPECHECK
   if (state.total_parse_nodes_typechecked > 0) {
     metric_state.heading = METRIC_H_TYPECHECK;
-    {
-      time_metric m = {
-        .name = "Time spent typechecking",
-        .time = state.total_typecheck_time,
-      };
-      put_metric_time(&metric_state, m);
-    }
+
+    put_perf_timings(&metric_state, "typechecker", state.total_typecheck_perf);
 
     {
       amount_metric m = {
@@ -517,14 +598,12 @@ int main(int argc, const char **argv) {
     }
 
     {
-      double nanos_per_parse_node =
-        (double)timespec_to_nanos(state.total_typecheck_time) /
-        (double)state.total_parse_nodes_typechecked;
-      float_time_metric m = {
-        .name = "Typecheck time per parse node",
-        .nanoseconds = nanos_per_parse_node,
-      };
-      put_metric_time_float(&metric_state, m);
+      const char *name = "Typecheck";
+      put_perf_per_thing(&metric_state,
+                         name,
+                         "parse node",
+                         state.total_parse_nodes_typechecked,
+                         state.total_typecheck_perf);
     }
   }
 #endif
@@ -532,21 +611,10 @@ int main(int argc, const char **argv) {
 #ifdef TIME_CODEGEN
   if (state.total_parse_nodes_codegened > 0) {
     metric_state.heading = METRIC_H_CODEGEN;
-    {
-      time_metric m = {
-        .name = "Time spent building LLVM IR",
-        .time = state.total_llvm_ir_generation_time,
-      };
-      put_metric_time(&metric_state, m);
-    }
 
-    {
-      time_metric m = {
-        .name = "Time spent performing codegen",
-        .time = state.total_codegen_time,
-      };
-      put_metric_time(&metric_state, m);
-    }
+    put_perf_timings(
+      &metric_state, "llvm ir generation", state.total_llvm_ir_generation_perf);
+    put_perf_timings(&metric_state, "llvm codegen", state.total_codegen_perf);
 
     {
       amount_metric m = {
@@ -557,25 +625,16 @@ int main(int argc, const char **argv) {
     }
 
     {
-      double nanos_per_parse_node =
-        (double)timespec_to_nanos(state.total_llvm_ir_generation_time) /
-        (double)state.total_parse_nodes_codegened;
-      float_time_metric m = {
-        .name = "Time building LLVM IR per parse node",
-        .nanoseconds = nanos_per_parse_node,
-      };
-      put_metric_time_float(&metric_state, m);
-    }
-
-    {
-      double nanos_per_parse_node =
-        (double)timespec_to_nanos(state.total_codegen_time) /
-        (double)state.total_parse_nodes_codegened;
-      float_time_metric m = {
-        .name = "Codegen time per parse node",
-        .nanoseconds = nanos_per_parse_node,
-      };
-      put_metric_time_float(&metric_state, m);
+      put_perf_per_thing(&metric_state,
+                         "LLVM IR Build",
+                         "parse node",
+                         state.total_parse_nodes_codegened,
+                         state.total_llvm_ir_generation_perf);
+      put_perf_per_thing(&metric_state,
+                         "Codegen",
+                         "parse node",
+                         state.total_parse_nodes_codegened,
+                         state.total_codegen_perf);
     }
   }
 #endif
