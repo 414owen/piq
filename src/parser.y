@@ -911,7 +911,7 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
 
   static parse_tree_res parse_internal(token *tokens, size_t token_amt, bool get_expected) {
 #ifdef TIME_PARSER
-    struct timespec start = get_monotonic_time();
+    perf_state perf_state = perf_start();
 #endif
     yyParser xp;
     ParseInit(&xp);
@@ -963,7 +963,7 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
     // we turn asserts into debug_asserts in this file
     VEC_FREE(&state.ind_stack);
   #ifdef TIME_PARSER
-    res.time_taken = time_since_monotonic(start);
+    res.perf_values = perf_end(perf_state);
   #endif
     return res;
   }

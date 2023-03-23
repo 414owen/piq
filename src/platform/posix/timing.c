@@ -1,5 +1,4 @@
 #include <time.h>
-#include <stdio.h>
 
 struct timespec get_monotonic_time(void) {
   struct timespec res;

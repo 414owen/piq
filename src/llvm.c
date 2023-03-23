@@ -835,7 +835,7 @@ void llvm_init(void) {
 llvm_res llvm_gen_module(source_file source, parse_tree tree, type_info types,
                          LLVMModuleRef module) {
 #ifdef TIME_CODEGEN
-  struct timespec start = get_monotonic_time();
+  perf_state perf_state = perf_start();
 #endif
   llvm_res res = {
     .module = module,
@@ -852,7 +852,7 @@ llvm_res llvm_gen_module(source_file source, parse_tree tree, type_info types,
   //   exit(1);
   // }
 #ifdef TIME_CODEGEN
-  res.time_taken = time_since_monotonic(start);
+  res.perf_values = perf_end(perf_state);
 #endif
   return res;
 }

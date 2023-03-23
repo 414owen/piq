@@ -72,25 +72,25 @@ VEC_DECL(test_action);
 typedef struct {
 #ifdef TIME_TOKENIZER
   uint64_t total_bytes_tokenized;
-  struct timespec total_tokenization_time;
-  uint64_t total_tokens;
+  perf_values total_tokenization_perf;
+  uint64_t total_tokens_produced;
 #endif
 #ifdef TIME_PARSER
-  struct timespec total_parser_time;
+  perf_values total_parser_perf;
   uint64_t total_tokens_parsed;
   uint64_t total_parse_nodes_produced;
 #endif
 #ifdef TIME_NAME_RESOLUTION
-  struct timespec total_name_resolution_time;
+  perf_values total_name_resolution_perf;
   uint64_t total_names_looked_up;
 #endif
 #ifdef TIME_TYPECHECK
-  struct timespec total_typecheck_time;
+  perf_values total_typecheck_perf;
   uint64_t total_parse_nodes_typechecked;
 #endif
 #ifdef TIME_CODEGEN
-  struct timespec total_llvm_ir_generation_time;
-  struct timespec total_codegen_time;
+  perf_values total_llvm_ir_generation_perf;
+  perf_values total_codegen_perf;
   uint64_t total_parse_nodes_codegened;
 #endif
   test_config config;

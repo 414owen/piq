@@ -102,6 +102,7 @@ A language that does everything right
 * Wrap index types in structs to protect us from bad changes
 * Precalculate stack depth in binding resolution or its own step, then use arrays instead of vectors
   in other traversals
+* Separate out locations into its own AST array. They're rarely used.
 
 ## Thoughts on pointers
 

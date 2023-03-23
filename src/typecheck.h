@@ -61,7 +61,7 @@ typedef struct {
   node_ind_t error_amt;
   type_info types;
 #ifdef TIME_TYPECHECK
-  struct timespec time_taken;
+  perf_values perf_values;
 #endif
 } tc_res;
 
