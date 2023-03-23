@@ -12,6 +12,7 @@
 #include "llvm_shim.h"
 #include "llvm_shim.h"
 #include "parse_tree.h"
+#include "timing.h"
 #include "traverse.h"
 #include "typecheck.h"
 #include "util.h"

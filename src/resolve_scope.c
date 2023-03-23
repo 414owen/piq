@@ -7,6 +7,7 @@
 #include "hashmap.h"
 #include "hashers.h"
 #include "parse_tree.h"
+#include "timing.h"
 #include "traverse.h"
 #include "util.h"
 #include "vec.h"

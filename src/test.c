@@ -8,6 +8,8 @@
 #include "diagnostic.h"
 #include "term.h"
 #include "test.h"
+#include "timing.h"
+#include "timespec.h"
 #include "token.h"
 #include "util.h"
 #include "vec.h"
@@ -148,19 +150,18 @@ test_state test_state_new(test_config config) {
     .path = VEC_NEW,
     .tests_passed = 0,
     .tests_run = 0,
-    .start_time = {0},
     .end_time = {0},
     .current_name = NULL,
     .current_failed = false,
     .failures = VEC_NEW,
     .filter_str = config.filter_str,
+    .start_time = get_monotonic_time(),
   };
-  clock_gettime(CLOCK_MONOTONIC, &res.start_time);
   return res;
 }
 
 void test_state_finalize(test_state *state) {
-  clock_gettime(CLOCK_MONOTONIC, &state->end_time);
+  state->end_time = get_monotonic_time();
 }
 
 static void print_test_path(vec_string v, FILE *out) {

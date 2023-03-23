@@ -125,11 +125,6 @@ size_t find_range(const void *restrict haystack, size_t el_size, size_t el_amt,
   return el_amt;
 }
 
-struct timespec time_since_monotonic(const struct timespec start) {
-  struct timespec end = get_monotonic_time();
-  return timespec_subtract(end, start);
-}
-
 NON_NULL_PARAMS
 void ss_init_immovable(stringstream *ss) {
   ss->stream = open_memstream(&ss->string, &ss->size);
@@ -434,10 +429,8 @@ void *__malloc_fill(size_t num, size_t elemsize, void *elem) {
 }
 
 #ifdef PREDEF_OS_WINDOWS
-#include "platform/windows/util.c"
 #include "platform/windows/rm_r.c"
 #elif defined(PREDEF_STANDARD_POSIX_2001)
-#include "platform/posix/util.c"
 #include "platform/posix/rm_r.c"
 #endif
 

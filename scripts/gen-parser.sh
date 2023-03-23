@@ -12,6 +12,7 @@ echo "#include <hedley.h>" > src/parser.c
 echo "HEDLEY_DIAGNOSTIC_PUSH" >> src/parser.c
 echo '#pragma GCC diagnostic ignored "-Wunused-variable"' >> src/parser.c
 echo '#pragma GCC diagnostic ignored "-Wunused-parameter"' >> src/parser.c
+echo '#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"' >> src/parser.c
 
 LINES_ADDED=4
 # Add to every self-reference line

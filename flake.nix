@@ -26,6 +26,7 @@
         pkgs = import nixpkgs { inherit system; overlays = [ (import ./nix/overlays.nix) ]; };
         lib = pkgs.lib;
         str = lib.strings;
+        # stdenv = pkgs.clangStdenv;
         stdenv = pkgs.stdenv;
         packageName = "lang-c";
 
@@ -163,7 +164,7 @@
 
         defaultPackage = packages.${packageName};
 
-        devShell = pkgs.mkShell {
+        devShell = (pkgs.mkShell.override { stdenv = stdenv; }) {
           buildInputs = with pkgs; lib.concatLists [
             (if stdenv.isLinux then [gdb cgdb] else [])
             [

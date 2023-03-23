@@ -9,6 +9,7 @@
 #include "parser.h"
 #include "source.h"
 #include "term.h"
+#include "timing.h"
 #include "token.h"
 #include "vec.h"
 

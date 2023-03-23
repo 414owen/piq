@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <time.h>
 
 #include "attrs.h"
 
@@ -110,15 +109,6 @@ NON_NULL_PARAMS
 COLD_ATTR
 void unimplemented(char *str, char *file, size_t line);
 
-bool timespec_negative(struct timespec a);
-
-bool timespec_gt(struct timespec x, struct timespec y);
-
-struct timespec timespec_subtract(const struct timespec x,
-                                  const struct timespec y);
-
-struct timespec timespec_add(const struct timespec x, const struct timespec y);
-
 NON_NULL_ALL
 MALLOC_ATTR_2(free, 1)
 void *memclone(void *src, size_t bytes);
@@ -193,11 +183,6 @@ MALLOC_ATTR_2(free, 1)
 void *__malloc_fill(size_t num, size_t elemsize, void *elem);
 
 void initialize_util(void);
-
-// platform-dependent
-struct timespec get_monotonic_time(void);
-
-struct timespec time_since_monotonic(const struct timespec start);
 
 NON_NULL_PARAMS
 char *read_entire_file(const char *restrict file_path);
