@@ -8,6 +8,7 @@
 
 #include "args.h"
 #include "diagnostic.h"
+#include "global_settings.h"
 #include "initialise.h"
 #include "llvm.h"
 #include "repl.h"
@@ -16,6 +17,11 @@
 typedef enum { COMMAND_NONE, COMMAND_REPL, COMMAND_COMPILE } subcommand_tag;
 
 static const char *preamble = "Lang v0.1.0 pre-alpha\n";
+
+typedef struct {
+  bool verbose;
+  bool extra_verbose;
+} global_arguments;
 
 typedef struct {
   bool stdin_input;
@@ -114,6 +120,11 @@ int main(const int argc, const char **argv) {
     .llvm_dump_path = NULL,
   };
 
+  global_arguments global_args = {
+    .verbose = false,
+    .extra_verbose = false,
+  };
+
   // Descriptions:
 
   argument compile_arg_descriptions[] = {
@@ -151,6 +162,19 @@ int main(const int argc, const char **argv) {
 
   argument args[] = {
     {
+      .tag = ARG_FLAG,
+      .short_name = 'v',
+      .long_name = "verbose",
+      .flag_data = &global_args.verbose,
+      .description = "print extra information for debugging purposes",
+    },
+    {
+      .tag = ARG_FLAG,
+      .long_name = "extra-verbose",
+      .flag_data = &global_args.extra_verbose,
+      .description = "print a lot of extra information for debugging purposes",
+    },
+    {
       .tag = ARG_SUBCOMMAND,
       .long_name = "repl",
       .description = "launch the Read Evaluate Print Loop",
@@ -177,6 +201,13 @@ int main(const int argc, const char **argv) {
   };
 
   parse_args(pa, argc, argv);
+
+  if (global_args.verbose) {
+    global_settings.verbosity = VERBOSE_SOME;
+  }
+  if (global_args.extra_verbose) {
+    global_settings.verbosity = VERBOSE_VERY;
+  }
 
   switch (root.subcommand_chosen) {
     case COMMAND_NONE: {
