@@ -10,6 +10,7 @@ typedef int fd;
 typedef struct perf_state_linux {
   fd group_leader;
   fd descriptors[NUM_EVENTS];
+  uint8_t num_successful_subscriptions;
   struct timespec start_time;
   uint64_t hw_cpu_cycles_id;
   uint64_t hw_branch_mispredictions_id;
