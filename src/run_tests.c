@@ -6,6 +6,7 @@
 
 #include "args.h"
 #include "benchmark.h"
+#include "global_settings.h"
 #include "initialise.h"
 #include "llvm.h"
 #include "perf.h"
@@ -376,8 +377,18 @@ static void put_perf_per_thing(put_metric_state *state, const char *operation,
 #endif
 }
 
+typedef struct {
+  bool verbose;
+  bool extra_verbose;
+} global_arguments;
+
 int main(int argc, const char **argv) {
   initialise();
+
+  global_arguments global_args = {
+    .verbose = false,
+    .extra_verbose = false,
+  };
 
   test_config conf = {
     .junit = false,
@@ -412,6 +423,19 @@ int main(int argc, const char **argv) {
         .short_name = 0,
         .description = "Run benchmark suite",
       },
+    {
+      .tag = ARG_FLAG,
+      .short_name = 'v',
+      .long_name = "verbose",
+      .flag_data = &global_args.verbose,
+      .description = "print extra information for debugging purposes",
+    },
+    {
+      .tag = ARG_FLAG,
+      .long_name = "extra-verbose",
+      .flag_data = &global_args.extra_verbose,
+      .description = "print a lot of extra information for debugging purposes",
+    },
     {
       .tag = ARG_FLAG,
       .long_name = "lite",
@@ -452,6 +476,13 @@ int main(int argc, const char **argv) {
   };
 
   parse_args(pa, argc, argv);
+
+  if (global_args.verbose) {
+    global_settings.verbosity = VERBOSE_SOME;
+  }
+  if (global_args.extra_verbose) {
+    global_settings.verbosity = VERBOSE_VERY;
+  }
 
   test_state state = test_state_new(conf);
 
