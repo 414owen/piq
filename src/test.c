@@ -14,6 +14,8 @@
 #include "util.h"
 #include "vec.h"
 
+const char *restrict test_source_file = "<test>";
+
 static const int test_indent = 2;
 
 static void print_depth_indent(test_state *state) {
@@ -301,18 +303,18 @@ void write_test_results(test_state *state) {
   VEC_FREE(&class_path);
 }
 
-bool test_matches(const test_state *restrict state,
-                  const char *restrict test_name) {
-  if (state->filter_str == NULL) {
-    return true;
-  }
+void update_test_path(test_state *restrict state,
+                      const char *restrict test_name) {
   VEC_PUSH(&state->path, test_name);
   stringstream ss;
   ss_init_immovable(&ss);
   print_test_path(state->path, ss.stream);
   ss_finalize(&ss);
+  state->current_path = ss.string;
   VEC_POP_(&state->path);
-  bool res = strstr(ss.string, state->filter_str) != NULL;
-  free(ss.string);
-  return res;
+}
+
+bool test_matches(const test_state *restrict state) {
+  return state->filter_str == NULL ||
+         strstr(state->current_path, state->filter_str) != NULL;
 }

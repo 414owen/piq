@@ -13,11 +13,11 @@
  */
 NON_NULL_PARAMS
 HEDLEY_PRINTF_FORMAT(1, 2)
-void log_verbose(const char *restrict fmt, ...);
+void log_warning(const char *restrict fmt, ...);
 
 /**
  * Log something to stdout when verbosity is >= VERBOSE_VERY
  */
 NON_NULL_PARAMS
 HEDLEY_PRINTF_FORMAT(1, 2)
-void log_extra_verbose(const char *restrict fmt, ...);
+void log_debug(const char *restrict fmt, ...);

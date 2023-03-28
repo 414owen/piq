@@ -100,6 +100,7 @@ typedef struct {
   struct timespec start_time;
   struct timespec end_time;
   const char *current_name;
+  char *current_path;
   u8 current_failed : 1;
   u8 in_test : 1;
   vec_failure failures;
@@ -108,18 +109,17 @@ typedef struct {
   const char *filter_str;
 } test_state;
 
-#define test_start(state, desc)                                                \
-  {                                                                            \
-    const char *__test_name = desc;                                            \
-    if (test_matches(state, __test_name)) {                                    \
-      test_start_internal(state, __test_name);                                 \
-      for (int __i = 0; __i < state->config.times; __i++) {
+#define test_start(state, test_name)                                           \
+  update_test_path(state, test_name);                                          \
+  if (test_matches(state)) {                                                   \
+    test_start_internal(state, test_name);                                     \
+    for (int __i = 0; __i < state->config.times; __i++) {
 
 #define test_end(state)                                                        \
-  }                                                                            \
-  test_end_internal(state);                                                    \
-  }                                                                            \
-  }
+    } /* end for */                                                            \
+    test_end_internal(state);                                                  \
+    free(state->current_path);                                                 \
+  } /* end if  */
 
 test_state test_state_new(test_config config);
 void test_state_finalize(test_state *state);
@@ -137,4 +137,7 @@ void test_fail_eq(test_state *state, char *a, char *b);
 void print_failures(test_state *state);
 
 void write_test_results(test_state *state);
-bool test_matches(const test_state *state, const char *test_name);
+bool test_matches(const test_state *state);
+void update_test_path(test_state *restrict state, const char *restrict test_name);
+
+extern const char *restrict test_source_file;

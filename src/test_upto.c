@@ -103,7 +103,8 @@ parse_tree_res test_upto_parse_tree(test_state *state,
     return res;
   }
 
-  const parse_tree_res pres = parse(tres.tokens, tres.token_amt);
+  const parse_tree_res pres =
+    parse(state->current_path, tres.tokens, tres.token_amt);
 
   add_parser_timings(state, tres, pres);
 

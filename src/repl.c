@@ -21,7 +21,7 @@ static void reply(char *input, FILE *out) {
     goto end_a;
   }
 
-  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
+  parse_tree_res pres = parse("<repl>", tres.tokens, tres.token_amt);
   if (pres.type != PRT_SUCCESS) {
     print_parse_errors(stdout, input, tres.tokens, pres);
     putc('\n', stdout);

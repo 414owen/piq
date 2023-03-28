@@ -95,6 +95,7 @@ tokens_res scan_all(source_file file) {
 #ifdef TIME_TOKENIZER
   perf_state perf_state = perf_start();
 #endif
+  log_debug("Tokenizing %s\n", file.path);
   buf_ind_t ind = 0;
   vec_token tokens = VEC_NEW;
   tokens_res res = { .succeeded = true };

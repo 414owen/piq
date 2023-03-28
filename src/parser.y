@@ -83,7 +83,7 @@
     node_ind_t b;
   } node_ind_tup;
 
-  static parse_tree_res parse_internal(token *tokens, size_t token_amt, bool get_expected);
+  static parse_tree_res parse_internal(const token *restrict tokens, size_t token_amt, bool get_expected);
 
   #ifndef NDEBUG
     void break_parser(void) {}
@@ -909,7 +909,7 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
     return node_amt;
   }
 
-  static parse_tree_res parse_internal(token *tokens, size_t token_amt, bool get_expected) {
+  static parse_tree_res parse_internal(const token *restrict tokens, size_t token_amt, bool get_expected) {
 #ifdef TIME_PARSER
     perf_state perf_state = perf_start();
 #endif
@@ -968,7 +968,8 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
     return res;
   }
 
-  parse_tree_res parse(token *tokens, size_t token_amt) {
+  parse_tree_res parse(const char *restrict source_path, const token *restrict tokens, size_t token_amt) {
+    log_debug("Parsing %s\n", source_path);
     return parse_internal(tokens, token_amt, true);
   }
 }

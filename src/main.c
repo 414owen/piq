@@ -56,7 +56,7 @@ static void compile_llvm(compile_arguments args) {
     return;
   }
 
-  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
+  parse_tree_res pres = parse(file.path, tres.tokens, tres.token_amt);
   if (pres.type != PRT_SUCCESS) {
     print_parse_errors(stdout, source_code, tres.tokens, pres);
     putc('\n', stdout);

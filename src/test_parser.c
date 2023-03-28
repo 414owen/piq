@@ -70,7 +70,7 @@ static void test_parser_fails_on(test_state *state, char *input, buf_ind_t pos,
   if (!tres.succeeded)
     return;
 
-  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
+  parse_tree_res pres = parse(state->current_path, tres.tokens, tres.token_amt);
 
   add_parser_timings(state, tres, pres);
 
