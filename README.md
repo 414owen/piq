@@ -103,6 +103,8 @@ A language that does everything right
 * Precalculate stack depth in binding resolution or its own step, then use arrays instead of vectors
   in other traversals
 * Separate out locations into its own AST array. They're rarely used.
+* Do the anonymous struct vector approach [here](https://gist.github.com/nicebyte/86bd1f119d3ff5c8da06bc2fd59ad668)
+  instead of predeclaring vectors
 
 ## Thoughts on pointers
 
@@ -243,6 +245,10 @@ Linearity via kinds looks great!
 
 I think that type inference is good to have, but there should be a mode
 that tells the compiler to error if (top-level) annotations are left out.
+
+## [Roc](https://www.roc-lang.org/)
+
+How roc compiles closures: https://www.rwx.com/blog/how-roc-compiles-closures
 
 # Language watchlist
 
