@@ -3,7 +3,6 @@
 #include "ast_meta.h"
 #include "diagnostic.h"
 #include "bitset.h"
-#include "builtins.h"
 #include "parse_tree.h"
 #include "traverse.h"
 #include "util.h"
