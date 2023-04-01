@@ -10,7 +10,8 @@ export CXXFLAGS
 
 export READLINE_LIBS
 export READLINE_CFLAGS
-export LLVM_CONFIG_FLAGS
+export LLVM_LDFLAGS
+export LLVM_CFLAGS
 
 OPT_LEVEL = -Ofast
 
@@ -25,6 +26,7 @@ COMMON_FLAGS = \
     -fshort-enums \
     $CFLAGS \
     $READLINE_CFLAGS \
+    $LLVM_CFLAGS \
     -fdiagnostics-color=always
 
 CXXFLAGS = $(COMMON_FLAGS) -std=gnu++17 $CXXFLAGS -fno-exceptions
@@ -90,7 +92,7 @@ main_objs += main.o
 main_objs += repl.o
 
 LDFLAGS = $READLINE_LIBS
-LDFLAGS += $LLVM_CONFIG_FLAGS
+LDFLAGS += $LLVM_LDFLAGS
 
 COMPILE_C_FAST = "$CC -O2 $(CFLAGS) -c -o %o %f"
 COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f 

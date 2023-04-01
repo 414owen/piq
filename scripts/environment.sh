@@ -28,4 +28,5 @@ getBest CXX c++ g++ clang++
 getBest LD mold lld gold ld
 export READLINE_LIBS=`pkg-config --libs "readline"`
 export READLINE_CFLAGS=`pkg-config --cflags "readline"`
-export LLVM_CONFIG_FLAGS=`llvm-config --cxxflags --ldflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
+export LLVM_CFLAGS=`llvm-config --cflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
+export LLVM_LDFLAGS=`llvm-config --ldflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
