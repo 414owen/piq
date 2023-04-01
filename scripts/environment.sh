@@ -26,17 +26,31 @@ getBest() {
 getBest CC cc gcc clang
 getBest CXX c++ g++ clang++
 getBest LD mold lld gold ld
-<<<<<<< HEAD
-export EDITLINE_LIBS=`pkg-config --libs "libeditline"`
-export EDITLINE_CFLAGS=`pkg-config --cflags "libeditline"`
-export LLVM_CONFIG_FLAGS=`llvm-config --cxxflags --ldflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
-||||||| parent of 9a236e8 (fix: Use LLVM cflags everywhere)
+
+get_llvm_config() {
+  if [ -x "$(command -v llvm-config)" ]; then
+    LLVM_CONFIG=llvm-config
+    return 0
+  fi
+  version=9;
+  while true; do
+    if [ $version -gt 30 ]; then
+      return 1
+    fi
+    found=false
+    if [ -x "$(command -v llvm-config-$version)" ]; then
+      LLVM_CONFIG=llvm-config-$version
+      found=true
+    elif [ $found = "true" ]; then
+      return 0
+    fi
+    version=$((version + 1))
+  done
+}
+
+get_llvm_config
+
 export READLINE_LIBS=`pkg-config --libs "readline"`
 export READLINE_CFLAGS=`pkg-config --cflags "readline"`
-export LLVM_CONFIG_FLAGS=`llvm-config --cxxflags --ldflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
-=======
-export READLINE_LIBS=`pkg-config --libs "readline"`
-export READLINE_CFLAGS=`pkg-config --cflags "readline"`
-export LLVM_CFLAGS=`llvm-config --cflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
-export LLVM_LDFLAGS=`llvm-config --ldflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
->>>>>>> 9a236e8 (fix: Use LLVM cflags everywhere)
+export LLVM_CFLAGS=`$LLVM_CONFIG --cflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
+export LLVM_LDFLAGS=`$LLVM_CONFIG --ldflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
