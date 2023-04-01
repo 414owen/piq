@@ -26,6 +26,17 @@ getBest() {
 getBest CC cc gcc clang
 getBest CXX c++ g++ clang++
 getBest LD mold lld gold ld
+<<<<<<< HEAD
 export EDITLINE_LIBS=`pkg-config --libs "libeditline"`
 export EDITLINE_CFLAGS=`pkg-config --cflags "libeditline"`
 export LLVM_CONFIG_FLAGS=`llvm-config --cxxflags --ldflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
+||||||| parent of 9a236e8 (fix: Use LLVM cflags everywhere)
+export READLINE_LIBS=`pkg-config --libs "readline"`
+export READLINE_CFLAGS=`pkg-config --cflags "readline"`
+export LLVM_CONFIG_FLAGS=`llvm-config --cxxflags --ldflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
+=======
+export READLINE_LIBS=`pkg-config --libs "readline"`
+export READLINE_CFLAGS=`pkg-config --cflags "readline"`
+export LLVM_CFLAGS=`llvm-config --cflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
+export LLVM_LDFLAGS=`llvm-config --ldflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
+>>>>>>> 9a236e8 (fix: Use LLVM cflags everywhere)
