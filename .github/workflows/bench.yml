@@ -10,7 +10,7 @@ defaults:
     working-directory: ./
 
 env:
-  CFLAGS: -s -flto -DNDEBUG -DTIME_ALL
+  CFLAGS: -s -DNDEBUG -DTIME_ALL
 
 jobs:
   Bench:
