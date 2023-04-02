@@ -21,7 +21,12 @@
     , predef-src
     , flake-utils
     }:
-    flake-utils.lib.eachDefaultSystem (system:
+
+    let
+      systems = flake-utils.lib.defaultSystems ++ [flake-utils.lib.system.armv6l-linux];
+    in
+
+    flake-utils.lib.eachSystem systems (system:
       let
         pkgs = import nixpkgs { inherit system; overlays = [ (import ./nix/overlays.nix) ]; };
         lib = pkgs.lib;
