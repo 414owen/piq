@@ -6,11 +6,9 @@ if [ $# = 0 ]; then
 fi
 
 dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-. ./release-env.sh
 
 # All the optimization options are in Tupfile anyway
-CFLAGS="-g"
-tup
+CFLAGS="-g -DNDEBUG" tup
 
 perf record -F 26000 --call-graph dwarf $@ >&2
 stackpath="$(mktemp)"
