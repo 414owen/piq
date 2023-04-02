@@ -172,7 +172,7 @@
         devShell = (pkgs.mkShell.override { stdenv = stdenv; }) {
           buildInputs = with pkgs; lib.concatLists [
             (if stdenv.isLinux then [gdb cgdb] else [])
-            [
+            (if system != "armv6l-linux" then [
               clang-tools
               clang-tools.clang
               bear
@@ -182,7 +182,7 @@
               watchexec
               commitizen
               flamegraph
-            ]
+            ] else [])
           ];
 
           inputsFrom = builtins.attrValues packages;
