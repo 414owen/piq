@@ -19,7 +19,7 @@ jobs:
     - uses: actions/checkout@v2
     - uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        packages: tup re2c lemon libxxhash-dev llvm-dev valgrind gcc g++ pkg-config libreadline-dev
+        packages: tup re2c lemon libxxhash-dev llvm-dev valgrind gcc g++ pkg-config libreadline-dev subversion
         version: 1.0
     - run: |
         pushd /usr/include
