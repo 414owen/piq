@@ -48,7 +48,11 @@ get_llvm_config() {
   done
 }
 
-get_llvm_config
+if [ -z "$USER_LLVM_CONFIG" ]; then
+  get_llvm_config
+else
+  LLVM_CONFIG="$USER_LLVM_CONFIG"
+fi
 
 export READLINE_LIBS=`pkg-config --libs "readline"`
 export READLINE_CFLAGS=`pkg-config --cflags "readline"`
