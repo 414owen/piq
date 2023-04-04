@@ -7,6 +7,7 @@ export CC
 export CXX
 export CFLAGS
 export CXXFLAGS
+export LDFLAGS
 
 export EDITLINE_LIBS
 export EDITLINE_CFLAGS
@@ -93,6 +94,7 @@ main_objs += repl.o
 
 LDFLAGS = $EDITLINE_LIBS
 LDFLAGS += $LLVM_LDFLAGS
+LDFLAGS += $LDFLAGS
 
 COMPILE_C_FAST = "$CC -O2 $(CFLAGS) -c -o %o %f"
 COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f 
