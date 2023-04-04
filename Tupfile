@@ -128,9 +128,9 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/test_parser.c    | src/parser.h |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_typecheck.c | src/parser.h |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_scanner.c   | src/parser.h |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/test.c                |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/run_tests.c           |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_bitset.c         |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/test.c                |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_diagnostics.c    |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/benchmark.c           |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/llvm_test_utils.c     |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
@@ -143,11 +143,11 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/test_parse_tree.c     |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_traverse.c       |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/test_hashmap.c        |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/timing.c              |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/perf.c                |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/platform/linux/perf.c |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> linux_perf.o
-: src/timespec.c            |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
-: src/token.c               |> ^j^ $CC -O2 $(CFLAGS) -c -o %o %f |> %B.o
+: src/timing.c              |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/perf.c                |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/platform/linux/perf.c |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> linux_perf.o
+: src/timespec.c            |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/token.c               |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/args.c                |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/main.c                |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/builtins.c            |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
