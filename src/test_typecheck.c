@@ -734,6 +734,23 @@ static void test_errors(test_state *state) {
   test_group_end(state);
 }
 
+static void test_kitchen_sink(test_state *state) {
+  test_group_start(state, "Kitchen sink");
+
+  {
+    test_start(state, "One");
+    const char *input = "(sig test (Fn I32 I32))\n"
+                        "(fun test (→a←)\n"
+                        "  (let f (if (i32-lte? a 12) i32-add i32-sub))\n"
+                        "  (f 3 4))\n";
+    test_type types[] = {i32_t};
+    test_types_match(state, input, types, STATIC_LEN(types));
+    test_end(state);
+  }
+
+  test_group_end(state);
+}
+
 static void test_typecheck_stress(test_state *state) {
   test_start(state, "Stress");
   {
@@ -767,6 +784,7 @@ void test_typecheck(test_state *state) {
   if (!state->config.lite) {
     test_typecheck_stress(state);
   }
+  test_kitchen_sink(state);
 
   test_group_end(state);
 }
