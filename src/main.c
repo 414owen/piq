@@ -64,6 +64,13 @@ static void compile_llvm(compile_arguments args) {
     return;
   }
 
+  {
+    resolution_res res = resolve_bindings(pres.tree, source_code);
+    if (res.not_found.binding_amt > 0) {
+      print_resolution_errors(stdout, source_code, res.not_found);
+    }
+  }
+
   free_tokens_res(tres);
 
   tc_res tc_res = typecheck(pres.tree);
