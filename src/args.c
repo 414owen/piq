@@ -274,7 +274,7 @@ static void parse_noprefix(parse_state *state, const char *restrict arg_str) {
   for (unsigned i = 0; i < state->arguments->amt; i++) {
     argument a = state->arguments->args[i];
     if (a.tag != ARG_SUBCOMMAND) {
-      break;
+      continue;
     }
     if (strcmp(arg_str, a.subcommand_name) == 0) {
       subcommand_taken = true;
