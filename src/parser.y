@@ -53,6 +53,7 @@
 
   #include "defs.h"
   #include "parse_tree.h"
+  #include "reorder_tree.h"
   #include "timing.h"
   #include "token.h"
   #include "util.h"
@@ -995,6 +996,7 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
       .success = state.success,
       .tree = {
         .node_amt = state.nodes.len,
+        .ind_amt = state.inds.len,
         .root_subs_start = state.root_subs_start,
         .root_subs_amt = state.root_subs_amt,
       },
@@ -1008,6 +1010,7 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
       res.tree.nodes = VEC_FINALIZE(&state.nodes);
       res.tree.inds = VEC_FINALIZE(&state.inds);
       assert(state.ind_stack.len == 0);
+      res.tree = reorder_tree(res.tree);
     } else {
       VEC_FREE(&state.nodes);
       VEC_FREE(&state.inds);
