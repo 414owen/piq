@@ -66,7 +66,7 @@ common_objs += print_tc_errors.o
 common_objs += hashmap.o
 common_objs += hashers.o
 common_objs += global_settings.o
-common_objs += trace.o
+common_objs += log.o
 
 test_objs += run_tests.o
 test_objs += span.o
@@ -156,7 +156,7 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/initialise.c          |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/print_tc_errors.c     |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/global_settings.c     |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/trace.c               |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/log.c               |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 
 : $(common_objs) $(main_objs) |> ^j^ $CXX $(CXXFLAGS) %f $(LDFLAGS) -o %o |> main
 : $(common_objs) $(test_objs) |> ^j^ $CXX $(CXXFLAGS) %f $(LDFLAGS) -o %o |> test
