@@ -808,7 +808,7 @@ static void test_errors(test_state *state) {
         .type = TC_ERR_INFINITE,
       },
     };
-    test_typecheck_errors(state, "(fun a () →a←)", errors, STATIC_LEN(errors));
+    test_typecheck_errors(state, "→(fun a () a)←", errors, STATIC_LEN(errors));
     test_end(state);
   }
 

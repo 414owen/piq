@@ -263,11 +263,12 @@ VEC_DECL(parse_node);
 typedef struct {
   parse_node *nodes;
   span *spans;
-  const node_ind_t *inds;
+  node_ind_t *inds;
   node_ind_t root_subs_start;
   node_ind_t root_subs_amt;
   // this is set even if parsing errored, for benchmarking
   node_ind_t node_amt;
+  node_ind_t ind_amt;
 } parse_tree;
 
 typedef struct {
