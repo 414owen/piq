@@ -17,18 +17,18 @@ export LLVM_CFLAGS
 OPT_LEVEL = -Ofast
 
 # RE2C_OPTIONS = # --case-ranges
-COMMON_FLAGS = \
-    -Wall \
-    -Wextra \
-    -Werror=implicit-fallthrough \
-    -pipe \
-    -ffast-math \
-    -flto \
-    -fshort-enums \
-    $CFLAGS \
-    $READLINE_CFLAGS \
-    $LLVM_CFLAGS \
-    -fdiagnostics-color=always
+
+COMMON_FLAGS = -Wall
+COMMON_FLAGS += -Wextra
+COMMON_FLAGS += -Werror=implicit-fallthrough
+COMMON_FLAGS += -pipe
+COMMON_FLAGS += -ffast-math
+COMMON_FLAGS += -flto
+COMMON_FLAGS += -fshort-enums
+COMMON_FLAGS += $CFLAGS
+COMMON_FLAGS += $READLINE_CFLAGS
+COMMON_FLAGS += $LLVM_CFLAGS
+COMMON_FLAGS += -fdiagnostics-color=always
 
 CXXFLAGS = $(COMMON_FLAGS) -std=gnu++17 $CXXFLAGS -fno-exceptions
 
