@@ -68,7 +68,7 @@ static HEDLEY_NEVER_INLINE uint64_t parse_arbitrary_positive_base16(
 // for base 16 and it will be faster...
 static HEDLEY_NEVER_INLINE uint64_t parse_arbitrary(
   flow_type *restrict flow, bool *restrict negative_p, const char *restrict str,
-  size_t str_len, base base, size_t minimum, size_t maximum) {
+  size_t str_len, base base, int64_t minimum, int64_t maximum) {
   bool negative = false;
   char c = str[0];
   while (c == '-' || c == '+') {
