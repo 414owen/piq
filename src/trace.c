@@ -6,7 +6,12 @@
 #include "global_settings.h"
 #include "util.h"
 
+// We don't want these to be inlined, because the branch will always
+// be predicted correctly after the first call, so we wouldn't get
+// any extra information from inlining.
+
 NON_NULL_PARAMS
+HEDLEY_NEVER_INLINE
 HEDLEY_PRINTF_FORMAT(1, 2)
 void log_verbose(const char *restrict fmt, ...) {
   if (global_settings.verbosity > VERBOSE_SOME) {
@@ -18,6 +23,7 @@ void log_verbose(const char *restrict fmt, ...) {
 }
 
 NON_NULL_PARAMS
+HEDLEY_NEVER_INLINE
 HEDLEY_PRINTF_FORMAT(1, 2)
 void log_extra_verbose(const char *restrict fmt, ...) {
   if (global_settings.verbosity > VERBOSE_VERY) {
