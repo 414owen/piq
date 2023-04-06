@@ -8,7 +8,9 @@
 
 typedef enum {
   VERBOSE_NONE = 0,
+  // print warnings
   VERBOSE_SOME = 1,
+  // print info
   VERBOSE_VERY = 2,
 } verbosity;
 
