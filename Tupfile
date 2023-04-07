@@ -95,6 +95,7 @@ main_objs += repl.o
 LDFLAGS = $EDITLINE_LIBS
 LDFLAGS += $LLVM_LDFLAGS
 LDFLAGS += $LDFLAGS
+LDFLAGS += -L /nix/store/zswvijb6cwgjpih165rzbbllc133rx4f-xxHash-0.8.1/lib -lxxhash
 
 COMPILE_C_FAST = "$CC -O2 $(CFLAGS) -c -o %o %f"
 COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f 

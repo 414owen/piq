@@ -5,15 +5,14 @@
 #include <stdint.h>
 
 #include "bitset.h"
+#include "hashers.h"
 #include "typedefs.h"
-
-#define HASH_TYPE uint32_t
 
 // Keep it a power of 2
 #define N_BUCKETS_START 512
 
 typedef bool (*eq_cmp)(const void *, const void *, const void *);
-typedef uint32_t (*hasher)(const void *, const void *);
+typedef hash_t (*hasher)(const void *, const void *);
 
 typedef struct {
   uint32_t grow_at;
@@ -24,6 +23,7 @@ typedef struct {
   uint32_t n_buckets;
   uint32_t n_elems;
   uint32_t mask;
+  uint32_t n_tombstones;
   const uint32_t keysize;
   const uint32_t valsize;
   const eq_cmp compare_newkey;
