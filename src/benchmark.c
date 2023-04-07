@@ -10,14 +10,14 @@
 #define BINDING_STR "bndng"
 #define FUNCTION_STR "test-fn-"
 
-const int FUNCTION_AMT = 200;
-const int STATEMENT_AMT = 200;
+const int FUNCTION_AMT = 400;
+const int STATEMENT_AMT = 400;
 
-typedef uint32_t (*fn_type)(void);
+typedef void (*fn_type)(void);
 
 static char *do_nothing(fn_type f, void *data) { return NULL; }
 
-void run_benchmarks(test_state *state) {
+static void run_compile_benchmark(test_state *state) {
   stringstream ss;
   ss_init_immovable(&ss);
   for (int i = 0; i < FUNCTION_AMT; i++) {
@@ -70,7 +70,13 @@ void run_benchmarks(test_state *state) {
 
   test_group_start(state, "Benchmark");
   test_start(state, "Benchmark");
+  // test_upto_resolution(state, ss.string);
   test_upto_codegen_with(state, ss.string, &test, 1);
+  // bool a;
+  // parse_tree b;
+  // test_upto_typecheck(state, ss.string, &a, &b);
   test_end(state);
   test_group_end(state);
 }
+
+void run_benchmarks(test_state *state) { run_compile_benchmark(state); }

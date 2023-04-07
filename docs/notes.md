@@ -285,7 +285,9 @@ To lookup:
   * Or maybe something recognizable, but balanced, like <"this">?
 * Main arguments are command line arguments: https://lobste.rs/s/ilmbgu/microfeatures_i_d_like_see_more_languages#c_l56bvw
 
-# C container libraries
+# Resources
+
+## C container libraries
 
 * https://rurban.github.io/ctl/
 * https://github.com/ludocode/pottery
@@ -294,6 +296,11 @@ To lookup:
 * https://github.com/springkim/OpenCSTL
 * https://github.com/LeoVen/C-Macro-Collections
 * https://github.com/nothings/stb
+
+## Hashmaps and mixers
+
+* http://mostlymangling.blogspot.com/
+* https://github.com/martinus/better-faster-stronger-mixer
 
 # Flags
 

@@ -55,7 +55,23 @@ void bs_data_update(bitset_data data, size_t ind, bool b) {
 
 void bs_set(bitset bs, size_t ind) { bs_data_set(bs.data, ind); }
 
+bool bs_get_set(bitset bs, size_t ind) {
+  char *slot = &bs.data[BITSLOT(ind)];
+  u8 mask = BITMASK(ind);
+  bool res = (*slot) & mask;
+  *slot |= mask;
+  return res;
+}
+
 void bs_clear(bitset bs, size_t ind) { bs_data_clear(bs.data, ind); }
+
+bool bs_get_clear(bitset bs, size_t ind) {
+  char *slot = &bs.data[BITSLOT(ind)];
+  u8 mask = BITMASK(ind);
+  bool res = (*slot) & mask;
+  *slot &= ~mask;
+  return res;
+}
 
 void bs_update(bitset bs, size_t ind, bool b) {
   bs_data_update(bs.data, ind, b);

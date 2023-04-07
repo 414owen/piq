@@ -1,4 +1,5 @@
 #include <hedley.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,11 +9,20 @@
 #include "hashmap.h"
 #include "typedefs.h"
 #include "util.h"
+#include "vec.h"
 
 // max ratio of elems to buckets before rehash
 // eg. 4/5 is four elements for five buckets
-#define AHM_MAX_FILL_NUMERATOR 3
-#define AHM_MAX_FILL_DENOMINATOR 4
+
+// With a ratio of 3/5, we end up a mean run length of ~3.3
+// before rehashing
+// With a ratio of 3/4, 5<MRL<9.5 before a rehash
+// With a ratio of 4/7, 1.8<MRL<3.2
+// With a ratio of 5/7, 5<MRL<7
+
+// With a ratio of 13/20 (0.65), 3<MRL<5
+#define AHM_MAX_FILL_NUMERATOR 13
+#define AHM_MAX_FILL_DENOMINATOR 20
 
 // Keep me a power of two please
 #define AHM_GROWTH_FACTOR 2
@@ -57,10 +67,72 @@ a_hashmap __ahm_new(uint32_t n_buckets, uint32_t keysize, uint32_t valsize,
 
 static uint32_t ahm_get_bucket_ind(a_hashmap *hm, const void *key, hasher hsh,
                                    const void *context) {
-  const uint32_t key_hash = hsh(key, context);
+  const hash_t key_hash = hsh(key, context);
   const uint32_t bucket_ind = key_hash & hm->mask;
   return bucket_ind;
 }
+
+#ifdef DEBUG_HASHMAP_PERF
+
+static void print_hashmap_perf_info(a_hashmap *hm, u32 new_num_buckets) {
+  printf("\nResizing from %" PRIu32 " to %" PRIu32 " buckets, for %" PRIu32
+         " elements\n",
+         hm->n_buckets,
+         new_num_buckets,
+         hm->n_elems);
+  {
+    float load1 = (float)hm->n_elems / (float)hm->n_buckets;
+    float load2 = (float)hm->n_elems / (float)new_num_buckets;
+    printf("Load reduced from %f to %f\n", load1, load2);
+  }
+
+  printf("Number of tombstones: %" PRIu32 "\n", hm->n_tombstones);
+
+  {
+    u32 longest_run = 0;
+    u32 start = 0;
+    double mean_run_length = 0;
+    double mean_run_length_without_tombstones = 0;
+    double runs_encountered = 0;
+    // vec_u32 run_lengths = VEC_NEW;
+    while (bs_get(hm->occupied, start) || bs_get(hm->tombstoned, start)) {
+      start++;
+    }
+    {
+      u32 current_run = 0;
+      // VEC_PUSH(&run_lengths, 0);
+      runs_encountered = 1;
+      for (u32 i = start + 1; i != start; i = (i + 1) % hm->n_buckets) {
+        if (bs_get(hm->occupied, i) || bs_get(hm->tombstoned, start)) {
+          current_run++;
+        } else {
+          // empty slot
+          longest_run = MAX(longest_run, current_run);
+          for (uint32_t i = 0; i < current_run; i++) {
+            runs_encountered += 1;
+            // VEC_PUSH(&run_lengths, i);
+            mean_run_length = mean_run_length + (double)i / runs_encountered -
+                              mean_run_length / runs_encountered;
+          }
+          current_run = 0;
+        }
+      }
+    }
+    printf("Longest run: %" PRIu32 "\n", longest_run);
+    printf("Mean run length: %f\n", mean_run_length);
+    /*
+    {
+      u64 sum = 0;
+      for (u32 i = 0; i < run_lengths.len; i++) {
+        sum += (u64) VEC_GET(run_lengths, i);
+      }
+      printf("Mean run length: %f\n", (double) sum / (double) run_lengths.len);
+    }
+    */
+  }
+}
+
+#endif
 
 static void ahm_rehash(a_hashmap *hm, void *context) {
   // printf("\n\nrehash\n");
@@ -75,6 +147,9 @@ static void ahm_rehash(a_hashmap *hm, void *context) {
     }
     new_num_buckets = UINT32_MAX;
   }
+#ifdef DEBUG_HASHMAP_PERF
+  print_hashmap_perf_info(hm, new_num_buckets);
+#endif
   a_hashmap res = __ahm_new(new_num_buckets,
                             hm->keysize,
                             hm->valsize,
@@ -95,6 +170,7 @@ static void ahm_rehash(a_hashmap *hm, void *context) {
   hm->vals = res.vals;
   hm->occupied = res.occupied;
   hm->tombstoned = res.tombstoned;
+  hm->n_tombstones = 0;
 }
 
 static bool ahm_memcmp_keys(const void *key1, const void *key2,
@@ -142,9 +218,7 @@ u32 ahm_lookup(a_hashmap *hm, const void *key, void *context) {
 void ahm_maybe_rehash(a_hashmap *hm, void *context) {
   // for simplicity, even if we end up updating an element, we grow
   // we use >= to deal with the 0 bucket case
-
-  // TODO store these values in hashmap struct
-  if (hm->n_elems >= hm->grow_at) {
+  if (hm->n_elems + hm->n_tombstones >= hm->grow_at) {
     ahm_rehash(hm, context);
   }
 }
@@ -176,16 +250,19 @@ void ahm_insert_stored(a_hashmap *hm, const void *key_stored, const void *val,
 */
 void ahm_insert_at(a_hashmap *hm, u32 index, const void *key_stored,
                    const void *val) {
+  // printf("index: %" PRIu32 "\n", index);
   memcpy(hm->keys + index * hm->keysize, key_stored, hm->keysize);
   memcpy(hm->vals + index * hm->valsize, val, hm->valsize);
   bs_set(hm->occupied, index);
-  bs_clear(hm->tombstoned, index);
+  bool prev = bs_get_clear(hm->tombstoned, index);
+  hm->n_tombstones -= prev ? 1 : 0;
   hm->n_elems++;
 }
 
 static uint32_t ahm_remove_epilogue(a_hashmap *hm, uint32_t ind) {
   if (HEDLEY_LIKELY(bs_get(hm->occupied, ind))) {
     bs_set(hm->tombstoned, ind);
+    hm->n_tombstones++;
     bs_clear(hm->occupied, ind);
     hm->n_elems--;
   }
@@ -204,6 +281,9 @@ u32 ahm_remove_stored(a_hashmap *hm, const void *key, void *context) {
 
 /** You're in charge of freeing the context, though */
 void ahm_free(a_hashmap *hm) {
+  // #ifdef DEBUG_HASHMAP_PERF
+  //   print_hashmap_perf_info(hm, 0);
+  // #endif
   bs_free(&hm->occupied);
   bs_free(&hm->tombstoned);
   free(hm->keys);

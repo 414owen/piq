@@ -24,7 +24,6 @@ result
 perf.data*
 main
 .cache/
-compile_commands.json
 massif.out.*
 dhat.*
 bench.json
