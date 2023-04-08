@@ -187,7 +187,7 @@ NON_NULL_PARAMS
 char *read_entire_file(const char *restrict file_path) {
   errno = 0;
   FILE *f = fopen(file_path, "rb");
-  if (errno != 0) {
+  if (f == NULL || errno != 0) {
     perror("Error occurred while opening file");
     exit(1);
   }
@@ -202,9 +202,19 @@ char *read_entire_file(const char *restrict file_path) {
     }
   } else {
     long fsize = ftell(f);
+    buf_ind_t max_buf = 0;
+    max_buf -= 1;
     rewind(f);
     char *string = malloc(fsize + 1);
     fread(string, fsize, 1, f);
+    if (errno != 0) {
+      perror("Error reading from file");
+      exit(1);
+    }
+    if (fsize > max_buf) {
+      fprintf(stderr, "File size can't exceed %d\n", max_buf);
+      exit(1);
+    }
     fclose(f);
     string[fsize] = 0;
     return string;

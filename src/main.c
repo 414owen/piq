@@ -37,6 +37,7 @@ static void compile_llvm(compile_arguments args) {
   if (args.stdin_input) {
     source_code = read_entire_file_no_seek(stdin);
   } else {
+    // also works if file is /dev/stdin
     source_code = read_entire_file(args.input_file_path);
   }
 
