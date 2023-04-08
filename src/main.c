@@ -5,6 +5,7 @@
 #include <llvm-c/Core.h>
 #include <llvm-c/Analysis.h>
 #include <llvm-c/Target.h>
+#include <llvm-c/TargetMachine.h>
 
 #include "args.h"
 #include "diagnostic.h"
@@ -27,12 +28,11 @@ typedef struct {
   bool stdin_input;
   bool no_codegen;
   const char *input_file_path;
-  const char *output_file_path;
+  char *output_file_path;
   const char *llvm_dump_path;
 } compile_arguments;
 
 static void compile_llvm(compile_arguments args) {
-  LLVMInitializeNativeTarget();
   const char *restrict source_code;
   if (args.stdin_input) {
     source_code = read_entire_file_no_seek(stdin);
@@ -83,6 +83,24 @@ static void compile_llvm(compile_arguments args) {
 
   LLVMContextRef ctx = LLVMContextCreate();
   LLVMModuleRef module = LLVMModuleCreateWithNameInContext("repl", ctx);
+
+  LLVMTargetRef target = LLVMGetFirstTarget();
+  LLVMTargetMachineRef machine =
+    LLVMCreateTargetMachine(target,
+                            LLVMGetDefaultTargetTriple(),
+                            "generic",
+                            LLVMGetHostCPUFeatures(),
+                            LLVMCodeGenLevelDefault,
+                            LLVMRelocDefault,
+                            LLVMCodeModelDefault);
+
+  LLVMSetTarget(module, LLVMGetDefaultTargetTriple());
+  LLVMTargetDataRef datalayout = LLVMCreateTargetDataLayout(machine);
+
+  char *datalayout_str = LLVMCopyStringRepOfTargetData(datalayout);
+  LLVMSetDataLayout(module, datalayout_str);
+  LLVMDisposeMessage(datalayout_str);
+
   llvm_res llvm_ir_res = llvm_gen_module(file, pres.tree, tc_res.types, module);
   free_parse_tree_res(pres);
 
@@ -94,6 +112,13 @@ static void compile_llvm(compile_arguments args) {
       printf("Couldn't dump LLVM IR: %s\n", err != NULL ? err : "");
     }
   }
+
+  if (!args.no_codegen) {
+    char *error = NULL;
+    LLVMTargetMachineEmitToFile(
+      machine, module, args.output_file_path, LLVMObjectFile, &error);
+  }
+
   LLVMDisposeModule(module);
   LLVMContextDispose(ctx);
 
@@ -154,6 +179,13 @@ int main(const int argc, const char **argv) {
       .short_name = 'i',
       .description = "path to input file",
       .string_data = &compile_args.input_file_path,
+    },
+    {
+      .tag = ARG_STRING,
+      .long_name = "output",
+      .short_name = 'o',
+      .description = "path to output file",
+      .string_data = &compile_args.output_file_path,
     },
     {
       .tag = ARG_STRING,
