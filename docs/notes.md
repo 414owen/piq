@@ -1,17 +1,5 @@
 [![workflow](https://github.com/414owen/piq/actions/workflows/ci.yml/badge.svg)](https://github.com/414owen/lang-c/actions)
 
-# Possible names
-
-* YAMLLL - Yet Another Modern Low Level Language
-* FAFL - Fast and friendly language
-
-attributes:
-
-* fast
-* homoiconic
-* bootstrappable
-* minimal
-
 # Links
 
 [benchmarks](https://lang-c.pages.dev/bench/compiler/)
