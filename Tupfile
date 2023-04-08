@@ -159,5 +159,5 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/global_settings.c     |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/log.c               |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 
-: $(common_objs) $(main_objs) |> ^j^ $CXX $(CXXFLAGS) %f $(LDFLAGS) -o %o |> main
+: $(common_objs) $(main_objs) |> ^j^ $CXX $(CXXFLAGS) %f $(LDFLAGS) -o %o |> piq
 : $(common_objs) $(test_objs) |> ^j^ $CXX $(CXXFLAGS) %f $(LDFLAGS) -o %o |> test

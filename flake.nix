@@ -33,7 +33,7 @@
         str = lib.strings;
         # stdenv = pkgs.clangStdenv;
         stdenv = pkgs.stdenv;
-        packageName = "lang-c";
+        packageName = "piq";
 
         hedley = stdenv.mkDerivation {
           name = "hedley";
@@ -59,7 +59,7 @@
 
         src = pkgs.nix-gitignore.gitignoreSource [] ./.;
 
-        app = {files ? ["main"]}: stdenv.mkDerivation rec {
+        app = {files ? ["piq"]}: stdenv.mkDerivation rec {
           name = packageName;
 
           inherit src;
@@ -102,7 +102,7 @@
         packages = {
           ${packageName} = app {};
           "${packageName}-tests" = app {files = ["test"];};
-          "${packageName}-all" = app {files = ["main" "test"];};
+          "${packageName}-all" = app {files = ["piq" "test"];};
           "${packageName}-metrics" = pkgs.stdenvNoCC.mkDerivation {
             name = "metrics";
             unpackPhase = "true";

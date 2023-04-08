@@ -1,4 +1,4 @@
-[![workflow](https://github.com/414owen/lang-c/actions/workflows/ci.yml/badge.svg)](https://github.com/414owen/lang-c/actions)
+[![workflow](https://github.com/414owen/piq/actions/workflows/ci.yml/badge.svg)](https://github.com/414owen/lang-c/actions)
 
 # Possible names
 

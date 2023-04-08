@@ -8,4 +8,4 @@ const char path_sep = '\\';
 const char path_sep = '/';
 #endif
 
-const char *issue_tracker_url = "https://github.com/414owen/lang-c/issues";
+const char *issue_tracker_url = "https://github.com/414owen/piq/issues";
