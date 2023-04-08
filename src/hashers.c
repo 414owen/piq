@@ -20,34 +20,35 @@
 
 // Some useful numbers to play around with, borrowed from XXHASH
 /* 0b1001111000110111011110011011000110000101111010111100101010000111 */
-#define PRIME64_1 0x9E3779B185EBCA87ULL
+#define PRIME_1 (sizeof(hash_t) == 8 ? 0x9E3779B185EBCA87ULL : 4201133899)
 /* 0b1100001010110010101011100011110100100111110101001110101101001111 */
-#define PRIME64_2 0xC2B2AE3D27D4EB4FULL
+#define PRIME_2 (sizeof(hash_t) == 8 ? 0xC2B2AE3D27D4EB4FULL : 3716661401)
 /* 0b0001011001010110011001111011000110011110001101110111100111111001 */
-#define PRIME64_3 0x165667B19E3779F9ULL
+#define PRIME_3 (sizeof(hash_t) == 8 ? 0x165667B19E3779F9ULL : 2561059601)
 /* 0b1000010111101011110010100111011111000010101100101010111001100011 */
-#define PRIME64_4 0x85EBCA77C2B2AE63ULL
+#define PRIME_4 (sizeof(hash_t) == 8 ? 0x85EBCA77C2B2AE63ULL : 3647556947)
 /* 0b0010011111010100111010110010111100010110010101100110011111000101 */
-#define PRIME64_5 0x27D4EB2F165667C5ULL
+#define PRIME_5 (sizeof(hash_t) == 8 ? 0x27D4EB2F165667C5ULL : 4164797977)
 
 // This doesn't seem to make a big difference
-#define INITIAL_SEED PRIME64_2
+#define INITIAL_SEED PRIME_2
 
-static inline uint64_t ror64(uint64_t v, int r) {
-  return (v >> r) | (v << (64 - r));
+// rotate right
+static inline hash_t rorhash_t(hash_t v, int r) {
+  return (v >> r) | (v << ((CHAR_BIT * sizeof(v)) - r));
 }
 
 HEDLEY_INLINE
-static uint64_t mix(uint64_t v) {
-  v ^= ror64(v, 49) ^ ror64(v, 24);
-  v *= PRIME64_1;
+static hash_t mix(hash_t v) {
+  v ^= rorhash_t(v, sizeof(hash_t) == 8 ? 49 : 17) ^ rorhash_t(v, 24);
+  v *= PRIME_1;
   v ^= v >> 28;
-  v *= PRIME64_3;
+  v *= PRIME_3;
   return v ^ v >> 28;
 }
 
 HEDLEY_INLINE
-static hash_t hash_eight_bytes(hash_t seed, u64 data) {
+static hash_t hash_hash_t_bytes(hash_t seed, hash_t data) {
   // Adding data to the seed just in case we lose data
   // from mixing. Doesn't seem to to much in practice.
   return (data + seed) ^ mix(data);
@@ -55,23 +56,26 @@ static hash_t hash_eight_bytes(hash_t seed, u64 data) {
 
 static hash_t hash_bytes(hash_t seed, const uint8_t *restrict bytes,
                          uint32_t n_bytes) {
-  while (n_bytes >= 8) {
-    seed = hash_eight_bytes(seed, *((uint64_t *)bytes));
-    bytes += 8;
-    n_bytes -= 8;
+  assert(sizeof(hash_t) <= 8);
+  while (n_bytes >= sizeof(hash_t)) {
+    seed = hash_hash_t_bytes(seed, *((hash_t *)bytes));
+    bytes += sizeof(hash_t);
+    n_bytes -= sizeof(hash_t);
   }
+#if HASH_BITS == 64
   if (n_bytes >= 4) {
-    seed = hash_eight_bytes(seed, (uint64_t)(*((uint32_t *)bytes)));
+    seed = hash_hash_t_bytes(seed, (hash_t)(*((uint32_t *)bytes)));
     bytes += 4;
     n_bytes -= 4;
   }
+#endif
   if (n_bytes >= 2) {
-    seed = hash_eight_bytes(seed, (uint64_t)(*((uint16_t *)bytes)));
+    seed = hash_hash_t_bytes(seed, (hash_t)(*((uint16_t *)bytes)));
     bytes += 2;
     n_bytes -= 2;
   }
   if (n_bytes == 1) {
-    seed = hash_eight_bytes(seed, (uint64_t)(*((uint8_t *)bytes)));
+    seed = hash_hash_t_bytes(seed, (hash_t)(*((uint8_t *)bytes)));
   }
   return seed;
 }
@@ -82,7 +86,7 @@ static hash_t hash_string(hash_t seed, const char *str) {
 
 #define hash_primitive(seed, val)                                              \
   (sizeof(val) <= sizeof(hash_t)                                               \
-     ? hash_eight_bytes(seed, (val))                                           \
+     ? hash_hash_t_bytes(seed, (val))                                          \
      : hash_bytes(seed, (uint8_t *)(&(val)), sizeof(val)))
 
 hash_t hash_newtype(const void *key_p, const void *ctx) {
