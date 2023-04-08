@@ -40,6 +40,10 @@ but the plan is to support libgccjit and others.
 
 The piq compiler is written in C99.[^4]
 
+## Usage
+
+Please see the (incomplete) [usage guide](docs/guide.md).
+
 [^1]: This is on laptop with an AMD Ryzen 5 5625U. The compiler performance can
 be greatly improved by multi-threading, and by a tonne of optimizations I haven't
 yet had time to implement.
