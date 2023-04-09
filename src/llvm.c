@@ -841,16 +841,11 @@ llvm_res llvm_gen_module(source_file source, parse_tree tree, type_info types,
     .module = module,
   };
   llvm_cg_module(LLVMGetModuleContext(module), res.module, source, tree, types);
-  // char *err;
-  // bool broken = LLVMVerifyModule(res.module, LLVMPrintMessageAction, &err);
+  LLVMVerifyModule(res.module, LLVMPrintMessageAction, NULL);
   // char *mod_str = LLVMPrintModuleToString(res.module);
   // puts(mod_str);
   // free(mod_str);
   // fputs(err, stderr);
-  // free(err);
-  // if (broken) {
-  //   exit(1);
-  // }
 #ifdef TIME_CODEGEN
   res.perf_values = perf_end(perf_state);
 #endif
