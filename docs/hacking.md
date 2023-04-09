@@ -1,12 +1,18 @@
 # Hacking
 
-First, install [nix](https://nixos.org/).
+First, install [nix](https://nixos.org/). Then:
 
 ```sh
-$ nix develop   # enter the development environment
-$ tup init      # first time only
-$ tup compiledb # get clangd working
-$ tup build     # build the compiler
+$ nix develop # enter the development environment
+$ tup init    # first time only
+$ tup build   # build the compiler
+```
+
+Optional extras:
+
+```sh
+$ git config blame.ignoreRevsFile .blameignore # ignore some useless commits
+$ tup compiledb                                # get clangd working properly
 ```
 
 Alternatively, you can mess around with the debian-based build instructions in
