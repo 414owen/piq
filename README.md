@@ -38,7 +38,7 @@ but the plan is to support libgccjit and others.
 
 ## Easily bootstrappable
 
-The piq compiler is written in C99.[^4]
+The piq stage0 compiler is written in C99.[^4] This is currently the only compiler.
 
 ## Usage
 
