@@ -788,7 +788,7 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
     /*
     printf("%d: %d: ", type_ind, first_pass);
     print_type(stdout, VEC_DATA_PTR(&old->types), VEC_DATA_PTR(&old->inds),
-    root_type); puts("");
+    type_ind); puts("");
     */
 
     if (t.check_tag == TC_VAR) {
@@ -796,6 +796,7 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
       bs_push(&first_pass_stack, first_pass);
       continue;
     }
+
     switch (type_repr(t.check_tag)) {
       case SUBS_NONE: {
         // first pass
@@ -820,9 +821,9 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
         if (first_pass) {
           VEC_PUSH(&stack, type_ind);
           bs_push_false(&first_pass_stack);
-          VEC_PUSH(&stack, t.sub_b);
-          bs_push_true(&first_pass_stack);
           VEC_PUSH(&stack, t.sub_a);
+          bs_push_true(&first_pass_stack);
+          VEC_PUSH(&stack, t.sub_b);
           bs_push_true(&first_pass_stack);
         } else {
           type_ref sub_a;

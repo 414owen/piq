@@ -37,6 +37,7 @@ static void push_str(vec_print_action *stack, char *str) {
   VEC_PUSH(stack, act);
 }
 
+// TODO export this as an array
 tree_node_repr type_repr(type_check_tag tag) {
   tree_node_repr res = SUBS_EXTERNAL;
   switch (tag) {
