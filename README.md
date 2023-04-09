@@ -14,7 +14,7 @@ consider changing your font.
 The language is fast. It's close to the metal, there's no indirection.
 
 The compiler is fast. The single-threaded performance is currently at about
-170_000loc/s on my laptop.[^1]
+170_000 sloc/s on my laptop.[^1]
 
 The compiler itself is fast to compile.[^2]
 
@@ -27,14 +27,14 @@ easy to parse, for humans and computers, without backtracking.
 
 ## Statically typed
 
-All piq types are known at compile time. We have full type inference, so if you
+All piq types are known at compile time. It has full type inference, so if you
 have enough type constraints in your compilation unit such that there is only
 one solution, the compiler will be satisfied.
 
 ## Compiled
 
-We currently have working LLVM codegen, with JIT'd code running in our test suites,
-but the plan is to support libgccjit and others.
+It currently has working LLVM codegen, with JIT'd code running in our test
+suites, but the plan is to support libgccjit and others.
 
 ## Easily bootstrappable
 
@@ -48,7 +48,7 @@ Please see the (incomplete) [usage guide](docs/guide.md).
 be greatly improved by multi-threading, and by a tonne of optimizations I haven't
 yet had time to implement.
 
-[^2]: Takes about 3.4 seconds on my laptop. This can be improved. see [^4].
+[^2]: Takes about 3.4 seconds on my laptop. This can be improved, see [^4].
 
 [^3]: The current tuple syntax doesn't follow this rule, but this is a bug I
 will fix soon.
