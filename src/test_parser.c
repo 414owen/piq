@@ -25,7 +25,7 @@ typedef struct {
 static void test_parser_succeeds_on(test_state *state, const char *input,
                                     expected_output output) {
   parse_tree_res pres = test_upto_parse_tree(state, input);
-  if (pres.type != PRT_SUCCESS) {
+  if (pres.type == PRT_SUCCESS) {
     switch (output.tag) {
       case ANY:
         break;
@@ -52,7 +52,9 @@ static void test_parser_succeeds_on_form(test_state *state, char *input,
   char *new_input;
   char *old_str = output.str;
   if (output.tag == STRING) {
-    asprintf(&output.str, "(Fun (TermName a) (Body %s))", old_str);
+    asprintf(&output.str,
+             "(FunctionStatement (TermName a) (FunctionBodyExpression %s))",
+             old_str);
   }
   asprintf(&new_input, "(fun a () %s)", input);
   test_parser_succeeds_on(state, new_input, output);
@@ -146,13 +148,14 @@ static void test_parser_succeeds_atomic(test_state *state) {
   {
     test_start(state, "Name");
     test_parser_succeeds_on_form(
-      state, "hello", expect_string("(TermName hello)"));
+      state, "hello", expect_string("(TermNameExpression hello)"));
     test_end(state);
   }
 
   {
-    test_start(state, "Int");
-    test_parser_succeeds_on_form(state, "123", expect_string("(Int 123)"));
+    test_start(state, "IntExpression");
+    test_parser_succeeds_on_form(
+      state, "123", expect_string("(IntExpression 123)"));
     test_end(state);
   }
 
@@ -199,7 +202,8 @@ static void test_parser_succeeds_kitchen_sink(test_state *state) {
     test_parser_succeeds_on_form(
       state,
       " ( ( hi 1   ) , 2 ) ",
-      expect_string("((Call (TermName hi) (Int 1)), (Int 2))"));
+      expect_string("((CallExpression (TermNameExpression hi) (IntExpression "
+                    "1)), (IntExpression 2))"));
     test_end(state);
   }
 
@@ -297,7 +301,7 @@ static void test_call_succeeds(test_state *state) {
   {
     test_start(state, "No params");
     test_parser_succeeds_on_form(
-      state, "(a)", expect_string("(Call (TermName a))"));
+      state, "(a)", expect_string("(CallExpression (TermNameExpression a))"));
     test_end(state);
   }
 
@@ -310,14 +314,20 @@ static void test_fn_succeeds(test_state *state) {
   {
     test_start(state, "Minimal");
     test_parser_succeeds_on_form(
-      state, "(fn () 1)", expect_string("(Fn () (Body (Int 1)))"));
+      state,
+      "(fn () 1)",
+      expect_string("(AnonymousFunctionExpression (FunctionBodyExpression "
+                    "(IntExpression 1)))"));
     test_end(state);
   }
 
   {
     test_start(state, "One arg");
     test_parser_succeeds_on_form(
-      state, "(fn (a) 1)", expect_string("(Fn ((Wildcard a)) (Body (Int 1)))"));
+      state,
+      "(fn (a) 1)",
+      expect_string("(AnonymousFunctionExpression (WildcardPattern a) "
+                    "(FunctionBodyExpression (IntExpression 1)))"));
     test_end(state);
   }
 
@@ -326,14 +336,19 @@ static void test_fn_succeeds(test_state *state) {
     test_parser_succeeds_on_form(
       state,
       "(fn (ab cd) 1)",
-      expect_string("(Fn ((Wildcard ab) (Wildcard cd)) (Body (Int 1)))"));
+      expect_string(
+        "(AnonymousFunctionExpression (WildcardPattern ab) (WildcardPattern "
+        "cd) (FunctionBodyExpression (IntExpression 1)))"));
     test_end(state);
   }
 
   {
     test_start(state, "Numeric param");
     test_parser_succeeds_on_form(
-      state, "(fn (123) 1)", expect_string("(Fn ((Int 123)) (Body (Int 1)))"));
+      state,
+      "(fn (123) 1)",
+      expect_string("(AnonymousFunctionExpression (IntPattern 123) "
+                    "(FunctionBodyExpression (IntExpression 1)))"));
     test_end(state);
   }
 
@@ -346,14 +361,20 @@ static void test_parser_succeeds_compound(test_state *state) {
   {
     test_start(state, "List");
     test_parser_succeeds_on_form(
-      state, "[1, 2, 3]", expect_string("[(Int 1), (Int 2), (Int 3)]"));
+      state,
+      "[1, 2, 3]",
+      expect_string(
+        "[(IntExpression 1), (IntExpression 2), (IntExpression 3)]"));
     test_end(state);
   }
 
   {
     test_start(state, "If");
     test_parser_succeeds_on_form(
-      state, "(if 1 2 3)", expect_string("(If (Int 1) (Int 2) (Int 3))"));
+      state,
+      "(if 1 2 3)",
+      expect_string("(IfExpression (IntExpression 1) (IntExpression 2) "
+                    "(IntExpression 3))"));
     test_end(state);
   }
 
@@ -362,14 +383,15 @@ static void test_parser_succeeds_compound(test_state *state) {
     test_parser_succeeds_on_form(
       state,
       "(add (1, 2))",
-      expect_string("(Call (TermName add) ((Int 1), (Int 2)))"));
+      expect_string("(CallExpression (TermNameExpression add) ((IntExpression "
+                    "1), (IntExpression 2)))"));
     test_end(state);
   }
 
   {
     test_start(state, "Tuple");
     test_parser_succeeds_on_form(
-      state, "(1, 2)", expect_string("((Int 1), (Int 2))"));
+      state, "(1, 2)", expect_string("((IntExpression 1), (IntExpression 2))"));
     test_end(state);
   }
 
@@ -378,7 +400,8 @@ static void test_parser_succeeds_compound(test_state *state) {
     test_parser_succeeds_on_form(
       state,
       "(as I32 1)",
-      expect_string("(As (TypeConstructorName I32) (Int 1))"));
+      expect_string(
+        "(AsExpression (TypeConstructorName I32) (IntExpression 1))"));
     test_end(state);
   }
 
@@ -387,7 +410,8 @@ static void test_parser_succeeds_compound(test_state *state) {
     test_parser_succeeds_on_form(
       state,
       "(1, 2, 3, hi, 4)",
-      expect_string("((Int 1), (Int 2), (Int 3), (TermName hi), (Int 4))"));
+      expect_string("((IntExpression 1), (IntExpression 2), (IntExpression 3), "
+                    "(TermNameExpression hi), (IntExpression 4))"));
     test_end(state);
   }
 
@@ -467,7 +491,7 @@ static void test_mismatched_parens(test_state *state) {
 static void test_parser_succeeds_on_type(test_state *state, char *in,
                                          char *ast) {
   char *full_ast;
-  asprintf(&full_ast, "(Sig (TermName a) %s)", ast);
+  asprintf(&full_ast, "(TypeSignatureStatement (TermName a) %s)", ast);
   char *full_in;
   asprintf(&full_in, "(sig a %s)", in);
   expected_output out = {.tag = STRING, .str = full_ast};
@@ -509,10 +533,12 @@ static void test_parser_succeeds_root(test_state *state) {
   {
     test_start(state, "Sig and fun");
 
-    expected_output out = {
-      .tag = STRING,
-      .str = "(Sig (TermName a) (Fn (()) (TypeConstructorName I32)))\n"
-             "(Fun (TermName a) () (Body (Int 12)))"};
+    expected_output out = {.tag = STRING,
+                           .str =
+                             "(TypeSignatureStatement (TermName a) "
+                             "(FunctionType () (TypeConstructorName I32)))\n"
+                             "(FunctionStatement (TermName a) () "
+                             "(FunctionBodyExpression (IntExpression 12)))"};
     test_parser_succeeds_on(state,
                             "(sig a (Fn () I32))\n"
                             "(fun a (()) 12)",
@@ -525,8 +551,9 @@ static void test_parser_succeeds_root(test_state *state) {
 
     expected_output out = {
       .tag = STRING,
-      .str = "(Sig (TermName a) (Fn ((TypeConstructorName I8) "
-             "(TypeConstructorName I16)) (TypeConstructorName I32)))"};
+      .str = "(TypeSignatureStatement (TermName a) (FunctionType "
+             "(TypeConstructorName I8) "
+             "(TypeConstructorName I16) (TypeConstructorName I32)))"};
     test_parser_succeeds_on(state, "(sig a (Fn I8 I16 I32))", out);
 
     test_end(state);
@@ -536,7 +563,8 @@ static void test_parser_succeeds_root(test_state *state) {
 
     expected_output out = {
       .tag = STRING,
-      .str = "(Fun (TermName a) (Wildcard a) () (Body (Int 12)))"};
+      .str = "(FunctionStatement (TermName a) (WildcardPattern a) () "
+             "(FunctionBodyExpression (IntExpression 12)))"};
     test_parser_succeeds_on(state, "(fun a (a ()) 12)", out);
 
     test_end(state);
@@ -544,9 +572,12 @@ static void test_parser_succeeds_root(test_state *state) {
   {
     test_start(state, "Multiple funs");
 
-    expected_output out = {.tag = STRING,
-                           .str = "(Fun (TermName a) (Body (TermName a)))\n"
-                                  "(Fun (TermName b) (Body (TermName b)))"};
+    expected_output out = {
+      .tag = STRING,
+      .str = "(FunctionStatement (TermName a) (FunctionBodyExpression "
+             "(TermNameExpression a)))\n"
+             "(FunctionStatement (TermName b) (FunctionBodyExpression "
+             "(TermNameExpression b)))"};
     test_parser_succeeds_on(state, "(fun a () a)(fun b () b)", out);
 
     test_end(state);
@@ -560,7 +591,8 @@ static void test_parser_succeeds_statements(test_state *state) {
 
     expected_output out = {
       .tag = STRING,
-      .str = "(Fun (TermName a) (Body (Let (TermName b) ()) ()))",
+      .str = "(FunctionStatement (TermName a) (FunctionBodyExpression "
+             "(LetStatement (TermName b) ()) ()))",
     };
     test_parser_succeeds_on(state, "(fun a () (let b ()) ())", out);
 
@@ -576,8 +608,10 @@ static void test_parser_succeeds_declaration(test_state *state) {
     const char *input = "(data A () (Test))";
     expected_output out = {
       .tag = STRING,
-      .str = "(DataDecl (TypeConstructorName A) (Type params: []) "
-             "(DataConstructorName Test))",
+      .str = "(DataDeclarationStatement (TypeConstructorName A) "
+             "(DataConstructors "
+             "(DataConstructorDeclaration "
+             "(DataConstructorName Test))))",
     };
     test_parser_succeeds_on(state, input, out);
 

@@ -78,6 +78,7 @@ typedef enum {
   PT_ALL_TY_PARAM_NAME,
   PT_ALL_TY_CONSTRUCTOR_NAME,
 
+  // TODO remove by using the X macro
   PT_ALL_LEN,
 } parse_node_type_all;
 
