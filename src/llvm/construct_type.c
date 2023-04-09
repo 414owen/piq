@@ -20,7 +20,8 @@ static void push_gen_type_action(vec_llvm_gen_type_action *actions, llvm_gen_typ
 // TODO this lazy construction is unnecessary, we should just construct all the types up-front
 
 LLVMTypeRef llvm_construct_type_internal(LLVMTypeRef *llvm_type_refs, type_tree types, LLVMContextRef context, node_ind_t root_type_ind) {
-
+  // print_type(stdout, types.nodes, types.inds, root_type_ind);
+  // putc('\n', stdout);
   vec_llvm_gen_type_action actions = VEC_NEW;
   push_gen_type_action(&actions, GEN_TYPE);
   vec_node_ind ind_stack = VEC_NEW;
