@@ -336,28 +336,31 @@ static llvm_cg_state llvm_new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
                                        source_file source, parse_tree tree,
                                        type_info types) {
   LLVMTypeRef bool_type = LLVMInt1TypeInContext(ctx);
-  llvm_cg_state state = {.context = ctx,
-                         .builder = LLVMCreateBuilderInContext(ctx),
-                         .module = mod,
+  llvm_cg_state state = {
+    .context = ctx,
+    .builder = LLVMCreateBuilderInContext(ctx),
+    .module = mod,
 
-                         .llvm_type_refs = (LLVMTypeRef *)calloc(
-                           types.type_amt, sizeof(LLVMTypeRef)),
-                         .return_values = llvm_empty_lang_values(),
-                         .environment_values = llvm_empty_lang_values(),
-                         .builtin_values = {NULL},
+    .llvm_type_refs =
+      (LLVMTypeRef *)calloc(types.type_amt, sizeof(LLVMTypeRef)),
+    .return_values = llvm_empty_lang_values(),
+    .environment_values = llvm_empty_lang_values(),
+    .builtin_values = {NULL},
 
-                         .block_stack = VEC_NEW,
-                         .function_stack = VEC_NEW,
+    .block_stack = VEC_NEW,
+    .function_stack = VEC_NEW,
 
-                         .source = source,
-                         .parse_tree = tree,
-                         .types = types,
+    .source = source,
+    .parse_tree = tree,
+    .types = types,
 
-                         .llvm_cache = {
-                           .ll_bool = bool_type,
-                           .ll_true = LLVMConstInt(bool_type, 1, false),
-                           .ll_false = LLVMConstInt(bool_type, 0, false),
-                         }};
+    .llvm_cache =
+      {
+        .ll_bool = bool_type,
+        .ll_true = LLVMConstInt(bool_type, 1, false),
+        .ll_false = LLVMConstInt(bool_type, 0, false),
+      },
+  };
 
   // Sometimes we want to be nowhere
   VEC_PUSH(&state.block_stack, NULL);
