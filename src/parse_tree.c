@@ -11,7 +11,6 @@
 typedef enum {
   PRINT_NODE,
   PRINT_STR,
-  PRINT_SOURCE,
   POP_TUP_BS,
 } print_action;
 
@@ -70,40 +69,40 @@ static const char *parse_node_strings_arr[] = {
   [PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME] = "DataConstructorName",
   [PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME] = "TypeConstructorName",
   [PT_ALL_MULTI_TYPE_PARAM_NAME] = "TypeParamName",
-  [PT_ALL_TY_CONSTRUCTOR_NAME] = "TypeName",
-  [PT_ALL_TY_PARAM_NAME] = "TVar",
-  [PT_ALL_PAT_WILDCARD] = "Wildcard",
-  [PT_ALL_STATEMENT_LET] = "Let",
+  [PT_ALL_TY_CONSTRUCTOR_NAME] = "TypeConstructorName",
+  [PT_ALL_TY_PARAM_NAME] = "TypeVariable",
+  [PT_ALL_PAT_WILDCARD] = "WildcardPattern",
+  [PT_ALL_STATEMENT_LET] = "LetStatement",
   [PT_ALL_EX_TERM_NAME] = "TermNameExpression",
-  [PT_ALL_EX_UPPER_NAME] = "Constructor",
-  [PT_ALL_EX_AS] = "Typed",
-  [PT_ALL_EX_CALL] = "Call",
-  [PT_ALL_TY_CONSTRUCTION] = "Construction",
-  [PT_ALL_PAT_CONSTRUCTION] = "Construction",
-  [PT_ALL_EX_FN] = "AnonymousFunction",
+  [PT_ALL_EX_UPPER_NAME] = "ConstructorNameExpression",
+  [PT_ALL_EX_AS] = "AsExpression",
+  [PT_ALL_EX_CALL] = "CallExpression",
+  [PT_ALL_TY_CONSTRUCTION] = "TypeConstructionType",
+  [PT_ALL_PAT_CONSTRUCTION] = "DataConstructionPattern",
+  [PT_ALL_EX_FN] = "AnonymousFunctionExpression",
   [PT_ALL_TY_FN] = "FunctionType",
-  [PT_ALL_EX_FUN_BODY] = "FunctionBody",
+  [PT_ALL_EX_FUN_BODY] = "FunctionBodyExpression",
   [PT_ALL_STATEMENT_FUN] = "FunctionStatement",
-  [PT_ALL_EX_IF] = "If",
-  [PT_ALL_PAT_INT] = "Int",
-  [PT_ALL_EX_INT] = "Int",
-  [PT_ALL_PAT_LIST] = "List",
-  [PT_ALL_EX_LIST] = "List",
-  [PT_ALL_TY_LIST] = "List",
+  [PT_ALL_EX_IF] = "IfExpression",
+  [PT_ALL_PAT_INT] = "IntPattern",
+  [PT_ALL_EX_INT] = "IntExpression",
+  [PT_ALL_PAT_LIST] = "ListPattern",
+  [PT_ALL_EX_LIST] = "ListExpression",
+  [PT_ALL_TY_LIST] = "ListType",
   [PT_ALL_MULTI_TERM_NAME] = "TermName",
-  [PT_ALL_STATEMENT_SIG] = "Sig",
-  [PT_ALL_PAT_STRING] = "String",
-  [PT_ALL_EX_STRING] = "String",
-  [PT_ALL_PAT_TUP] = "Tuple",
-  [PT_ALL_TY_TUP] = "Tuple",
-  [PT_ALL_EX_TUP] = "Tuple",
+  [PT_ALL_STATEMENT_SIG] = "TypeSignatureStatement",
+  [PT_ALL_PAT_STRING] = "StringPattern",
+  [PT_ALL_EX_STRING] = "StringExpression",
+  [PT_ALL_PAT_TUP] = "TuplePattern",
+  [PT_ALL_TY_TUP] = "TupleType",
+  [PT_ALL_EX_TUP] = "TupleExpression",
   [PT_ALL_TY_UNIT] = "UnitType",
   [PT_ALL_PAT_UNIT] = "UnitPattern",
   [PT_ALL_EX_UNIT] = "UnitExpression",
-  [PT_ALL_STATEMENT_DATA_DECLARATION] = "Data declaration",
-  [PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL] = "Data constructor",
-  [PT_ALL_MULTI_TYPE_PARAMS] = "Type params",
-  [PT_ALL_MULTI_DATA_CONSTRUCTORS] = "Data constructors",
+  [PT_ALL_STATEMENT_DATA_DECLARATION] = "DataDeclarationStatement",
+  [PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL] = "DataConstructorDeclaration",
+  [PT_ALL_MULTI_TYPE_PARAMS] = "TypeParameters",
+  [PT_ALL_MULTI_DATA_CONSTRUCTORS] = "DataConstructors",
 };
 
 const char **parse_node_strings = parse_node_strings_arr;
@@ -178,10 +177,8 @@ static void push_node(printer_state *s, node_ind_t node) {
   VEC_PUSH(&s->node_stack, node);
 }
 
-static void push_source(printer_state *s, node_ind_t node) {
-  print_action action = PRINT_SOURCE;
-  VEC_PUSH(&s->actions, action);
-  VEC_PUSH(&s->node_stack, node);
+static void print_source(printer_state *s, parse_node node) {
+  fprintf(s->out, "%.*s", node.span.len, s->input + node.span.start);
 }
 
 static bool is_tuple(parse_node_type t) {
@@ -206,9 +203,16 @@ static void print_separated(printer_state *s, const node_ind_t *restrict inds,
   }
 }
 
-static void print_compound(printer_state *s, char *prefix, char *sep,
-                           char *terminator, parse_node node) {
-  fputs(prefix, s->out);
+HEDLEY_PRINTF_FORMAT(2, 6)
+static void print_compound(printer_state *restrict s,
+                           const char *restrict prefix,
+                           const char *restrict sep, char *terminator,
+                           parse_node node, ...) {
+  va_list rest;
+  va_start(rest, node);
+  vfprintf(s->out, prefix, rest);
+  va_end(rest);
+
   bs_push(&s->in_tuple, is_tuple(node.type));
   switch (pt_subs_type[node.type.all]) {
     case SUBS_NONE:
@@ -230,48 +234,63 @@ static void print_compound(printer_state *s, char *prefix, char *sep,
   push_str(s, terminator);
 }
 
+static void print_compound_normal(printer_state *restrict s, parse_node node) {
+  print_compound(
+    s, "(%s ", " ", ")", node, parse_node_strings_arr[node.type.all]);
+}
+
+static void print_atom_normal(printer_state *restrict s, parse_node node) {
+  fprintf(s->out,
+          "(%s %.*s)",
+          parse_node_strings_arr[node.type.all],
+          node.span.len,
+          s->input + node.span.start);
+}
+
 static void print_node(printer_state *s, node_ind_t node_ind) {
   parse_node node = s->tree.nodes[node_ind];
   switch (node.type.all) {
     case PT_ALL_LEN:
       // TODO impossible
       break;
-    case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME: {
-      fprintf(s->out,
-              "(DataConstructorName %.*s)",
-              node.span.len,
-              s->input + node.span.start);
+    case PT_ALL_PAT_INT:
+    case PT_ALL_EX_INT:
+    case PT_ALL_TY_PARAM_NAME:
+    case PT_ALL_TY_CONSTRUCTOR_NAME:
+    case PT_ALL_EX_UPPER_NAME:
+    case PT_ALL_PAT_WILDCARD:
+    case PT_ALL_EX_TERM_NAME:
+    case PT_ALL_MULTI_TERM_NAME:
+    case PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME:
+    case PT_ALL_MULTI_TYPE_PARAM_NAME:
+    case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME:
+    case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME:
+      print_atom_normal(s, node);
       break;
-    }
-    case PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME: {
-      fprintf(s->out,
-              "(DataConstructorName %.*s)",
-              node.span.len,
-              s->input + node.span.start);
+    case PT_ALL_EX_AS:
+    case PT_ALL_EX_IF:
+    case PT_ALL_PAT_CONSTRUCTION:
+    case PT_ALL_TY_CONSTRUCTION:
+    case PT_ALL_EX_FUN_BODY:
+    case PT_ALL_EX_CALL:
+    case PT_ALL_STATEMENT_LET:
+    case PT_ALL_STATEMENT_SIG:
+    case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
+    case PT_ALL_MULTI_DATA_CONSTRUCTORS:
+    case PT_ALL_TY_FN:
+    case PT_ALL_EX_FN:
+    case PT_ALL_STATEMENT_DATA_DECLARATION:
+      print_compound_normal(s, node);
       break;
-    }
-    case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME: {
-      fprintf(s->out,
-              "(TypeConstructorName %.*s)",
-              node.span.len,
-              s->input + node.span.start);
+    case PT_ALL_MULTI_TYPE_PARAMS:
+      if (node.sub_amt > 0) {
+        print_compound_normal(s, node);
+      } else {
+        // can only be followed by a string (space)
+        VEC_POP_(&s->actions);
+        VEC_POP_(&s->string_stack);
+      }
       break;
-    }
-    case PT_ALL_MULTI_TYPE_PARAM_NAME: {
-      fprintf(s->out,
-              "(TypeParamName %.*s)",
-              node.span.len,
-              s->input + node.span.start);
-      break;
-    }
-    case PT_ALL_STATEMENT_SIG: {
-      print_compound(s, "(Sig ", " ", ")", node);
-      break;
-    }
-    case PT_ALL_STATEMENT_LET: {
-      print_compound(s, "(Let ", " ", ")", node);
-      break;
-    }
     case PT_ALL_TY_UNIT:
     case PT_ALL_PAT_UNIT:
     case PT_ALL_EX_UNIT: {
@@ -279,7 +298,7 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       break;
     }
     case PT_ALL_STATEMENT_FUN:
-      push_str(s, "(Fun ");
+      fprintf(s->out, "(%s ", parse_node_strings_arr[node.type.all]);
       push_node(s, PT_FUN_BINDING_IND(s->tree.inds, node));
       if (PT_FUN_PARAM_AMT(node) > 0) {
         push_str(s, " ");
@@ -292,71 +311,15 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       push_node(s, PT_FN_BODY_IND(s->tree.inds, node));
       push_str(s, ")");
       break;
-    case PT_ALL_TY_FN:
-    case PT_ALL_EX_FN: {
-      push_str(s, "(Fn (");
-      print_separated(
-        s, &PT_FN_PARAM_IND(s->tree.inds, node, 0), PT_FN_PARAM_AMT(node), " ");
-      push_str(s, ") ");
-      push_node(s, PT_FN_BODY_IND(s->tree.inds, node));
-      push_str(s, ")");
-      break;
-    }
-    case PT_ALL_PAT_CONSTRUCTION:
-    case PT_ALL_TY_CONSTRUCTION: {
-      print_compound(s, "(Construct ", " ", ")", node);
-      break;
-    }
-    case PT_ALL_EX_FUN_BODY: {
-      print_compound(s, "(Body ", " ", ")", node);
-      break;
-    }
-    case PT_ALL_EX_CALL:
-      print_compound(s, "(Call ", " ", ")", node);
-      break;
-    case PT_ALL_PAT_INT:
-    case PT_ALL_EX_INT:
-      fprintf(s->out, "(Int %.*s)", node.span.len, s->input + node.span.start);
-      break;
-    case PT_ALL_TY_PARAM_NAME:
-      fprintf(
-        s->out, "(TypeVar %.*s)", node.span.len, s->input + node.span.start);
-      break;
-    case PT_ALL_TY_CONSTRUCTOR_NAME:
-      fprintf(s->out,
-              "(TypeConstructorName %.*s)",
-              node.span.len,
-              s->input + node.span.start);
-      break;
-    case PT_ALL_EX_UPPER_NAME:
-      fprintf(s->out,
-              "(Constructor %.*s)",
-              node.span.len,
-              s->input + node.span.start);
-      break;
-    case PT_ALL_PAT_WILDCARD:
-      fprintf(
-        s->out, "(Wildcard %.*s)", node.span.len, s->input + node.span.start);
-      break;
-    case PT_ALL_EX_TERM_NAME:
-    case PT_ALL_MULTI_TERM_NAME:
-      fprintf(
-        s->out, "(TermName %.*s)", node.span.len, s->input + node.span.start);
-      break;
-    case PT_ALL_EX_IF:
-      print_compound(s, "(If ", " ", ")", node);
-      break;
     case PT_ALL_PAT_TUP:
     case PT_ALL_TY_TUP:
     case PT_ALL_EX_TUP:
       if (bs_peek(&s->in_tuple)) {
+        // right-associated 2-tuples are written as n-tuples
         print_compound(s, "", ", ", "", node);
       } else {
         print_compound(s, "(", ", ", ")", node);
       }
-      break;
-    case PT_ALL_EX_AS:
-      print_compound(s, "(As ", " ", ")", node);
       break;
     case PT_ALL_TY_LIST:
     case PT_ALL_PAT_LIST:
@@ -365,19 +328,7 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       break;
     case PT_ALL_PAT_STRING:
     case PT_ALL_EX_STRING:
-      push_source(s, node_ind);
-      break;
-    case PT_ALL_STATEMENT_DATA_DECLARATION:
-      print_compound(s, "(DataDecl ", " ", ")", node);
-      break;
-    case PT_ALL_MULTI_DATA_CONSTRUCTORS:
-      print_compound(s, "", "", "", node);
-      break;
-    case PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL:
-      print_compound(s, "", ", ", "", node);
-      break;
-    case PT_ALL_MULTI_TYPE_PARAMS:
-      print_compound(s, "(Type params: [", ", ", "])", node);
+      print_source(s, node);
       break;
   }
 }
@@ -407,13 +358,6 @@ void print_parse_tree(FILE *f, const char *restrict input, parse_tree tree) {
     print_action action;
     VEC_POP(&s.actions, &action);
     switch (action) {
-      case PRINT_SOURCE: {
-        node_ind_t node_ind;
-        VEC_POP(&s.node_stack, &node_ind);
-        parse_node node = tree.nodes[node_ind];
-        fprintf(f, "%.*s", node.span.len, input + node.span.start);
-        break;
-      }
       case PRINT_STR: {
         char *str;
         VEC_POP(&s.string_stack, &str);
