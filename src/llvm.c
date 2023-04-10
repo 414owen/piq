@@ -781,6 +781,7 @@ static void llvm_cg_predeclare_fn(llvm_cg_state *state,
   // LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
   const LLVMFunctionRef fn = LLVMAddFunctionCustom(
     state->module, &state->source.data[span.start], span.len, fn_type);
+  LLVMSetFunctionCallConv(fn, LLVMCCallConv);
   LLVMSetLinkage(fn, LLVMExternalLinkage);
   llvm_push_exogenous_value(&state->environment_values, fn);
 }
