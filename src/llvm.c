@@ -784,6 +784,7 @@ static void llvm_cg_predeclare_fn(llvm_cg_state *state,
                           &state->source.data[binding.span.start],
                           binding_len,
                           fn_type);
+  LLVMSetFunctionCallConv(fn, LLVMCCallConv);
   LLVMSetLinkage(fn, LLVMExternalLinkage);
   llvm_push_exogenous_value(&state->environment_values, fn);
 }
