@@ -11,6 +11,7 @@
 #include "hashmap.h"
 #include "hashers.h"
 #include "parse_tree.h"
+#include "resolve_scope.h"
 #include "timing.h"
 #include "traverse.h"
 #include "util.h"
@@ -39,18 +40,6 @@ static bool streq(const char *restrict a, const char *restrict b,
   }
   return true;
 }
-
-typedef struct {
-  bitset is_builtin;
-  vec_str_ref bindings;
-  vec_environment_ind shadows;
-  a_hashmap map;
-} scope;
-
-typedef struct {
-  scope *scope;
-  const char *source_file;
-} resolve_map_ctx;
 
 // TODO consider separating builtins into separate array somehow
 // Find index of binding, return bindings.len if not found
@@ -143,7 +132,7 @@ static void precalculate_scope_push(scope_calculator_state *state) {
       node_ind_t binding_ind =
         PT_FUN_BINDING_IND(state->tree.inds, state->elem.data.node_data.node);
       parse_node *binding_node = &state->tree.nodes[binding_ind];
-      binding b = binding_node->span;
+      binding b = binding_node->data.span;
       binding_node->variable_index = state->environment.bindings.len;
       scope_push(state->input, &state->environment, b);
       break;
@@ -152,7 +141,7 @@ static void precalculate_scope_push(scope_calculator_state *state) {
       parse_node *node =
         &state->tree.nodes[state->elem.data.node_data.node_index];
       node->variable_index = state->environment.bindings.len;
-      binding b = node->span;
+      binding b = node->data.span;
       scope_push(state->input, &state->environment, b);
       break;
     }
@@ -160,7 +149,7 @@ static void precalculate_scope_push(scope_calculator_state *state) {
       node_ind_t binding_ind = PT_LET_BND_IND(state->elem.data.node_data.node);
       parse_node *node = &state->tree.nodes[binding_ind];
       node->variable_index = state->environment.bindings.len;
-      binding b = node->span;
+      binding b = node->data.span;
       scope_push(state->input, &state->environment, b);
       break;
     }
@@ -186,9 +175,9 @@ static void precalculate_scope_visit(scope_calculator_state *state) {
   }
   scope scope = *scope_p;
   state->num_names_looked_up++;
-  VEC_LEN_T index = lookup_str_ref(state->input, scope, node.span);
+  VEC_LEN_T index = lookup_str_ref(state->input, scope, node.data.span);
   if (index == scope.bindings.len) {
-    VEC_PUSH(&state->not_found, node.span);
+    VEC_PUSH(&state->not_found, node.data.span);
   }
   state->tree.nodes[state->elem.data.node_data.node_index].variable_index =
     index;

@@ -8,6 +8,7 @@
 
 #include "consts.h"
 #include "parse_tree.h"
+#include "resolve_scope.h"
 
 typedef struct {
   buf_ind_t line;

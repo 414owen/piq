@@ -13,6 +13,7 @@
 
 #include "args.h"
 #include "diagnostic.h"
+#include "externalise_spans.h"
 #include "global_settings.h"
 #include "initialise.h"
 #include "llvm.h"
@@ -73,10 +74,13 @@ static void compile_llvm(compile_arguments args) {
     resolution_res res = resolve_bindings(pres.tree, source_code);
     if (res.not_found.binding_amt > 0) {
       print_resolution_errors(stdout, source_code, res.not_found);
+      return;
     }
   }
 
   free_tokens_res(tres);
+
+  externalise_spans(&pres.tree);
 
   tc_res tc_res = typecheck(pres.tree);
   if (tc_res.error_amt > 0) {

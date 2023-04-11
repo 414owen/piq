@@ -181,8 +181,8 @@ static void push_node(printer_state *s, node_ind_t node) {
   VEC_PUSH(&s->node_stack, node);
 }
 
-static void print_source(printer_state *s, parse_node node) {
-  fprintf(s->out, "%.*s", node.span.len, s->input + node.span.start);
+static void print_source(printer_state *s, span span) {
+  fprintf(s->out, "%.*s", span.len, s->input + span.start);
 }
 
 static bool is_tuple(parse_node_type t) {
@@ -243,16 +243,18 @@ static void print_compound_normal(printer_state *restrict s, parse_node node) {
     s, "(%s ", " ", ")", node, parse_node_strings_arr[node.type.all]);
 }
 
-static void print_atom_normal(printer_state *restrict s, parse_node node) {
+static void print_atom_normal(printer_state *restrict s,
+                              parse_node_type_all node_type, span span) {
   fprintf(s->out,
           "(%s %.*s)",
-          parse_node_strings_arr[node.type.all],
-          node.span.len,
-          s->input + node.span.start);
+          parse_node_strings_arr[node_type],
+          span.len,
+          s->input + span.start);
 }
 
 static void print_node(printer_state *s, node_ind_t node_ind) {
   parse_node node = s->tree.nodes[node_ind];
+  span span = s->tree.spans != NULL ? s->tree.spans[node_ind] : node.data.span;
   switch (node.type.all) {
     case PT_ALL_LEN:
       // TODO impossible
@@ -269,7 +271,7 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
     case PT_ALL_MULTI_TYPE_PARAM_NAME:
     case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME:
     case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME:
-      print_atom_normal(s, node);
+      print_atom_normal(s, node.type.all, span);
       break;
     case PT_ALL_EX_AS:
     case PT_ALL_EX_IF:
@@ -332,7 +334,7 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       break;
     case PT_ALL_PAT_STRING:
     case PT_ALL_EX_STRING:
-      print_source(s, node);
+      print_source(s, span);
       break;
   }
 }
@@ -411,6 +413,7 @@ char *print_parse_tree_str(const char *restrict input, const parse_tree tree) {
 void free_parse_tree(parse_tree tree) {
   free((void *)tree.inds);
   free((void *)tree.nodes);
+  free((void *)tree.spans);
 }
 
 void free_parse_tree_res(parse_tree_res res) {
@@ -437,8 +440,8 @@ static void print_semantic_error(FILE *f, const char *restrict input,
   switch (err.type) {
     case SEMERR_OUT_OF_PLACE_SIG: {
       fprintf(f, "Expected binding to match signature:\n");
-      parse_node node = tree.nodes[err.sig_index];
-      format_error_ctx(f, input, node.span.start, node.span.len);
+      span span = tree.spans[err.sig_index];
+      format_error_ctx(f, input, span.start, span.len);
       break;
     }
   }

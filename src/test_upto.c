@@ -4,6 +4,7 @@
 
 #include "defs.h"
 #include "diagnostic.h"
+#include "externalise_spans.h"
 #include "test.h"
 #include "test_upto.h"
 #include "test_llvm.h"
@@ -145,6 +146,7 @@ upto_resolution_res test_upto_resolution(test_state *state,
     free_parse_tree_res(tree_res);
     return res;
   } else {
+    externalise_spans(&tree_res.tree);
     const upto_resolution_res res = {
       .success = true,
       .tree = tree_res.tree,
