@@ -56,10 +56,23 @@ static void annotate_parse_tree(const parse_tree tree, type_builder *builder) {
   //
   // let's estimate there will be one of them every 100 nodes...
   VEC_RESERVE(&builder->substitutions, tree.node_amt + tree.node_amt / 100);
+  VEC_RESERVE(&builder->types, tree.node_amt);
+  type_ref prev_types_len = builder->types.len;
+
   builder->substitutions.len = tree.node_amt;
+  type_ref *substitutions = VEC_DATA_PTR(&builder->substitutions);
+
   for (node_ind_t i = 0; i < tree.node_amt; i++) {
-    VEC_DATA_PTR(&builder->substitutions)[i] = mk_type_var(builder, i);
+    type t = {
+      .check_tag = TC_VAR,
+      .type_var = i,
+    };
+    type_ref ind = prev_types_len + i;
+    builder->types.data[ind] = t;
+    substitutions[i] = ind;
   }
+
+  builder->types.len += tree.node_amt;
 }
 
 static void add_type_constraint(tc_constraint_builder *builder, type_ref a,
