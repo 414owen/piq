@@ -1,7 +1,7 @@
 * [x] read
 * [x] write
 * [x] open
-* [ ] close
+* [x] close
 * [ ] stat
 * [ ] fstat
 * [ ] lstat

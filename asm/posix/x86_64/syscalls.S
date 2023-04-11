@@ -33,9 +33,15 @@ __syscall_write:
 	ret
 
 __syscall_open:
-	mov rax, 3
+	mov rax, 2
 	# char *fname  is in rdi
 	# int flags    is in rsi
 	# umode_t mode is in rdx
+	syscall
+	ret
+
+__syscall_close:
+	mov rax, 3
+	# int fd       is in rdi
 	syscall
 	ret

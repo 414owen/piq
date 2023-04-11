@@ -159,9 +159,10 @@ COMPILE_C_SMALL = $CC -O2 $(CFLAGS) -c -o %o %f
 : src/initialise.c          |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/print_tc_errors.c     |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 : src/global_settings.c     |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
-: src/log.c               |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
+: src/log.c                 |> ^j^ $CC -Os $(CFLAGS) -c -o %o %f |> %B.o
 
-: asm/posix/x86_64/piqrt.S  |> as %f -o %o                                |> %B.o
+: asm/posix/x86_64/piqrt.S    |> as %f -o %o |> %B.o
+: asm/posix/x86_64/syscalls.S |> as %f -o %o |> %B.o
 
 : $(common_objs) $(main_objs) |> ^j^ $CXX $(CXXFLAGS) %f $(LDFLAGS) -o %o |> piq
 : $(common_objs) $(test_objs) |> ^j^ $CXX $(CXXFLAGS) %f $(LDFLAGS) -o %o |> test

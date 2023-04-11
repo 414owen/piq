@@ -130,7 +130,7 @@ static void compile_llvm(compile_arguments args) {
       machine, module, obj_path, LLVMObjectFile, &error);
     if (!args.lib) {
       char *cmd = format_to_string(
-        "ld piqrt.o %s -o %s", obj_path, args.output_file_path);
+        "ld piqrt.o syscalls.o %s -o %s", obj_path, args.output_file_path);
       system(cmd);
       free(cmd);
     }
