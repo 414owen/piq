@@ -39,13 +39,3 @@ __syscall_open:
 	# umode_t mode is in rdx
 	syscall
 	ret
-
-__syscall_exit:
-	mov rax, 60
-	# rdi filled by C
-	syscall
-
-_start:
-	call main
-	mov rdi, rax
-	call __syscall_exit

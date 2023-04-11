@@ -19,3 +19,14 @@ typedef uint32_t environment_ind_t;
 extern const char *const program_name;
 extern const char path_sep;
 extern const char *issue_tracker_url;
+
+#if defined(_M_AMD64) || defined(_M_X64)
+  #define PIQ_ARCH_AMD64
+  #define ARCH_STR "x86_64"
+#endif
+
+#if PREDEF_OS_WINDOWS
+  #define PATH_SEP_STR "\\"
+#else
+  #define PATH_SEP_STR "/"
+#endif

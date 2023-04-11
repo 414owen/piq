@@ -60,24 +60,23 @@ static token_res scan(source_file file, buf_ind_t start) {
   upper_ident = upperAlpha (alpha | digit | [-])*;
   int = [-]?[0-9]+;
 
-  // "type"  { return mk_token(TK_TYPE, start, pos);        }
-  // "match" { return mk_token(TK_MATCH, start, pos);       }
-  // "do"    { return mk_token(TK_DO, start, pos)}
-
   str = ["]([^"\\\n] | "\\" [^\n])*["];
-  str     { return mk_token(TK_STRING, start, pos);         }
-  "if"    { return mk_token(TK_IF, start, pos);             }
-  "Fn"    { return mk_token(TK_FN_TYPE, start, pos);             }
-  "fn"    { return mk_token(TK_FN, start, pos);             }
-  "fun"   { return mk_token(TK_FUN, start, pos);            }
-  "sig"   { return mk_token(TK_SIG, start, pos);            }
-  "let"   { return mk_token(TK_LET, start, pos);            }
-  "as"    { return mk_token(TK_AS, start, pos);             }
-  "data"  { return mk_token(TK_DATA, start, pos);           }
-  lower_ident { return mk_token(TK_LOWER_NAME, start, pos); }
-  upper_ident { return mk_token(TK_UPPER_NAME, start, pos); }
-  "["     { return mk_token(TK_OPEN_BRACKET, start, pos);   }
-  "]"     { return mk_token(TK_CLOSE_BRACKET, start, pos);  }
+  str     { return mk_token(TK_STRING, start, pos);          }
+  "if"    { return mk_token(TK_IF, start, pos);              }
+  "Fn"    { return mk_token(TK_FN_TYPE, start, pos);         }
+  "fn"    { return mk_token(TK_FN, start, pos);              }
+  "fun"   { return mk_token(TK_FUN, start, pos);             }
+  "sig"   { return mk_token(TK_SIG, start, pos);             }
+  "let"   { return mk_token(TK_LET, start, pos);             }
+  "as"    { return mk_token(TK_AS, start, pos);              }
+  "data"  { return mk_token(TK_DATA, start, pos);            }
+  "#c"    { return mk_token(TK_C_PRAGMA, start, pos);        }
+  "#extern" { return mk_token(TK_EXTERN_PRAGMA, start, pos); }
+  "#pub"    { return mk_token(TK_PUB_PRAGMA, start, pos);    }
+  lower_ident { return mk_token(TK_LOWER_NAME, start, pos);  }
+  upper_ident { return mk_token(TK_UPPER_NAME, start, pos);  }
+  "["     { return mk_token(TK_OPEN_BRACKET, start, pos);    }
+  "]"     { return mk_token(TK_CLOSE_BRACKET, start, pos);   }
 
   // parsed here, because allowing spaces between parens
   // can be used to obfuscate

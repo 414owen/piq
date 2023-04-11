@@ -21,6 +21,9 @@
   UPPER_NAME
   LET
   DATA
+  C_PRAGMA
+  EXTERN_PRAGMA
+  PUB_PRAGMA
   .
 
 %type commaexressions stack_ref_t

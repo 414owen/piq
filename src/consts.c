@@ -4,12 +4,10 @@
 
 #include <predef/predef.h>
 
-const char *const program_name = "lang";
+#include "consts.h"
 
-#if PREDEF_OS_WINDOWS
-const char path_sep = '\\';
-#else
-const char path_sep = '/';
-#endif
+const char *const program_name = "piq";
+
+const char path_sep = PATH_SEP_STR[0];
 
 const char *issue_tracker_url = "https://github.com/414owen/piq/issues";

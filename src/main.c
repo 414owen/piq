@@ -12,6 +12,7 @@
 #include <llvm-c/TargetMachine.h>
 
 #include "args.h"
+#include "defs.h"
 #include "diagnostic.h"
 #include "externalise_spans.h"
 #include "global_settings.h"
@@ -32,6 +33,7 @@ typedef struct {
 typedef struct {
   bool stdin_input;
   bool no_codegen;
+  bool lib;
   const char *input_file_path;
   char *output_file_path;
   const char *llvm_dump_path;
@@ -123,8 +125,16 @@ static void compile_llvm(compile_arguments args) {
 
   if (!args.no_codegen) {
     char *error = NULL;
+    char *obj_path = format_to_string("%s.out", args.input_file_path);
     LLVMTargetMachineEmitToFile(
-      machine, module, args.output_file_path, LLVMObjectFile, &error);
+      machine, module, obj_path, LLVMObjectFile, &error);
+    if (!args.lib) {
+      char *cmd = format_to_string(
+        "ld piqrt.o %s -o %s", obj_path, args.output_file_path);
+      system(cmd);
+      free(cmd);
+    }
+    free(obj_path);
   }
 
   LLVMDisposeModule(module);
@@ -194,6 +204,13 @@ int main(const int argc, const char **argv) {
       .short_name = 'o',
       .description = "path to output file",
       .string_data = &compile_args.output_file_path,
+    },
+    {
+      .tag = ARG_FLAG,
+      .long_name = "lib",
+      .short_name = '\0',
+      .description = "don't link",
+      .flag_data = &compile_args.lib,
     },
     {
       .tag = ARG_STRING,
