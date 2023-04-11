@@ -11,6 +11,7 @@
 #include "llvm.h"
 #include "parser.h"
 #include "parse_tree.h"
+#include "resolve_scope.h"
 #include "token.h"
 #include "typecheck.h"
 #include "util.h"

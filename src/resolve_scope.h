@@ -6,8 +6,9 @@
 
 #include "binding.h"
 #include "bitset.h"
-#include "vec.h"
+#include "parse_tree.h"
 #include "hashmap.h"
+#include "vec.h"
 
 typedef struct {
   bitset is_builtin;
@@ -20,3 +21,18 @@ typedef struct {
   scope *scope;
   const char *source_file;
 } resolve_map_ctx;
+
+typedef struct {
+  binding *bindings;
+  node_ind_t binding_amt;
+} resolution_errors;
+
+typedef struct {
+  resolution_errors not_found;
+#ifdef TIME_NAME_RESOLUTION
+  perf_values perf_values;
+  u32 num_names_looked_up;
+#endif
+} resolution_res;
+
+resolution_res resolve_bindings(parse_tree tree, const char *restrict input);

@@ -6,6 +6,7 @@
 
 #include "defs.h"
 #include "parse_tree.h"
+#include "resolve_scope.h"
 #include "test.h"
 #include "typecheck.h"
 #include "llvm.h"
