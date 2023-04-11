@@ -221,7 +221,12 @@ extern const parse_node_category *parse_node_categories;
 typedef struct {
   parse_node_type type;
 
-  span span;
+  union {
+    // the parser puts this inline, we move it to a separate array during name resolution,
+    // because it won't be very useful after that.
+    span span;
+    node_ind_t type_data_ind;
+  } data;
 
   union {
     struct {
@@ -247,6 +252,7 @@ VEC_DECL(parse_node);
 
 typedef struct {
   parse_node *nodes;
+  span *spans;
   const node_ind_t *inds;
   node_ind_t root_subs_start;
   node_ind_t root_subs_amt;
@@ -299,21 +305,6 @@ char *print_parse_errors_string(const char *input, const token *tokens,
 void free_parse_tree(parse_tree tree);
 void free_parse_tree_res(parse_tree_res res);
 extern const tree_node_repr *pt_subs_type;
-
-typedef struct {
-  binding *bindings;
-  node_ind_t binding_amt;
-} resolution_errors;
-
-typedef struct {
-  resolution_errors not_found;
-#ifdef TIME_NAME_RESOLUTION
-  perf_values perf_values;
-  u32 num_names_looked_up;
-#endif
-} resolution_res;
-
-resolution_res resolve_bindings(parse_tree tree, const char *restrict input);
 
 #define PT_EXPRESSION_CASES                                                    \
   PT_ALL_EX_CALL:                                                              \

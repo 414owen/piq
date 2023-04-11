@@ -663,8 +663,9 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
     case PT_ALL_EX_INT: {
       node_ind_t type_ind = state->types.node_types[data.node_index];
       LLVMTypeRef type = llvm_construct_type(state, type_ind);
-      const char *str = VEC_GET_PTR(state->source, data.node.span.start);
-      size_t len = data.node.span.len;
+      span span = state->parse_tree.spans[data.node_index];
+      const char *str = VEC_GET_PTR(state->source, span.start);
+      size_t len = span.len;
       llvm_push_exogenous_value(
         &state->return_values, LLVMConstIntOfStringAndSize(type, str, len, 10));
       break;
@@ -772,18 +773,14 @@ static void llvm_cg_predeclare_fn(llvm_cg_state *state,
                                   traversal_node_data data) {
   const node_ind_t binding_ind =
     llvm_get_statement_binding_ind(state->parse_tree.inds, data.node);
-  const parse_node binding = state->parse_tree.nodes[binding_ind];
   const type_ref type_ref = state->types.node_types[data.node_index];
   const LLVMTypeRef fn_type = llvm_construct_type(state, type_ref);
-  const buf_ind_t binding_len = binding.span.len;
+  span span = state->parse_tree.spans[binding_ind];
 
   // We should add this back at some point, I guess
   // LLVMLinkage linkage = LLVMAvailableExternallyLinkage;
-  const LLVMFunctionRef fn =
-    LLVMAddFunctionCustom(state->module,
-                          &state->source.data[binding.span.start],
-                          binding_len,
-                          fn_type);
+  const LLVMFunctionRef fn = LLVMAddFunctionCustom(
+    state->module, &state->source.data[span.start], span.len, fn_type);
   LLVMSetLinkage(fn, LLVMExternalLinkage);
   llvm_push_exogenous_value(&state->environment_values, fn);
 }
