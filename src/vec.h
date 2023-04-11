@@ -200,6 +200,7 @@ void __vec_replicate(vec_void *vec, void *el, VEC_LEN_T amt, size_t elemsize);
 
 void __vec_reserve(vec_void *vec, VEC_LEN_T amt, size_t elemsize);
 
+/** Make sure the vector has at least this many *free* slots */
 #define VEC_RESERVE(vec, amt)                                                  \
   __vec_reserve((vec_void *)vec, amt, VEC_ELSIZE(vec));
 
