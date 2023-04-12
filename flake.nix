@@ -65,6 +65,8 @@
           inherit src;
 
           nativeBuildInputs = with pkgs; [
+            cmake
+            ninja
             re2c
             lemon
             pkg-config
@@ -76,7 +78,6 @@
             llvmPackages_14.libllvm
             hedley
             predef
-            xxHash
           ];
 
           CFLAGS = "-s -DTIME_ALL";
