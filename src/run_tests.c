@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "args.h"
+#include "defs.h"
 #include "benchmark.h"
 #include "global_settings.h"
 #include "initialise.h"
@@ -16,6 +17,7 @@
 #include "perf.h"
 #include "test.h"
 #include "tests.h"
+#include "timespec.h"
 
 const char *byte_suffixes[] = {"B", "KB", "MB", "GB", "TB"};
 const long mega = 1e6;
@@ -52,10 +54,6 @@ static void print_amount(FILE *f, uint64_t amt) {
   free(ss.string);
 }
 
-static uint64_t timespec_to_nanos(struct timespec ts) {
-  return (uint64_t)ts.tv_nsec + (uint64_t)ts.tv_sec * 1e9;
-}
-
 static void print_timespan_nanos(FILE *f, uint64_t ns) {
   if (ns < 1000) {
     fprintf(f, "%" PRIu64 "ns", ns);
@@ -79,8 +77,8 @@ static void print_timespan_nanos(FILE *f, uint64_t ns) {
   }
 }
 
-static void print_timespan_timespec(FILE *f, struct timespec ts) {
-  print_timespan_nanos(f, timespec_to_nanos(ts));
+static void print_timespan_timespec(FILE *f, timespec ts) {
+  print_timespan_nanos(f, timespec_to_nanoseconds(ts));
 }
 
 static void print_timespan_float_nanos(FILE *f, double nanos) {
@@ -141,7 +139,7 @@ typedef struct {
 
 typedef struct {
   char *name;
-  struct timespec time;
+  timespec time;
 } time_metric;
 
 typedef struct {
@@ -214,7 +212,7 @@ static void put_metric_time(put_metric_state *state, time_metric m) {
     fprintf(state->params.json_file,
             "  \"unit\": \"ns\",\n"
             "  \"value\": %" PRIu64,
-            timespec_to_nanos(m.time));
+            timespec_to_nanoseconds(m.time));
   }
   print_metric_postamble(state);
 }
@@ -311,7 +309,7 @@ static void put_perf_per_thing(put_metric_state *state, const char *operation,
 
   {
     double nanos_per_parse_node =
-      (double)timespec_to_nanos(values.time_taken) / (double)number;
+      (double)timespec_to_nanoseconds(values.time_taken) / (double)number;
     char *desc = format_to_string("%s time per %s", operation, object);
     float_time_metric m = {
       .name = desc,

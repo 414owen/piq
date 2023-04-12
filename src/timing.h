@@ -6,9 +6,9 @@
 
 #include <time.h>
 
-
+#include "timespec.h"
 
 // platform-dependent
-struct timespec get_monotonic_time(void);
+timespec get_monotonic_time(void);
 
-struct timespec time_since_monotonic(const struct timespec start);
+difftime_t time_since_monotonic(const timespec start);

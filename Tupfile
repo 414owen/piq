@@ -33,7 +33,7 @@ COMMON_FLAGS += -fdiagnostics-color=always
 CXXFLAGS = $(COMMON_FLAGS) -std=gnu++17 $CXXFLAGS -fno-exceptions
 
 # This seems to get tinycc to pick up c11, but gcc/clang to pick up gnu11
-CFLAGS = $(COMMON_FLAGS) -std=c11 -std=gnu11
+CFLAGS = $(COMMON_FLAGS) -std=c99
 
 common_objs += bitset.o
 common_objs += consts.o
