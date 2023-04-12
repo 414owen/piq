@@ -233,7 +233,7 @@ void write_test_results(test_state *state) {
   VEC_FREE(&agg_stack);
   vec_string class_path = VEC_NEW;
 
-  struct timespec elapsed =
+  difftime_t elapsed =
     timespec_subtract(state->end_time, state->start_time);
 
   fprintf(f,
@@ -242,7 +242,7 @@ void write_test_results(test_state *state) {
           "errors=\"0\" failures=\"%u\" time=\"%lld\">\n",
           current.tests,
           current.failures,
-          (long long)elapsed.tv_sec);
+          difftime_to_secs(elapsed));
 
   size_t agg_ind = aggs.len - 1;
   size_t str_ind = 0;

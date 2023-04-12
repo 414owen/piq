@@ -66,11 +66,12 @@ static void run_join_tests(test_state *state) {
 }
 
 static void test_timespec_subtract(test_state *state) {
+#ifdef STD_C11
   test_group_start(state, "Timespec");
 
-  struct timespec res;
-  struct timespec x;
-  struct timespec y;
+  timespec res;
+  timespec x;
+  timespec y;
 
   {
     test_start(state, "subtract pos");
@@ -110,12 +111,13 @@ static void test_timespec_subtract(test_state *state) {
   }
 
   test_group_end(state);
+#endif
 }
 
 static void test_monotonic_time(test_state *state) {
   test_start(state, "subsequent calls lead to greater times");
-  struct timespec x = get_monotonic_time();
-  struct timespec y = get_monotonic_time();
+  timespec x = get_monotonic_time();
+  timespec y = get_monotonic_time();
   test_assert(state, timespec_gt(y, x));
   test_end(state);
 }

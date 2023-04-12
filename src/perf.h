@@ -15,13 +15,13 @@
 #else
 
 typedef struct {
-  struct timespec time_taken;
+  timespec time_taken;
 } perf_state;
 
 #endif
 
 typedef struct {
-  struct timespec time_taken;
+  timespec time_taken;
 
 #ifdef PREDEF_OS_LINUX
   uint64_t hw_cpu_cycles;

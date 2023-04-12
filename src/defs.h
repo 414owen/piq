@@ -6,6 +6,10 @@
 
 #ifdef TIME_ALL
 
+#if (__STDC_VERSION__ >= 201112L)
+#define STD_C11
+#endif
+
 #ifndef TIME_TOKENIZER
 #define TIME_TOKENIZER
 #endif

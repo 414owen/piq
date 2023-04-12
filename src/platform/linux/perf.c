@@ -107,7 +107,7 @@ perf_values perf_end(perf_state state) {
 
     // TODO figure out whether order is consistent, so we can remove this loop
     // and the branches.
-    for (int i = 0; i < results.nr; i++) {
+    for (unsigned i = 0; i < results.nr; i++) {
       if (close(state.descriptors[i]) == -1) {
         perror("Couldn't close performance counter");
       }
