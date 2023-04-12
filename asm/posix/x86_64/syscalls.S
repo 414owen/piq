@@ -14,7 +14,6 @@
 # r9   arg5
 
 .section .text
-	.global _start
 
 __syscall_read:
 	mov rax, 0
