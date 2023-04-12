@@ -101,8 +101,8 @@ typedef struct {
   vec_string path;
   uint32_t tests_passed;
   uint32_t tests_run;
-  struct timespec start_time;
-  struct timespec end_time;
+  timespec start_time;
+  timespec end_time;
   const char *current_name;
   u8 current_failed : 1;
   u8 in_test : 1;

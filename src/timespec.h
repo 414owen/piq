@@ -5,13 +5,40 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <time.h>
 
-bool timespec_negative(struct timespec a);
+#include "defs.h"
 
-bool timespec_gt(struct timespec x, struct timespec y);
+#ifdef STD_C11
+  typedef struct timespec timespec;
+  typedef struct timespec difftime_t;
 
-struct timespec timespec_subtract(const struct timespec x,
-                                  const struct timespec y);
+  // timespec -> time_t
+  #define difftime_to_secs(ts) ((long_long) (tv.tv_sec))
 
-struct timespec timespec_add(const struct timespec x, const struct timespec y);
+  // TODO only compile this function if running tests
+  bool timespec_negative(timespec a);
+
+  bool timespec_gt(timespec x, timespec y);
+
+  difftime_t timespec_subtract(const timespec x,
+                                    const timespec y);
+
+  timespec timespec_add(const timespec x, const timespec y);
+
+#else
+  typedef clock_t timespec;
+  typedef clock_t difftime_t;
+
+  // timespec -> long long
+  #define difftime_to_secs(ts) ((long long) ts)
+
+  #define timespec_gt(a, b) (a > b)
+
+  #define timespec_add(a, b) (a + b)
+
+  #define timespec_subtract difftime
+#endif
+
+uint64_t timespec_to_nanoseconds(timespec);
