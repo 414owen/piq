@@ -29,7 +29,7 @@ typedef struct {
 static void test_parser_succeeds_on(test_state *state, const char *input,
                                     expected_output output) {
   parse_tree_res pres = test_upto_parse_tree(state, input);
-  if (pres.type == PRT_SUCCESS) {
+  if (pres.success) {
     switch (output.tag) {
       case ANY:
         break;
@@ -80,40 +80,35 @@ static void test_parser_fails_on(test_state *state, char *input, buf_ind_t pos,
 
   add_parser_timings(state, tres, pres);
 
-  switch (pres.type) {
-    case PRT_SEMANTIC_ERRORS:
-    case PRT_SUCCESS: {
-      char *parse_tree_str = print_parse_tree_str(input, pres.tree);
-      failf(state,
-            "Parsing \"%s\" was supposed to fail.\nGot parse tree:\n%s",
-            input,
-            parse_tree_str);
-      free((void *)pres.tree.inds);
-      free((void *)pres.tree.nodes);
-      goto end_a;
-    }
-    case PRT_PARSE_ERROR:
-      break;
+  if (pres.success) {
+    char *parse_tree_str = print_parse_tree_str(input, pres.tree);
+    failf(state,
+          "Parsing \"%s\" was supposed to fail.\nGot parse tree:\n%s",
+          input,
+          parse_tree_str);
+    free((void *)pres.tree.inds);
+    free((void *)pres.tree.nodes);
+    goto end_a;
   }
 
-  if (pos != pres.error_pos) {
+  if (pos != pres.errors.error_pos) {
     failf(state,
           "Parsing failed at wrong position.\n"
           "Expected: %d\n"
           "Got:      %d",
           pos,
-          pres.error_pos);
+          pres.errors.error_pos);
   }
 
   bool expected_tokens_match = multiset_eq(sizeof(token_type),
-                                           pres.expected_amt,
+                                           pres.errors.expected_amt,
                                            expected_amt,
-                                           pres.expected,
+                                           pres.errors.expected,
                                            expected);
 
   if (!expected_tokens_match) {
     char *as = print_tokens_str(expected, expected_amt);
-    char *bs = print_tokens_str(pres.expected, pres.expected_amt);
+    char *bs = print_tokens_str(pres.errors.expected, pres.errors.expected_amt);
     failf(state,
           "Expected token mismatch.\n"
           "Expected: %s\n"
@@ -124,7 +119,7 @@ static void test_parser_fails_on(test_state *state, char *input, buf_ind_t pos,
     free(bs);
   }
 
-  free(pres.expected);
+  free(pres.errors.expected);
 end_a:
   free(tres.tokens);
 }

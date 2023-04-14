@@ -417,67 +417,28 @@ void free_parse_tree(parse_tree tree) {
 }
 
 void free_parse_tree_res(parse_tree_res res) {
-  if (res.type == PRT_SUCCESS) {
+  if (res.success) {
     free_parse_tree(res.tree);
   } else {
-    free(res.expected);
+    free(res.errors.expected);
   }
 }
 
-static void print_honest_parse_error(FILE *f, const char *restrict input,
-                                     const token *restrict tokens,
-                                     const parse_tree_res pres) {
+void print_parse_errors(FILE *f, const char *restrict input,
+                        const token *restrict tokens, parse_errors errors) {
   fputs("Parsing failed:\n", f);
-  token t = tokens[pres.error_pos];
+  token t = tokens[errors.error_pos];
   format_error_ctx(f, input, t.start, t.len);
   fputs("\nExpected one of: ", f);
-  print_tokens(f, pres.expected, pres.expected_amt);
+  print_tokens(f, errors.expected, errors.expected_amt);
 }
 
-static void print_semantic_error(FILE *f, const char *restrict input,
-                                 const parse_tree tree,
-                                 const semantic_error err) {
-  switch (err.type) {
-    case SEMERR_OUT_OF_PLACE_SIG: {
-      fprintf(f, "Expected binding to match signature:\n");
-      span span = tree.spans[err.sig_index];
-      format_error_ctx(f, input, span.start, span.len);
-      break;
-    }
-  }
-}
-
-static void print_semantic_errors(FILE *f, const char *restrict input,
-                                  const parse_tree_res pres) {
-  for (uint32_t i = 0; i < pres.semantic_errors.len; i++) {
-    print_semantic_error(f, input, pres.tree, VEC_GET(pres.semantic_errors, i));
-  }
-}
-
-// TODO add line/col number
-void print_parse_errors(FILE *f, const char *restrict input,
-                        const token *restrict tokens,
-                        const parse_tree_res pres) {
-  switch (pres.type) {
-    case PRT_SUCCESS:
-      // impossible
-      break;
-    case PRT_PARSE_ERROR:
-      print_honest_parse_error(f, input, tokens, pres);
-      break;
-    case PRT_SEMANTIC_ERRORS:
-      print_semantic_errors(f, input, pres);
-      break;
-  }
-}
-
-MALLOC_ATTR_2(free, 1)
 char *print_parse_errors_string(const char *restrict input,
                                 const token *restrict tokens,
                                 const parse_tree_res pres) {
   stringstream ss;
   ss_init_immovable(&ss);
-  print_parse_errors(ss.stream, input, tokens, pres);
+  print_parse_errors(ss.stream, input, tokens, pres.errors);
   ss_finalize(&ss);
   return ss.string;
 }
