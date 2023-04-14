@@ -488,9 +488,9 @@ static void llvm_cg_visit_in(llvm_cg_state *state, traversal_node_data data) {
         PT_FUN_BINDING_IND(state->parse_tree.inds, data.node);
       const parse_node binding = state->parse_tree.nodes[binding_ind];
       // we've already predeclared this
-      LLVMFunctionRef fn =
-        VEC_GET(state->environment_values.values, binding.variable_index)
-          .exogenous;
+      LLVMFunctionRef fn = VEC_GET(state->environment_values.values,
+                                   binding.data.var_data.variable_index)
+                             .exogenous;
       VEC_PUSH(&state->function_stack, fn);
       llvm_gen_basic_block(state, ENTRY_STR, fn);
       for (node_ind_t i = 0; i < PT_LIST_SUB_AMT(data.node); i++) {
@@ -675,7 +675,7 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
     }
     case PT_ALL_EX_UPPER_NAME:
     case PT_ALL_EX_TERM_NAME: {
-      node_ind_t ind = data.node.variable_index;
+      node_ind_t ind = data.node.data.var_data.variable_index;
       debug_assert(ind != state->environment_values.is_builtin.len);
       llvm_lang_value val = llvm_get_environment(state, ind);
       llvm_push_value(&state->return_values, val);

@@ -129,10 +129,11 @@ static traversal_node_data traverse_get_parse_node(pt_traversal *traversal) {
 }
 
 static void tr_push_subs_external(pt_traversal *traversal, parse_node node) {
-  VEC_APPEND_REVERSE(
-    &traversal->node_stack, node.sub_amt, &traversal->inds[node.subs_start]);
+  VEC_APPEND_REVERSE(&traversal->node_stack,
+                     node.data.more_subs.amt,
+                     &traversal->inds[node.data.more_subs.start]);
   const traverse_action_internal act = TR_ACT_INITIAL;
-  VEC_REPLICATE(&traversal->actions, node.sub_amt, act);
+  VEC_REPLICATE(&traversal->actions, node.data.more_subs.amt, act);
 }
 
 static void tr_maybe_link_sig(pt_traversal *traversal, node_ind_t node_index) {
@@ -172,10 +173,10 @@ static void tr_push_subs(pt_traversal *traversal, parse_node node) {
     case SUBS_NONE:
       break;
     case SUBS_TWO:
-      tr_push_subs_two(traversal, node.sub_a, node.sub_b);
+      tr_push_subs_two(traversal, node.data.two_subs.a, node.data.two_subs.b);
       break;
     case SUBS_ONE:
-      tr_push_initial(traversal, node.sub_a);
+      tr_push_initial(traversal, node.data.two_subs.a);
       break;
   }
 }
@@ -253,7 +254,8 @@ static void tr_initial_generic(pt_traversal *traversal,
 static void tr_initial_two_sub_statement(pt_traversal *traversal,
                                          traversal_node_data data) {
   tr_push_out(traversal, data.node_index);
-  tr_push_subs_two(traversal, data.node.sub_a, data.node.sub_b);
+  tr_push_subs_two(
+    traversal, data.node.data.two_subs.a, data.node.data.two_subs.b);
   tr_push_in(traversal, data.node_index);
 }
 

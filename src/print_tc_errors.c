@@ -41,13 +41,14 @@ static void print_tc_error(FILE *f, tc_res res, const char *restrict input,
       break;
   }
   parse_node node = tree.nodes[error.pos];
-  position_info pos = find_line_and_col(input, node.data.span.start);
+  position_info pos = find_line_and_col(input, node.phase_data.span.start);
   fprintf(f,
           "\nAt %s at %d:%d\n",
           parse_node_strings[node.type.all],
           pos.line,
           pos.column);
-  format_error_ctx(f, input, node.data.span.start, node.data.span.len);
+  format_error_ctx(
+    f, input, node.phase_data.span.start, node.phase_data.span.len);
 }
 
 COLD_ATTR

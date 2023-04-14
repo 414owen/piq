@@ -151,14 +151,14 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
     case PT_ALL_EX_UPPER_NAME:
     case PT_ALL_EX_TERM_NAME: {
       const type_ref target_type =
-        VEC_GET(builder->environment, node.variable_index);
+        VEC_GET(builder->environment, node.data.var_data.variable_index);
       add_type_constraint(builder, our_type, target_type, node_ind);
       break;
     }
     case PT_ALL_TY_CONSTRUCTOR_NAME:
     case PT_ALL_TY_PARAM_NAME: {
       const type_ref target_type =
-        VEC_GET(builder->type_environment, node.variable_index);
+        VEC_GET(builder->type_environment, node.data.var_data.variable_index);
       add_type_constraint(builder, our_type, target_type, node_ind);
       break;
     }
