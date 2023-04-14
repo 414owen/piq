@@ -37,7 +37,7 @@ LLVMTypeRef llvm_construct_type_internal(LLVMTypeRef *llvm_type_refs, type_tree 
       case GEN_TYPE: {
         if (llvm_type_refs[type_ind] != NULL)
           break;
-        switch (t.tag) {
+        switch (t.tag.normal) {
           case T_BOOL: {
             llvm_type_refs[type_ind] = LLVMInt1TypeInContext(context);
             break;
@@ -106,9 +106,9 @@ LLVMTypeRef llvm_construct_type_internal(LLVMTypeRef *llvm_type_refs, type_tree 
       }
 
       case COMBINE_TYPE: {
-        switch (t.tag) {
+        switch (t.tag.normal) {
           case T_LIST: {
-            node_ind_t sub_ind = t.sub_a;
+            node_ind_t sub_ind = t.data.one_sub.ind;
             llvm_type_refs[type_ind] =
               (LLVMTypeRef)LLVMArrayType(llvm_type_refs[sub_ind], 0);
             break;

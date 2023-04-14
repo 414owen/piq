@@ -182,7 +182,7 @@ static LLVMTypeRef llvm_construct_passable_type(llvm_cg_state *state,
                                                 node_ind_t root_type_ind) {
   LLVMTypeRef res = llvm_construct_type(state, root_type_ind);
   type t = state->types.tree.nodes[root_type_ind];
-  switch (t.tag) {
+  switch (t.tag.normal) {
     case T_FN:
       return LLVMPointerType(res, 0);
     default:
