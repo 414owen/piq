@@ -14,24 +14,30 @@ static void print_tc_error(FILE *f, tc_res res, const char *restrict input,
   switch (error.type) {
     case TC_ERR_AMBIGUOUS:
       fputs("Ambiguous type: ", f);
-      print_type(
-        f, res.types.tree.nodes, res.types.tree.inds, error.ambiguous.index);
+      print_type(f,
+                 res.types.tree.nodes,
+                 res.types.tree.inds,
+                 error.data.ambiguous.index);
       break;
     case TC_ERR_CONFLICT:
       fputs("Conflicting types:\nExpected:\n", f);
       print_type(f,
                  res.types.tree.nodes,
                  res.types.tree.inds,
-                 error.conflict.expected_ind);
+                 error.data.conflict.expected_ind);
       fputs("\n\nGot:\n", f);
-      print_type(
-        f, res.types.tree.nodes, res.types.tree.inds, error.conflict.got_ind);
+      print_type(f,
+                 res.types.tree.nodes,
+                 res.types.tree.inds,
+                 error.data.conflict.got_ind);
       fputc('\n', f);
       break;
     case TC_ERR_INFINITE:
       fputs("Can't construct infinite type:\n", f);
-      print_type(
-        f, res.types.tree.nodes, res.types.tree.inds, error.ambiguous.index);
+      print_type(f,
+                 res.types.tree.nodes,
+                 res.types.tree.inds,
+                 error.data.ambiguous.index);
       break;
   }
   parse_node node = tree.nodes[error.pos];
