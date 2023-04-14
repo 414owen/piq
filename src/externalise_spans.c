@@ -14,7 +14,7 @@ void externalise_spans(parse_tree *tree) {
     // At first this also wrote zeros into the node's span,
     // but that causes this function to slow down by about
     // 33%, so I guess we'll just have to deal.
-    spans[i] = nodes[i].data.span;
+    spans[i] = nodes[i].phase_data.span;
   }
   tree->spans = spans;
 }

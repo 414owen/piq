@@ -153,46 +153,46 @@ typedef union {
   parse_node_binding_introducer_type binding;
 } parse_node_type;
 
-#define PT_FUN_BINDING_IND(inds, node) inds[node.subs_start + 0]
-#define PT_FUN_PARAM_AMT(node) (node.sub_amt - 2)
-#define PT_FUN_PARAM_IND(inds, node, i) inds[node.subs_start + 1 + i]
-#define PT_FUN_BODY_IND(inds, node) inds[node.subs_start + node.sub_amt - 1]
+#define PT_FUN_BINDING_IND(inds, node) (inds)[(node).data.more_subs.start + 0]
+#define PT_FUN_PARAM_AMT(node) (node.data.more_subs.amt - 2)
+#define PT_FUN_PARAM_IND(inds, node, i) (inds)[(node).data.more_subs.start + 1 + i]
+#define PT_FUN_BODY_IND(inds, node) (inds)[(node).data.more_subs.start + (node).data.more_subs.amt - 1]
 
-#define PT_DATA_DECL_TYPENAME_IND(inds, node) inds[node.subs_start + 0]
-#define PT_DATA_DECL_TYPEPARAMS_IND(inds, node) inds[node.subs_start + 1]
-#define PT_DATA_DECL_DATA_CONSTRUCTORS_IND(inds, node) inds[node.subs_start + 2]
+#define PT_DATA_DECL_TYPENAME_IND(inds, node) (inds)[(node).data.more_subs.start + 0]
+#define PT_DATA_DECL_TYPEPARAMS_IND(inds, node) (inds)[(node).data.more_subs.start + 1]
+#define PT_DATA_DECL_DATA_CONSTRUCTORS_IND(inds, node) (inds)[(node).data.more_subs.start + 2]
 
 // lambda expression
-#define PT_FN_PARAM_AMT(node) ((node).sub_amt - 1)
-#define PT_FN_PARAM_IND(inds, node, i) inds[(node).subs_start + i]
-#define PT_FN_BODY_IND(inds, node) inds[(node).subs_start + (node).sub_amt - 1]
+#define PT_FN_PARAM_AMT(node) (node.data.more_subs.amt - 1)
+#define PT_FN_PARAM_IND(inds, node, i) (inds)[(node).data.more_subs.start + (i)]
+#define PT_FN_BODY_IND(inds, node) (inds)[(node).data.more_subs.start + (node).data.more_subs.amt - 1]
 
-#define PT_FN_TYPE_PARAM_AMT(node) ((node).sub_amt - 1)
-#define PT_FN_TYPE_PARAM_IND(inds, node, i) (inds)[(node).subs_start + i]
+#define PT_FN_TYPE_PARAM_AMT(node) (node.data.more_subs.amt - 1)
+#define PT_FN_TYPE_PARAM_IND(inds, node, i) (inds)[(node).data.more_subs.start + (i)]
 #define PT_FN_TYPE_RETURN_IND(inds, node)                                      \
-  inds[(node).subs_start + (node).sub_amt - 1]
+  (inds)[(node).data.more_subs.start + (node).data.more_subs.amt - 1]
 
-#define PT_CALL_CALLEE_IND(inds, node) (inds)[(node).subs_start]
-#define PT_CALL_PARAM_AMT(node) ((node).sub_amt - 1)
-#define PT_CALL_PARAM_IND(inds, node, i) (inds)[(node).subs_start + i + 1]
+#define PT_CALL_CALLEE_IND(inds, node) (inds)[(node).data.more_subs.start]
+#define PT_CALL_PARAM_AMT(node) (node.data.more_subs.amt - 1)
+#define PT_CALL_PARAM_IND(inds, node, i) (inds)[(node).data.more_subs.start + (i) + 1]
 
-#define PT_TY_CONSTRUCTION_CALLEE_IND(node) node.sub_a
-#define PT_TY_CONSTRUCTION_PARAM_IND(node) node.sub_b
+#define PT_TY_CONSTRUCTION_CALLEE_IND(node) (node).data.two_subs.a
+#define PT_TY_CONSTRUCTION_PARAM_IND(node)  (node).data.two_subs.b
 
-#define PT_IF_COND_IND(inds, node) inds[node.subs_start]
-#define PT_IF_A_IND(inds, node) inds[node.subs_start + 1]
-#define PT_IF_B_IND(inds, node) inds[node.subs_start + 2]
+#define PT_IF_COND_IND(inds, node) (inds)[(node).data.more_subs.start]
+#define PT_IF_A_IND(inds, node) (inds)[(node).data.more_subs.start + 1]
+#define PT_IF_B_IND(inds, node) (inds)[(node).data.more_subs.start + 2]
 
-#define PT_LIST_SUB_AMT(node) node.sub_amt
-#define PT_LIST_SUB_IND(inds, node, i) inds[node.subs_start + i]
+#define PT_LIST_SUB_AMT(node) (node).data.more_subs.amt
+#define PT_LIST_SUB_IND(inds, node, i) (inds)[(node).data.more_subs.start + (i)]
 
-#define PT_LIST_TYPE_SUB(node) node.sub_a
+#define PT_LIST_TYPE_SUB(node) (node).data.one_sub.ind
 
-#define PT_BLOCK_SUBS_START(node) node.subs_start
-#define PT_BLOCK_SUB_AMT(node) node.sub_amt
-#define PT_BLOCK_SUB_IND(inds, node, i) inds[node.subs_start + i]
+#define PT_BLOCK_SUBS_START(node) (node).data.more_subs.start
+#define PT_BLOCK_SUB_AMT(node) (node).data.more_subs.amt
+#define PT_BLOCK_SUB_IND(inds, node, i) (inds)[(node).data.more_subs.start + (i)]
 #define PT_BLOCK_LAST_SUB_IND(inds, node)                                      \
-  inds[node.subs_start + node.sub_amt - 1]
+  (inds)[(node).data.more_subs.start + (node).data.more_subs.amt - 1]
 
 #define PT_ROOT_SUB_AMT(node) PT_BLOCK_SUB_AMT(node)
 #define PT_ROOT_SUB_IND(inds, node, i) PT_BLOCK_SUB_IND(inds, node, i)
@@ -202,18 +202,18 @@ typedef union {
 #define PT_FUN_BODY_SUB_IND(inds, node, i) PT_BLOCK_SUB_IND(inds, node, i)
 #define PT_FUN_BODY_LAST_SUB_IND(inds, node) PT_BLOCK_LAST_SUB_IND(inds, node)
 
-#define PT_SIG_BINDING_IND(node) node.sub_a
-#define PT_SIG_TYPE_IND(node) node.sub_b
+#define PT_SIG_BINDING_IND(node) (node).data.two_subs.a
+#define PT_SIG_TYPE_IND(node) (node).data.two_subs.b
 
 #define PT_TUP_SUB_AMT(node) 2
-#define PT_TUP_SUB_A(node) node.sub_a
-#define PT_TUP_SUB_B(node) node.sub_b
+#define PT_TUP_SUB_A(node) (node).data.two_subs.a
+#define PT_TUP_SUB_B(node) (node).data.two_subs.b
 
-#define PT_LET_BND_IND(node) node.sub_a
-#define PT_LET_VAL_IND(node) node.sub_b
+#define PT_LET_BND_IND(node) (node).data.two_subs.a
+#define PT_LET_VAL_IND(node) (node).data.two_subs.b
 
-#define PT_AS_TYPE_IND(node) node.sub_a
-#define PT_AS_VAL_IND(node) node.sub_b
+#define PT_AS_TYPE_IND(node) (node).data.two_subs.a
+#define PT_AS_VAL_IND(node) (node).data.two_subs.b
 
 extern const char **parse_node_strings;
 extern const parse_node_category *parse_node_categories;
@@ -222,11 +222,12 @@ typedef struct {
   parse_node_type type;
 
   union {
-    // the parser puts this inline, we move it to a separate array during name resolution,
-    // because it won't be very useful after that.
+    // the parser puts this inline, we move it to a separate
+    // array during name resolution, because it won't be very
+    // useful after that.
     span span;
     node_ind_t type_data_ind;
-  } data;
+  } phase_data;
 
   union {
     struct {
@@ -236,16 +237,22 @@ typedef struct {
       // position of the binding in the current scope
       // vector
       environment_ind_t variable_index;
-    };
+    } var_data;
+
     struct {
-      node_ind_t subs_start;
-      node_ind_t sub_amt;
-    };
+      node_ind_t start;
+      node_ind_t amt;
+    } more_subs;
+
     struct {
-      node_ind_t sub_a;
-      node_ind_t sub_b;
-    };
-  };
+      node_ind_t ind;
+    } one_sub;
+
+    struct {
+      node_ind_t a;
+      node_ind_t b;
+    } two_subs;
+  } data;
 } parse_node;
 
 VEC_DECL(parse_node);
