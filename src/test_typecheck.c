@@ -21,23 +21,19 @@ typedef struct test_type {
   type_check_tag tag;
   union {
     struct {
-      const struct test_type *subs;
-      size_t sub_amt;
-    };
+      size_t amt;
+      const struct test_type *arr;
+    } subs;
     typevar type_var;
-  };
+  } data;
 } test_type;
 
 VEC_DECL(test_type);
 
 typedef struct {
   tc_error_type type;
-  union {
-    struct {
-      test_type type_exp;
-      test_type type_got;
-    };
-  };
+  test_type type_exp;
+  test_type type_got;
 } tc_err_test;
 
 typedef struct {
@@ -47,14 +43,15 @@ typedef struct {
   } type;
   union {
     struct {
-      size_t span_amt;
-      test_type *spans;
-    };
+      size_t amt;
+      test_type *arr;
+    } spans;
+
     struct {
-      size_t error_amt;
-      const tc_err_test *errors;
-    };
-  };
+      size_t amt;
+      const tc_err_test *arr;
+    } errors;
+  } data;
 } tc_test;
 
 static bool test_type_eq(type *types, node_ind_t *inds, node_ind_t root,
@@ -106,17 +103,17 @@ static bool test_type_eq(type *types, node_ind_t *inds, node_ind_t root,
           const size_t ind_v = find_range(VEC_DATA_PTR(&substitution_vals),
                                           sizeof(typevar),
                                           substitution_keys.len,
-                                          &type_b.type_var,
+                                          &type_b.data.type_var,
                                           1);
           res &= ind_k == ind_v;
           if (ind_k == substitution_keys.len) {
             VEC_PUSH(&substitution_keys, type_a.type_var);
-            VEC_PUSH(&substitution_vals, type_b.type_var);
+            VEC_PUSH(&substitution_vals, type_b.data.type_var);
           }
         }
-        break;
+        continue;
     }
-    VEC_APPEND(&stack_b, type_b.sub_amt, type_b.subs);
+    VEC_APPEND(&stack_b, type_b.data.subs.amt, type_b.data.subs.arr);
   }
   VEC_FREE(&substitution_keys);
   VEC_FREE(&substitution_vals);
@@ -323,77 +320,160 @@ static void test_typecheck_errors(test_state *state, const char *input_p,
 
 static const test_type unit_t = {
   .tag = TC_UNIT,
-  .sub_amt = 0,
-  .subs = NULL,
+  .data.subs =
+    {
+      .amt = 0,
+      .arr = NULL,
+    },
 };
 
 static const test_type bool_t = {
   .tag = TC_BOOL,
-  .sub_amt = 0,
-  .subs = NULL,
+  .data.subs =
+    {
+      .amt = 0,
+      .arr = NULL,
+    },
 };
 
 static const test_type u8_t = {
   .tag = TC_U8,
-  .sub_amt = 0,
-  .subs = NULL,
+  .data.subs =
+    {
+      .amt = 0,
+      .arr = NULL,
+    },
 };
 
 static const test_type string_t = {
   .tag = TC_LIST,
-  .sub_amt = 1,
-  .subs = &u8_t,
+  .data.subs =
+    {
+      .amt = 1,
+      .arr = &u8_t,
+    },
 };
 
 static const test_type i16_t = {
   .tag = TC_I16,
-  .sub_amt = 0,
-  .subs = NULL,
+  .data.subs =
+    {
+      .amt = 0,
+      .arr = NULL,
+    },
 };
 
 static const test_type i32_t = {
   .tag = TC_I32,
-  .sub_amt = 0,
-  .subs = NULL,
+  .data.subs =
+    {
+      .amt = 0,
+      .arr = NULL,
+    },
 };
 
 static const test_type i64_t = {
   .tag = TC_I64,
-  .sub_amt = 0,
-  .subs = NULL,
-};
-
-static const test_type any_int_type_arr[] = {
-  {.tag = TC_I8, .sub_amt = 0, .subs = NULL},
-  {.tag = TC_I16, .sub_amt = 0, .subs = NULL},
-  {.tag = TC_I32, .sub_amt = 0, .subs = NULL},
-  {.tag = TC_I64, .sub_amt = 0, .subs = NULL},
-  {.tag = TC_U8, .sub_amt = 0, .subs = NULL},
-  {.tag = TC_U16, .sub_amt = 0, .subs = NULL},
-  {.tag = TC_U32, .sub_amt = 0, .subs = NULL},
-  {.tag = TC_U64, .sub_amt = 0, .subs = NULL},
+  .data.subs =
+    {
+      .amt = 0,
+      .arr = NULL,
+    },
 };
 
 static const test_type i8_t = {
   .tag = TC_I8,
-  .sub_amt = 0,
-  .subs = NULL,
-};
-
-static const test_type any_int_t = {
-  .tag = TC_OR,
-  .sub_amt = STATIC_LEN(any_int_type_arr),
-  .subs = any_int_type_arr,
+  .data.subs =
+    {
+      .amt = 0,
+      .arr = NULL,
+    },
 };
 
 static const test_type VAR_A = {
   .tag = TC_VAR,
-  .type_var = 0,
+  .data.type_var = 0,
 };
 
 static const test_type VAR_B = {
   .tag = TC_VAR,
-  .type_var = 1,
+  .data.type_var = 1,
+};
+
+static const test_type any_int_type_arr[] = {
+  {
+    .tag = TC_I8,
+    .data.subs =
+      {
+        .amt = 0,
+        .arr = NULL,
+      },
+  },
+  {
+    .tag = TC_I16,
+    .data.subs =
+      {
+        .amt = 0,
+        .arr = NULL,
+      },
+  },
+  {
+    .tag = TC_I32,
+    .data.subs =
+      {
+        .amt = 0,
+        .arr = NULL,
+      },
+  },
+  {
+    .tag = TC_I64,
+    .data.subs =
+      {
+        .amt = 0,
+        .arr = NULL,
+      },
+  },
+  {
+    .tag = TC_U8,
+    .data.subs =
+      {
+        .amt = 0,
+        .arr = NULL,
+      },
+  },
+  {
+    .tag = TC_U16,
+    .data.subs =
+      {
+        .amt = 0,
+        .arr = NULL,
+      },
+  },
+  {
+    .tag = TC_U32,
+    .data.subs =
+      {
+        .amt = 0,
+        .arr = NULL,
+      },
+  },
+  {
+    .tag = TC_U64,
+    .data.subs =
+      {
+        .amt = 0,
+        .arr = NULL,
+      },
+  },
+};
+
+static const test_type any_int_t = {
+  .tag = TC_OR,
+  .data.subs =
+    {
+      .amt = STATIC_LEN(any_int_type_arr),
+      .arr = any_int_type_arr,
+    },
 };
 
 static void test_typecheck_succeeds(test_state *state) {
@@ -504,8 +584,11 @@ static void test_typecheck_succeeds(test_state *state) {
 
     const test_type het_t = {
       .tag = TC_FN,
-      .sub_amt = STATIC_LEN(het_t_params),
-      .subs = het_t_params,
+      .data.subs =
+        {
+          .amt = STATIC_LEN(het_t_params),
+          .arr = het_t_params,
+        },
     };
 
     test_type types[] = {
@@ -603,8 +686,11 @@ static void test_errors(test_state *state) {
     };
     const test_type type = {
       .tag = TC_TUP,
-      .subs = subs,
-      .sub_amt = STATIC_LEN(subs),
+      .data.subs =
+        {
+          .amt = STATIC_LEN(subs),
+          .arr = subs,
+        },
     };
     const tc_err_test errors[] = {{
       .type = TC_ERR_CONFLICT,
@@ -621,8 +707,11 @@ static void test_errors(test_state *state) {
     test_start(state, "I32 vs (() -> Int)");
     const test_type got = {
       .tag = TC_FN,
-      .sub_amt = 1,
-      .subs = &VAR_A,
+      .data.subs =
+        {
+          .amt = 1,
+          .arr = &VAR_A,
+        },
     };
     const tc_err_test errors[] = {
       {
@@ -643,8 +732,11 @@ static void test_errors(test_state *state) {
     test_start(state, "I32 vs [I32]");
     const test_type got = {
       .tag = TC_LIST,
-      .subs = &VAR_A,
-      .sub_amt = 1,
+      .data.subs =
+        {
+          .amt = 1,
+          .arr = &VAR_A,
+        },
     };
     const tc_err_test errors[] = {
       {
