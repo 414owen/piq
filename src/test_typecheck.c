@@ -136,11 +136,11 @@ static bool test_err_eq(parse_tree tree, tc_res res, size_t err_ind,
     case TC_ERR_CONFLICT: {
       return test_type_eq(res.types.tree.nodes,
                           res.types.tree.inds,
-                          eA.conflict.expected_ind,
+                          eA.data.conflict.expected_ind,
                           test_err.type_exp) &&
              test_type_eq(res.types.tree.nodes,
                           res.types.tree.inds,
-                          eA.conflict.got_ind,
+                          eA.data.conflict.got_ind,
                           test_err.type_got);
     }
     default:
