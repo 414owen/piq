@@ -261,36 +261,15 @@ typedef struct {
 } parse_tree;
 
 typedef struct {
-  enum {
-    SEMERR_OUT_OF_PLACE_SIG,
-  } type;
-  union {
-    struct {
-      node_ind_t sig_index;
-      node_ind_t next_index;
-    };
-  };
-} semantic_error;
-
-VEC_DECL(semantic_error);
-
-typedef enum {
-  PRT_SUCCESS,
-  PRT_PARSE_ERROR,
-  PRT_SEMANTIC_ERRORS,
-} parse_result_type;
+  token_type *expected;
+  node_ind_t error_pos;
+  uint8_t expected_amt;
+} parse_errors;
 
 typedef struct {
   parse_tree tree;
-  union {
-    struct {
-      token_type *expected;
-      node_ind_t error_pos;
-      uint8_t expected_amt;
-    };
-    vec_semantic_error semantic_errors;
-  };
-  parse_result_type type;
+  parse_errors errors;
+  bool success;
   perf_values perf_values;
 } parse_tree_res;
 
@@ -298,8 +277,9 @@ parse_tree_res parse(token *tokens, size_t token_amt);
 
 void print_parse_tree(FILE *f, const char *input, const parse_tree tree);
 char *print_parse_tree_str(const char *input, const parse_tree tree);
-void print_parse_errors(FILE *f, const char *input, const token *tokens,
-                        const parse_tree_res pres);
+void print_parse_errors(FILE *f, const char *restrict input,
+                                     const token *restrict tokens,
+                                     parse_errors errors);
 char *print_parse_errors_string(const char *input, const token *tokens,
                                 const parse_tree_res pres);
 void free_parse_tree(parse_tree tree);

@@ -71,8 +71,7 @@
     node_ind_t error_pos;
     uint8_t expected_amt;
     bool get_expected;
-    parse_result_type state;
-    vec_semantic_error semantic_errors;
+    bool success;
     vec_node_ind ind_stack;
   } parse_state;
 
@@ -838,22 +837,15 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
 %syntax_error {
   BREAK_PARSER;
   vec_token_type expected = VEC_NEW;
-  switch (s->state) {
-    case PRT_SEMANTIC_ERRORS:
-      VEC_FREE(&s->semantic_errors);
-      HEDLEY_FALL_THROUGH;
-    case PRT_SUCCESS: {
-      s->error_pos = s->pos;
-      for (token_type i = 0; i < YYNTOKEN; i++) {
-        int a = yy_find_shift_action((YYCODETYPE)i, yypParser->yytos->stateno);
-        if (a != YY_ERROR_ACTION) VEC_PUSH(&expected, i);
-      }
-      s->expected_amt = expected.len;
-      s->expected = VEC_FINALIZE(&expected);
-      s->state = PRT_PARSE_ERROR;
+  if (s->success) {
+    s->error_pos = s->pos;
+    for (token_type i = 0; i < YYNTOKEN; i++) {
+      int a = yy_find_shift_action((YYCODETYPE)i, yypParser->yytos->stateno);
+      if (a != YY_ERROR_ACTION) VEC_PUSH(&expected, i);
     }
-    case PRT_PARSE_ERROR:
-      break;
+    s->expected_amt = expected.len;
+    s->expected = VEC_FINALIZE(&expected);
+    s->success = false;
   }
 }
 
@@ -917,7 +909,7 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
     ParseInit(&xp);
     parse_state state = {
       .tokens = tokens,
-      .state = PRT_SUCCESS,
+      .success = true,
       .root_subs_start = 0,
       .root_subs_amt = 0,
       .nodes = VEC_NEW,
@@ -928,7 +920,6 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
       .get_expected = get_expected,
       .error_pos = -1,
       .expected_amt = 0,
-      .semantic_errors = VEC_NEW,
       .expected = NULL,
     };
 
@@ -939,20 +930,19 @@ if(RES) ::= IF expression(A) expression(B) expression(C). {
     ParseFinalize(&xp);
 
     parse_tree_res res =  {
-      .type = state.state,
+      .success = state.success,
       .tree = {
         .node_amt = state.nodes.len,
         .root_subs_start = state.root_subs_start,
         .root_subs_amt = state.root_subs_amt,
       },
-      .error_pos = state.error_pos,
-      .expected_amt = state.expected_amt,
-      .expected = state.expected,
+      .errors = {
+        .error_pos = state.error_pos,
+        .expected_amt = state.expected_amt,
+        .expected = state.expected,
+      },
     };
-    if (res.type == PRT_SEMANTIC_ERRORS) {
-      res.semantic_errors = state.semantic_errors;
-    }
-    if (res.type == PRT_SUCCESS) {
+    if (res.success) {
       res.tree.nodes = VEC_FINALIZE(&state.nodes);
       res.tree.inds = VEC_FINALIZE(&state.inds);
       assert(state.ind_stack.len == 0);
