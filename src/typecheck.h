@@ -48,7 +48,7 @@ typedef struct {
     struct {
       type_ref index;
     } ambiguous;
-  };
+  } data;
 } tc_error;
 
 VEC_DECL(tc_error);

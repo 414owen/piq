@@ -398,7 +398,7 @@ static void unify_typevar(unification_state *state, typevar a, type_ref b_ind,
   if (type_contains_specific_typevar(state->types, b_ind, a)) {
     tc_error err = {
       .type = TC_ERR_INFINITE,
-      .infinite =
+      .data.infinite =
         {
           .index = b_ind,
         },
@@ -504,7 +504,7 @@ static void add_conflict(vec_tc_error *restrict errs,
   tc_error err = {
     .type = TC_ERR_CONFLICT,
     .pos = c->original.provenance,
-    .conflict =
+    .data.conflict =
       {
         .expected_ind = c->target_a,
         .got_ind = c->target_b,
@@ -770,7 +770,7 @@ static void check_ambiguities(node_ind_t parse_node_amt, type_builder *builder,
             .type = TC_ERR_AMBIGUOUS,
             .pos = node_ind,
             // TODO do we need this?
-            .ambiguous.index = type_ind,
+            .data.ambiguous.index = type_ind,
           };
           VEC_PUSH(errors, err);
         } else {
