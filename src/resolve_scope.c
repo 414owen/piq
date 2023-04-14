@@ -132,24 +132,25 @@ static void precalculate_scope_push(scope_calculator_state *state) {
       node_ind_t binding_ind =
         PT_FUN_BINDING_IND(state->tree.inds, state->elem.data.node_data.node);
       parse_node *binding_node = &state->tree.nodes[binding_ind];
-      binding b = binding_node->data.span;
-      binding_node->variable_index = state->environment.bindings.len;
+      binding b = binding_node->phase_data.span;
+      binding_node->data.var_data.variable_index =
+        state->environment.bindings.len;
       scope_push(state->input, &state->environment, b);
       break;
     }
     case PT_BIND_WILDCARD: {
       parse_node *node =
         &state->tree.nodes[state->elem.data.node_data.node_index];
-      node->variable_index = state->environment.bindings.len;
-      binding b = node->data.span;
+      node->data.var_data.variable_index = state->environment.bindings.len;
+      binding b = node->phase_data.span;
       scope_push(state->input, &state->environment, b);
       break;
     }
     case PT_BIND_LET: {
       node_ind_t binding_ind = PT_LET_BND_IND(state->elem.data.node_data.node);
       parse_node *node = &state->tree.nodes[binding_ind];
-      node->variable_index = state->environment.bindings.len;
-      binding b = node->data.span;
+      node->data.var_data.variable_index = state->environment.bindings.len;
+      binding b = node->phase_data.span;
       scope_push(state->input, &state->environment, b);
       break;
     }
@@ -175,12 +176,12 @@ static void precalculate_scope_visit(scope_calculator_state *state) {
   }
   scope scope = *scope_p;
   state->num_names_looked_up++;
-  VEC_LEN_T index = lookup_str_ref(state->input, scope, node.data.span);
+  VEC_LEN_T index = lookup_str_ref(state->input, scope, node.phase_data.span);
   if (index == scope.bindings.len) {
-    VEC_PUSH(&state->not_found, node.data.span);
+    VEC_PUSH(&state->not_found, node.phase_data.span);
   }
-  state->tree.nodes[state->elem.data.node_data.node_index].variable_index =
-    index;
+  state->tree.nodes[state->elem.data.node_data.node_index]
+    .data.var_data.variable_index = index;
 }
 
 static void resolve_pop_env(scope_calculator_state *state) {

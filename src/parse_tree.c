@@ -222,15 +222,18 @@ static void print_compound(printer_state *restrict s,
     case SUBS_NONE:
       break;
     case SUBS_ONE:
-      push_node(s, node.sub_a);
+      push_node(s, node.data.one_sub.ind);
       break;
     case SUBS_TWO:
-      push_node(s, node.sub_a);
+      push_node(s, node.data.two_subs.a);
       push_str(s, sep);
-      push_node(s, node.sub_b);
+      push_node(s, node.data.two_subs.b);
       break;
     case SUBS_EXTERNAL:
-      print_separated(s, &s->tree.inds[node.subs_start], node.sub_amt, sep);
+      print_separated(s,
+                      &s->tree.inds[node.data.more_subs.start],
+                      node.data.more_subs.amt,
+                      sep);
       break;
   }
   print_action action = POP_TUP_BS;
@@ -254,7 +257,8 @@ static void print_atom_normal(printer_state *restrict s,
 
 static void print_node(printer_state *s, node_ind_t node_ind) {
   parse_node node = s->tree.nodes[node_ind];
-  span span = s->tree.spans != NULL ? s->tree.spans[node_ind] : node.data.span;
+  span span =
+    s->tree.spans != NULL ? s->tree.spans[node_ind] : node.phase_data.span;
   switch (node.type.all) {
     case PT_ALL_LEN:
       // TODO impossible
@@ -289,7 +293,7 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
       print_compound_normal(s, node);
       break;
     case PT_ALL_MULTI_TYPE_PARAMS:
-      if (node.sub_amt > 0) {
+      if (node.data.more_subs.amt > 0) {
         print_compound_normal(s, node);
       } else {
         // can only be followed by a string (space)
