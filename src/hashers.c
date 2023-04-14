@@ -95,19 +95,23 @@ static hash_t hash_string(hash_t seed, const char *str) {
 
 hash_t hash_newtype(const void *key_p, const void *ctx) {
   type_key_with_ctx *key = (type_key_with_ctx *)key_p;
-  hash_t hash = INITIAL_SEED;
+  hash_t hash = hash = hash_primitive(INITIAL_SEED, key->tag);
   switch (type_repr(key->tag)) {
-    case SUBS_EXTERNAL: {
-      hash = hash_primitive(hash, key->tag);
-      return hash_bytes(
-        hash, (uint8_t *)key->subs, key->sub_amt * sizeof(type_ref));
-    }
-    default: {
-      hash = hash_primitive(hash, key->tag);
+    case SUBS_EXTERNAL:
+      hash =
+        hash_bytes(hash, (uint8_t *)key->subs, key->sub_amt * sizeof(type_ref));
+      break;
+    case SUBS_NONE:
+      break;
+    case SUBS_ONE:
       hash = hash_primitive(hash, key->sub_a);
-      return hash_primitive(hash, key->sub_b);
-    }
+      break;
+    case SUBS_TWO:
+      hash = hash_primitive(hash, key->sub_a);
+      hash = hash_primitive(hash, key->sub_b);
+      break;
   }
+  return hash;
 }
 
 hash_t hash_binding(const void *binding_p, const void *ctx_p) {
@@ -131,17 +135,23 @@ hash_t hash_stored_type(const void *key_p, const void *ctx_p) {
   type_ref key_ind = *((type_ref *)key_p);
   type_builder *builder = (type_builder *)ctx_p;
   type key = VEC_GET(builder->types, key_ind);
-  hash_t hash = INITIAL_SEED;
-  switch (type_repr(key.check_tag)) {
+  hash_t hash = hash_primitive(INITIAL_SEED, key.tag.check);
+  switch (type_repr(key.tag.check)) {
     case SUBS_EXTERNAL: {
-      hash = hash_primitive(hash, key.tag);
-      type_ref *subs = &VEC_DATA_PTR(&builder->inds)[key.subs_start];
-      return hash_bytes(hash, (uint8_t *)subs, key.sub_amt * sizeof(type_ref));
+      type_ref *subs = &VEC_DATA_PTR(&builder->inds)[key.data.more_subs.start];
+      hash = hash_bytes(
+        hash, (uint8_t *)subs, key.data.more_subs.amt * sizeof(type_ref));
+      break;
     }
-    default: {
-      hash = hash_primitive(hash, key.tag);
-      hash = hash_primitive(hash, key.sub_a);
-      return hash_primitive(hash, key.sub_b);
-    }
+    case SUBS_NONE:
+      break;
+    case SUBS_ONE:
+      hash = hash_primitive(hash, key.data.one_sub.ind);
+      break;
+    case SUBS_TWO:
+      hash = hash_primitive(hash, key.data.two_subs.a);
+      hash = hash_primitive(hash, key.data.two_subs.b);
+      break;
   }
+  return hash;
 }

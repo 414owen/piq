@@ -64,8 +64,8 @@ static void annotate_parse_tree(const parse_tree tree, type_builder *builder) {
 
   for (node_ind_t i = 0; i < tree.node_amt; i++) {
     type t = {
-      .check_tag = TC_VAR,
-      .type_var = i,
+      .tag.check = TC_VAR,
+      .data.type_var = i,
     };
     type_ref ind = prev_types_len + i;
     builder->types.data[ind] = t;
@@ -392,7 +392,7 @@ typedef struct {
 
 static void unify_typevar(unification_state *state, typevar a, type_ref b_ind,
                           type b) {
-  if (b.check_tag == TC_VAR && a == b.type_var) {
+  if (b.tag.check == TC_VAR && a == b.data.type_var) {
     return;
   }
   if (type_contains_specific_typevar(state->types, b_ind, a)) {
@@ -415,10 +415,10 @@ static void unify_typevar(unification_state *state, typevar a, type_ref b_ind,
              b_ind);
   putc('\n', stdout);
   if (a < state->tree.node_amt) {
-    if (b.check_tag == TC_VAR) {
+    if (b.tag.check == TC_VAR) {
       printf(RED "%s" RESET " := " RED "%s" RESET "\n",
              parse_node_strings[state->tree.nodes[a].type.all],
-             parse_node_strings[state->tree.nodes[b.type_var].type.all]);
+             parse_node_strings[state->tree.nodes[b.data.type_var].type.all]);
     } else {
       printf(RED "%s" RESET "\n",
              parse_node_strings[state->tree.nodes[a].type.all]);
@@ -433,7 +433,7 @@ static bool get_substitute_layer(type_builder *types, typevar t,
   type_ref substitution_ind = VEC_GET(types->substitutions, t);
   type substitution = VEC_GET(types->types, substitution_ind);
   *res = substitution_ind;
-  return substitution.check_tag != TC_VAR || substitution.type_var != t;
+  return substitution.tag.check != TC_VAR || substitution.data.type_var != t;
 }
 
 typedef struct {
@@ -459,10 +459,10 @@ static resolved_type resolve_type(type_builder *type_builder,
   for (;;) {
     type a = VEC_GET(types, res.target);
     // printf("%d\n", res.target);
-    if (a.check_tag == TC_VAR) {
+    if (a.tag.check == TC_VAR) {
       last_typevar_ref = res.target;
       bool had_sub =
-        get_substitute_layer(type_builder, a.type_var, &res.target);
+        get_substitute_layer(type_builder, a.data.type_var, &res.target);
       if (had_sub) {
         continue;
       }
@@ -473,14 +473,14 @@ static resolved_type resolve_type(type_builder *type_builder,
 
   // this could be put in the loop instead of branched here
   if (last_typevar_ref != types.len) {
-    res.last_typevar = VEC_GET(types, last_typevar_ref).type_var;
+    res.last_typevar = VEC_GET(types, last_typevar_ref).data.type_var;
     // redirect all type_var links to the last type_var in the chain
     // making subsequent calls faster.
     type_ref type_ind = root_ind;
     while (type_ind != last_typevar_ref) {
       type a = VEC_GET(types, type_ind);
-      type_ind = VEC_GET(substitutions, a.type_var);
-      VEC_DATA_PTR(&substitutions)[a.type_var] = last_typevar_ref;
+      type_ind = VEC_GET(substitutions, a.data.type_var);
+      VEC_DATA_PTR(&substitutions)[a.data.type_var] = last_typevar_ref;
     }
   }
 
@@ -584,12 +584,12 @@ static void ensure_subtype(unification_state *state,
             "that the case is valid.");
   }
 
-  if (b.check_tag == TC_OR) {
+  if (b.tag.check == TC_OR) {
     size_t intersection_amt = 0;
-    for (type_ref i = 0; i < a.sub_amt; i++) {
-      type_ref ref_a = VEC_GET(types->inds, a.subs_start + i);
-      for (type_ref j = 0; j < b.sub_amt; j++) {
-        type_ref ref_b = VEC_GET(types->inds, b.subs_start + j);
+    for (type_ref i = 0; i < a.data.more_subs.amt; i++) {
+      type_ref ref_a = VEC_GET(types->inds, a.data.more_subs.start + i);
+      for (type_ref j = 0; j < b.data.more_subs.amt; j++) {
+        type_ref ref_b = VEC_GET(types->inds, b.data.more_subs.start + j);
         if (ref_a == ref_b) {
           intersection_amt++;
           break;
@@ -603,10 +603,10 @@ static void ensure_subtype(unification_state *state,
     const size_t subs_bytes = sizeof(type_ref) * intersection_amt;
     type_ref *subs = stalloc(subs_bytes);
     type_ref sub_ind = 0;
-    for (type_ref i = 0; i < a.sub_amt; i++) {
-      type_ref ref_a = VEC_GET(types->inds, a.subs_start + i);
-      for (type_ref j = 0; j < b.sub_amt; j++) {
-        type_ref ref_b = VEC_GET(types->inds, b.subs_start + j);
+    for (type_ref i = 0; i < a.data.more_subs.amt; i++) {
+      type_ref ref_a = VEC_GET(types->inds, a.data.more_subs.start + i);
+      for (type_ref j = 0; j < b.data.more_subs.amt; j++) {
+        type_ref ref_b = VEC_GET(types->inds, b.data.more_subs.start + j);
         if (ref_a == ref_b) {
           subs[sub_ind++] = ref_a;
           break;
@@ -620,8 +620,8 @@ static void ensure_subtype(unification_state *state,
     stfree(subs, subs_bytes);
   } else {
     bool updated = false;
-    for (type_ref i = 0; i < a.sub_amt; i++) {
-      type_ref sub_ind = VEC_GET(types->inds, a.subs_start + i);
+    for (type_ref i = 0; i < a.data.more_subs.amt; i++) {
+      type_ref sub_ind = VEC_GET(types->inds, a.data.more_subs.start + i);
       if (sub_ind == constraint->target_b) {
         update_typevar(types, constraint->last_type_var_a, sub_ind);
         updated = true;
@@ -664,9 +664,9 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
     type b = VEC_GET(type_builder->types, constraint.target_b);
 
     // switcheroos
-    if ((b.check_tag == TC_VAR && a.check_tag != TC_VAR) ||
-        (b.check_tag == TC_OR && a.check_tag != TC_OR &&
-         a.check_tag != TC_VAR)) {
+    if ((b.tag.check == TC_VAR && a.tag.check != TC_VAR) ||
+        (b.tag.check == TC_OR && a.tag.check != TC_OR &&
+         a.tag.check != TC_VAR)) {
       tc_constraint new_constraint = tc_swap_constraint(constraint.original);
       VEC_PUSH(&state.constraints, new_constraint);
       continue;
@@ -676,28 +676,28 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
     printf("solve: %d = %d\n", constraint.target_a, constraint.target_b);
 #endif
 
-    if (a.check_tag == TC_OR) {
+    if (a.tag.check == TC_OR) {
       ensure_subtype(&state, &constraint);
       continue;
     }
 
-    if (a.check_tag == TC_VAR) {
-      unify_typevar(&state, a.type_var, constraint.target_b, b);
+    if (a.tag.check == TC_VAR) {
+      unify_typevar(&state, a.data.type_var, constraint.target_b, b);
       continue;
     }
 
-    if (a.check_tag != b.check_tag) {
+    if (a.tag.check != b.tag.check) {
       add_conflict(&state.errors, &constraint);
       continue;
     }
 
-    switch (type_repr(a.check_tag)) {
+    switch (type_repr(a.tag.check)) {
       case SUBS_NONE:
         break;
       case SUBS_TWO: {
         tc_constraint c = {
-          .a = a.sub_b,
-          .b = b.sub_b,
+          .a = a.data.two_subs.b,
+          .b = b.data.two_subs.b,
           .provenance = constraint.original.provenance,
         };
         VEC_PUSH(&state.constraints, c);
@@ -705,22 +705,22 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
       }
       case SUBS_ONE: {
         tc_constraint c = {
-          .a = a.sub_a,
-          .b = b.sub_a,
+          .a = a.data.one_sub.ind,
+          .b = b.data.one_sub.ind,
           .provenance = constraint.original.provenance,
         };
         VEC_PUSH(&state.constraints, c);
         break;
       }
       case SUBS_EXTERNAL:
-        if (a.sub_amt != b.sub_amt) {
+        if (a.data.more_subs.amt != b.data.more_subs.amt) {
           add_conflict(&state.errors, &constraint);
           break;
         }
-        for (type_ref i = 0; i < a.sub_amt; i++) {
+        for (type_ref i = 0; i < a.data.more_subs.amt; i++) {
           tc_constraint c = {
-            .a = VEC_GET(state.types->inds, a.subs_start + i),
-            .b = VEC_GET(state.types->inds, b.subs_start + i),
+            .a = VEC_GET(state.types->inds, a.data.more_subs.start + i),
+            .b = VEC_GET(state.types->inds, b.data.more_subs.start + i),
             .provenance = constraint.original.provenance,
           };
           VEC_PUSH(&state.constraints, c);
@@ -733,11 +733,11 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
 
 void print_tyvar_parse_node(parse_tree tree, type *types, type_ref ref) {
   type t = types[ref];
-  if (t.check_tag != TC_VAR || t.type_var >= tree.node_amt) {
+  if (t.tag.check != TC_VAR || t.data.type_var >= tree.node_amt) {
     return;
   }
   fputs("Parse node: ", stdout);
-  puts(parse_node_strings[tree.nodes[t.type_var].type.all]);
+  puts(parse_node_strings[tree.nodes[t.data.type_var].type.all]);
   putc('\n', stdout);
 }
 
@@ -759,9 +759,9 @@ static void check_ambiguities(node_ind_t parse_node_amt, type_builder *builder,
         continue;
       }
       type t = types[type_ind];
-      if (t.check_tag == TC_VAR) {
-        node_ind_t target = substitutions[t.type_var];
-        if (t.type_var < parse_node_amt && target != root_ind) {
+      if (t.tag.check == TC_VAR) {
+        node_ind_t target = substitutions[t.data.type_var];
+        if (t.data.type_var < parse_node_amt && target != root_ind) {
           // report this at the other node
           continue;
         }
@@ -808,29 +808,29 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
     type_ind); puts("");
     */
 
-    if (t.check_tag == TC_VAR) {
-      VEC_PUSH(&stack, VEC_GET(old->substitutions, t.type_var));
+    if (t.tag.check == TC_VAR) {
+      VEC_PUSH(&stack, VEC_GET(old->substitutions, t.data.type_var));
       bs_push(&first_pass_stack, first_pass);
       continue;
     }
 
-    switch (type_repr(t.check_tag)) {
+    switch (type_repr(t.tag.check)) {
       case SUBS_NONE: {
         // first pass
-        VEC_PUSH(&return_stack, mk_primitive_type(builder, t.check_tag));
+        VEC_PUSH(&return_stack, mk_primitive_type(builder, t.tag.check));
         break;
       }
       case SUBS_ONE: {
         if (first_pass) {
           VEC_PUSH(&stack, type_ind);
           bs_push_false(&first_pass_stack);
-          VEC_PUSH(&stack, t.sub_a);
+          VEC_PUSH(&stack, t.data.two_subs.a);
           bs_push_true(&first_pass_stack);
         } else {
           type_ref sub_a;
           VEC_POP(&return_stack, &sub_a);
           VEC_PUSH(&return_stack,
-                   mk_type_inline(builder, t.check_tag, sub_a, 0));
+                   mk_type_inline(builder, t.tag.check, sub_a, 0));
         }
         break;
       }
@@ -838,9 +838,9 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
         if (first_pass) {
           VEC_PUSH(&stack, type_ind);
           bs_push_false(&first_pass_stack);
-          VEC_PUSH(&stack, t.sub_a);
+          VEC_PUSH(&stack, t.data.two_subs.a);
           bs_push_true(&first_pass_stack);
-          VEC_PUSH(&stack, t.sub_b);
+          VEC_PUSH(&stack, t.data.two_subs.b);
           bs_push_true(&first_pass_stack);
         } else {
           type_ref sub_a;
@@ -848,7 +848,7 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
           type_ref sub_b;
           VEC_POP(&return_stack, &sub_b);
           VEC_PUSH(&return_stack,
-                   mk_type_inline(builder, t.check_tag, sub_a, sub_b));
+                   mk_type_inline(builder, t.tag.check, sub_a, sub_b));
         }
         break;
       }
@@ -857,14 +857,16 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
           VEC_PUSH(&stack, type_ind);
           bs_push_false(&first_pass_stack);
           // first on stack = last processed = first on result stack
-          VEC_APPEND_REVERSE(
-            &stack, t.sub_amt, VEC_GET_PTR(old->inds, t.subs_start));
-          bs_push_true_n(&first_pass_stack, t.sub_amt);
+          VEC_APPEND_REVERSE(&stack,
+                             t.data.more_subs.amt,
+                             VEC_GET_PTR(old->inds, t.data.more_subs.start));
+          bs_push_true_n(&first_pass_stack, t.data.more_subs.amt);
         } else {
-          type_ref *subs_ptr =
-            &VEC_DATA_PTR(&return_stack)[return_stack.len - t.sub_amt];
-          VEC_PUSH(&return_stack,
-                   mk_type(builder, t.check_tag, subs_ptr, t.sub_amt));
+          type_ref *subs_ptr = &VEC_DATA_PTR(
+            &return_stack)[return_stack.len - t.data.more_subs.amt];
+          VEC_PUSH(
+            &return_stack,
+            mk_type(builder, t.tag.check, subs_ptr, t.data.more_subs.amt));
         }
         break;
       }

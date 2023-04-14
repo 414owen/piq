@@ -62,127 +62,184 @@ const node_ind_t named_builtin_type_amount = STATIC_LEN(builtin_type_names);
 const type builtin_types[] = {
   [bool_type_ind] =
     {
-      .tag = T_BOOL,
-      .sub_a = 0,
-      .sub_b = 0,
+      .tag.normal = T_BOOL,
+      .data.two_subs =
+        {
+          .a = 0,
+          .b = 0,
+        },
     },
   [u8_type_ind] =
     {
-      .tag = T_U8,
-      .sub_a = 0,
-      .sub_b = 0,
+      .tag.normal = T_U8,
+      .data.two_subs =
+        {
+          .a = 0,
+          .b = 0,
+        },
     },
   [u16_type_ind] =
     {
-      .tag = T_U16,
-      .sub_a = 0,
-      .sub_b = 0,
+      .tag.normal = T_U16,
+      .data.two_subs =
+        {
+          .a = 0,
+          .b = 0,
+        },
     },
   [u32_type_ind] =
     {
-      .tag = T_U32,
-      .sub_a = 0,
-      .sub_b = 0,
+      .tag.normal = T_U32,
+      .data.two_subs =
+        {
+          .a = 0,
+          .b = 0,
+        },
     },
   [u64_type_ind] =
     {
-      .tag = T_U64,
-      .sub_a = 0,
-      .sub_b = 0,
+      .tag.normal = T_U64,
+      .data.two_subs =
+        {
+          .a = 0,
+          .b = 0,
+        },
     },
   [i8_type_ind] =
     {
-      .tag = T_I8,
-      .sub_a = 0,
-      .sub_b = 0,
+      .tag.normal = T_I8,
+      .data.two_subs =
+        {
+          .a = 0,
+          .b = 0,
+        },
     },
   [i16_type_ind] =
     {
-      .tag = T_I16,
-      .sub_a = 0,
-      .sub_b = 0,
+      .tag.normal = T_I16,
+      .data.two_subs =
+        {
+          .a = 0,
+          .b = 0,
+        },
     },
   [i32_type_ind] =
     {
-      .tag = T_I32,
-      .sub_a = 0,
-      .sub_b = 0,
+      .tag.normal = T_I32,
+      .data.two_subs =
+        {
+          .a = 0,
+          .b = 0,
+        },
     },
   [i64_type_ind] =
     {
-      .tag = T_I64,
-      .sub_a = 0,
-      .sub_b = 0,
+      .tag.normal = T_I64,
+      .data.two_subs =
+        {
+          .a = 0,
+          .b = 0,
+        },
     },
   [string_type_ind] =
     {
-      .tag = T_LIST,
-      .sub_a = u8_type_ind,
-      .sub_b = 0,
+      .tag.normal = T_LIST,
+      .data.two_subs =
+        {
+          .a = u8_type_ind,
+          .b = 0,
+        },
     },
 
   [compare_i8s_type_ind] =
     {
-      .tag = T_FN,
-      .subs_start = i8_predicate_fn_ind_start,
-      .sub_amt = 3,
+      .tag.normal = T_FN,
+      .data.more_subs =
+        {
+          .start = i8_predicate_fn_ind_start,
+          .amt = 3,
+        },
     },
 
   [compare_i16s_type_ind] =
     {
-      .tag = T_FN,
-      .subs_start = i16_predicate_fn_ind_start,
-      .sub_amt = 3,
+      .tag.normal = T_FN,
+      .data.more_subs =
+        {
+          .start = i16_predicate_fn_ind_start,
+          .amt = 3,
+        },
     },
 
   [compare_i32s_type_ind] =
     {
-      .tag = T_FN,
-      .subs_start = i32_predicate_fn_ind_start,
-      .sub_amt = 3,
+      .tag.normal = T_FN,
+      .data.more_subs =
+        {
+          .amt = 3,
+          .start = i32_predicate_fn_ind_start,
+        },
     },
 
   [compare_i64s_type_ind] =
     {
-      .tag = T_FN,
-      .subs_start = i64_predicate_fn_ind_start,
-      .sub_amt = 3,
+      .tag.normal = T_FN,
+      .data.more_subs =
+        {
+          .amt = 3,
+          .start = i64_predicate_fn_ind_start,
+        },
     },
 
   [i8_arithmetic_type_ind] =
     {
-      .tag = T_FN,
-      .subs_start = i8_arithmetic_fn_ind_start,
-      .sub_amt = 3,
+      .tag.normal = T_FN,
+      .data.more_subs =
+        {
+          .amt = 3,
+          .start = i8_arithmetic_fn_ind_start,
+        },
     },
 
   [i16_arithmetic_type_ind] =
     {
-      .tag = T_FN,
-      .subs_start = i16_arithmetic_fn_ind_start,
-      .sub_amt = 3,
+      .tag.normal = T_FN,
+      .data.more_subs =
+        {
+          .amt = 3,
+          .start = i16_arithmetic_fn_ind_start,
+        },
     },
 
   [i32_arithmetic_type_ind] =
     {
-      .tag = T_FN,
-      .subs_start = i32_arithmetic_fn_ind_start,
-      .sub_amt = 3,
+      .tag.normal = T_FN,
+      .data.more_subs =
+        {
+          .amt = 3,
+          .start = i32_arithmetic_fn_ind_start,
+        },
     },
 
   [i64_arithmetic_type_ind] =
     {
-      .tag = T_FN,
-      .subs_start = i64_arithmetic_fn_ind_start,
-      .sub_amt = 3,
+      .tag.normal = T_FN,
+      .data.more_subs =
+        {
+          .amt = 3,
+          .start = i64_arithmetic_fn_ind_start,
+        },
     },
 
   [any_int_type_ind] =
     {
-      .check_tag = TC_OR,
-      .subs_start = any_int_type_ind_start,
-      // signed and usigned 8, 16, 32, and 64 bits
-      .sub_amt = 8,
+      .tag.normal = TC_OR,
+      .data.more_subs =
+        {
+          // signed and usigned 8, 16, 32, and 64 bits
+          .amt = 8,
+          .start = any_int_type_ind_start,
+        },
     },
 };
 

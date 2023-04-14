@@ -78,27 +78,29 @@ static bool test_type_eq(type *types, node_ind_t *inds, node_ind_t root,
     type type_a = types[ind_a];
     test_type type_b;
     VEC_POP(&stack_b, &type_b);
-    if (type_a.check_tag != type_b.tag) {
+    if (type_a.tag.check != type_b.tag) {
       res = false;
       break;
     }
-    switch (type_repr(type_a.check_tag)) {
+    switch (type_repr(type_a.tag.check)) {
       case SUBS_EXTERNAL:
-        VEC_APPEND(&stack_a, type_a.sub_amt, inds + type_a.subs_start);
+        VEC_APPEND(&stack_a,
+                   type_a.data.more_subs.amt,
+                   inds + type_a.data.more_subs.start);
         break;
       case SUBS_ONE:
-        VEC_PUSH(&stack_a, type_a.sub_a);
+        VEC_PUSH(&stack_a, type_a.data.one_sub.ind);
         break;
       case SUBS_TWO:
-        VEC_PUSH(&stack_a, type_a.sub_a);
-        VEC_PUSH(&stack_a, type_a.sub_b);
+        VEC_PUSH(&stack_a, type_a.data.two_subs.a);
+        VEC_PUSH(&stack_a, type_a.data.two_subs.b);
         break;
       case SUBS_NONE:
-        if (type_a.check_tag == TC_VAR) {
+        if (type_a.tag.check == TC_VAR) {
           const size_t ind_k = find_range(VEC_DATA_PTR(&substitution_keys),
                                           sizeof(typevar),
                                           substitution_keys.len,
-                                          &type_a.type_var,
+                                          &type_a.data.type_var,
                                           1);
           const size_t ind_v = find_range(VEC_DATA_PTR(&substitution_vals),
                                           sizeof(typevar),
@@ -107,7 +109,7 @@ static bool test_type_eq(type *types, node_ind_t *inds, node_ind_t root,
                                           1);
           res &= ind_k == ind_v;
           if (ind_k == substitution_keys.len) {
-            VEC_PUSH(&substitution_keys, type_a.type_var);
+            VEC_PUSH(&substitution_keys, type_a.data.type_var);
             VEC_PUSH(&substitution_vals, type_b.data.type_var);
           }
         }
