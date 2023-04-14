@@ -74,8 +74,9 @@ tree_node_repr type_repr(type_check_tag tag) {
 }
 
 bool inline_types_eq(type a, type b) {
-  return a.tag == b.tag && a.type_var == b.type_var && a.sub_a == b.sub_a &&
-         a.sub_b == b.sub_b;
+  return a.tag.check == b.tag.check && a.data.type_var == b.data.type_var &&
+         a.data.two_subs.a == b.data.two_subs.a &&
+         a.data.two_subs.b == b.data.two_subs.b;
 }
 
 static void print_type_head(FILE *f, type_check_tag head) {
@@ -157,9 +158,9 @@ void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root) {
       case PRINT_TYPE: {
         type node = types[action.type_ind];
         size_t stack_top = stack.len;
-        switch (node.check_tag) {
+        switch (node.tag.check) {
           case TC_VAR: {
-            fprintf(f, "(TypeVar %d)", node.type_var);
+            fprintf(f, "(TypeVar %d)", node.data.type_var);
             break;
           }
           case TC_OR:
@@ -189,11 +190,12 @@ void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root) {
             break;
           case TC_LIST:
             fputs("[", f);
-            push_node(&stack, node.sub_a);
+            push_node(&stack, node.data.one_sub.ind);
             push_str(&stack, "]");
             break;
           default:
-            print_type_head(f, node.check_tag);
+            assert(type_repr(node.tag.check) == SUBS_ONE);
+            print_type_head(f, node.tag.check);
             break;
         }
         reverse_arbitrary(&VEC_DATA_PTR(&stack)[stack_top],

@@ -37,9 +37,12 @@ static type_ref find_type(type_builder *tb, const type_key_with_ctx *key) {
 static type_ref insert_inline_type_to_hm(type_builder *tb, type_check_tag tag,
                                          type_ref sub_a, type_ref sub_b) {
   type t = {
-    .check_tag = tag,
-    .sub_a = sub_a,
-    .sub_b = sub_b,
+    .tag.check = tag,
+    .data.two_subs =
+      {
+        .a = sub_a,
+        .b = sub_b,
+      },
   };
   VEC_PUSH(&tb->types, t);
   type_ref res = tb->types.len - 1;
@@ -82,9 +85,12 @@ type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
     return ind;
   VEC_APPEND(&tb->inds, sub_amt, subs);
   type t = {
-    .check_tag = tag,
-    .sub_amt = sub_amt,
-    .subs_start = tb->inds.len - sub_amt,
+    .tag.check = tag,
+    .data.more_subs =
+      {
+        .amt = sub_amt,
+        .start = tb->inds.len - sub_amt,
+      },
   };
   VEC_PUSH(&tb->types, t);
   type_ref res = tb->types.len - 1;
@@ -95,8 +101,8 @@ type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
 
 type_ref mk_type_var(type_builder *tb, typevar value) {
   type t = {
-    .check_tag = TC_VAR,
-    .type_var = value,
+    .tag.check = TC_VAR,
+    .data.type_var = value,
   };
   // Don't check for duplicates, because type variables should be unique
   // and constructed once
@@ -114,17 +120,18 @@ typedef bool exited_early;
 
 void push_type_subs(vec_type_ref *restrict stack, const type_ref *restrict inds,
                     type t) {
-  switch (type_repr(t.check_tag)) {
+  switch (type_repr(t.tag.check)) {
     case SUBS_NONE:
       break;
     case SUBS_TWO:
-      VEC_PUSH(stack, t.sub_b);
-      HEDLEY_FALL_THROUGH;
+      VEC_PUSH(stack, t.data.two_subs.b);
+      VEC_PUSH(stack, t.data.two_subs.a);
+      break;
     case SUBS_ONE:
-      VEC_PUSH(stack, t.sub_a);
+      VEC_PUSH(stack, t.data.one_sub.ind);
       break;
     case SUBS_EXTERNAL:
-      VEC_APPEND(stack, t.sub_amt, &inds[t.subs_start]);
+      VEC_APPEND(stack, t.data.more_subs.amt, &inds[t.data.more_subs.start]);
       break;
   }
 }
@@ -141,9 +148,9 @@ static exited_early type_contains_typevar_by(const type_builder *types,
     type_ref node_ind;
     VEC_POP(&stack, &node_ind);
     type node = VEC_GET(types->types, node_ind);
-    switch (node.check_tag) {
+    switch (node.tag.check) {
       case TC_VAR: {
-        var_step_res step_res = step(node.type_var, data);
+        var_step_res step_res = step(node.data.type_var, data);
         if (step_res.early_exit) {
           exited_early = true;
           goto end;
@@ -196,7 +203,7 @@ static var_step_res cmp_typevar(typevar a, const void *data) {
   type t = ctx->types[type_ind];
   var_step_res res = {
     .early_exit = false,
-    .redirect_to_next = t.check_tag != TC_VAR || t.type_var != a,
+    .redirect_to_next = t.tag.check != TC_VAR || t.data.type_var != a,
     .next = type_ind,
   };
   return res;
@@ -227,8 +234,8 @@ static var_step_res is_unsubstituted_typevar_step(typevar a,
   // If this branch containsunsubstituted vars
   // they'll be reported by their parse_node.
   const bool is_node_var = a < data->parse_node_amount;
-  if (t.check_tag == TC_VAR &&
-      (a == t.type_var || !is_node_var || a == data->root_node)) {
+  if (t.tag.check == TC_VAR &&
+      (a == t.data.type_var || !is_node_var || a == data->root_node)) {
     const var_step_res res = {
       .early_exit = true,
     };
@@ -271,19 +278,21 @@ static bool cmp_newtype_eq(const void *key_p, const void *stored_key,
   type_builder *builder = (type_builder *)ctx;
   type snd = VEC_GET(builder->types, snd_ind);
 
-  if (key->tag == snd.check_tag) {
+  if (key->tag == snd.tag.check) {
     switch (type_repr(key->tag)) {
       case SUBS_NONE:
         return true;
       case SUBS_TWO:
-        return key->sub_a == snd.sub_a && key->sub_b == snd.sub_b;
+        return key->sub_a == snd.data.two_subs.a &&
+               key->sub_b == snd.data.two_subs.b;
       case SUBS_ONE:
-        return key->sub_a == snd.sub_a;
+        return key->sub_a == snd.data.one_sub.ind;
       case SUBS_EXTERNAL:
-        return key->sub_amt == snd.sub_amt &&
-               typeref_arrs_eq(key->subs,
-                               &VEC_DATA_PTR(&builder->inds)[snd.subs_start],
-                               key->sub_amt);
+        return key->sub_amt == snd.data.more_subs.amt &&
+               typeref_arrs_eq(
+                 key->subs,
+                 &VEC_DATA_PTR(&builder->inds)[snd.data.more_subs.start],
+                 key->sub_amt);
     }
   }
 

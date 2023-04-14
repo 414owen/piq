@@ -58,20 +58,26 @@ VEC_DECL(typevar);
 
 typedef struct {
   union {
-    type_tag tag;
-    type_check_tag check_tag;
-  };
+    // includes type variables, used in typecheck phase
+    type_check_tag check;
+    // no type variables
+    type_tag normal;
+  } tag;
+
   union {
     typevar type_var;
     struct {
-      type_ref subs_start;
-      type_ref sub_amt;
-    };
+      type_ref start;
+      type_ref amt;
+    } more_subs;
     struct {
-      type_ref sub_a;
-      type_ref sub_b;
-    };
-  };
+      type_ref ind;
+    } one_sub;
+    struct {
+      type_ref a;
+      type_ref b;
+    } two_subs;
+  } data;
 } type;
 
 VEC_DECL(type);
@@ -118,17 +124,17 @@ typedef struct {
   type_ref *inds;
 } type_tree;
 
-#define T_FN_PARAM_AMT(node) ((node).sub_amt - 1)
-#define T_FN_PARAM_IND(inds, node, i) (inds)[(node).subs_start + i]
-#define T_FN_RET_IND(inds, node) (inds)[(node).subs_start + (node).sub_amt - 1]
+#define T_FN_PARAM_AMT(node) ((node).data.more_subs.amt - 1)
+#define T_FN_PARAM_IND(inds, node, i) (inds)[(node).data.more_subs.start + i]
+#define T_FN_RET_IND(inds, node) (inds)[(node).data.more_subs.start + (node).data.more_subs.amt - 1]
 
-#define T_OR_SUB_AMT(node) ((node).sub_amt)
-#define T_OR_SUB_IND(inds, node, i) (inds)[(node).subs_start + i]
+#define T_OR_SUB_AMT(node) ((node).data.more_subs.amt)
+#define T_OR_SUB_IND(inds, node, i) (inds)[(node).data.more_subs.start + i]
 
-#define T_LIST_SUB_IND(node) node.sub_a
-#define T_TUP_SUB_AMT(node) 2
-#define T_TUP_SUB_A(node) node.sub_a
-#define T_TUP_SUB_B(node) node.sub_b
+#define T_LIST_SUB_IND(node) node.data.one_sub.ind
+
+#define T_TUP_SUB_A(node) node.data.two_subs.a
+#define T_TUP_SUB_B(node) node.data.two_subs.b
 
 void free_type_builder(type_builder tb);
 tree_node_repr type_repr(type_check_tag tag);
@@ -164,6 +170,8 @@ typedef struct {
 type_traversal traverse_types(types);
 */
 
+// Used as a key in hashmaps, where we haven't yet added the type
+// to the builder.
 typedef struct {
   type_check_tag tag;
   union {
