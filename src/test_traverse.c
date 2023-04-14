@@ -184,7 +184,7 @@ static void test_traversal(test_state *state, const char *input,
                            traverse_mode mode, test_traverse_elem *elems,
                            int amount) {
   parse_tree_res pres = test_upto_parse_tree(state, input);
-  if (pres.type != PRT_SUCCESS) {
+  if (!pres.success) {
     return;
   }
   pt_traversal traversal = pt_traverse(pres.tree, mode);
