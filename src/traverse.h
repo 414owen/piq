@@ -104,10 +104,8 @@ typedef struct {
   vec_traverse_action actions;
   environment_ind_t environment_amt;
   vec_environment_ind environment_len_stack;
-  union {
-    vec_node_ind node_stack;
-    vec_node_ind amt_stack;
-  };
+  // two names for the same stack
+  vec_node_ind node_stack;
   traverse_mode mode;
   traversal_wanted_actions wanted_actions;
 } pt_traversal;
