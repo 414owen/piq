@@ -20,7 +20,7 @@ typedef struct {
   union {
     node_ind_t type_ind;
     char *str;
-  };
+  } data;
 } print_action;
 
 VEC_DECL(print_action);
@@ -28,7 +28,7 @@ VEC_DECL(print_action);
 static void push_node(vec_print_action *stack, node_ind_t type_ind) {
   print_action act = {
     .tag = PRINT_TYPE,
-    .type_ind = type_ind,
+    .data.type_ind = type_ind,
   };
   VEC_PUSH(stack, act);
 }
@@ -36,7 +36,7 @@ static void push_node(vec_print_action *stack, node_ind_t type_ind) {
 static void push_str(vec_print_action *stack, char *str) {
   print_action act = {
     .tag = PRINT_STRING,
-    .str = str,
+    .data.str = str,
   };
   VEC_PUSH(stack, act);
 }
@@ -153,10 +153,10 @@ void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root) {
     VEC_POP(&stack, &action);
     switch (action.tag) {
       case PRINT_STRING:
-        fputs(action.str, f);
+        fputs(action.data.str, f);
         break;
       case PRINT_TYPE: {
-        type node = types[action.type_ind];
+        type node = types[action.data.type_ind];
         size_t stack_top = stack.len;
         switch (node.tag.check) {
           case TC_VAR: {
