@@ -403,7 +403,7 @@ int main(int argc, const char **argv) {
   argument bench_args[] = {
     {
       .tag = ARG_FLAG,
-      .long_name = "write-json",
+      .names.long_name = "write-json",
       .short_name = 'j',
       .data.flag_val = &conf.write_json,
       .description = "Write a json report (for continuous benchmarking CI)",
@@ -420,7 +420,7 @@ int main(int argc, const char **argv) {
     [SUB_BENCH] =
       {
         .tag = ARG_SUBCOMMAND,
-        .subcommand_name = "bench",
+        .names.subcommand_name = "bench",
         .data.subcommand =
           {
             .subs = bench_arg_bag,
@@ -431,38 +431,38 @@ int main(int argc, const char **argv) {
     {
       .tag = ARG_FLAG,
       .short_name = 'v',
-      .long_name = "verbose",
+      .names.long_name = "verbose",
       .data.flag_val = &global_args.verbose,
       .description = "print extra information for debugging purposes",
     },
     {
       .tag = ARG_FLAG,
-      .long_name = "extra-verbose",
+      .names.long_name = "extra-verbose",
       .data.flag_val = &global_args.extra_verbose,
       .description = "print a lot of extra information for debugging purposes",
     },
     {
       .tag = ARG_FLAG,
-      .long_name = "lite",
+      .names.long_name = "lite",
       .short_name = 'l',
       .data.flag_val = &conf.lite,
       .description = "Turn off stress tests",
     },
     {.tag = ARG_FLAG,
-     .long_name = "junit",
+     .names.long_name = "junit",
      .short_name = 'j',
      .data.flag_val = &conf.junit,
      .description = "Create JUnit compatible test-results.xml file"},
     {
       .tag = ARG_INT,
-      .long_name = "times",
+      .names.long_name = "times",
       .short_name = 't',
       .data.int_val = &conf.times,
       .description = "Run the test suite more than once (for benchmarking)",
     },
     {
       .tag = ARG_STRING,
-      .long_name = "match",
+      .names.long_name = "match",
       .short_name = 'm',
       .data.string_val = &conf.filter_str,
       .description = "filter tests by name. Matches on <group>.<group>.<test>",

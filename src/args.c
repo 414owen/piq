@@ -35,7 +35,7 @@ static char *type_strs[] = {
 static const argument help_arg = {
   .tag = ARG_FLAG,
   .short_name = 'h',
-  .long_name = "help",
+  .names.long_name = "help",
   .long_len = 4,
   .description = "list available commands and arguments",
 };
@@ -46,7 +46,7 @@ static void print_argument(argument a, int max_long_len, int max_type_len) {
          a.short_name == '\0' ? ' ' : a.short_name,
          2 + max_long_len - a.long_len,
          "",
-         a.long_name,
+         a.names.long_name,
          2 + max_type_len,
          type_str,
          a.description);
@@ -97,7 +97,7 @@ static void print_help_internal(parse_state *state) {
       if (a.tag == ARG_SUBCOMMAND) {
         printf("%*s %*s %s\n",
                8 + max_long_len,
-               a.subcommand_name,
+               a.names.subcommand_name,
                2 + max_type_len,
                "",
                a.description);
@@ -162,7 +162,7 @@ static void parse_long(parse_state *restrict state,
     argument a = state->arguments->args[i];
     // TODO --arg=val form
     bool prefix_matches = arg_str_len >= a.long_len &&
-                          strncmp(arg_str, a.long_name, a.long_len) == 0;
+                          strncmp(arg_str, a.names.long_name, a.long_len) == 0;
     bool matches = prefix_matches && arg_str_len == a.long_len;
     bool matched = false;
     switch (a.tag) {
@@ -178,7 +178,7 @@ static void parse_long(parse_state *restrict state,
       case ARG_STRING:
         if (matches) {
           if (state->arg_cursor == state->argc - 1) {
-            expected_argument(state, a.long_name);
+            expected_argument(state, a.names.long_name);
           }
           state->arg_cursor++;
           const char *str = state->argv[state->arg_cursor];
@@ -280,10 +280,10 @@ static void parse_noprefix(parse_state *state, const char *restrict arg_str) {
     if (a.tag != ARG_SUBCOMMAND) {
       continue;
     }
-    if (strcmp(arg_str, a.subcommand_name) == 0) {
+    if (strcmp(arg_str, a.names.subcommand_name) == 0) {
       subcommand_taken = true;
       state->arg_cursor++;
-      VEC_PUSH(&state->subcommands, a.subcommand_name);
+      VEC_PUSH(&state->subcommands, a.names.subcommand_name);
       state->arguments->subcommand_chosen = a.data.subcommand.value;
       argument_bag *tmp = state->arguments;
       state->arguments = &a.data.subcommand.subs;
@@ -312,7 +312,7 @@ static void preprocess_and_validate_args(argument_bag bag) {
       case ARG_STRING:
       case ARG_INT:
         assert(a.short_name == 0 || valid_short_flag(a.short_name));
-        bag.args[i].long_len = strlen(a.long_name);
+        bag.args[i].long_len = strlen(a.names.long_name);
         break;
     }
   }
