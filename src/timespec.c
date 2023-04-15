@@ -111,4 +111,3 @@ uint64_t timespec_to_nanoseconds(timespec ts) {
 }
 
 #endif
-
