@@ -25,15 +25,14 @@ COMMON_FLAGS += -pipe
 COMMON_FLAGS += -ffast-math
 COMMON_FLAGS += -flto
 COMMON_FLAGS += -fshort-enums
-COMMON_FLAGS += $CFLAGS
 COMMON_FLAGS += $EDITLINE_CFLAGS
 COMMON_FLAGS += $LLVM_CFLAGS
 COMMON_FLAGS += -fdiagnostics-color=always
 
-CXXFLAGS = $(COMMON_FLAGS) -std=gnu++17 $CXXFLAGS -fno-exceptions
+CXXFLAGS = $(COMMON_FLAGS) -std=gnu++17 -fno-exceptions $CXXFLAGS
 
 # This seems to get tinycc to pick up c11, but gcc/clang to pick up gnu11
-CFLAGS = $(COMMON_FLAGS) -std=c99
+CFLAGS = $(COMMON_FLAGS) -std=c99 $CFLAGS
 
 common_objs += bitset.o
 common_objs += consts.o
