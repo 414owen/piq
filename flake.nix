@@ -59,39 +59,29 @@
 
         src = pkgs.nix-gitignore.gitignoreSource [] ./.;
 
-        app = {files ? ["piq"]}: stdenv.mkDerivation rec {
+        app = {installTests ? false}: stdenv.mkDerivation rec {
           name = packageName;
 
           inherit src;
 
           nativeBuildInputs = with pkgs; [
+            # breakpointHook
+            # gnused
             cmake
-            ninja
             re2c
             lemon
-            pkg-config
             editline
-            tup
           ];
+
+          cmakeFlags = if installTests then [
+            "-DINSTALL_TEST=true"
+          ] else [];
 
           buildInputs = with pkgs; [
             llvmPackages_14.libllvm
             hedley
             predef
           ];
-
-          CFLAGS = "-s -DTIME_ALL";
-
-          buildPhase = ''
-            . ./scripts/environment.sh
-            tup generate build.sh
-            ./build.sh
-          '';
-
-          installPhase = ''
-            mkdir -p $out/bin
-            ${str.concatMapStrings (f: "mv ${f} $out/bin/${f}\n") files}
-          '';
         };
 
         noopInstall = ''
@@ -102,15 +92,14 @@
       rec {
         packages = {
           ${packageName} = app {};
-          "${packageName}-tests" = app {files = ["test"];};
-          "${packageName}-all" = app {files = ["piq" "test"];};
+          "${packageName}-all" = app {installTests = true;};
           "${packageName}-metrics" = pkgs.stdenvNoCC.mkDerivation {
             name = "metrics";
             unpackPhase = "true";
             buildInputs = [pkgs.jq];
             buildPhase = ''
               builddir=$PWD
-              ${packages."${packageName}-all"}/bin/test bench -j
+              ${packages."${packageName}-all"}/bin/test-exe bench -j
               pushd ${packages."${packageName}-all"}/bin
               ${./scripts/collect-size-metrics.sh} > $builddir/sizes.json
               popd
@@ -158,7 +147,7 @@
             name = "formatting";
             unpackPhase = "true";
             buildPhase = ''
-              ${packages."${packageName}-tests"}/bin/test --lite
+              ${packages."${packageName}-all"}/bin/test-exe --lite
             '';
             installPhase = noopInstall;
           };
@@ -171,7 +160,7 @@
             unpackPhase = "true";
             buildPhase = ''
               valgrind --leak-check=full --error-exitcode=1 \
-                ${packages."${packageName}-tests"}/bin/test --lite
+                ${packages."${packageName}-all"}/bin/test-exe --lite
             '';
             installPhase = noopInstall;
           };
@@ -186,6 +175,7 @@
               clang-tools
               clang-tools.clang
               bear
+              ninja
               lldb
               lcov
               valgrind
@@ -196,14 +186,7 @@
           ];
 
           inputsFrom = builtins.attrValues packages;
-
-          CFLAGS = "-O0 -ggdb -Werror -DTIME_ALL";
-          CPATH = pkgs.lib.makeSearchPathOutput "dev" "include" packages.${packageName}.buildInputs;
-
-          shellHook = ''
-            source ${./scripts/environment.sh}
-            tup compiledb
-          '';
+          CFLAGS = "-DTIME_ALL";
         };
       });
 }

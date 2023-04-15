@@ -56,11 +56,16 @@ static void test_parser_succeeds_on_form(test_state *state, char *input,
   char *new_input;
   char *old_str = output.str;
   if (output.tag == STRING) {
-    asprintf(&output.str,
-             "(FunctionStatement (TermName a) (FunctionBodyExpression %s))",
-             old_str);
+    int amt =
+      asprintf(&output.str,
+               "(FunctionStatement (TermName a) (FunctionBodyExpression %s))",
+               old_str);
+    (void)amt;
   }
-  asprintf(&new_input, "(fun a () %s)", input);
+  {
+    int amt = asprintf(&new_input, "(fun a () %s)", input);
+    (void)amt;
+  }
   test_parser_succeeds_on(state, new_input, output);
   free(new_input);
   if (output.tag == STRING) {
@@ -128,7 +133,10 @@ static void test_parser_fails_on_form(test_state *state, char *input,
                                       buf_ind_t pos, node_ind_t expected_amt,
                                       const token_type *expected) {
   char *new_input;
-  asprintf(&new_input, "(fun a () %s)", input);
+  {
+    int amt = asprintf(&new_input, "(fun a () %s)", input);
+    (void)amt;
+  }
   test_parser_fails_on(state, new_input, pos + 4, expected_amt, expected);
   free(new_input);
 }
@@ -490,9 +498,16 @@ static void test_mismatched_parens(test_state *state) {
 static void test_parser_succeeds_on_type(test_state *state, char *in,
                                          char *ast) {
   char *full_ast;
-  asprintf(&full_ast, "(TypeSignatureStatement (TermName a) %s)", ast);
+  {
+    int amt =
+      asprintf(&full_ast, "(TypeSignatureStatement (TermName a) %s)", ast);
+    (void)amt;
+  }
   char *full_in;
-  asprintf(&full_in, "(sig a %s)", in);
+  {
+    int amt = asprintf(&full_in, "(sig a %s)", in);
+    (void)amt;
+  }
   expected_output out = {.tag = STRING, .str = full_ast};
   test_parser_succeeds_on(state, full_in, out);
   free(full_ast);

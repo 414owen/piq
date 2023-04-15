@@ -121,7 +121,7 @@ HEDLEY_NON_NULL(1, 2)
 NON_NULL_PARAMS
 void memset_arbitrary(void *dest, void *el, size_t amt, size_t elsize);
 
-NON_NULL_ALL
+HEDLEY_NON_NULL(3)
 MALLOC_ATTR_2(free, 1)
 char *join(const size_t str_amt, const char *const *const strs,
            const char *sep);

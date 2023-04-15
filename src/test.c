@@ -56,7 +56,8 @@ static vec_string make_test_path(test_state *state) {
 
 static char *ne_reason(char *a_name, char *b_name) {
   char *res;
-  asprintf(&res, "Assert failed: '%s' != '%s'", a_name, b_name);
+  int amt = asprintf(&res, "Assert failed: '%s' != '%s'", a_name, b_name);
+  (void)amt;
   return res;
 }
 

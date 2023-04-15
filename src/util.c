@@ -4,6 +4,7 @@
 
 #include <alloca.h>
 #include <errno.h>
+#include <hedley.h>
 #include <predef/predef.h>
 #include <pwd.h>
 #include <stdarg.h>
@@ -208,15 +209,15 @@ char *read_entire_file(const char *restrict file_path) {
     long fsize = ftell(f);
     buf_ind_t max_buf = 0;
     max_buf -= 1;
-    rewind(f);
-    char *string = malloc(fsize + 1);
-    fread(string, fsize, 1, f);
-    if (errno != 0) {
-      perror("Error reading from file");
-      exit(1);
-    }
     if (fsize > max_buf) {
       fprintf(stderr, "File size can't exceed %d\n", max_buf);
+      exit(1);
+    }
+    rewind(f);
+    char *string = malloc(fsize + 1);
+    size_t amt = fread(string, fsize, 1, f);
+    if (errno != 0 || (size_t)fsize != amt) {
+      perror("Error reading from file");
       exit(1);
     }
     fclose(f);
@@ -251,7 +252,8 @@ char *format_to_string(const char *restrict fmt, ...) {
   char *res;
   va_list ap;
   va_start(ap, fmt);
-  vasprintf(&res, fmt, ap);
+  int written = vasprintf(&res, fmt, ap);
+  (void)written;
   va_end(ap);
   return res;
 }
@@ -290,7 +292,7 @@ void reverse_arbitrary(void *dest, size_t amt, size_t elsize) {
   stfree(tmp, elsize);
 }
 
-NON_NULL_ALL
+HEDLEY_NON_NULL(3)
 MALLOC_ATTR_2(free, 1)
 char *join(const size_t str_amt, const char *const *restrict const strs,
            const char *restrict sep) {
