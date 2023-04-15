@@ -213,7 +213,7 @@ bool type_contains_specific_typevar(const type_builder *types, type_ref root,
                                     typevar a) {
   cmp_specific_typevar_ctx ctx = {
     .target = a,
-    .substitutions = VEC_DATA_PTR(&types->substitutions),
+    .substitutions = VEC_DATA_PTR(&types->data.substitutions),
     .types = VEC_DATA_PTR(&types->types),
   };
   return type_contains_typevar_by(types, root, cmp_typevar, &ctx);
@@ -229,7 +229,7 @@ static var_step_res is_unsubstituted_typevar_step(typevar a,
                                                   const void *data_p) {
   const unsubstituted_check_data *data = (unsubstituted_check_data *)data_p;
   const type_builder *builder = &data->builder;
-  const type_ref type_ind = VEC_GET(builder->substitutions, a);
+  const type_ref type_ind = VEC_GET(builder->data.substitutions, a);
   const type t = VEC_GET(builder->types, type_ind);
   // If this branch containsunsubstituted vars
   // they'll be reported by their parse_node.
@@ -305,7 +305,7 @@ type_builder new_type_builder(void) {
     .inds = VEC_NEW,
     .type_to_index =
       hashset_new(type_ref, cmp_newtype_eq, hash_newtype, hash_stored_type),
-    .substitutions = VEC_NEW,
+    .data.substitutions = VEC_NEW,
   };
   return type_builder;
 }
@@ -324,6 +324,6 @@ type_builder new_type_builder_with_builtins(void) {
 void free_type_builder(type_builder tb) {
   VEC_FREE(&tb.inds);
   VEC_FREE(&tb.types);
-  VEC_FREE(&tb.substitutions);
+  VEC_FREE(&tb.data.substitutions);
   ahm_free(&tb.type_to_index);
 }
