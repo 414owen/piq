@@ -52,7 +52,7 @@ typedef struct {
   bool bench;
   bool lite;
   int times;
-  const char *filter_str;
+  char *filter_str;
   bool write_json;
 } test_config;
 

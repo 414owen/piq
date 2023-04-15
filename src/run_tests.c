@@ -385,7 +385,7 @@ typedef struct {
   bool extra_verbose;
 } global_arguments;
 
-int main(int argc, const char **argv) {
+int main(int argc, char **argv) {
   initialise();
 
   global_arguments global_args = {

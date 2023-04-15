@@ -38,7 +38,7 @@ static void test_llvm_code_produces_int(test_state *state,
   llvm_symbol_test tests[] = {
     {
       .symbol_name = "test",
-      .test_callback = (voidfn)test_produces_int_callback,
+      .test_callback = (symbol_test)test_produces_int_callback,
       .data = &expected,
     },
   };
@@ -84,7 +84,7 @@ static void test_llvm_code_maps_ints(test_state *state,
   llvm_symbol_test tests[] = {
     {
       .symbol_name = "test",
-      .test_callback = (voidfn)test_maps_ints_callback,
+      .test_callback = (symbol_test)test_maps_ints_callback,
       .data = &test_cases,
     },
   };
@@ -100,12 +100,14 @@ static void test_llvm_code_produces_bool(test_state *state,
                                          const char *restrict input,
                                          bool expected) {
   llvm_symbol_test test = {.symbol_name = "test",
-                           .test_callback = (voidfn)test_produces_bool_callback,
+                           .test_callback =
+                             (symbol_test)test_produces_bool_callback,
                            .data = &expected};
   test_upto_codegen_with(state, input, &test, 1);
 }
 
 char *test_code_runs_callback(voidfn f, void *data) {
+  (void)data;
   f();
   return NULL;
 }
@@ -113,7 +115,7 @@ char *test_code_runs_callback(voidfn f, void *data) {
 static void test_llvm_code_runs(test_state *state, const char *restrict input) {
   llvm_symbol_test test = {
     .symbol_name = "test",
-    .test_callback = (voidfn)test_code_runs_callback,
+    .test_callback = (symbol_test)test_code_runs_callback,
   };
   test_upto_codegen_with(state, input, &test, 1);
 }

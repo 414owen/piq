@@ -196,7 +196,7 @@
 
           inputsFrom = builtins.attrValues packages;
 
-          CFLAGS = "-std=c99 -pedantic -O0 -ggdb -Wall -Wextra -DTIME_ALL";
+          CFLAGS = "-O0 -ggdb -Werror -DTIME_ALL";
           CPATH = pkgs.lib.makeSearchPathOutput "dev" "include" packages.${packageName}.buildInputs;
 
           shellHook = ''
