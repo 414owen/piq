@@ -233,7 +233,7 @@ const type builtin_types[] = {
 
   [any_int_type_ind] =
     {
-      .tag.normal = TC_OR,
+      .tag.check = TC_OR,
       .data.more_subs =
         {
           // signed and usigned 8, 16, 32, and 64 bits

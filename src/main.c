@@ -32,9 +32,9 @@ typedef struct {
 typedef struct {
   bool stdin_input;
   bool no_codegen;
-  const char *input_file_path;
+  char *input_file_path;
   char *output_file_path;
-  const char *llvm_dump_path;
+  char *llvm_dump_path;
 } compile_arguments;
 
 static void compile_llvm(compile_arguments args) {
@@ -149,7 +149,7 @@ static char *validate_compile_args(compile_arguments args) {
 
 // Create the pass manager.
 // This one corresponds to a typical -O2 optimization pipeline.
-int main(const int argc, const char **argv) {
+int main(const int argc, char **argv) {
 
   // Parsed arguments
 

@@ -326,7 +326,7 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
     case PT_ALL_EX_TUP:
       if (bs_peek(&s->in_tuple)) {
         // right-associated 2-tuples are written as n-tuples
-        print_compound(s, "", ", ", "", node);
+        print_compound(s, "%s", ", ", "", node, "");
       } else {
         print_compound(s, "(", ", ", ")", node);
       }

@@ -39,7 +39,7 @@ struct argument {
 
   union {
     bool *flag_val;
-    const char **string_val;
+    char **string_val;
     int *int_val;
     struct {
       argument_bag subs;
@@ -56,5 +56,5 @@ typedef struct {
   const char *preamble;
 } program_args;
 
-void parse_args(program_args args, int argc, const char **argv);
-void print_help(program_args program_args, int argc, const char **argv);
+void parse_args(program_args args, int argc, char **argv);
+void print_help(program_args program_args, int argc, char **argv);

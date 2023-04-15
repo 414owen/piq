@@ -20,10 +20,12 @@ static uint32_t hash_eight_bytes(uint32_t seed, uint64_t bytes) {
 }
 
 static uint32_t hash_u64(const void *val, const void *context) {
+  (void)context;
   return hash_eight_bytes(0, *((uint64_t *)val));
 }
 
 static bool cmp_u64(const void *a, const void *b, const void *context) {
+  (void)context;
   return *((uint64_t *)a) == *((uint64_t *)b);
 }
 

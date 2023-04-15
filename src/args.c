@@ -14,7 +14,7 @@
 #include "vec.h"
 
 typedef struct {
-  const char **restrict argv;
+  char **restrict argv;
   int arg_cursor;
   int argc;
   program_args program_args;
@@ -134,7 +134,7 @@ static void expected_argument(parse_state *restrict state,
   exit(1);
 }
 
-static void assign_data(argument a, const char *str) {
+static void assign_data(argument a, char *str) {
   // convert from string to type
   switch (a.tag) {
     case ARG_INT:
@@ -151,8 +151,7 @@ static void assign_data(argument a, const char *str) {
   }
 }
 
-static void parse_long(parse_state *restrict state,
-                       const char *restrict arg_str) {
+static void parse_long(parse_state *restrict state, char *restrict arg_str) {
   size_t arg_str_len = strlen(arg_str);
   if (strcmp(arg_str, "help") == 0) {
     print_help_internal(state);
@@ -181,11 +180,11 @@ static void parse_long(parse_state *restrict state,
             expected_argument(state, a.names.long_name);
           }
           state->arg_cursor++;
-          const char *str = state->argv[state->arg_cursor];
+          char *str = state->argv[state->arg_cursor];
           assign_data(a, str);
           matched = true;
         } else if (prefix_matches && arg_str[a.long_len] == '=') {
-          const char *str = &arg_str[a.long_len + 1];
+          char *str = &arg_str[a.long_len + 1];
           assign_data(a, str);
           matched = true;
         }
@@ -246,7 +245,7 @@ static void parse_short(parse_state *state, const char *restrict arg_str) {
               expected_argument(state, s);
             }
             cursor++;
-            const char *str = state->argv[cursor];
+            char *str = state->argv[cursor];
             assign_data(a, str);
           }
           break;
@@ -326,7 +325,7 @@ typedef enum {
 
 static void parse_args_rec(parse_state *state) {
   while (state->arg_cursor < state->argc) {
-    const char *arg_str = state->argv[state->arg_cursor];
+    char *arg_str = state->argv[state->arg_cursor];
     prefix_type prefix_type = PREFIX_NONE;
 
     if (arg_str[0] == '-') {
@@ -353,7 +352,7 @@ static void parse_args_rec(parse_state *state) {
 }
 
 static parse_state new_state(program_args program_args, int argc,
-                             const char **restrict argv) {
+                             char **restrict argv) {
   parse_state res = {
     // assume the first parameter is the program name
     .arg_cursor = 1,
@@ -366,14 +365,12 @@ static parse_state new_state(program_args program_args, int argc,
   return res;
 }
 
-void print_help(program_args program_args, int argc,
-                const char **restrict argv) {
+void print_help(program_args program_args, int argc, char **restrict argv) {
   parse_state state = new_state(program_args, argc, argv);
   print_help_internal(&state);
 }
 
-void parse_args(program_args program_args, int argc,
-                const char **restrict argv) {
+void parse_args(program_args program_args, int argc, char **restrict argv) {
   preprocess_and_validate_args(*program_args.root);
   parse_state state = new_state(program_args, argc, argv);
   parse_args_rec(&state);
