@@ -15,8 +15,11 @@ static type_ref find_inline_type(type_builder *tb, type_check_tag tag,
                                  type_ref sub_a, type_ref sub_b) {
   type_key_with_ctx key = {
     .tag = tag,
-    .sub_a = sub_a,
-    .sub_b = sub_b,
+    .data.two_subs =
+      {
+        .a = sub_a,
+        .b = sub_b,
+      },
   };
   u32 bucket_ind = ahm_lookup(&tb->type_to_index, &key, tb);
   // TODO remove this branch somehow
@@ -77,8 +80,11 @@ type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
   }
   const type_key_with_ctx key = {
     .tag = tag,
-    .sub_amt = sub_amt,
-    .subs = subs,
+    .data.more_subs =
+      {
+        .amt = sub_amt,
+        .arr = subs,
+      },
   };
   type_ref ind = find_type(tb, &key);
   if (ind < tb->types.len)
@@ -283,16 +289,16 @@ static bool cmp_newtype_eq(const void *key_p, const void *stored_key,
       case SUBS_NONE:
         return true;
       case SUBS_TWO:
-        return key->sub_a == snd.data.two_subs.a &&
-               key->sub_b == snd.data.two_subs.b;
+        return key->data.two_subs.a == snd.data.two_subs.a &&
+               key->data.two_subs.b == snd.data.two_subs.b;
       case SUBS_ONE:
-        return key->sub_a == snd.data.one_sub.ind;
+        return key->data.one_sub.ind == snd.data.one_sub.ind;
       case SUBS_EXTERNAL:
-        return key->sub_amt == snd.data.more_subs.amt &&
+        return key->data.more_subs.amt == snd.data.more_subs.amt &&
                typeref_arrs_eq(
-                 key->subs,
+                 key->data.more_subs.arr,
                  &VEC_DATA_PTR(&builder->inds)[snd.data.more_subs.start],
-                 key->sub_amt);
+                 key->data.more_subs.amt);
     }
   }
 
