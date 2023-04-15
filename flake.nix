@@ -144,6 +144,15 @@
             installPhase = noopInstall;
           };
 
+          "licences" = pkgs.stdenvNoCC.mkDerivation {
+            name = "licenses";
+            inherit src;
+            buildPhase = ''
+              ${pkgs.bash}/bin/bash ${packages.${packageName}.src}/scripts/checks/licences.sh
+            '';
+            installPhase = noopInstall;
+          };
+
           "tests" = pkgs.stdenvNoCC.mkDerivation {
             name = "formatting";
             unpackPhase = "true";
