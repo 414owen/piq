@@ -67,7 +67,8 @@ static void fail_with(test_state *state, char *reason) {
   failure f = {.path = make_test_path(state), .reason = reason};
   VEC_PUSH(&state->failures, f);
   if (state->config.junit) {
-    VEC_PUSH(&state->actions, TEST_FAIL);
+    test_action act = TEST_FAIL;
+    VEC_PUSH(&state->actions, act);
   }
 }
 
@@ -258,12 +259,17 @@ void write_test_results(test_state *state) {
       default:
         break;
     }
-    for (size_t j = 0; j < depth; j++)
+
+    for (size_t j = 0; j < depth; j++) {
       fputs("  ", f);
+    }
+
     switch (action) {
       case GROUP_ENTER: {
-        test_aggregate agg = VEC_GET(aggs, agg_ind--);
-        char *str = VEC_GET(state->strs, str_ind++);
+        test_aggregate agg = VEC_GET(aggs, agg_ind);
+        agg_ind--;
+        char *str = VEC_GET(state->strs, str_ind);
+        str_ind++;
         fprintf(f,
                 "<testsuite name=\"%s\" tests=\"%u\" failures=\"%u\">\n",
                 str,
@@ -276,7 +282,8 @@ void write_test_results(test_state *state) {
       case TEST_ENTER:
         fprintf(f,
                 "<testcase name=\"%s\" classname=\"",
-                VEC_GET(state->strs, str_ind++));
+                VEC_GET(state->strs, str_ind));
+        str_ind++;
         for (size_t i = 0; i < class_path.len; i++) {
           if (i > 0)
             putc('/', f);
@@ -293,7 +300,8 @@ void write_test_results(test_state *state) {
       case TEST_FAIL:
         fprintf(f,
                 "<failure message=\"Assertion failure\">%s</failure>\n",
-                VEC_GET(state->failures, fail_ind++).reason);
+                VEC_GET(state->failures, fail_ind).reason);
+        fail_ind--;
         break;
     }
   }
