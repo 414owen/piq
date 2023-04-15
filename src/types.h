@@ -95,7 +95,7 @@ typedef struct {
   //   },
   //   {
   //     .tag = T_FN,
-  //     .subs_start = 0,
+  //     .subs_s/tart = 0,
   //     .sub_amt = 3,
   //   },
   //   { .tag = T_I32, },
@@ -107,16 +107,20 @@ typedef struct {
   //   2, 3, 4, 5
   // }
   //
+
   // Reuses indices 0-3 in two function types, and is perfectly valid.
-  // Unfortunately, we don't currently reuse runs of indices.
-  // I had a quick go at it using suffix arrays, but in the end I
-  // got fed up and deleted the work. See commit
+  // Unfortunately, we don't currently reuse runs of indices, unless we're
+  // reuing the whole type. I had a quick go at reusing runs using suffix
+  // arrays, but in the end I got fed up and deleted the work. See commit
   // c23046ca2496f19ea165aaf9c078397db597d410 if you want to revive the work.
   vec_type_ref inds;
+
+  // Looking back at these, I think they're used in different parts of the
+  // typechecker. I'll comment if I remember.
   union {
     vec_type_ref node_types;
     vec_type_ref substitutions;
-  };
+  } data;
 } type_builder;
 
 typedef struct {

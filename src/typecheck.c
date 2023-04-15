@@ -55,12 +55,13 @@ static void annotate_parse_tree(const parse_tree tree, type_builder *builder) {
   // * That's it
   //
   // let's estimate there will be one of them every 100 nodes...
-  VEC_RESERVE(&builder->substitutions, tree.node_amt + tree.node_amt / 100);
+  VEC_RESERVE(&builder->data.substitutions,
+              tree.node_amt + tree.node_amt / 100);
   VEC_RESERVE(&builder->types, tree.node_amt);
   type_ref prev_types_len = builder->types.len;
 
-  builder->substitutions.len = tree.node_amt;
-  type_ref *substitutions = VEC_DATA_PTR(&builder->substitutions);
+  builder->data.substitutions.len = tree.node_amt;
+  type_ref *substitutions = VEC_DATA_PTR(&builder->data.substitutions);
 
   for (node_ind_t i = 0; i < tree.node_amt; i++) {
     type t = {
@@ -86,12 +87,12 @@ generate_constraints_push_environment(tc_constraint_builder *builder,
                                       node_ind_t node_ind) {
   // remember, node index is used as type variable
   VEC_PUSH(&builder->environment,
-           VEC_GET(builder->type_builder->node_types, node_ind));
+           VEC_GET(builder->type_builder->data.node_types, node_ind));
 }
 
 static type_ref generate_node_type(tc_constraint_builder *builder,
                                    node_ind_t node_ind) {
-  return VEC_GET(builder->type_builder->node_types, node_ind);
+  return VEC_GET(builder->type_builder->data.node_types, node_ind);
 }
 
 static void generate_constraints_visit(tc_constraint_builder *builder,
@@ -215,8 +216,8 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
         }
       } else {
         sub_type = mk_type_var(builder->type_builder,
-                               builder->type_builder->substitutions.len);
-        VEC_PUSH(&builder->type_builder->substitutions, sub_type);
+                               builder->type_builder->data.substitutions.len);
+        VEC_PUSH(&builder->type_builder->data.substitutions, sub_type);
       }
       const type_ref list_type =
         mk_type_inline(builder->type_builder, TC_LIST, sub_type, 0);
@@ -317,9 +318,9 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
 static void generate_constraints_link_sigs(tc_constraint_builder *builder,
                                            traversal_link_sig_data elem) {
   const type_ref sig_type =
-    VEC_GET(builder->type_builder->node_types, elem.sig_index);
+    VEC_GET(builder->type_builder->data.node_types, elem.sig_index);
   const type_ref linked_type =
-    VEC_GET(builder->type_builder->node_types, elem.linked_index);
+    VEC_GET(builder->type_builder->data.node_types, elem.linked_index);
   add_type_constraint(builder, sig_type, linked_type, elem.linked_index);
 }
 
@@ -406,7 +407,7 @@ static void unify_typevar(unification_state *state, typevar a, type_ref b_ind,
     VEC_PUSH(&state->errors, err);
     return;
   }
-  VEC_DATA_PTR(&state->types->substitutions)[a] = b_ind;
+  VEC_DATA_PTR(&state->types->data.substitutions)[a] = b_ind;
 #ifdef DEBUG_TC
   printf("Typevar %d := ", a);
   print_type(stdout,
@@ -430,7 +431,7 @@ static void unify_typevar(unification_state *state, typevar a, type_ref b_ind,
 // Returns true if there was a substitution for 't'
 static bool get_substitute_layer(type_builder *types, typevar t,
                                  type_ref *res) {
-  type_ref substitution_ind = VEC_GET(types->substitutions, t);
+  type_ref substitution_ind = VEC_GET(types->data.substitutions, t);
   type substitution = VEC_GET(types->types, substitution_ind);
   *res = substitution_ind;
   return substitution.tag.check != TC_VAR || substitution.data.type_var != t;
@@ -445,7 +446,7 @@ typedef struct {
 // and also reduces any chains to chains of one
 static resolved_type resolve_type(type_builder *type_builder,
                                   type_ref root_ind) {
-  vec_type_ref substitutions = type_builder->substitutions;
+  vec_type_ref substitutions = type_builder->data.substitutions;
   vec_type types = type_builder->types;
 
   resolved_type res = {
@@ -533,10 +534,10 @@ static tc_resolved_constraint tc_resolve_constraint(type_builder *types,
 // wrapper that only updates a type variable if it's valid
 // (meaning not equal to substitutions.len)
 static void update_typevar(type_builder *types, typevar t, type_ref val) {
-  if (t == types->substitutions.len) {
+  if (t == types->data.substitutions.len) {
     return;
   }
-  VEC_DATA_PTR(&types->substitutions)[t] = val;
+  VEC_DATA_PTR(&types->data.substitutions)[t] = val;
 }
 
 tc_constraint tc_swap_constraint(tc_constraint constraint) {
@@ -575,7 +576,7 @@ static void ensure_subtype(unification_state *state,
   type a = VEC_GET(types->types, constraint->target_a);
   type b = VEC_GET(types->types, constraint->target_b);
 
-  type_ref substitution_amt = types->substitutions.len;
+  type_ref substitution_amt = types->data.substitutions.len;
   if (constraint->last_type_var_a == substitution_amt &&
       constraint->last_type_var_b == substitution_amt) {
     give_up("Tried to unify OR types, but didn't have "
@@ -746,8 +747,8 @@ static void check_ambiguities(node_ind_t parse_node_amt, type_builder *builder,
   bitset visited = bs_new_false_n(builder->types.len);
   type *types = VEC_DATA_PTR(&builder->types);
   type_ref *inds = VEC_DATA_PTR(&builder->inds);
-  type_ref *node_type_inds = VEC_DATA_PTR(&builder->node_types);
-  node_ind_t *substitutions = VEC_DATA_PTR(&builder->substitutions);
+  type_ref *node_type_inds = VEC_DATA_PTR(&builder->data.node_types);
+  node_ind_t *substitutions = VEC_DATA_PTR(&builder->data.substitutions);
   for (node_ind_t node_ind = 0; node_ind < parse_node_amt; node_ind++) {
     type_ref root_ind = node_type_inds[node_ind];
     vec_type_ref stack = VEC_NEW;
@@ -809,7 +810,7 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
     */
 
     if (t.tag.check == TC_VAR) {
-      VEC_PUSH(&stack, VEC_GET(old->substitutions, t.data.type_var));
+      VEC_PUSH(&stack, VEC_GET(old->data.substitutions, t.data.type_var));
       bs_push(&first_pass_stack, first_pass);
       continue;
     }
@@ -887,7 +888,7 @@ static type_info cleanup_types(node_ind_t parse_node_amt, type_builder *old) {
   type_ref *node_types = malloc(sizeof(type_ref) * parse_node_amt);
 
   for (node_ind_t i = 0; i < parse_node_amt; i++) {
-    type_ref type_ind = VEC_GET(old->substitutions, i);
+    type_ref type_ind = VEC_GET(old->data.substitutions, i);
     node_types[i] = copy_type(old, &builder, type_ind);
   }
 
@@ -972,7 +973,7 @@ tc_res typecheck(const parse_tree tree) {
             .nodes = VEC_FINALIZE(&type_builder.types),
             .inds = VEC_FINALIZE(&type_builder.inds),
           },
-        .node_types = VEC_FINALIZE(&type_builder.substitutions),
+        .node_types = VEC_FINALIZE(&type_builder.data.substitutions),
       },
 #ifdef TIME_TYPECHECK
     .perf_values = perf_end(perf_state),
