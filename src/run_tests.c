@@ -19,6 +19,29 @@
 #include "tests.h"
 #include "timespec.h"
 
+static void run_tests(test_state *state) {
+  test_vec(state);
+  test_bitset(state);
+  test_hashmap(state);
+  test_strint(state);
+  test_utils(state);
+  test_diagnostics(state);
+  test_scanner(state);
+  test_parse_tree(state);
+  test_parser(state);
+  test_traverse(state);
+  test_typecheck(state);
+  test_semantics(state);
+  test_llvm(state);
+}
+
+enum {
+  SUB_NONE = -1,
+  SUB_BENCH = 0,
+} subcommand;
+
+#ifdef TIME_ANY
+
 const char *byte_suffixes[] = {"B", "KB", "MB", "GB", "TB"};
 const long mega = 1e6;
 
@@ -89,29 +112,8 @@ static void print_timespan_float_nanos(FILE *f, double nanos) {
   }
 }
 
-static void run_tests(test_state *state) {
-  test_vec(state);
-  test_bitset(state);
-  test_hashmap(state);
-  test_strint(state);
-  test_utils(state);
-  test_diagnostics(state);
-  test_scanner(state);
-  test_parse_tree(state);
-  test_parser(state);
-  test_traverse(state);
-  test_typecheck(state);
-  test_semantics(state);
-  test_llvm(state);
-}
-
 HEDLEY_NEVER_INLINE
 static void newline(FILE *f) { putc('\n', f); }
-
-enum {
-  SUB_NONE = -1,
-  SUB_BENCH = 0,
-} subcommand;
 
 typedef enum {
   METRIC_H_TOKENIZER,
@@ -176,7 +178,6 @@ static void print_metric_postamble(put_metric_state *state) {
     fputs("\n }", state->params.json_file);
   }
 }
-
 static void put_metric_amount(put_metric_state *state, amount_metric m) {
   put_metric_preamble(state, m.name);
   print_amount(stdout, m.amount);
@@ -377,6 +378,7 @@ static void put_perf_per_thing(put_metric_state *state, const char *operation,
   }
 #endif
 }
+#endif
 
 typedef struct {
   bool verbose;

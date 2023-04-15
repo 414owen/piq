@@ -94,6 +94,7 @@ static hash_t hash_string(hash_t seed, const char *str) {
      : hash_bytes(seed, (uint8_t *)(&(val)), sizeof(val)))
 
 hash_t hash_newtype(const void *key_p, const void *ctx) {
+  (void)ctx;
   type_key_with_ctx *key = (type_key_with_ctx *)key_p;
   hash_t hash = hash = hash_primitive(INITIAL_SEED, key->tag);
   switch (type_repr(key->tag)) {

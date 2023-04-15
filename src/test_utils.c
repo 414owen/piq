@@ -66,9 +66,8 @@ static void run_join_tests(test_state *state) {
 }
 
 static void test_timespec_subtract(test_state *state) {
-#ifdef STD_C11
   test_group_start(state, "Timespec");
-
+#ifdef STD_C11
   timespec res;
   timespec x;
   timespec y;
@@ -109,9 +108,8 @@ static void test_timespec_subtract(test_state *state) {
     test_assert_eq(state, res.tv_nsec, 1e9 - 1);
     test_end(state);
   }
-
-  test_group_end(state);
 #endif
+  test_group_end(state);
 }
 
 static void test_monotonic_time(test_state *state) {
