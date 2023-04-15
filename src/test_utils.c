@@ -117,7 +117,13 @@ static void test_timespec_subtract(test_state *state) {
 static void test_monotonic_time(test_state *state) {
   test_start(state, "subsequent calls lead to greater times");
   timespec x = get_monotonic_time();
-  timespec y = get_monotonic_time();
+  timespec y;
+  for (int i = 0; i < 1000; i++) {
+    y = get_monotonic_time();
+    if (timespec_gt(y, x)) {
+      break;
+    }
+  }
   test_assert(state, timespec_gt(y, x));
   test_end(state);
 }
