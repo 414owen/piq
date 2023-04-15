@@ -17,7 +17,7 @@
   #define TIMESPEC_ZERO {0}
 
   // timespec -> time_t
-  #define difftime_to_secs(ts) ((long_long) (tv.tv_sec))
+  #define difftime_to_secs(ts) ((long long) ((ts).tv_sec))
 
   // TODO only compile this function if running tests
   bool timespec_negative(timespec a);

@@ -24,7 +24,7 @@ typedef struct {
 
 static void parse_args_rec(parse_state *state);
 
-static bool valid_short_flag(char c) { return c >= 'a' && c <= 'z'; }
+// static bool valid_short_flag(char c) { return c >= 'a' && c <= 'z'; }
 
 static char *type_strs[] = {
   [ARG_FLAG] = "",

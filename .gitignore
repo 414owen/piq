@@ -35,3 +35,7 @@ callgrind*
 *.json
 analysis.txt
 cachegrind*
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+Makefile
