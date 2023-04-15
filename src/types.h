@@ -180,14 +180,19 @@ typedef struct {
   type_check_tag tag;
   union {
     struct {
-      type_ref sub_amt;
-      const type_ref *subs;
-    };
+      type_ref amt;
+      const type_ref *arr;
+    } more_subs;
+
     struct {
-      type_ref sub_a;
-      type_ref sub_b;
-    };
-  };
+      type_ref ind;
+    } one_sub;
+
+    struct {
+      type_ref a;
+      type_ref b;
+    } two_subs;
+  } data;
 } type_key_with_ctx;
 
 bool type_contains_specific_typevar(const type_builder *types, type_ref root,

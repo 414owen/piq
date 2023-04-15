@@ -98,17 +98,18 @@ hash_t hash_newtype(const void *key_p, const void *ctx) {
   hash_t hash = hash = hash_primitive(INITIAL_SEED, key->tag);
   switch (type_repr(key->tag)) {
     case SUBS_EXTERNAL:
-      hash =
-        hash_bytes(hash, (uint8_t *)key->subs, key->sub_amt * sizeof(type_ref));
+      hash = hash_bytes(hash,
+                        (uint8_t *)key->data.more_subs.arr,
+                        key->data.more_subs.amt * sizeof(type_ref));
       break;
     case SUBS_NONE:
       break;
     case SUBS_ONE:
-      hash = hash_primitive(hash, key->sub_a);
+      hash = hash_primitive(hash, key->data.one_sub.ind);
       break;
     case SUBS_TWO:
-      hash = hash_primitive(hash, key->sub_a);
-      hash = hash_primitive(hash, key->sub_b);
+      hash = hash_primitive(hash, key->data.two_subs.a);
+      hash = hash_primitive(hash, key->data.two_subs.b);
       break;
   }
   return hash;
