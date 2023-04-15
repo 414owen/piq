@@ -27,8 +27,8 @@ COMMON_FLAGS += -ffast-math
 COMMON_FLAGS += -flto
 COMMON_FLAGS += -fshort-enums
 COMMON_FLAGS += $EDITLINE_CFLAGS
-COMMON_FLAGS += $LLVM_CFLAGS
 COMMON_FLAGS += -fdiagnostics-color=always
+COMMON_FLAGS += $LLVM_CFLAGS
 
 CXXFLAGS = $(COMMON_FLAGS)
 CXXFLAGS += -std=gnu++17
