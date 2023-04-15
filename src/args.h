@@ -26,26 +26,29 @@ typedef struct {
 struct argument {
   arg_type tag;
   // flag, string, int
-  struct {
-    // when zero, argument has no short name
-    const char short_name;
-    union {
-      const char *long_name;
-      const char *subcommand_name;
-    };
-    const char *description;
-    union {
-      bool *flag_data;
-      const char **string_data;
-      int *int_data;
-      struct {
-        argument_bag subs;
-        int subcommand_value;
-      };
-    };
-    // Filled in by argument parser
-    unsigned long_len;
+
+  // when zero, argument has no short name
+  const char short_name;
+
+  union {
+    const char *long_name;
+    const char *subcommand_name;
   };
+
+  const char *description;
+
+  union {
+    bool *flag_val;
+    const char **string_val;
+    int *int_val;
+    struct {
+      argument_bag subs;
+      int value;
+    } subcommand;
+  } data;
+
+  // Filled in by argument parser
+  unsigned long_len;
 };
 
 typedef struct {
