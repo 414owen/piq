@@ -173,33 +173,33 @@ int main(const int argc, const char **argv) {
       .tag = ARG_FLAG,
       .long_name = "stdin",
       .description = "take program input from stdin",
-      .flag_data = &compile_args.stdin_input,
+      .data.flag_val = &compile_args.stdin_input,
     },
     {
       .tag = ARG_FLAG,
       .long_name = "no-codegen",
       .description = "disable generating machine code",
-      .flag_data = &compile_args.no_codegen,
+      .data.flag_val = &compile_args.no_codegen,
     },
     {
       .tag = ARG_STRING,
       .long_name = "input",
       .short_name = 'i',
       .description = "path to input file",
-      .string_data = &compile_args.input_file_path,
+      .data.string_val = &compile_args.input_file_path,
     },
     {
       .tag = ARG_STRING,
       .long_name = "output",
       .short_name = 'o',
       .description = "path to output file",
-      .string_data = &compile_args.output_file_path,
+      .data.string_val = &compile_args.output_file_path,
     },
     {
       .tag = ARG_STRING,
       .long_name = "dump-llvm",
       .description = "path to dump LLVM IR to",
-      .string_data = &compile_args.llvm_dump_path,
+      .data.string_val = &compile_args.llvm_dump_path,
     },
   };
 
@@ -213,27 +213,34 @@ int main(const int argc, const char **argv) {
       .tag = ARG_FLAG,
       .short_name = 'v',
       .long_name = "verbose",
-      .flag_data = &global_args.verbose,
+      .data.flag_val = &global_args.verbose,
       .description = "print extra information for debugging purposes",
     },
     {
       .tag = ARG_FLAG,
       .long_name = "extra-verbose",
-      .flag_data = &global_args.extra_verbose,
+      .data.flag_val = &global_args.extra_verbose,
       .description = "print a lot of extra information for debugging purposes",
     },
     {
       .tag = ARG_SUBCOMMAND,
       .long_name = "repl",
       .description = "launch the Read Evaluate Print Loop",
-      .subcommand_value = COMMAND_REPL,
+      .data.subcommand =
+        {
+          .value = COMMAND_REPL,
+          .subs.amt = 0,
+        },
     },
     {
       .tag = ARG_SUBCOMMAND,
       .long_name = "compile",
       .description = "compile a file",
-      .subs = compile_arg_bag,
-      .subcommand_value = COMMAND_COMPILE,
+      .data.subcommand =
+        {
+          .subs = compile_arg_bag,
+          .value = COMMAND_COMPILE,
+        },
     },
   };
 

@@ -138,10 +138,10 @@ static void assign_data(argument a, const char *str) {
   // convert from string to type
   switch (a.tag) {
     case ARG_INT:
-      *a.int_data = atoi(str);
+      *a.data.int_val = atoi(str);
       break;
     case ARG_STRING:
-      *a.string_data = str;
+      *a.data.string_val = str;
       break;
     case ARG_FLAG:
       break;
@@ -170,7 +170,7 @@ static void parse_long(parse_state *restrict state,
         break;
       case ARG_FLAG:
         if (matches) {
-          *a.flag_data = true;
+          *a.data.flag_val = true;
           matched = true;
         }
         break;
@@ -226,7 +226,7 @@ static void parse_short(parse_state *state, const char *restrict arg_str) {
           break;
         case ARG_FLAG:
           if (matched) {
-            *a.flag_data = true;
+            *a.data.flag_val = true;
           }
           break;
 
@@ -284,9 +284,9 @@ static void parse_noprefix(parse_state *state, const char *restrict arg_str) {
       subcommand_taken = true;
       state->arg_cursor++;
       VEC_PUSH(&state->subcommands, a.subcommand_name);
-      state->arguments->subcommand_chosen = a.subcommand_value;
+      state->arguments->subcommand_chosen = a.data.subcommand.value;
       argument_bag *tmp = state->arguments;
-      state->arguments = &a.subs;
+      state->arguments = &a.data.subcommand.subs;
       parse_args_rec(state);
       state->arguments = tmp;
       break;
@@ -306,7 +306,7 @@ static void preprocess_and_validate_args(argument_bag bag) {
     argument a = bag.args[i];
     switch (a.tag) {
       case ARG_SUBCOMMAND:
-        preprocess_and_validate_args(a.subs);
+        preprocess_and_validate_args(a.data.subcommand.subs);
         HEDLEY_FALL_THROUGH;
       case ARG_FLAG:
       case ARG_STRING:
