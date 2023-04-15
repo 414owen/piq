@@ -14,6 +14,8 @@
   typedef struct timespec timespec;
   typedef struct timespec difftime_t;
 
+  #define TIMESPEC_ZERO {0}
+
   // timespec -> time_t
   #define difftime_to_secs(ts) ((long_long) (tv.tv_sec))
 
@@ -30,6 +32,8 @@
 #else
   typedef clock_t timespec;
   typedef clock_t difftime_t;
+
+  #define TIMESPEC_ZERO 0
 
   // timespec -> long long
   #define difftime_to_secs(ts) ((long long) ts)

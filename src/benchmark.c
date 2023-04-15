@@ -19,7 +19,11 @@ const int STATEMENT_AMT = 400;
 
 typedef void (*fn_type)(void);
 
-static char *do_nothing(fn_type f, void *data) { return NULL; }
+static char *do_nothing(fn_type f, void *data) {
+  (void)f;
+  (void)data;
+  return NULL;
+}
 
 static void run_compile_benchmark(test_state *state) {
   stringstream ss;

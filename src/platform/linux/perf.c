@@ -96,11 +96,11 @@ perf_values perf_end(perf_state state) {
     read_format results;
     {
       ssize_t res = read(state.group_leader, &results, sizeof(read_format));
-      if (res == -1 && global_settings.verbosity >= VERBOSE_NONE) {
+      if (res == -1 && global_settings.verbosity >= VERBOSE_SOME) {
         perror("Couldn't read performance counters");
       }
     }
-    if (results.nr != NUM_EVENTS && global_settings.verbosity >= VERBOSE_NONE) {
+    if (results.nr != NUM_EVENTS && global_settings.verbosity >= VERBOSE_SOME) {
       fprintf(stderr, "Wrong number of perf events returned.\n"
         "Expected %d, but got %" PRIu64 "\n", state.num_successful_subscriptions, results.nr);
     }
@@ -142,7 +142,7 @@ perf_values perf_add(perf_values a, perf_values b) {
 }
 
 perf_values perf_zero = {
-  .time_taken = {0},
+  .time_taken = TIMESPEC_ZERO,
   .hw_cpu_cycles = 0,
   .hw_retired_instructions = 0,
   .hw_retired_branches = 0,

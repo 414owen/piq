@@ -21,6 +21,7 @@ OPT_LEVEL = -Ofast
 COMMON_FLAGS = -Wall
 COMMON_FLAGS += -Wextra
 COMMON_FLAGS += -Werror=implicit-fallthrough
+COMMON_FLAGS += -pedantic
 COMMON_FLAGS += -pipe
 COMMON_FLAGS += -ffast-math
 COMMON_FLAGS += -flto
@@ -29,7 +30,10 @@ COMMON_FLAGS += $EDITLINE_CFLAGS
 COMMON_FLAGS += $LLVM_CFLAGS
 COMMON_FLAGS += -fdiagnostics-color=always
 
-CXXFLAGS = $(COMMON_FLAGS) -std=gnu++17 -fno-exceptions $CXXFLAGS
+CXXFLAGS = $(COMMON_FLAGS)
+CXXFLAGS += -std=gnu++17
+CXXFLAGS += -fno-exceptions
+CXXFLAGS += $CXXFLAGS
 
 # This seems to get tinycc to pick up c11, but gcc/clang to pick up gnu11
 CFLAGS = $(COMMON_FLAGS) -std=c99 $CFLAGS
