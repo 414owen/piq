@@ -153,6 +153,17 @@ How is this modeled? It seems like every (expression?/binding?) should
 conceptually create a singleton type, which can initially only be used by
 builtins, but can eventually be exposed to the user?
 
+# List of potential Backends
+
+* llvm
+* qbe
+* libgccjit
+* cranelift
+* c
+* [b3](https://webkit.org/blog/5852/introducing-the-b3-jit-compiler/)
+* [mir](https://github.com/vnmakarov/mir)
+* [nanojit](https://github.com/dibyendumajumdar/nanojit)
+
 # Mistakes
 
 * Having sigs as separate syntactic constructs makes the compiler
