@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+#include <hedley.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
+#include "attrs.h"
 #include "diagnostic.h"
 #include "test.h"
 #include "tests.h"
@@ -29,6 +31,7 @@ static void test_memclone(test_state *state) {
   test_end(state);
 }
 
+HEDLEY_NON_NULL(1, 4)
 static void test_join(test_state *state, const char *const *strs, size_t amt,
                       char *exp) {
   char *join_res = join(amt, strs, sep);
@@ -130,7 +133,10 @@ static void test_asprintf(test_state *state) {
   test_start(state, "asprintf");
   char *res;
   static const char *fmt = "Hello World! %d";
-  asprintf(&res, fmt, 42);
+  {
+    int amt = asprintf(&res, fmt, 42);
+    (void)amt;
+  }
   static const char *exp = "Hello World! 42";
   if (strcmp(exp, res) != 0)
     failf(state, "'%s' didn't format to '%s'", fmt, exp);

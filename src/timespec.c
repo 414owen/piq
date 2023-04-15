@@ -100,7 +100,7 @@ bool timespec_gt(timespec x, timespec y) {
   return x.tv_sec > y.tv_sec || (x.tv_sec == y.tv_sec && x.tv_nsec > y.tv_nsec);
 }
 
-uint64_t timespec_to_nanos(timespec ts) {
+uint64_t timespec_to_nanoseconds(timespec ts) {
   return (uint64_t)ts.tv_nsec + (uint64_t)ts.tv_sec * 1e9;
 }
 
