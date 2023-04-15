@@ -233,8 +233,7 @@ void write_test_results(test_state *state) {
   VEC_FREE(&agg_stack);
   vec_string class_path = VEC_NEW;
 
-  difftime_t elapsed =
-    timespec_subtract(state->end_time, state->start_time);
+  difftime_t elapsed = timespec_subtract(state->end_time, state->start_time);
 
   fprintf(f,
           "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
