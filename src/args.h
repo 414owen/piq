@@ -33,7 +33,7 @@ struct argument {
   union {
     const char *long_name;
     const char *subcommand_name;
-  };
+  } names;
 
   const char *description;
 
