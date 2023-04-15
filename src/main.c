@@ -171,33 +171,33 @@ int main(const int argc, const char **argv) {
   argument compile_arg_descriptions[] = {
     {
       .tag = ARG_FLAG,
-      .long_name = "stdin",
+      .names.long_name = "stdin",
       .description = "take program input from stdin",
       .data.flag_val = &compile_args.stdin_input,
     },
     {
       .tag = ARG_FLAG,
-      .long_name = "no-codegen",
+      .names.long_name = "no-codegen",
       .description = "disable generating machine code",
       .data.flag_val = &compile_args.no_codegen,
     },
     {
       .tag = ARG_STRING,
-      .long_name = "input",
+      .names.long_name = "input",
       .short_name = 'i',
       .description = "path to input file",
       .data.string_val = &compile_args.input_file_path,
     },
     {
       .tag = ARG_STRING,
-      .long_name = "output",
+      .names.long_name = "output",
       .short_name = 'o',
       .description = "path to output file",
       .data.string_val = &compile_args.output_file_path,
     },
     {
       .tag = ARG_STRING,
-      .long_name = "dump-llvm",
+      .names.long_name = "dump-llvm",
       .description = "path to dump LLVM IR to",
       .data.string_val = &compile_args.llvm_dump_path,
     },
@@ -212,19 +212,19 @@ int main(const int argc, const char **argv) {
     {
       .tag = ARG_FLAG,
       .short_name = 'v',
-      .long_name = "verbose",
+      .names.long_name = "verbose",
       .data.flag_val = &global_args.verbose,
       .description = "print extra information for debugging purposes",
     },
     {
       .tag = ARG_FLAG,
-      .long_name = "extra-verbose",
+      .names.long_name = "extra-verbose",
       .data.flag_val = &global_args.extra_verbose,
       .description = "print a lot of extra information for debugging purposes",
     },
     {
       .tag = ARG_SUBCOMMAND,
-      .long_name = "repl",
+      .names.long_name = "repl",
       .description = "launch the Read Evaluate Print Loop",
       .data.subcommand =
         {
@@ -234,7 +234,7 @@ int main(const int argc, const char **argv) {
     },
     {
       .tag = ARG_SUBCOMMAND,
-      .long_name = "compile",
+      .names.long_name = "compile",
       .description = "compile a file",
       .data.subcommand =
         {
