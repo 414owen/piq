@@ -39,7 +39,7 @@ typedef struct {
   union {
     parse_node_type_all node_type;
     uint32_t amount;
-  };
+  } data;
 } test_traverse_elem;
 
 static int count_traversal_elems(pt_traversal *traversal) {
@@ -65,10 +65,10 @@ static char *print_ctx(test_traverse_elem *elems, int position) {
       case TR_VISIT_OUT:
       case TR_PREDECLARE_FN:
       case TR_LINK_SIG:
-        fprintf(ss.stream, ": %s\n", parse_node_strings[elem.node_type]);
+        fprintf(ss.stream, ": %s\n", parse_node_strings[elem.data.node_type]);
         break;
       case TR_POP_TO:
-        fprintf(ss.stream, ": %d\n", elem.amount);
+        fprintf(ss.stream, ": %d\n", elem.data.amount);
         break;
       case TR_NEW_BLOCK:
         fputc('\n', ss.stream);
@@ -136,19 +136,19 @@ static void test_elems_match(test_state *state, pt_traversal *traversal,
       case TR_PUSH_SCOPE_VAR:
       case TR_VISIT_IN:
       case TR_VISIT_OUT:
-        if (b.node_type != a.data.node_data.node.type.all) {
+        if (b.data.node_type != a.data.node_data.node.type.all) {
           node_type_mismatch(
-            state, i, elems, b.node_type, a.data.node_data.node.type.all);
+            state, i, elems, b.data.node_type, a.data.node_data.node.type.all);
           return;
         }
         break;
       case TR_POP_TO:
-        if (b.amount != a.data.new_environment_amount) {
+        if (b.data.amount != a.data.new_environment_amount) {
           traversal_fail(state,
                          format_to_string("Wrong environment (pop) amount at "
                                           "position %d. Expected: %d, got %d",
                                           i,
-                                          b.amount,
+                                          b.data.amount,
                                           a.data.new_environment_amount),
                          elems,
                          i);
@@ -162,8 +162,8 @@ static void test_elems_match(test_state *state, pt_traversal *traversal,
       case TR_LINK_SIG: {
         parse_node_type_all at =
           traversal->nodes[a.data.link_sig_data.linked_index].type.all;
-        if (at != b.node_type) {
-          node_type_mismatch(state, i, elems, b.node_type, at);
+        if (at != b.data.node_type) {
+          node_type_mismatch(state, i, elems, b.data.node_type, at);
           return;
         }
         break;
@@ -199,7 +199,7 @@ static const char *input = "(sig a (Fn I8 (I8, I8) I8))\n"
                            "  (add ((fn () 2) ()) 3))";
 
 #define node_act(_action_type, _node_type)                                     \
-  { .action = (_action_type), .node_type = (_node_type), }
+  { .action = (_action_type), .data.node_type = (_node_type), }
 
 #define in(_node_type) node_act(TR_VISIT_IN, _node_type)
 
@@ -215,7 +215,7 @@ static const char *input = "(sig a (Fn I8 (I8, I8) I8))\n"
 #define push_env(_node_type) node_act(TR_PUSH_SCOPE_VAR, _node_type)
 
 #define pop_env_to(amt)                                                        \
-  { .action = TR_POP_TO, .amount = amt, }
+  { .action = TR_POP_TO, .data.amount = amt, }
 
 #define link_sig(_node_type) node_act(TR_LINK_SIG, _node_type)
 
