@@ -56,5 +56,5 @@ fi
 
 export READLINE_LIBS=`pkg-config --libs "readline"`
 export READLINE_CFLAGS=`pkg-config --cflags "readline"`
-export LLVM_CFLAGS=`$LLVM_CONFIG --cflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
+export LLVM_CFLAGS=`$LLVM_CONFIG --cflags core executionengine mcjit engine analysis native bitwriter --system-libs`
 export LLVM_LDFLAGS=`$LLVM_CONFIG --ldflags --libs core executionengine mcjit engine analysis native bitwriter --system-libs`
