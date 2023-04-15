@@ -87,7 +87,7 @@ static HEDLEY_NEVER_INLINE uint64_t parse_arbitrary(
   }
   *negative_p = negative;
   bool overflow = false;
-  uint64_t res;
+  uint64_t res = 0;
   size_t limit = negative ? 0 - minimum : maximum;
   switch (base) {
     case BASE_10:
