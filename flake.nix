@@ -186,7 +186,7 @@
           ];
 
           inputsFrom = builtins.attrValues packages;
-          CFLAGS = "-DTIME_ALL";
+          CFLAGS = "-DTIME_ALL -Werror";
         };
       });
 }

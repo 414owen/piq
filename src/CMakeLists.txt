@@ -163,18 +163,15 @@ set (LLVM_JIT_LINK_COMPONENTS
   bitwriter
 )
 
-# Find the libraries that correspond to the LLVM components
-# that we wish to use
-llvm_map_components_to_libnames(llvm_compile_libs ${LLVM_COMPILE_LINK_COMPONENTS})
-llvm_map_components_to_libnames(llvm_jit_libs ${LLVM_JIT_LINK_COMPONENTS})
-
 add_executable(piq ${MAIN_OBJS} ${COMMON_OBJS})
 add_executable(test-exe ${TEST_OBJS} ${COMMON_OBJS})
 
 message("LLVM args: ${llvm_jit_libs}")
 
-target_link_libraries(piq ${llvm_compile_libs} readline)
-target_link_libraries(test-exe ${llvm_jit_libs})
+target_link_libraries(piq PRIVATE readline)
+
+llvm_config(piq USE_SHARED ${LLVM_COMPILE_LINK_COMPONENTS})
+llvm_config(test-exe USE_SHARED ${LLVM_JIT_LINK_COMPONENTS})
 
 foreach(exe piq)
   set_property(TARGET ${exe} PROPERTY C_STANDARD 99)
