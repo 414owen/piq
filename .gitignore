@@ -3,6 +3,7 @@ build/
 piq
 .gdb_history
 test
+test-exe
 *.out
 *.so
 *.o
@@ -37,5 +38,5 @@ analysis.txt
 cachegrind*
 CMakeFiles
 CMakeCache.txt
-cmake_install.cmake
+*.cmake
 Makefile
