@@ -4,11 +4,24 @@ set(CMAKE_COLOR_DIAGNOSTICS ON)
 
 project(piq C CXX)
 
-include(CheckIPOSupported)
-check_ipo_supported(RESULT IPOSupported OUTPUT IPOError)
-
 enable_testing()
 
-set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -s")
+if (MSVC)
+    # warning level 4
+    add_compile_options(/W4)
+else()
+    # additional warnings
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+
+  if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_compile_options(-s -fomit-frame-pointer)
+  endif()
+  add_compile_options(-ffunction-sections -fdata-sections)
+  add_link_options(-Wl,--gc-sections)
+
+endif()
 
 add_subdirectory(src)
