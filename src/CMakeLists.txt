@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.9)
 
 add_compile_options(-Wall -pedantic)
 
@@ -140,6 +140,10 @@ set (COMPILE_FOR_SIZE
   log.c
 )
 
+foreach (file ${COMPILE_FOR_SIZE})
+  set_source_files_properties(${file} PROPERTIES COMPILE_FLAGS -Os)
+endforeach(file)
+
 set (LLVM_COMPILE_LINK_COMPONENTS
   Core
   ExecutionEngine
@@ -166,7 +170,18 @@ set (LLVM_JIT_LINK_COMPONENTS
 add_executable(piq ${MAIN_OBJS} ${COMMON_OBJS})
 add_executable(test-exe ${TEST_OBJS} ${COMMON_OBJS})
 
-message("LLVM args: ${llvm_jit_libs}")
+cmake_policy(SET CMP0069 NEW) 
+set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT IPOSupported OUTPUT IPOError)
+
+if(IPOSupported)
+    message(STATUS "IPO / LTO enabled")
+    set_property(TARGET piq test-exe PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+    message(STATUS "IPO / LTO not supported: <${IPOError}>")
+endif()
 
 target_link_libraries(piq PRIVATE readline)
 
@@ -190,6 +205,3 @@ install(
   CONFIGURATIONS Release
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-
-foreach (file ${COMPILE_FOR_SIZE})
-endforeach(file)
