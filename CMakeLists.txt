@@ -6,4 +6,6 @@ project(piq C CXX)
 
 enable_testing()
 
+set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -s -flto")
+
 add_subdirectory(src)
