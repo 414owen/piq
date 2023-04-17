@@ -34,6 +34,7 @@
         # stdenv = pkgs.clangStdenv;
         stdenv = pkgs.stdenv;
         packageName = "piq";
+        valgrindSupported = system != "armv6l-linux";
 
         hedley = stdenv.mkDerivation {
           name = "hedley";
@@ -151,7 +152,7 @@
             '';
             installPhase = noopInstall;
           };
-
+        } // (if valgrindSupported then {
           "valgrind" = pkgs.stdenvNoCC.mkDerivation {
             name = "formatting";
             buildInputs = with pkgs; [
@@ -164,14 +165,14 @@
             '';
             installPhase = noopInstall;
           };
-        };
+        } else {});
 
         defaultPackage = packages.${packageName};
 
         devShell = (pkgs.mkShell.override { stdenv = stdenv; }) {
           buildInputs = with pkgs; lib.concatLists [
             (if stdenv.isLinux then [gdb cgdb] else [])
-            (if system != "armv6l-linux" then [
+            (if valgrindSupported then [
               clang-tools
               clang-tools.clang
               bear
