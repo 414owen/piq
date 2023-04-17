@@ -2,7 +2,7 @@
   description = "Lang - A programming language";
 
   inputs = {
-    nixpkgs.url = "github:414owen/nixpkgs/os/lang-c-env-22.11";
+    # nixpkgs.url = "github:NixOS/nixos-22.11";
     flake-utils.url = "github:numtide/flake-utils";
     hedley-src = {
       url = "github:nemequ/hedley/v15";
@@ -34,7 +34,11 @@
         # stdenv = pkgs.clangStdenv;
         stdenv = pkgs.stdenv;
         packageName = "piq";
-        valgrindSupported = system != "armv6l-linux";
+        isArm6 = system == "armv6l-linux";
+        valgrindSupported =
+          let meta = pkgs.valgrind.meta;
+          in builtins.elem system meta.platforms
+          && !meta.broken;
 
         hedley = stdenv.mkDerivation {
           name = "hedley";
@@ -71,7 +75,7 @@
             cmake
             re2c
             lemon
-            readline81
+            readline
           ];
 
           cmakeFlags = if installTests then [
@@ -172,18 +176,15 @@
         devShell = (pkgs.mkShell.override { stdenv = stdenv; }) {
           buildInputs = with pkgs; lib.concatLists [
             (if stdenv.isLinux then [gdb cgdb] else [])
-            (if valgrindSupported then [
+            (if valgrindSupported then [ valgrind ] else [])
+            (if isArm6 then [ ] else [ commitizen ])
+            [
               clang-tools
               clang-tools.clang
-              bear
               ninja
-              lldb
-              lcov
-              valgrind
               watchexec
-              commitizen
               flamegraph
-            ] else [])
+            ]
           ];
 
           inputsFrom = builtins.attrValues packages;
