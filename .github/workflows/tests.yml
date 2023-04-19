@@ -38,8 +38,6 @@ jobs:
         }
         [ -d predef ] || predef
         popd
-    - run: sed -i 's/\^j\^//g' Tupfile
-    - run: "[ -f .tup/db ] || tup init"
     - name: Configure
       run: cmake -B build -DCMAKE_BUILD_TYPE=Release
     - name: Build
