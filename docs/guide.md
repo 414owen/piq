@@ -20,7 +20,7 @@ For this reason, I recommend just installing nix, and using the instructions
 above instead.
 
 ```sh
-$ sudo apt install -y tup re2c lemon libxxhash-dev llvm-dev valgrind gcc g++ pkg-config libreadline-dev subversion
+$ sudo apt install -y cmake re2c lemon llvm-dev valgrind gcc g++ pkg-config editline-dev subversion
 $ sed -i 's/\^j\^//g' Tupfile # downgrade tupfile syntax
 $ pushd /usr/include
 
