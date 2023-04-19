@@ -37,8 +37,6 @@ cat "$tmpcfile" \
 
 echo "HEDLEY_DIAGNOSTIC_POP" >> "$tmpcfile2"
 
-cat "$tmpcfile2"
-
 /bin/sh $(dirname "$0")/add-pragmas.sh "$tmphfile"
 
 mv "$tmphfile" "${outhfile}"
