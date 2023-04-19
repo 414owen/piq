@@ -6,13 +6,15 @@ if [ $# = 0 ]; then
 fi
 
 dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-. ./release-env.sh
+
+outdir=build-flamegraph
 
 # All the optimization options are in Tupfile anyway
-CFLAGS="-g"
-tup
+export CFLAGS="-g"
+cmake -B "$outdir" -DCMAKE_BUILD_TYPE=Release
+cmake --build "$outdir"
 
-perf record -F 26000 --call-graph dwarf $@ >&2
+perf record -F 26000 --call-graph dwarf "${outdir}/$@" >&2
 stackpath="$(mktemp)"
 perf script | stackcollapse-perf.pl > "${stackpath}"
 flamegraph.pl "${stackpath}" > flamegraph.svg
