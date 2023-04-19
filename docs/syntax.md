@@ -74,7 +74,7 @@ aBc
 
 // lambdas
 (fn a a)
-(fn (a, b) (+ a b))
+(fn (a b) (+ a b))
 ```
 
 
@@ -82,16 +82,12 @@ aBc
 
 ```
 // signatures and functions, pattern matching and fall-through
-(sig a (fn (I32, I32) I32))
-(fun a (1, b)
-  (a (2, b)))
-(fun a (b, c)
+(sig a (fn I32 I32 I32))
+(fun a (1 b)
+  (a (2 b)))
+(fun a (b c)
   (+ b c))
 
-// which is the same as
-(fun pa
-  (case ps
-    ((b, c) (+ b c))))
 
 // constants
 (sig b I64)
