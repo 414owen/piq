@@ -30,12 +30,12 @@ $ [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/m
 # install predef globally
 $ [ -d predef ] || sudo svn checkout https://github.com/natefoo/predef/trunk/predef
 
-$ . scripts/environment.sh
-$ tup
+$ cmake -B build -DCMAKE_BUILD_TYPE=Release # configure phase
+$ cmake --build build/                      # build phase
 ```
 
 ### Running
 
 ```sh
-$ ./piq compile -i examples/snd.scm -o a.out
+$ ./build/piq compile -i examples/snd.scm -o a.out
 ```
