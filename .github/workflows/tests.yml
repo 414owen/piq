@@ -40,8 +40,11 @@ jobs:
         popd
     - run: sed -i 's/\^j\^//g' Tupfile
     - run: "[ -f .tup/db ] || tup init"
-    - run: ". scripts/environment.sh && tup"
-    - run: ./test --lite -j
+    - name: Configure
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+    - name: Build
+      run: cmake --build build
+    - run: ./build/test-exe --lite -j
 
     - name: Publish Test Report
       uses: mikepenz/action-junit-report@v3
@@ -49,4 +52,4 @@ jobs:
       with:
         report_paths: 'test-results.xml'
 
-    - run: valgrind --leak-check=full --error-exitcode=1 ./test --lite
+    - run: valgrind --leak-check=full --error-exitcode=1 ./build/test-exe --lite
