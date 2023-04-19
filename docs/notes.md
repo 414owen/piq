@@ -179,12 +179,7 @@ $ ./result/bin/lang
 
 # Developing
 
-```
-$ nix develop
-$ tup dbconfig   # generate compile_commands.json so the language server works
-$ tup
-$ ./repl
-```
+See [hacking.md](./hacking.md)
 
 # Without nix
 
