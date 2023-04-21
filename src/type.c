@@ -45,6 +45,7 @@ static void push_str(vec_print_action *stack, char *str) {
 tree_node_repr type_repr(type_check_tag tag) {
   tree_node_repr res = SUBS_EXTERNAL;
   switch (tag) {
+    case TC_IS_C_ABI:
     case TC_VAR:
     case TC_UNIT:
     case TC_I8:
@@ -66,6 +67,7 @@ tree_node_repr type_repr(type_check_tag tag) {
       res = SUBS_TWO;
       break;
     case TC_OR:
+    case TC_CFN:
     case TC_FN:
       res = SUBS_EXTERNAL;
       break;
@@ -118,6 +120,9 @@ static void print_type_head(FILE *f, type_check_tag head) {
     case TC_BOOL:
       str = "Bool";
       break;
+    case TC_CFN:
+      str = "CFn";
+      break;
     case TC_FN:
       str = "Fn";
       break;
@@ -129,6 +134,9 @@ static void print_type_head(FILE *f, type_check_tag head) {
       break;
     case TC_CALL:
       str = "Call";
+      break;
+    case TC_IS_C_ABI:
+      str = "CAbi";
       break;
   }
   fputs(str, f);

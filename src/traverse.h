@@ -94,7 +94,7 @@ typedef struct {
   uint8_t traverse_expressions_in : 1;
   uint8_t traverse_expressions_out : 1;
   uint8_t edit_environment : 1;
-  uint8_t link_sigs : 1;
+  uint8_t annotate : 1;
   uint8_t add_blocks : 1;
 } traversal_wanted_actions;
 

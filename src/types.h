@@ -22,6 +22,7 @@ typedef enum {
   TC_U32,
   TC_I64,
   TC_U64,
+  TC_CFN,
   TC_FN,
   TC_BOOL,
   TC_TUP,
@@ -29,6 +30,7 @@ typedef enum {
   TC_CALL,
   TC_VAR,
   TC_OR,
+  TC_IS_C_ABI,
 } type_check_tag;
 
 typedef enum {

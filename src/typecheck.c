@@ -104,6 +104,12 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
     case PT_ALL_LEN:
       // TODO Impossible
       break;
+    case PT_ALL_STATEMENT_ABI: {
+      // TODO could speed this up by pre-computing + caching this type
+      type_ref a = mk_primitive_type(builder->type_builder, TC_IS_C_ABI);
+      add_type_constraint(builder, our_type, a, node_ind);
+      break;
+    }
     case PT_ALL_MULTI_TYPE_PARAM_NAME:
     case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME:
       // TODO
