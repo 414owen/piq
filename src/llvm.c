@@ -670,6 +670,7 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
         &state->return_values, LLVMConstIntOfStringAndSize(type, str, len, 10));
       break;
     }
+    case PT_ALL_STATEMENT_ABI:
     case PT_ALL_EX_AS: {
       break;
     }

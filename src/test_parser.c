@@ -453,6 +453,7 @@ static token_type inside_block_el[] = {
   TK_SIG,
   TK_UPPER_NAME,
   TK_LET,
+  TK_HASH_ABI,
   TK_UNIT,
   TK_STRING,
 };

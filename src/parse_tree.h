@@ -69,6 +69,7 @@ typedef enum {
   PT_ALL_PAT_LIST,
 
   // sig and fun two are also top levels
+  PT_ALL_STATEMENT_ABI,
   PT_ALL_STATEMENT_SIG,
   PT_ALL_STATEMENT_FUN,
   PT_ALL_STATEMENT_LET,
@@ -115,6 +116,7 @@ typedef enum {
 } parse_node_pattern_type;
 
 typedef enum {
+  PT_STATEMENT_ABI = PT_ALL_STATEMENT_ABI,
   PT_STATEMENT_SIG = PT_ALL_STATEMENT_SIG,
   PT_STATEMENT_FUN = PT_ALL_STATEMENT_FUN,
   PT_STATEMENT_LET = PT_ALL_STATEMENT_LET,
