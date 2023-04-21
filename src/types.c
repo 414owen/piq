@@ -63,7 +63,7 @@ type_ref __mk_type_inline(type_builder *tb, type_check_tag tag, type_ref sub_a,
 
 type_ref mk_type_inline(type_builder *tb, type_check_tag tag, type_ref sub_a,
                         type_ref sub_b) {
-  debug_assert(type_repr(tag) == SUBS_ONE || type_repr(tag) == SUBS_TWO);
+  debug_assert(type_reprs[tag] == SUBS_ONE || type_repr(tag) == SUBS_TWO);
   return __mk_type_inline(tb, tag, sub_a, sub_b);
 }
 
@@ -126,7 +126,7 @@ typedef bool exited_early;
 
 void push_type_subs(vec_type_ref *restrict stack, const type_ref *restrict inds,
                     type t) {
-  switch (type_repr(t.tag.check)) {
+  switch (type_reprs[t.tag.check]) {
     case SUBS_NONE:
       break;
     case SUBS_TWO:
@@ -287,7 +287,7 @@ static bool cmp_newtype_eq(const void *key_p, const void *stored_key,
   type snd = VEC_GET(builder->types, snd_ind);
 
   if (key->tag == snd.tag.check) {
-    switch (type_repr(key->tag)) {
+    switch (type_reprs[key->tag]) {
       case SUBS_NONE:
         return true;
       case SUBS_TWO:

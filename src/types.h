@@ -143,7 +143,9 @@ typedef struct {
 #define T_TUP_SUB_B(node) node.data.two_subs.b
 
 void free_type_builder(type_builder tb);
-tree_node_repr type_repr(type_check_tag tag);
+
+extern const tree_node_repr *const restrict type_reprs;
+
 bool inline_types_eq(type a, type b);
 void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root);
 char *print_type_str(type *types, node_ind_t *inds, node_ind_t root);

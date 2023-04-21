@@ -698,7 +698,7 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
       continue;
     }
 
-    switch (type_repr(a.tag.check)) {
+    switch (type_reprs[a.tag.check]) {
       case SUBS_NONE:
         break;
       case SUBS_TWO: {
@@ -821,7 +821,7 @@ static type_ref copy_type(const type_builder *old, type_builder *builder,
       continue;
     }
 
-    switch (type_repr(t.tag.check)) {
+    switch (type_reprs[t.tag.check]) {
       case SUBS_NONE: {
         // first pass
         VEC_PUSH(&return_stack, mk_primitive_type(builder, t.tag.check));
