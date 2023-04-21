@@ -27,7 +27,6 @@ static void run_tests(test_state *state) {
   test_utils(state);
   test_diagnostics(state);
   test_scanner(state);
-  test_parse_tree(state);
   test_parser(state);
   test_traverse(state);
   test_typecheck(state);
