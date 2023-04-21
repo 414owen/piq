@@ -97,7 +97,7 @@ hash_t hash_newtype(const void *key_p, const void *ctx) {
   (void)ctx;
   type_key_with_ctx *key = (type_key_with_ctx *)key_p;
   hash_t hash = hash = hash_primitive(INITIAL_SEED, key->tag);
-  switch (type_repr(key->tag)) {
+  switch (type_reprs[key->tag]) {
     case SUBS_EXTERNAL:
       hash = hash_bytes(hash,
                         (uint8_t *)key->data.more_subs.arr,
@@ -138,7 +138,7 @@ hash_t hash_stored_type(const void *key_p, const void *ctx_p) {
   type_builder *builder = (type_builder *)ctx_p;
   type key = VEC_GET(builder->types, key_ind);
   hash_t hash = hash_primitive(INITIAL_SEED, key.tag.check);
-  switch (type_repr(key.tag.check)) {
+  switch (type_reprs[key.tag.check]) {
     case SUBS_EXTERNAL: {
       type_ref *subs = &VEC_DATA_PTR(&builder->inds)[key.data.more_subs.start];
       hash = hash_bytes(
