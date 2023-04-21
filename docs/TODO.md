@@ -8,6 +8,6 @@
   * [ ] Codegen
     * [ ] Call
     * [ ] C Function
-* Remove PT_LEN
-* Change print_type_head to be an array lookup
-* Change type_repr to be an array lookup
+* [x] Remove PT_LEN
+* [ ] Change print_type_head to be an array lookup
+* [ ] Change type_repr to be an array lookup
