@@ -15,6 +15,9 @@
 #include "token.h"
 #include "vec.h"
 
+// TODO `type` is way too overloaded here.
+// Maybe we should use `tag`?
+
 #define node_ind_t buf_ind_t
 
 VEC_DECL_CUSTOM(node_ind_t, vec_node_ind);
@@ -28,63 +31,55 @@ typedef enum {
   PT_C_TOPLEVEL = 6,
 } parse_node_category;
 
-// TODO `type` is way too overloaded here.
-// Maybe we should use `tag`?
+#define PARSE_NODE_ALL_PREFIX(name) PT_ALL_ ## name
 
-// When editing, make sure to add the category in
-// parse_tree.c.
+#define DECL_PARSE_NODES \
+  X(EX_AS, "AsExpression", PT_C_EXPRESSION, SUBS_TWO) \
+  X(EX_CALL, "CallExpression", PT_C_EXPRESSION, SUBS_EXTERNAL) \
+  X(EX_FN, "AnonymousFunctionExpression", PT_C_EXPRESSION, SUBS_EXTERNAL) \
+  X(EX_FUN_BODY, "FunctionBodyExpression", PT_C_EXPRESSION, SUBS_EXTERNAL) \
+  X(EX_IF, "IfExpression", PT_C_EXPRESSION, SUBS_EXTERNAL) \
+  X(EX_INT, "IntExpression", PT_C_EXPRESSION, SUBS_NONE) \
+  X(EX_LIST, "ListExpression", PT_C_EXPRESSION, SUBS_EXTERNAL) \
+  X(EX_STRING, "StringExpression", PT_C_EXPRESSION, SUBS_NONE) \
+  X(EX_TERM_NAME, "TermNameExpression", PT_C_EXPRESSION, SUBS_NONE) \
+  X(EX_TUP, "TupleExpression", PT_C_EXPRESSION, SUBS_TWO) \
+  X(EX_UNIT, "UnitExpression", PT_C_EXPRESSION, SUBS_NONE) \
+  X(EX_UPPER_NAME, "ConstructorNameExpression", PT_C_EXPRESSION, SUBS_NONE) \
+  X(MULTI_DATA_CONSTRUCTOR_DECL, "DataConstructorDeclaration", PT_C_NONE, SUBS_EXTERNAL) \
+  X(MULTI_DATA_CONSTRUCTOR_NAME, "DataConstructorName", PT_C_NONE, SUBS_NONE) \
+  X(MULTI_DATA_CONSTRUCTORS, "DataConstructors", PT_C_NONE, SUBS_EXTERNAL) \
+  X(MULTI_TERM_NAME, "TermName", PT_C_NONE, SUBS_NONE) \
+  X(MULTI_TYPE_CONSTRUCTOR_NAME, "TypeConstructorName", PT_C_NONE, SUBS_NONE) \
+  X(MULTI_TYPE_PARAM_NAME, "TypeParamName", PT_C_NONE, SUBS_NONE) \
+  X(MULTI_TYPE_PARAMS, "TypeParameters", PT_C_NONE, SUBS_EXTERNAL) \
+  X(PAT_CONSTRUCTION, "DataConstructionPattern", PT_C_PATTERN, SUBS_TWO) \
+  X(PAT_DATA_CONSTRUCTOR_NAME, "DataConstructorName", PT_C_PATTERN, SUBS_NONE) \
+  X(PAT_INT, "IntPattern", PT_C_PATTERN, SUBS_NONE) \
+  X(PAT_LIST, "ListPattern", PT_C_PATTERN, SUBS_NONE) \
+  X(PAT_STRING, "StringPattern", PT_C_PATTERN, SUBS_NONE) \
+  X(PAT_TUP, "TuplePattern", PT_C_PATTERN, SUBS_TWO) \
+  X(PAT_UNIT, "UnitPattern", PT_C_PATTERN, SUBS_NONE) \
+  X(PAT_WILDCARD, "WildcardPattern", PT_C_PATTERN, SUBS_NONE) \
+  X(STATEMENT_ABI, "AbiStatement", PT_C_STATEMENT, SUBS_ONE) \
+  X(STATEMENT_DATA_DECLARATION, "DataDeclarationStatement", PT_C_STATEMENT, SUBS_EXTERNAL) \
+  X(STATEMENT_FUN, "FunctionStatement", PT_C_STATEMENT, SUBS_EXTERNAL) \
+  X(STATEMENT_LET, "LetStatement", PT_C_STATEMENT, SUBS_TWO) \
+  X(STATEMENT_SIG, "TypeSignatureStatement", PT_C_STATEMENT, SUBS_TWO) \
+  X(TY_CONSTRUCTION, "TypeConstructionType", PT_C_TYPE, SUBS_TWO) \
+  X(TY_CONSTRUCTOR_NAME, "TypeConstructorName", PT_C_TYPE, SUBS_NONE) \
+  X(TY_FN, "FunctionType", PT_C_TYPE, SUBS_EXTERNAL) \
+  X(TY_LIST, "ListType", PT_C_TYPE, SUBS_ONE) \
+  X(TY_PARAM_NAME, "TypeVariable", PT_C_TYPE, SUBS_NONE) \
+  X(TY_TUP, "TupleType", PT_C_TYPE, SUBS_TWO) \
+  X(TY_UNIT, "UnitType", PT_C_TYPE, SUBS_NONE)
+  
 typedef enum {
-  PT_ALL_EX_CALL,
-  PT_ALL_EX_FN,
-  PT_ALL_EX_FUN_BODY,
-  PT_ALL_EX_IF,
-  PT_ALL_EX_INT,
-  PT_ALL_EX_AS,
-  PT_ALL_EX_TERM_NAME,
-  PT_ALL_EX_UPPER_NAME,
-  PT_ALL_EX_LIST,
-  PT_ALL_EX_STRING,
-  PT_ALL_EX_TUP,
-  PT_ALL_EX_UNIT,
+  
+#define X(enum_name, str, cat, subs) PARSE_NODE_ALL_PREFIX(enum_name),
+DECL_PARSE_NODES
+#undef X
 
-  // stuff that is context-agnostic, and that shouldn't really
-  // be a node at all...
-  // Maybe the fact that these aren't "near" other
-  // parse node categories' enums affects the switch output?
-  PT_ALL_MULTI_TERM_NAME,
-  PT_ALL_MULTI_TYPE_PARAMS,
-  PT_ALL_MULTI_TYPE_PARAM_NAME,
-  PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME,
-  PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME,
-  PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL,
-  PT_ALL_MULTI_DATA_CONSTRUCTORS,
-
-  PT_ALL_PAT_WILDCARD,
-  PT_ALL_PAT_TUP,
-  PT_ALL_PAT_UNIT,
-  PT_ALL_PAT_DATA_CONSTRUCTOR_NAME,
-  PT_ALL_PAT_CONSTRUCTION,
-  PT_ALL_PAT_STRING,
-  PT_ALL_PAT_INT,
-  PT_ALL_PAT_LIST,
-
-  // sig and fun two are also top levels
-  PT_ALL_STATEMENT_ABI,
-  PT_ALL_STATEMENT_SIG,
-  PT_ALL_STATEMENT_FUN,
-  PT_ALL_STATEMENT_LET,
-  PT_ALL_STATEMENT_DATA_DECLARATION,
-
-  PT_ALL_TY_CONSTRUCTION,
-  PT_ALL_TY_LIST,
-  PT_ALL_TY_FN,
-  PT_ALL_TY_TUP,
-  PT_ALL_TY_UNIT,
-  PT_ALL_TY_PARAM_NAME,
-  PT_ALL_TY_CONSTRUCTOR_NAME,
-
-  // TODO remove by using the X macro
-  PT_ALL_LEN,
 } parse_node_type_all;
 
 VEC_DECL(parse_node_type_all);

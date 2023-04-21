@@ -520,8 +520,6 @@ static void llvm_cg_visit_in(llvm_cg_state *state, traversal_node_data data) {
     case PT_ALL_TY_CONSTRUCTOR_NAME:
       break;
 
-    case PT_ALL_LEN:
-      break;
     default:
       break;
   }
@@ -748,8 +746,6 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
 
     case PT_TYPE_CASES:
       break;
-
-    case PT_ALL_LEN:
 
     case PT_ALL_EX_FN: {
       // TODO implement
