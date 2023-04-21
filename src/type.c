@@ -41,39 +41,33 @@ static void push_str(vec_print_action *stack, char *str) {
   VEC_PUSH(stack, act);
 }
 
-// TODO export this as an array
-tree_node_repr type_repr(type_check_tag tag) {
-  tree_node_repr res = SUBS_EXTERNAL;
-  switch (tag) {
-    case TC_IS_C_ABI:
-    case TC_VAR:
-    case TC_UNIT:
-    case TC_I8:
-    case TC_U8:
-    case TC_I16:
-    case TC_U16:
-    case TC_I32:
-    case TC_U32:
-    case TC_I64:
-    case TC_U64:
-    case TC_BOOL:
-      res = SUBS_NONE;
-      break;
-    case TC_LIST:
-      res = SUBS_ONE;
-      break;
-    case TC_CALL:
-    case TC_TUP:
-      res = SUBS_TWO;
-      break;
-    case TC_OR:
-    case TC_CFN:
-    case TC_FN:
-      res = SUBS_EXTERNAL;
-      break;
-  }
-  return res;
-}
+static const tree_node_repr type_repr_arr[] = {
+  [TC_IS_C_ABI] = SUBS_NONE,
+  [TC_VAR] = SUBS_NONE,
+  [TC_UNIT] = SUBS_NONE,
+  [TC_I8] = SUBS_NONE,
+  [TC_U8] = SUBS_NONE,
+  [TC_I16] = SUBS_NONE,
+  [TC_U16] = SUBS_NONE,
+  [TC_I32] = SUBS_NONE,
+  [TC_U32] = SUBS_NONE,
+  [TC_I64] = SUBS_NONE,
+  [TC_U64] = SUBS_NONE,
+  [TC_BOOL] = SUBS_NONE,
+
+  [TC_LIST] = SUBS_ONE,
+
+  // TODO shouldn't this be exernal
+  [TC_CALL] = SUBS_TWO,
+  [TC_TUP] = SUBS_TWO,
+
+  [TC_OR] = SUBS_EXTERNAL,
+  [TC_CFN] = SUBS_EXTERNAL,
+  [TC_FN] = SUBS_EXTERNAL,
+
+};
+
+const tree_node_repr *const restrict type_reprs = type_repr_arr;
 
 bool inline_types_eq(type a, type b) {
   return a.tag.check == b.tag.check && a.data.type_var == b.data.type_var &&
