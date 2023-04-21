@@ -171,17 +171,18 @@ statement(RES) ::= expression(A). {
   RES = A;
 }
 
-statement(RES) ::= OPEN_PAREN(O) block_in_parens(A) CLOSE_PAREN(C). {
+statement(RES) ::= OPEN_PAREN(O) statement_in_parens(A) CLOSE_PAREN(C). {
   BREAK_PARSER;
   // TODO take actual parse_node, instead of ind
   VEC_DATA_PTR(&s->nodes)[A].phase_data.span = span_from_token_inds(s->tokens, O, C);
   RES = A;
 }
 
-block_in_parens(RES) ::= let(A). {
+statement_in_parens(RES) ::= let(A). {
   RES = A;
 }
-block_in_parens(RES) ::= sig(A). {
+
+statement_in_parens(RES) ::= sig(A). {
   RES = A;
 }
 
