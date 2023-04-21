@@ -67,7 +67,7 @@ static token_res scan(source_file file, buf_ind_t start) {
   str = ["]([^"\\\n] | "\\" [^\n])*["];
   str     { return mk_token(TK_STRING, start, pos);         }
   "if"    { return mk_token(TK_IF, start, pos);             }
-  "Fn"    { return mk_token(TK_FN_TYPE, start, pos);             }
+  "Fn"    { return mk_token(TK_FN_TYPE, start, pos);        }
   "fn"    { return mk_token(TK_FN, start, pos);             }
   "fun"   { return mk_token(TK_FUN, start, pos);            }
   "sig"   { return mk_token(TK_SIG, start, pos);            }
@@ -79,9 +79,11 @@ static token_res scan(source_file file, buf_ind_t start) {
   "["     { return mk_token(TK_OPEN_BRACKET, start, pos);   }
   "]"     { return mk_token(TK_CLOSE_BRACKET, start, pos);  }
 
+  "#abi"  { return mk_token(TK_HASH_ABI, start, pos);       }
+
   // parsed here, because allowing spaces between parens
   // can be used to obfuscate
-  "()"    { return mk_token(TK_UNIT, start, pos);  }
+  "()"    { return mk_token(TK_UNIT, start, pos);           }
   [(]     { return mk_token(TK_OPEN_PAREN, start, pos);     }
   [)]     { return mk_token(TK_CLOSE_PAREN, start, pos);    }
   [,]     { return mk_token(TK_COMMA, start, pos);          }
