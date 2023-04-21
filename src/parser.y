@@ -21,6 +21,7 @@
   UPPER_NAME
   LET
   DATA
+  HASH_ABI
   .
 
 %type commaexressions stack_ref_t
