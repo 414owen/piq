@@ -57,7 +57,12 @@ add_custom_command(
   OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/parser.h
          ${CMAKE_CURRENT_SOURCE_DIR}/src/parser.c
   COMMAND
-    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen-parser.sh ${CMAKE_CURRENT_SOURCE_DIR}/src/parser.y ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen-parser.sh
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/parser.y
+      ${CMAKE_CURRENT_SOURCE_DIR}/src
+  DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen-parser.sh
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/parser.y
 )
 
 add_custom_command(
@@ -68,7 +73,9 @@ add_custom_command(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tokenizer.re
   # lemon generates header with tokens
   # Not a good way of doing it tbh
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/parser.h
+  DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/parser.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tokenizer.re
 )
 
 set (COMMON_OBJS
