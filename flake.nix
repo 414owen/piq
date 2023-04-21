@@ -175,7 +175,7 @@
 
         devShell = (pkgs.mkShell.override { stdenv = stdenv; }) {
           buildInputs = with pkgs; lib.concatLists [
-            (if stdenv.isLinux then [gdb cgdb] else [])
+            (if stdenv.isLinux then [gdb cgdb linuxPackages.perf] else [])
             (if valgrindSupported then [ valgrind ] else [])
             (if isArm6 then [ ] else [ commitizen ])
             [
