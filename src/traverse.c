@@ -79,7 +79,7 @@ static uint8_t should_edit_environment = (1 << TRAVERSE_RESOLVE_BINDINGS) |
                                          (1 << TRAVERSE_TYPECHECK) |
                                          (1 << TRAVERSE_CODEGEN);
 
-static uint8_t should_link_sigs = (1 << TRAVERSE_TYPECHECK);
+static uint8_t should_annotate = (1 << TRAVERSE_TYPECHECK);
 
 static uint8_t should_add_blocks = (1 << TRAVERSE_CODEGEN);
 
@@ -136,8 +136,8 @@ static void tr_push_subs_external(pt_traversal *traversal, parse_node node) {
   VEC_REPLICATE(&traversal->actions, node.data.more_subs.amt, act);
 }
 
-static void tr_maybe_link_sig(pt_traversal *traversal, node_ind_t node_index) {
-  if (traversal->wanted_actions.link_sigs) {
+static void tr_maybe_annotate(pt_traversal *traversal, node_ind_t node_index) {
+  if (traversal->wanted_actions.annotate) {
     const traverse_action act = TR_LINK_SIG;
     VEC_PUSH(&traversal->actions, act);
     const vec_node_ind stack = traversal->node_stack;
@@ -248,6 +248,13 @@ static void tr_initial_generic(pt_traversal *traversal,
                                traversal_node_data data) {
   tr_push_out(traversal, data.node_index);
   tr_push_subs(traversal, data.node);
+  tr_push_in(traversal, data.node_index);
+}
+
+static void tr_initial_one_sub_statement(pt_traversal *traversal,
+                                         traversal_node_data data) {
+  tr_push_out(traversal, data.node_index);
+  tr_push_initial(traversal, data.node.data.two_subs.a);
   tr_push_in(traversal, data.node_index);
 }
 
@@ -384,11 +391,18 @@ static void tr_handle_initial(pt_traversal *traversal) {
       tr_initial_pattern(traversal, data);
       break;
 
+    case PT_ALL_STATEMENT_ABI:
+      debug_assert(pt_subs_type[PT_ALL_STATEMENT_ABI] == SUBS_ONE);
+      tr_maybe_annotate(traversal, data.node_index);
+      tr_initial_one_sub_statement(traversal, data);
+      break;
+
     case PT_ALL_STATEMENT_SIG:
       debug_assert(pt_subs_type[PT_ALL_STATEMENT_SIG] == SUBS_TWO);
-      tr_maybe_link_sig(traversal, data.node_index);
+      tr_maybe_annotate(traversal, data.node_index);
       tr_initial_two_sub_statement(traversal, data);
       break;
+
     case PT_ALL_STATEMENT_LET:
       debug_assert(pt_subs_type[PT_ALL_STATEMENT_LET] == SUBS_TWO);
       // push env after the fact
@@ -433,7 +447,7 @@ pt_traversal pt_traverse(parse_tree tree, traverse_mode mode) {
       {
         .add_blocks = test_should(should_add_blocks, mode),
         .edit_environment = test_should(should_edit_environment, mode),
-        .link_sigs = test_should(should_link_sigs, mode),
+        .annotate = test_should(should_annotate, mode),
         .traverse_expressions_in = test_should(traverse_expressions_in, mode),
         .traverse_expressions_out = test_should(traverse_expressions_out, mode),
         .traverse_patterns_in = test_should(traverse_patterns_in, mode),

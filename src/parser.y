@@ -186,6 +186,18 @@ statement_in_parens(RES) ::= sig(A). {
   RES = A;
 }
 
+statement_in_parens(RES) ::= abi_annotation(A). {
+  RES = A;
+}
+
+abi_annotation(RES) ::= HASH_ABI lower_name_node(A). {
+  parse_node n = {
+    .type.statement = PT_STATEMENT_ABI,
+    .data.two_subs.a = push_node(s, A),
+  };
+  RES = push_node(s, n);
+}
+
 // TODO make this a pattern, not a binding
 let(RES) ::= LET lower_name_node(A) expression(B). {
   BREAK_PARSER;
