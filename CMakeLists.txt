@@ -129,7 +129,6 @@ set (TEST_OBJS
   src/test_llvm.c
   src/test_parser.c
   src/test_diagnostics.c
-  src/test_parse_tree.c
   src/test_scanner.c
   src/test_semantics.c
   src/test_strint.c
@@ -157,7 +156,6 @@ set (COMPILE_FOR_SIZE
   src/test_utils.c
   src/test_vec.c
   src/test_upto.c
-  src/test_parse_tree.c
   src/test_traverse.c
   src/test_hashmap.c
   src/timing.c

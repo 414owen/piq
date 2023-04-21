@@ -101,9 +101,6 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
   const node_ind_t node_ind = elem.node_index;
   const type_ref our_type = generate_node_type(builder, node_ind);
   switch (node.type.all) {
-    case PT_ALL_LEN:
-      // TODO Impossible
-      break;
     case PT_ALL_STATEMENT_ABI: {
       // TODO could speed this up by pre-computing + caching this type
       type_ref a = mk_primitive_type(builder->type_builder, TC_IS_C_ABI);

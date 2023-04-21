@@ -329,10 +329,6 @@ static void tr_handle_initial(pt_traversal *traversal) {
   traversal_node_data data = traverse_get_parse_node(traversal);
 
   switch (data.node.type.all) {
-    case PT_ALL_LEN:
-      // impossible
-      break;
-
     case PT_ALL_EX_FN:
       debug_assert(pt_subs_type[PT_ALL_EX_FN] == SUBS_EXTERNAL);
       tr_maybe_restore_scope(traversal);

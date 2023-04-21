@@ -20,141 +20,34 @@ typedef enum {
 
 VEC_DECL(print_action);
 
+// subs_type, name, category
+
 static const tree_node_repr pt_subs_type_arr[] = {
-  [PT_ALL_LEN] = SUBS_NONE,
-  [PT_ALL_EX_INT] = SUBS_NONE,
-  [PT_ALL_MULTI_TERM_NAME] = SUBS_NONE,
-  [PT_ALL_MULTI_TYPE_PARAM_NAME] = SUBS_NONE,
-  [PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME] = SUBS_NONE,
-  [PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME] = SUBS_NONE,
-  [PT_ALL_EX_TERM_NAME] = SUBS_NONE,
-  [PT_ALL_EX_UPPER_NAME] = SUBS_NONE,
-  [PT_ALL_EX_STRING] = SUBS_NONE,
-  [PT_ALL_EX_UNIT] = SUBS_NONE,
-  [PT_ALL_PAT_WILDCARD] = SUBS_NONE,
-  [PT_ALL_PAT_UNIT] = SUBS_NONE,
-  [PT_ALL_PAT_STRING] = SUBS_NONE,
-  [PT_ALL_PAT_LIST] = SUBS_NONE,
-  [PT_ALL_PAT_INT] = SUBS_NONE,
-  [PT_ALL_PAT_DATA_CONSTRUCTOR_NAME] = SUBS_NONE,
-  [PT_ALL_TY_UNIT] = SUBS_NONE,
-  [PT_ALL_TY_CONSTRUCTOR_NAME] = SUBS_NONE,
-  [PT_ALL_TY_PARAM_NAME] = SUBS_NONE,
 
-  [PT_ALL_TY_LIST] = SUBS_ONE,
+#define X(name, str, cat, subs) [PARSE_NODE_ALL_PREFIX(name)] = subs,
+  DECL_PARSE_NODES
+#undef X
 
-  [PT_ALL_EX_AS] = SUBS_TWO,
-  [PT_ALL_EX_TUP] = SUBS_TWO,
-  [PT_TY_TUP] = SUBS_TWO,
-  [PT_TY_CONSTRUCTION] = SUBS_TWO,
-  [PT_ALL_STATEMENT_SIG] = SUBS_TWO,
-  [PT_ALL_STATEMENT_LET] = SUBS_TWO,
-  [PT_ALL_PAT_TUP] = SUBS_TWO,
-  [PT_ALL_PAT_CONSTRUCTION] = SUBS_TWO,
-
-  [PT_ALL_TY_FN] = SUBS_EXTERNAL,
-  [PT_ALL_EX_CALL] = SUBS_EXTERNAL,
-  [PT_ALL_EX_FN] = SUBS_EXTERNAL,
-  [PT_ALL_EX_IF] = SUBS_EXTERNAL,
-  [PT_ALL_EX_LIST] = SUBS_EXTERNAL,
-  [PT_ALL_EX_FUN_BODY] = SUBS_EXTERNAL,
-  [PT_ALL_STATEMENT_FUN] = SUBS_EXTERNAL,
-  [PT_ALL_STATEMENT_DATA_DECLARATION] = SUBS_EXTERNAL,
-  [PT_ALL_MULTI_DATA_CONSTRUCTORS] = SUBS_EXTERNAL,
-  [PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL] = SUBS_EXTERNAL,
-  [PT_ALL_MULTI_TYPE_PARAMS] = SUBS_EXTERNAL,
 };
 
 const tree_node_repr *pt_subs_type = pt_subs_type_arr;
 
 static const char *parse_node_strings_arr[] = {
-  [PT_ALL_LEN] = "",
-  [PT_ALL_PAT_DATA_CONSTRUCTOR_NAME] = "DataConstructorName",
-  [PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME] = "DataConstructorName",
-  [PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME] = "TypeConstructorName",
-  [PT_ALL_MULTI_TYPE_PARAM_NAME] = "TypeParamName",
-  [PT_ALL_TY_CONSTRUCTOR_NAME] = "TypeConstructorName",
-  [PT_ALL_TY_PARAM_NAME] = "TypeVariable",
-  [PT_ALL_PAT_WILDCARD] = "WildcardPattern",
-  [PT_ALL_STATEMENT_LET] = "LetStatement",
-  [PT_ALL_EX_TERM_NAME] = "TermNameExpression",
-  [PT_ALL_EX_UPPER_NAME] = "ConstructorNameExpression",
-  [PT_ALL_EX_AS] = "AsExpression",
-  [PT_ALL_EX_CALL] = "CallExpression",
-  [PT_ALL_TY_CONSTRUCTION] = "TypeConstructionType",
-  [PT_ALL_PAT_CONSTRUCTION] = "DataConstructionPattern",
-  [PT_ALL_EX_FN] = "AnonymousFunctionExpression",
-  [PT_ALL_TY_FN] = "FunctionType",
-  [PT_ALL_EX_FUN_BODY] = "FunctionBodyExpression",
-  [PT_ALL_STATEMENT_FUN] = "FunctionStatement",
-  [PT_ALL_EX_IF] = "IfExpression",
-  [PT_ALL_PAT_INT] = "IntPattern",
-  [PT_ALL_EX_INT] = "IntExpression",
-  [PT_ALL_PAT_LIST] = "ListPattern",
-  [PT_ALL_EX_LIST] = "ListExpression",
-  [PT_ALL_TY_LIST] = "ListType",
-  [PT_ALL_MULTI_TERM_NAME] = "TermName",
-  [PT_ALL_STATEMENT_SIG] = "TypeSignatureStatement",
-  [PT_ALL_PAT_STRING] = "StringPattern",
-  [PT_ALL_EX_STRING] = "StringExpression",
-  [PT_ALL_PAT_TUP] = "TuplePattern",
-  [PT_ALL_TY_TUP] = "TupleType",
-  [PT_ALL_EX_TUP] = "TupleExpression",
-  [PT_ALL_TY_UNIT] = "UnitType",
-  [PT_ALL_PAT_UNIT] = "UnitPattern",
-  [PT_ALL_EX_UNIT] = "UnitExpression",
-  [PT_ALL_STATEMENT_DATA_DECLARATION] = "DataDeclarationStatement",
-  [PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL] = "DataConstructorDeclaration",
-  [PT_ALL_MULTI_TYPE_PARAMS] = "TypeParameters",
-  [PT_ALL_MULTI_DATA_CONSTRUCTORS] = "DataConstructors",
+
+#define X(name, str, cat, subs) [PARSE_NODE_ALL_PREFIX(name)] = str,
+  DECL_PARSE_NODES
+#undef X
+
 };
 
 const char **parse_node_strings = parse_node_strings_arr;
 
 static const parse_node_category parse_node_categories_arr[] = {
-  [PT_ALL_EX_AS] = PT_C_EXPRESSION,
-  [PT_ALL_EX_CALL] = PT_C_EXPRESSION,
-  [PT_ALL_EX_FN] = PT_C_EXPRESSION,
-  [PT_ALL_EX_FUN_BODY] = PT_C_EXPRESSION,
-  [PT_ALL_EX_IF] = PT_C_EXPRESSION,
-  [PT_ALL_EX_INT] = PT_C_EXPRESSION,
-  [PT_ALL_EX_LIST] = PT_C_EXPRESSION,
-  [PT_ALL_EX_STRING] = PT_C_EXPRESSION,
-  [PT_ALL_EX_TERM_NAME] = PT_C_EXPRESSION,
-  [PT_ALL_EX_TUP] = PT_C_EXPRESSION,
-  [PT_ALL_EX_UNIT] = PT_C_EXPRESSION,
-  [PT_ALL_EX_UPPER_NAME] = PT_C_EXPRESSION,
 
-  [PT_ALL_MULTI_DATA_CONSTRUCTOR_DECL] = PT_C_NONE,
-  [PT_ALL_MULTI_DATA_CONSTRUCTOR_NAME] = PT_C_NONE,
-  [PT_ALL_MULTI_DATA_CONSTRUCTORS] = PT_C_NONE,
-  [PT_ALL_MULTI_TERM_NAME] = PT_C_NONE,
-  [PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME] = PT_C_NONE,
-  [PT_ALL_MULTI_TYPE_PARAM_NAME] = PT_C_NONE,
-  [PT_ALL_MULTI_TYPE_PARAMS] = PT_C_NONE,
+#define X(name, str, cat, subs) [PARSE_NODE_ALL_PREFIX(name)] = cat,
+  DECL_PARSE_NODES
+#undef X
 
-  [PT_ALL_PAT_CONSTRUCTION] = PT_C_PATTERN,
-  [PT_ALL_PAT_DATA_CONSTRUCTOR_NAME] = PT_C_PATTERN,
-  [PT_ALL_PAT_INT] = PT_C_PATTERN,
-  [PT_ALL_PAT_LIST] = PT_C_PATTERN,
-  [PT_ALL_PAT_STRING] = PT_C_PATTERN,
-  [PT_ALL_PAT_TUP] = PT_C_PATTERN,
-  [PT_ALL_PAT_UNIT] = PT_C_PATTERN,
-  [PT_ALL_PAT_WILDCARD] = PT_C_PATTERN,
-
-  [PT_ALL_STATEMENT_DATA_DECLARATION] = PT_C_STATEMENT,
-  [PT_ALL_STATEMENT_FUN] = PT_C_STATEMENT,
-  [PT_ALL_STATEMENT_LET] = PT_C_STATEMENT,
-  [PT_ALL_STATEMENT_SIG] = PT_C_STATEMENT,
-
-  [PT_ALL_TY_CONSTRUCTION] = PT_C_TYPE,
-  [PT_ALL_TY_CONSTRUCTOR_NAME] = PT_C_TYPE,
-  [PT_ALL_TY_FN] = PT_C_TYPE,
-  [PT_ALL_TY_LIST] = PT_C_TYPE,
-  [PT_ALL_TY_PARAM_NAME] = PT_C_TYPE,
-  [PT_ALL_TY_TUP] = PT_C_TYPE,
-  [PT_ALL_TY_UNIT] = PT_C_TYPE,
-  [PT_ALL_LEN] = 0,
 };
 
 const parse_node_category *parse_node_categories = parse_node_categories_arr;
@@ -260,9 +153,6 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
   span span =
     s->tree.spans != NULL ? s->tree.spans[node_ind] : node.phase_data.span;
   switch (node.type.all) {
-    case PT_ALL_LEN:
-      // TODO impossible
-      break;
     case PT_ALL_PAT_INT:
     case PT_ALL_EX_INT:
     case PT_ALL_TY_PARAM_NAME:
