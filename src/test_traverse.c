@@ -44,10 +44,10 @@ typedef struct {
 
 static int count_traversal_elems(pt_traversal *traversal) {
   int res = 0;
-  pt_traverse_elem a = pt_traverse_next(traversal);
+  pt_traverse_elem a = pt_walk_next(traversal);
   while (a.action != TR_END) {
     res += 1;
-    a = pt_traverse_next(traversal);
+    a = pt_walk_next(traversal);
   }
   return res;
 }
@@ -106,7 +106,7 @@ static void node_type_mismatch(test_state *state, int position,
 static void test_elems_match(test_state *state, pt_traversal *traversal,
                              test_traverse_elem *elems, int amount) {
   for (int i = 0; i < amount; i++) {
-    pt_traverse_elem a = pt_traverse_next(traversal);
+    pt_traverse_elem a = pt_walk_next(traversal);
     test_traverse_elem b = elems[i];
     if (a.action == TR_END) {
       traversal_fail(
@@ -170,7 +170,7 @@ static void test_elems_match(test_state *state, pt_traversal *traversal,
       }
     }
   }
-  pt_traverse_elem b = pt_traverse_next(traversal);
+  pt_traverse_elem b = pt_walk_next(traversal);
   if (b.action != TR_END) {
     const int traversal_elem_amt = count_traversal_elems(traversal) + amount;
     failf(state,
@@ -187,7 +187,7 @@ static void test_traversal(test_state *state, const char *input,
   if (!pres.success) {
     return;
   }
-  pt_traversal traversal = pt_traverse(pres.tree, mode);
+  pt_traversal traversal = pt_walk(pres.tree, mode);
   test_elems_match(state, &traversal, elems, amount);
   free_parse_tree_res(pres);
 }

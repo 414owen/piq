@@ -794,10 +794,10 @@ static void llvm_cg_module(LLVMContextRef ctx, LLVMModuleRef mod,
   llvm_cg_state state = llvm_new_cg_state(ctx, mod, source, tree, types);
   llvm_init_builtins(&state);
 
-  pt_traversal traversal = pt_traverse(tree, TRAVERSE_CODEGEN);
+  pt_traversal traversal = pt_walk(tree, TRAVERSE_CODEGEN);
 
   while (true) {
-    pt_traverse_elem elem = pt_traverse_next(&traversal);
+    pt_traverse_elem elem = pt_walk_next(&traversal);
     switch (elem.action) {
       case TR_NEW_BLOCK:
         llvm_gen_basic_block(&state, "block", VEC_PEEK(state.function_stack));
