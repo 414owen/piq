@@ -218,12 +218,18 @@ extern const parse_node_category *parse_node_categories;
 typedef struct {
   parse_node_type type;
 
+  // TODO use these spare padding bits for something?
+
   union {
     // the parser puts this inline, we move it to a separate
     // array during name resolution, because it won't be very
     // useful after that.
     span span;
-    node_ind_t type_data_ind;
+    struct {
+      node_ind_t type_data_ind;
+      // flags
+      node_ind_t c_abi : 1;
+    } post_resolve;
   } phase_data;
 
   union {
