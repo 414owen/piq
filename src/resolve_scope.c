@@ -203,7 +203,7 @@ static void resolve_pop_env(scope_calculator_state *state) {
 }
 
 resolution_res resolve_bindings(parse_tree tree, const char *restrict input) {
-  pt_traversal traversal = pt_traverse(tree, TRAVERSE_RESOLVE_BINDINGS);
+  pt_traversal traversal = pt_walk(tree, TRAVERSE_RESOLVE_BINDINGS);
   scope_calculator_state state = {
     .not_found = VEC_NEW,
     .tree = tree,
@@ -249,7 +249,7 @@ resolution_res resolve_bindings(parse_tree tree, const char *restrict input) {
   }
 
   while (true) {
-    state.elem = pt_traverse_next(&traversal);
+    state.elem = pt_walk_next(&traversal);
     switch (state.elem.action) {
       case TR_NEW_BLOCK:
       case TR_LINK_SIG:

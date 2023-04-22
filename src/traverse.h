@@ -6,5 +6,5 @@
 
 #include "traversal.h"
 
-pt_traversal pt_traverse(parse_tree tree, traverse_mode mode);
-pt_traverse_elem pt_traverse_next(pt_traversal *traversal);
+pt_traversal pt_walk(parse_tree tree, traverse_mode mode);
+pt_traverse_elem pt_walk_next(pt_traversal *traversal);
