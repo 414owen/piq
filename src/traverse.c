@@ -64,24 +64,31 @@ typedef enum {
 
 static uint8_t traverse_patterns_in =
   (1 << TRAVERSE_PRINT_TREE) | (1 << TRAVERSE_RESOLVE_BINDINGS) |
-  (1 << TRAVERSE_TYPECHECK) | (1 << TRAVERSE_CODEGEN);
+  (1 << TRAVERSE_TYPECHECK) | (1 << TRAVERSE_CODEGEN) |
+  (1 << TRAVERSE_PRECALCULATE);
 
-static uint8_t traverse_patterns_out = (1 << TRAVERSE_PRINT_TREE);
+static uint8_t traverse_patterns_out = (1 << TRAVERSE_PRINT_TREE) |
+  (1 << TRAVERSE_PRECALCULATE);
 
 static uint8_t traverse_expressions_in = (1 << TRAVERSE_PRINT_TREE) |
                                          (1 << TRAVERSE_RESOLVE_BINDINGS) |
-                                         (1 << TRAVERSE_TYPECHECK);
+                                         (1 << TRAVERSE_TYPECHECK) |
+  (1 << TRAVERSE_PRECALCULATE);
 
 static uint8_t traverse_expressions_out =
-  (1 << TRAVERSE_PRINT_TREE) | (1 << TRAVERSE_CODEGEN);
+  (1 << TRAVERSE_PRINT_TREE) | (1 << TRAVERSE_CODEGEN) |
+  (1 << TRAVERSE_PRECALCULATE);
 
 static uint8_t should_edit_environment = (1 << TRAVERSE_RESOLVE_BINDINGS) |
                                          (1 << TRAVERSE_TYPECHECK) |
-                                         (1 << TRAVERSE_CODEGEN);
+                                         (1 << TRAVERSE_CODEGEN) |
+  (1 << TRAVERSE_PRECALCULATE);
 
-static uint8_t should_annotate = (1 << TRAVERSE_TYPECHECK);
+static uint8_t should_annotate = (1 << TRAVERSE_TYPECHECK) |
+  (1 << TRAVERSE_PRECALCULATE);
 
-static uint8_t should_add_blocks = (1 << TRAVERSE_CODEGEN);
+static uint8_t should_add_blocks = (1 << TRAVERSE_CODEGEN) |
+  (1 << TRAVERSE_PRECALCULATE);
 
 static void tr_push_action(pt_traversal *traversal,
                            traverse_action_internal action,
@@ -515,4 +522,45 @@ pt_traverse_elem pt_traverse_next(pt_traversal *traversal) {
   }
   res.action = TR_END;
   return res;
+}
+
+static pt_minimal_traverse_elem pt_shrink_elem(pt_traverse_elem elem) {
+  pt_minimal_traverse_elem res = {
+    .action = elem.action,
+  };
+  switch (elem.action) {
+    case TR_PREDECLARE_FN:
+    case TR_PUSH_SCOPE_VAR:
+    case TR_NEW_BLOCK:
+    case TR_VISIT_IN:
+    case TR_VISIT_OUT:
+      res.data.node_index = elem.data.node_data.node_index;
+      break;
+    case TR_POP_TO:
+      res.data.new_environment_amount = elem.data.new_environment_amount;
+      break;
+    case TR_END:
+      break;
+    case TR_LINK_SIG:
+      res.data.link_sig_data = elem.data.link_sig_data;
+      break;
+  }
+  return res;
+}
+
+pt_precalculated_traversal pt_traverse_precalculate(parse_tree tree) {
+  pt_traversal traversal = pt_traverse(tree, TRAVERSE_PRECALCULATE);
+  vec_pt_minimal_traverse_elem elems = VEC_NEW;
+  while (true) {
+    pt_minimal_traverse_elem elem = pt_shrink_elem(pt_traverse_next(&traversal));
+    if (elem.action == TR_END) {
+      pt_precalculated_traversal res = {
+        .traverse_action_amt = elems.len,
+        .elems = VEC_FINALIZE(&elems),
+      };
+      return res;
+    } else {
+      VEC_PUSH(&elems, elem);
+    }
+  }
 }
