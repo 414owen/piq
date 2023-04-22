@@ -22,7 +22,6 @@ typedef enum {
   TC_U32,
   TC_I64,
   TC_U64,
-  TC_CFN,
   TC_FN,
   TC_BOOL,
   TC_TUP,

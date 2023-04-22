@@ -62,7 +62,6 @@ static const tree_node_repr type_repr_arr[] = {
   [TC_TUP] = SUBS_TWO,
 
   [TC_OR] = SUBS_EXTERNAL,
-  [TC_CFN] = SUBS_EXTERNAL,
   [TC_FN] = SUBS_EXTERNAL,
 
 };
@@ -88,7 +87,6 @@ static char *type_head_strs[] = {
   [TC_U64] = "U64",
   [TC_VAR] = "TypeVar",
   [TC_BOOL] = "Bool",
-  [TC_CFN] = "CFn",
   [TC_FN] = "Fn",
   [TC_TUP] = "Tuple",
   [TC_LIST] = "List",
