@@ -75,65 +75,29 @@ bool inline_types_eq(type a, type b) {
          a.data.two_subs.b == b.data.two_subs.b;
 }
 
+static char *type_head_strs[] = {
+  [TC_OR] = "OR",
+  [TC_UNIT] = "()",
+  [TC_I8] = "I8",
+  [TC_U8] = "U8",
+  [TC_I16] = "I16",
+  [TC_U16] = "U16",
+  [TC_I32] = "I32",
+  [TC_U32] = "U32",
+  [TC_I64] = "I64",
+  [TC_U64] = "U64",
+  [TC_VAR] = "TypeVar",
+  [TC_BOOL] = "Bool",
+  [TC_CFN] = "CFn",
+  [TC_FN] = "Fn",
+  [TC_TUP] = "Tuple",
+  [TC_LIST] = "List",
+  [TC_CALL] = "Call",
+  [TC_IS_C_ABI] = "CAbi",
+};
+
 static void print_type_head(FILE *f, type_check_tag head) {
-  static const char *str;
-  switch (head) {
-    case TC_OR:
-      str = "OR";
-      break;
-    case TC_UNIT:
-      str = "()";
-      break;
-    case TC_I8:
-      str = "I8";
-      break;
-    case TC_U8:
-      str = "U8";
-      break;
-    case TC_I16:
-      str = "I16";
-      break;
-    case TC_U16:
-      str = "U16";
-      break;
-    case TC_I32:
-      str = "I32";
-      break;
-    case TC_U32:
-      str = "U32";
-      break;
-    case TC_I64:
-      str = "I64";
-      break;
-    case TC_U64:
-      str = "U64";
-      break;
-    case TC_VAR:
-      str = "TypeVar";
-      break;
-    case TC_BOOL:
-      str = "Bool";
-      break;
-    case TC_CFN:
-      str = "CFn";
-      break;
-    case TC_FN:
-      str = "Fn";
-      break;
-    case TC_TUP:
-      str = "Tuple";
-      break;
-    case TC_LIST:
-      str = "List";
-      break;
-    case TC_CALL:
-      str = "Call";
-      break;
-    case TC_IS_C_ABI:
-      str = "CAbi";
-      break;
-  }
-  fputs(str, f);
+  fputs(type_head_strs[head], f);
 }
 
 void print_type_head_placeholders(FILE *f, type_check_tag head) {
