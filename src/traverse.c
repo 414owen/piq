@@ -441,7 +441,7 @@ static void tr_handle_initial(pt_traversal *traversal) {
   }
 }
 
-pt_traversal pt_traverse(parse_tree tree, traverse_mode mode) {
+pt_traversal pt_walk(parse_tree tree, traverse_mode mode) {
   pt_traversal res = {
     .nodes = tree.nodes,
     .inds = tree.inds,
@@ -473,7 +473,7 @@ pt_traversal pt_traverse(parse_tree tree, traverse_mode mode) {
 }
 
 // pre-then-postorder traversal
-pt_traverse_elem pt_traverse_next(pt_traversal *traversal) {
+pt_traverse_elem pt_walk_next(pt_traversal *traversal) {
   pt_traverse_elem res;
   while (traversal->actions.len > 0) {
     traverse_action_internal act;
@@ -549,10 +549,10 @@ static pt_minimal_traverse_elem pt_shrink_elem(pt_traverse_elem elem) {
 }
 
 pt_precalculated_traversal pt_traverse_precalculate(parse_tree tree) {
-  pt_traversal traversal = pt_traverse(tree, TRAVERSE_PRECALCULATE);
+  pt_traversal traversal = pt_walk(tree, TRAVERSE_PRECALCULATE);
   vec_pt_minimal_traverse_elem elems = VEC_NEW;
   while (true) {
-    pt_minimal_traverse_elem elem = pt_shrink_elem(pt_traverse_next(&traversal));
+    pt_minimal_traverse_elem elem = pt_shrink_elem(pt_walk_next(&traversal));
     if (elem.action == TR_END) {
       pt_precalculated_traversal res = {
         .traverse_action_amt = elems.len,
