@@ -27,7 +27,7 @@ static uint8_t char_to_base16_digit(char c) {
 // Can be optimized by removing the noinline, but it generates a lot of code.
 static HEDLEY_NEVER_INLINE uint64_t parse_arbitrary_positive_base10(
   bool *restrict overflow, const char *restrict str, const size_t str_len,
-  size_t maximum) {
+  uint64_t maximum) {
   uint64_t res = 0;
   uint64_t limit = maximum / 10;
   for (size_t i = 0; i < str_len; i++) {
@@ -49,7 +49,7 @@ static HEDLEY_NEVER_INLINE uint64_t parse_arbitrary_positive_base10(
 // Can be optimized by removing the noinline, but it generates a lot of code.
 static HEDLEY_NEVER_INLINE uint64_t parse_arbitrary_positive_base16(
   bool *restrict overflow, const char *restrict str, const size_t str_len,
-  size_t maximum) {
+  uint64_t maximum) {
   uint64_t res = 0;
   uint64_t limit = maximum / 16;
   for (size_t i = 0; i < str_len; i++) {

@@ -221,7 +221,8 @@ void test_upto_codegen_with(test_state *state, const char *restrict input,
   LLVMOrcThreadSafeModuleRef tsm =
     LLVMOrcCreateNewThreadSafeModule(res.module, ctx.orc_ctx);
   LLVMOrcLLJITAddLLVMIRModule(ctx.jit, ctx.dylib, tsm);
-  LLVMOrcJITTargetAddress entry_addr = (LLVMOrcJITTargetAddress)NULL;
+  // not NULL, because for some reason this isn't a pointer, but a uint64_t
+  LLVMOrcJITTargetAddress entry_addr = 0;
 
   char *module_preamble = "\nIn module:\n";
   bool have_printed_module = false;
@@ -230,7 +231,7 @@ void test_upto_codegen_with(test_state *state, const char *restrict input,
     LLVMErrorRef error =
       LLVMOrcLLJITLookup(ctx.jit, &entry_addr, test.symbol_name);
     if (error == LLVMErrorSuccess) {
-      char *err = test.test_callback((voidfn)entry_addr, test.data);
+      char *err = test.test_callback((voidfn)(uintptr_t)entry_addr, test.data);
       if (err != NULL) {
         failf(state,
               "%s\nOn symbol: '%s'%s%s",

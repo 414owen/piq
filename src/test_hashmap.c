@@ -55,7 +55,7 @@ void test_hashmap(test_state *state) {
       ahm_upsert(&hm, &i, &i, &val, NULL);
     }
     for (u64 i = 0; i < 1000; i++) {
-      char *s = format_to_string("%lu", i);
+      char *s = format_to_string("%" PRIu64, i);
       free(s);
       u32 res_ind = ahm_lookup(&hm, &i, NULL);
       u64 key_res = ((uint64_t *)hm.keys)[res_ind];
@@ -83,7 +83,7 @@ void test_hashmap(test_state *state) {
       }
     }
     for (u64 i = 0; i < 1000; i++) {
-      char *s = format_to_string("%lu", i);
+      char *s = format_to_string("%" PRIu64, i);
       free(s);
       u32 res_ind = ahm_lookup(&hm, &i, NULL);
       u64 key_res = ((uint64_t *)hm.keys)[res_ind];
@@ -107,7 +107,7 @@ void test_hashmap(test_state *state) {
       ahm_upsert(&hm, &i, &i, NULL, NULL);
     }
     for (u64 i = 0; i < 1000; i++) {
-      char *s = format_to_string("%lu", i);
+      char *s = format_to_string("%" PRIu64, i);
       free(s);
       u32 res_ind = ahm_lookup(&hm, &i, NULL);
       u64 key_res = ((uint64_t *)hm.keys)[res_ind];
