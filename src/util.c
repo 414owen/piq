@@ -209,7 +209,12 @@ char *read_entire_file(const char *restrict file_path) {
     long fsize = ftell(f);
     buf_ind_t max_buf = 0;
     max_buf -= 1;
-    if (fsize > max_buf) {
+    const char *restrict err_reading = "Error reading from file";
+    if (fsize < 0) {
+      perror(err_reading);
+      exit(1);
+    }
+    if ((buf_ind_t)fsize > max_buf) {
       fprintf(stderr, "File size can't exceed %d\n", max_buf);
       exit(1);
     }
@@ -217,7 +222,7 @@ char *read_entire_file(const char *restrict file_path) {
     char *string = malloc(fsize + 1);
     size_t amt = fread(string, fsize, 1, f);
     if (errno != 0 || (size_t)fsize != amt) {
-      perror("Error reading from file");
+      perror(err_reading);
       exit(1);
     }
     fclose(f);

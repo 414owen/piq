@@ -232,6 +232,9 @@ if(DEFINED INSTALL_TEST)
   set(TEST_INSTALL_TARGET test-exe)
 endif()
 
+# For testing 32-bit compilation
+# set_target_properties(test-exe piq PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+
 install(
   TARGETS piq ${TEST_INSTALL_TARGET}
   CONFIGURATIONS Release
