@@ -63,18 +63,18 @@ type_ref __mk_type_inline(type_builder *tb, type_check_tag tag, type_ref sub_a,
 
 type_ref mk_type_inline(type_builder *tb, type_check_tag tag, type_ref sub_a,
                         type_ref sub_b) {
-  debug_assert(type_reprs[tag] == SUBS_ONE || type_repr(tag) == SUBS_TWO);
+  debug_assert(type_reprs[tag] == SUBS_ONE || type_reprs[tag] == SUBS_TWO);
   return __mk_type_inline(tb, tag, sub_a, sub_b);
 }
 
 type_ref mk_primitive_type(type_builder *tb, type_check_tag tag) {
-  debug_assert(type_repr(tag) == SUBS_NONE);
+  debug_assert(type_reprs[tag] == SUBS_NONE);
   return __mk_type_inline(tb, tag, 0, 0);
 }
 
 type_ref mk_type(type_builder *tb, type_check_tag tag, const type_ref *subs,
                  type_ref sub_amt) {
-  debug_assert(type_repr(tag) == SUBS_EXTERNAL);
+  debug_assert(type_reprs[tag] == SUBS_EXTERNAL);
   if (subs == NULL) {
     return mk_primitive_type(tb, tag);
   }
