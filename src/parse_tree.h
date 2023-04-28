@@ -33,7 +33,7 @@ typedef enum {
 
 #define PARSE_NODE_ALL_PREFIX(name) PT_ALL_ ## name
 
-#define DECL_PARSE_NODES \
+#define DECL_PARSE_NODES(X) \
   X(EX_AS, "AsExpression", PT_C_EXPRESSION, SUBS_TWO) \
   X(EX_CALL, "CallExpression", PT_C_EXPRESSION, SUBS_EXTERNAL) \
   X(EX_FN, "AnonymousFunctionExpression", PT_C_EXPRESSION, SUBS_EXTERNAL) \
@@ -73,11 +73,19 @@ typedef enum {
   X(TY_PARAM_NAME, "TypeVariable", PT_C_TYPE, SUBS_NONE) \
   X(TY_TUP, "TupleType", PT_C_TYPE, SUBS_TWO) \
   X(TY_UNIT, "UnitType", PT_C_TYPE, SUBS_NONE)
-  
+
+#define DECL_PARSE_NODES_2(X) DECL_PARSE_NODES(X)
+#define DECL_PARSE_NODES_3(X) DECL_PARSE_NODES_2(X)
+
+#define SUCC(a, b, c, d) 1 +
+#define PARSE_NODE_TYPE_AMT DECL_PARSE_NODES_3(SUCC) 0
+
+extern const node_ind_t parse_node_type_amt;
+
 typedef enum {
   
 #define X(enum_name, str, cat, subs) PARSE_NODE_ALL_PREFIX(enum_name),
-DECL_PARSE_NODES
+DECL_PARSE_NODES(X)
 #undef X
 
 } parse_node_type_all;
@@ -268,6 +276,8 @@ typedef struct {
   node_ind_t root_subs_amt;
   // this is set even if parsing errored, for benchmarking
   node_ind_t node_amt;
+  node_ind_t depth;
+  node_ind_t parse_node_type_amounts[PARSE_NODE_TYPE_AMT];
 } parse_tree;
 
 typedef struct {

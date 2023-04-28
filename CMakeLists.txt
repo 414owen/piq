@@ -112,6 +112,7 @@ set (COMMON_OBJS
   src/global_settings.c
   src/log.c
   src/externalise_spans.c
+  src/calc_depth.c
 )
 
 set (MAIN_OBJS

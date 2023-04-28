@@ -456,7 +456,6 @@ pt_traversal pt_walk(parse_tree tree, traverse_mode mode) {
         .traverse_patterns_in = test_should(traverse_patterns_in, mode),
         .traverse_patterns_out = test_should(traverse_patterns_out, mode),
       },
-    // .path = VEC_NEW,
     .node_stack = VEC_NEW,
     .environment_amt = builtin_term_amount,
   };

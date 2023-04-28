@@ -111,11 +111,12 @@ typedef struct {
 typedef struct {
   const parse_node *restrict nodes;
   const node_ind_t *restrict inds;
-  vec_traverse_action actions;
+  node_ind_t action_stack_ind;
+  traverse_action *actions;
   environment_ind_t environment_amt;
   vec_environment_ind environment_len_stack;
   // two names for the same stack
-  vec_node_ind node_stack;
+  node_ind_t *node_stack;
   traverse_mode mode;
   traversal_wanted_actions wanted_actions;
 } pt_traversal;
@@ -158,4 +159,3 @@ typedef struct {
   pt_minimal_traverse_elem *elems;
   uint64_t traverse_action_amt;
 } pt_precalculated_traversal;
-

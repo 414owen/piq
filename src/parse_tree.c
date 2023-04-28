@@ -20,12 +20,14 @@ typedef enum {
 
 VEC_DECL(print_action);
 
+const node_ind_t parse_node_type_amt = PARSE_NODE_TYPE_AMT;
+
 // subs_type, name, category
 
 static const tree_node_repr pt_subs_type_arr[] = {
 
 #define X(name, str, cat, subs) [PARSE_NODE_ALL_PREFIX(name)] = subs,
-  DECL_PARSE_NODES
+  DECL_PARSE_NODES(X)
 #undef X
 
 };
@@ -35,7 +37,7 @@ const tree_node_repr *pt_subs_type = pt_subs_type_arr;
 static const char *parse_node_strings_arr[] = {
 
 #define X(name, str, cat, subs) [PARSE_NODE_ALL_PREFIX(name)] = str,
-  DECL_PARSE_NODES
+  DECL_PARSE_NODES(X)
 #undef X
 
 };
@@ -45,7 +47,7 @@ const char **parse_node_strings = parse_node_strings_arr;
 static const parse_node_category parse_node_categories_arr[] = {
 
 #define X(name, str, cat, subs) [PARSE_NODE_ALL_PREFIX(name)] = cat,
-  DECL_PARSE_NODES
+  DECL_PARSE_NODES(X)
 #undef X
 
 };

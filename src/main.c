@@ -12,6 +12,7 @@
 #include <llvm-c/TargetMachine.h>
 
 #include "args.h"
+#include "calc_depth.h"
 #include "diagnostic.h"
 #include "externalise_spans.h"
 #include "global_settings.h"
@@ -69,6 +70,8 @@ static void compile_llvm(compile_arguments args) {
     free_parse_tree_res(pres);
     return;
   }
+  
+  pres.tree.depth = calculate_tree_depth(pres.tree);
 
   {
     resolution_res res = resolve_bindings(pres.tree, source_code);
