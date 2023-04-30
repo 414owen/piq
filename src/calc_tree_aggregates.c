@@ -56,17 +56,46 @@ static node_ind_t calc_max_depth(parse_tree_without_aggregates tree) {
   return max_depth;
 }
 
-static node_ind_t calc_max_actions_depth(parse_tree_without_aggregates tree) {
-  vec_traverse_action actions = VEC_NEW;
+typedef struct {
+  vec_traverse_action actions;
+  vec_node_ind node_inds;
+} max_action_state;
 
-  for (node_ind_t i = 0; i < tree.root_subs_amt; i++) {
-    depth_state initial = {
-      .node_index = tree.inds[tree.root_subs_start + i],
-      .depth = 1,
-    };
-    VEC_PUSH(&stack, initial);
+HEDLEY_INLINE
+static void calc_max_actions_push_action(max_action_state *state, traverse_action_internal act, node_ind_t node_index) {
+  VEC_PUSH(&state->actions, act);
+  VEC_PUSH(&state->node_inds, node_index);
+}
+
+
+
+static void calc_max_actions_push_letrec(parse_node *nodes, node_ind_t *inds, max_action_state *state, node_ind_t start, node_ind_t amount) {
+
+  for (node_ind_t i = 0; i < amount; i++) {
+    const node_ind_t node_index = inds[start + amount - 1 - i];
+    parse_node node = nodes[node_index];
+    switch (node.type.statement) {
+      case PT_STATEMENT_FUN: {
+        // '0' is not a node index, just a scope amount
+        calc_max_actions_push_action(state, TR_ACT_POP_SCOPE_TO, 0);
+        calc_max_actions_push_external_initial(state, )
+        tr_initial_external_sub_statement(traversal, data);
+        tr_maybe_backup_scope(traversal);
+        break;
+      }
+      default:
+        tr_push_initial(traversal, node_index);
+        break;
+    }
   }
+}
 
+static node_ind_t calc_max_actions_depth(parse_tree_without_aggregates tree) {
+  VEC_LEN_T max_actions;
+  VEC_LEN_T max_node_inds;
+  max_action_state state = {
+    
+  };
   return res;
 }
 

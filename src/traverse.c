@@ -287,7 +287,7 @@ static void tr_push_inout(pt_traversal *traversal, node_ind_t node_index) {
 
 static void tr_maybe_restore_scope(pt_traversal *traversal) {
   if (traversal->wanted_actions.edit_environment) {
-    const traverse_action_internal act = TR_ACT_POP_TO;
+    const traverse_action_internal act = TR_ACT_POP_SCOPE_TO;
     VEC_PUSH(&traversal->actions, act);
   }
 }
@@ -496,7 +496,7 @@ pt_traverse_elem pt_walk_next(pt_traversal *traversal) {
       case TR_ACT_INITIAL:
         tr_handle_initial(traversal);
         break;
-      case TR_ACT_POP_TO:
+      case TR_ACT_POP_SCOPE_TO:
         VEC_POP(&traversal->environment_len_stack,
                 &res.data.new_environment_amount);
         traversal->environment_amt = res.data.new_environment_amount;
