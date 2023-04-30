@@ -269,6 +269,15 @@ typedef struct {
 VEC_DECL(parse_node);
 
 typedef struct {
+  node_ind_t max_depth;
+  node_ind_t max_actions_depth;
+  /*
+  node_ind_t max_depth_parse_node_type_amounts[PARSE_NODE_TYPE_AMT];
+  node_ind_t parse_node_type_amounts[PARSE_NODE_TYPE_AMT];
+  */
+} parse_tree_aggregates;
+
+typedef struct {
   parse_node *nodes;
   span *spans;
   const node_ind_t *inds;
@@ -276,8 +285,11 @@ typedef struct {
   node_ind_t root_subs_amt;
   // this is set even if parsing errored, for benchmarking
   node_ind_t node_amt;
-  node_ind_t depth;
-  node_ind_t parse_node_type_amounts[PARSE_NODE_TYPE_AMT];
+} parse_tree_without_aggregates;
+
+typedef struct {
+  parse_tree_without_aggregates data;
+  parse_tree_aggregates aggregates;
 } parse_tree;
 
 typedef struct {

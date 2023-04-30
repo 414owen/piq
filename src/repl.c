@@ -7,7 +7,7 @@
 #include <readline/readline.h>
 #include <stdlib.h>
 
-#include "calc_depth.h"
+#include "calc_tree_aggregates.h"
 #include "diagnostic.h"
 #include "llvm.h"
 #include "parser.h"
@@ -34,7 +34,7 @@ static void reply(char *input, FILE *out) {
     goto end_b;
   }
 
-  pres.tree.depth = calculate_tree_depth(pres.tree);
+  pres.tree.aggregates = calculate_tree_aggregates(pres.tree);
   resolution_res res_res = resolve_bindings(pres.tree, input);
   if (res_res.not_found.binding_amt > 0) {
     print_resolution_errors(stdout, input, res_res.not_found);

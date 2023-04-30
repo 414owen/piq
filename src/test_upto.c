@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-#include "calc_depth.h"
+#include "calc_tree_aggregates.h"
 #include "defs.h"
 #include "diagnostic.h"
 #include "externalise_spans.h"
@@ -38,7 +38,7 @@ void add_parser_timings_internal(test_state *state, tokens_res tres,
 
   state->total_parser_perf =
     perf_add(state->total_parser_perf, pres.perf_values);
-  state->total_parse_nodes_produced += pres.tree.node_amt;
+  state->total_parse_nodes_produced += pres.tree.data.node_amt;
 }
 #endif
 
@@ -48,7 +48,7 @@ void add_typecheck_timings_internal(test_state *state, parse_tree tree,
   if (tc_res.error_amt == 0) {
     state->total_typecheck_perf =
       perf_add(state->total_typecheck_perf, tc_res.perf_values);
-    state->total_parse_nodes_typechecked += tree.node_amt;
+    state->total_parse_nodes_typechecked += tree.data.node_amt;
   }
 }
 #endif
@@ -58,7 +58,7 @@ void add_codegen_timings_internal(test_state *state, parse_tree tree,
                                   llvm_res llres) {
   state->total_llvm_ir_generation_perf =
     perf_add(state->total_llvm_ir_generation_perf, llres.perf_values);
-  state->total_parse_nodes_codegened += tree.node_amt;
+  state->total_parse_nodes_codegened += tree.data.node_amt;
 }
 #endif
 
@@ -109,15 +109,18 @@ parse_tree_res test_upto_parse_tree(test_state *state,
     return res;
   }
 
-  const parse_tree_res pres = parse(tres.tokens, tres.token_amt);
+  parse_tree_res pres = parse(tres.tokens, tres.token_amt);
 
   add_parser_timings(state, tres, pres);
 
-  if (!pres.success) {
+  if (pres.success) {
+    pres.tree.aggregates = calculate_tree_aggregates(pres.tree.data);
+  } else {
     char *error = print_parse_errors_string(input, tres.tokens, pres);
     failf(state, "Parsing failed:\n%s", error);
     free(error);
   }
+
   free_tokens_res(tres);
   return pres;
 }
@@ -132,7 +135,6 @@ upto_resolution_res test_upto_resolution(test_state *state,
     };
     return res;
   }
-  tree_res.tree.depth = calculate_tree_depth(tree_res.tree);
   const resolution_res res_res = resolve_bindings(tree_res.tree, input);
 
   add_name_resolution_timings(state, res_res);

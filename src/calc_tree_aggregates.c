@@ -1,8 +1,11 @@
+#include <stdint.h>
+#include <stdint.h>
+
 #include "consts.h"
-#include "calc_depth.h"
+#include "calc_tree_aggregates.h"
 #include "parse_tree.h"
+#include "traversal.h"
 #include "vec.h"
-#include "util.h"
 
 typedef struct {
   node_ind_t node_index;
@@ -11,8 +14,8 @@ typedef struct {
 
 VEC_DECL(depth_state);
 
-node_ind_t calculate_tree_depth(parse_tree tree) {
-  node_ind_t total = 0;
+static node_ind_t calc_max_depth(parse_tree_without_aggregates tree) {
+  node_ind_t max_depth = 0;
   vec_depth_state stack = VEC_NEW;
   for (node_ind_t i = 0; i < tree.root_subs_amt; i++) {
     depth_state initial = {
@@ -21,10 +24,11 @@ node_ind_t calculate_tree_depth(parse_tree tree) {
     };
     VEC_PUSH(&stack, initial);
   }
+
   while (stack.len > 0) {
     depth_state elem;
     VEC_POP(&stack, &elem);
-    total = MAX(total, elem.depth);
+    max_depth = MAX(elem.depth, max_depth);
     parse_node n = tree.nodes[elem.node_index];
     elem.depth++;
 
@@ -49,5 +53,28 @@ node_ind_t calculate_tree_depth(parse_tree tree) {
         break;
     }
   }
-  return total;
+  return max_depth;
+}
+
+static node_ind_t calc_max_actions_depth(parse_tree_without_aggregates tree) {
+  vec_traverse_action actions = VEC_NEW;
+
+  for (node_ind_t i = 0; i < tree.root_subs_amt; i++) {
+    depth_state initial = {
+      .node_index = tree.inds[tree.root_subs_start + i],
+      .depth = 1,
+    };
+    VEC_PUSH(&stack, initial);
+  }
+
+  return res;
+}
+
+
+parse_tree_aggregates calculate_tree_aggregates(parse_tree_without_aggregates tree) {
+  parse_tree_aggregates res = {
+    .max_depth = calc_max_depth(tree),
+    .max_actions_depth = calc_max_actions_depth(tree),
+  };
+  return res;
 }

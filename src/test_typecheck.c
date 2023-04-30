@@ -129,7 +129,7 @@ static bool test_err_eq(parse_tree tree, tc_res res, size_t err_ind,
   tc_error eA = res.errors[err_ind];
   if (eA.type != test_err.type)
     return false;
-  if (!spans_equal(tree.spans[eA.pos], err_span))
+  if (!spans_equal(tree.data.spans[eA.pos], err_span))
     return false;
   switch (eA.type) {
     case TC_ERR_CONFLICT: {
@@ -230,8 +230,8 @@ static void test_types_match(test_state *state, const char *input_p,
       test_type exp = exps[i];
       span span = spans[i];
       bool seen = false;
-      for (size_t j = 0; j < rres.tree.node_amt; j++) {
-        if (spans_equal(rres.tree.spans[j], span)) {
+      for (size_t j = 0; j < rres.tree.data.node_amt; j++) {
+        if (spans_equal(rres.tree.data.spans[j], span)) {
           seen = true;
           if (!test_type_eq(res.types.tree.nodes,
                             res.types.tree.inds,

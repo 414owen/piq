@@ -91,8 +91,8 @@ static void test_parser_fails_on(test_state *state, char *input, buf_ind_t pos,
           "Parsing \"%s\" was supposed to fail.\nGot parse tree:\n%s",
           input,
           parse_tree_str);
-    free((void *)pres.tree.inds);
-    free((void *)pres.tree.nodes);
+    free((void *)pres.tree.data.inds);
+    free((void *)pres.tree.data.nodes);
     goto end_a;
   }
 
