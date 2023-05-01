@@ -71,10 +71,13 @@ static void compile_llvm(compile_arguments args) {
     return;
   }
   
-  pres.tree.aggregates = calculate_tree_aggregates(pres.tree);
+  parse_tree tree = {
+    .data = pres.tree,
+    .aggregates = calculate_tree_aggregates(pres.tree),
+  };
 
   {
-    resolution_res res = resolve_bindings(pres.tree, source_code);
+    resolution_res res = resolve_bindings(tree, source_code);
     if (res.not_found.binding_amt > 0) {
       print_resolution_errors(stdout, source_code, res.not_found);
       return;
@@ -83,11 +86,11 @@ static void compile_llvm(compile_arguments args) {
 
   free_tokens_res(tres);
 
-  externalise_spans(&pres.tree);
+  externalise_spans(&tree);
 
-  tc_res tc_res = typecheck(pres.tree);
+  tc_res tc_res = typecheck(tree);
   if (tc_res.error_amt > 0) {
-    print_tc_errors(stdout, source_code, pres.tree, tc_res);
+    print_tc_errors(stdout, source_code, tree.data, tc_res);
     putc('\n', stdout);
     goto end_c;
   }
@@ -112,7 +115,7 @@ static void compile_llvm(compile_arguments args) {
   LLVMSetDataLayout(module, datalayout_str);
   LLVMDisposeMessage(datalayout_str);
 
-  llvm_res llvm_ir_res = llvm_gen_module(file, pres.tree, tc_res.types, module);
+  llvm_res llvm_ir_res = llvm_gen_module(file, tree, tc_res.types, module);
   free_parse_tree_res(pres);
 
   if (args.llvm_dump_path != NULL) {

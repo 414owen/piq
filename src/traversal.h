@@ -7,6 +7,27 @@
 #include "parse_tree.h"
 #include "vec.h"
 
+#define TR_VEC_DECL(type) TR_VEC_DECL_CUSTOM(type, vec_ ## type)
+
+#ifdef PRECALC_MODE
+
+  #define TR_VEC(name) vec_ ## name
+  #define TR_VEC_DECL_CUSTOM(type, name) VEC_DECL_CUSTOM(type, name)
+
+#else
+
+  #define TR_VEC_DECL_CUSTOM(type, name) \
+    typedef struct { \
+      type *data; \
+      VEC_LEN_T len; \
+    } fixed_ ## name
+
+  #define TR_VEC(vec_name) fixed_vec_ ## vec_name
+
+  TR_VEC_DECL_CUSTOM(node_ind_t, vec_node_ind);
+
+#endif
+
 // If traversing the AST ever becomes a bottleneck (unlikely)
 // we could consider specializing the traversal to these cases
 typedef enum {
@@ -79,6 +100,8 @@ typedef enum {
   TR_ACT_BACKUP_SCOPE,
 } traverse_action_internal;
 
+TR_VEC_DECL_CUSTOM(traverse_action_internal, vec_traverse_action);
+
 typedef enum {
   TR_PREDECLARE_FN = TR_ACT_PREDECLARE_FN,
   TR_PUSH_SCOPE_VAR = TR_ACT_PUSH_SCOPE_VAR,
@@ -95,9 +118,6 @@ typedef union {
   traverse_action_internal action_internal;
 } traverse_action_union;
 
-VEC_DECL_CUSTOM(traverse_action_internal, vec_traverse_action);
-// VEC_DECL_CUSTOM(traverse_action, vec_traverse_action);
-
 typedef struct {
   uint8_t traverse_patterns_in : 1;
   uint8_t traverse_patterns_out : 1;
@@ -111,12 +131,10 @@ typedef struct {
 typedef struct {
   const parse_node *restrict nodes;
   const node_ind_t *restrict inds;
-  node_ind_t action_stack_ind;
-  traverse_action *actions;
-  environment_ind_t environment_amt;
-  vec_environment_ind environment_len_stack;
-  // two names for the same stack
-  node_ind_t *node_stack;
+  TR_VEC(traverse_action) actions;
+  TR_VEC(node_ind) environment_len_stack;
+  TR_VEC(node_ind) node_stack;
+  node_ind_t environment_amt;
   traverse_mode mode;
   traversal_wanted_actions wanted_actions;
 } pt_traversal;

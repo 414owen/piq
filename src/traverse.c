@@ -2,11 +2,68 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "builtins.h"
+#include "calc_tree_aggregates.h"
 #include "parse_tree.h"
-#include "traverse.h"
+#include "traversal.h"
+
+#ifdef PRECALC_MODE
+
+  #define TR_VEC_POP_ VEC_POP_
+  #define TR_VEC_POP(vec, into) VEC_POP(vec, into)
+  #define TR_VEC_PUSH(arr, elem) VEC_PUSH(arr, elem)
+  #define TR_VEC_NEW(vec, size) vec.data = NULL; vec.len = 0; vec.cap = 0
+  #define TR_VEC_FREE(vec) VEC_FREE(vec)
+  #define TR_WANTED(a, b) true
+  #define TR_VEC_APPEND_REVERSE(vec, amt, elems) VEC_APPEND_REVERSE(vec, amt, elems)
+  #define TR_VEC_REPLICATE(vec, amt, elem) VEC_REPLICATE(vec, amt, elem)
+  #define TR_VEC_GET(vec, ind) VEC_GET(vec, ind)
+
+#else
+
+  #define TR_VEC_DECL_CUSTOM(type, name) \
+    typedef struct { \
+      type *data; \
+      VEC_LEN_T len; \
+    } fixed_ ## name
+
+  #define TR_VEC_POP_(vecptr) \
+    assert((vecptr)->len > 0); \
+    (vecptr)->len--
+
+  #define TR_VEC_POP(vecptr, into) \
+    assert((vecptr)->len > 0); \
+    *(into) = (vecptr)->data[--(vecptr)->len]
+
+  #define TR_VEC_PUSH(vecptr, elem) \
+    (vecptr)->data[(vecptr)->len++] = elem
+
+  #define TR_VEC_NEW(vec, size) \
+    vec.data = malloc(sizeof(vec.data[0]) * size); \
+    vec.len = 0; \
+
+  #define TR_VEC_FREE(vec) free((vec)->data)
+  #define TR_WANTED(traversal, wanted_field) (traversal)->wanted_actions.wanted_field
+
+  #define TR_VEC_APPEND_REVERSE(vec, amt, elems) \
+    { \
+      void *p = &(vec)->data[(vec)->len]; \
+      memcpy(p, elems, sizeof((elems)[0]) * (amt)); \
+      reverse_arbitrary(p, (amt), sizeof((elems)[0])); \
+      (vec)->len += amt; \
+    }
+
+  #define TR_VEC_REPLICATE(vec, amt, elem) \
+    for (VEC_LEN_T i = 0; i < (amt); i++) { (vec)->data[(vec)->len + i] = elem; } \
+    (vec)->len += amt
+
+  #define TR_VEC_GET(vec, ind) vec.data[ind]
+
+#endif
+
 
 // TODO rename push_scope(function) to declare_function
 
@@ -93,8 +150,8 @@ static uint8_t should_add_blocks = (1 << TRAVERSE_CODEGEN) |
 static void tr_push_action(pt_traversal *traversal,
                            traverse_action_internal action,
                            node_ind_t node_index) {
-  VEC_PUSH(&traversal->actions, action);
-  VEC_PUSH(&traversal->node_stack, node_index);
+  TR_VEC_PUSH(&traversal->actions, action);
+  TR_VEC_PUSH(&traversal->node_stack, node_index);
 }
 
 static void tr_push_initial(pt_traversal *traversal, node_ind_t node_index) {
@@ -102,9 +159,9 @@ static void tr_push_initial(pt_traversal *traversal, node_ind_t node_index) {
 }
 
 static void tr_maybe_add_block(pt_traversal *traversal) {
-  if (traversal->wanted_actions.add_blocks) {
+  if (TR_WANTED(traversal, add_blocks)) {
     traverse_action_internal action = TR_ACT_NEW_BLOCK;
-    VEC_PUSH(&traversal->actions, action);
+    TR_VEC_PUSH(&traversal->actions, action);
   }
 }
 
@@ -130,27 +187,29 @@ static void traverse_push_block(pt_traversal *traversal, node_ind_t start,
 
 static traversal_node_data traverse_get_parse_node(pt_traversal *traversal) {
   traversal_node_data res;
-  VEC_POP(&traversal->node_stack, &res.node_index);
+  TR_VEC_POP(&traversal->node_stack, &res.node_index);
   res.node = traversal->nodes[res.node_index];
   return res;
 }
 
 static void tr_push_subs_external(pt_traversal *traversal, parse_node node) {
-  VEC_APPEND_REVERSE(&traversal->node_stack,
+  TR_VEC_APPEND_REVERSE(&traversal->node_stack,
                      node.data.more_subs.amt,
                      &traversal->inds[node.data.more_subs.start]);
   const traverse_action_internal act = TR_ACT_INITIAL;
-  VEC_REPLICATE(&traversal->actions, node.data.more_subs.amt, act);
+  TR_VEC_REPLICATE(&traversal->actions, node.data.more_subs.amt, act);
 }
 
 static void tr_maybe_annotate(pt_traversal *traversal, node_ind_t node_index) {
-  if (traversal->wanted_actions.annotate) {
-    const traverse_action act = TR_LINK_SIG;
-    VEC_PUSH(&traversal->actions, act);
-    const vec_node_ind stack = traversal->node_stack;
-    node_ind_t target = VEC_GET(stack, stack.len - 1);
-    VEC_PUSH(&traversal->node_stack, target);
-    VEC_PUSH(&traversal->node_stack, node_index);
+  bool wanted = TR_WANTED(traversal, annotate);
+  if (wanted) {
+    printf("WANTED ANNOTATE\n");
+    const traverse_action_internal act = TR_ACT_LINK_SIG;
+    TR_VEC_PUSH(&traversal->actions, act);
+    TR_VEC(node_ind) stack = traversal->node_stack;
+    node_ind_t target = TR_VEC_GET(stack, stack.len - 1);
+    TR_VEC_PUSH(&traversal->node_stack, target);
+    TR_VEC_PUSH(&traversal->node_stack, node_index);
   }
 }
 
@@ -158,9 +217,9 @@ static void tr_maybe_annotate(pt_traversal *traversal, node_ind_t node_index) {
 static void tr_maybe_push_environment(pt_traversal *traversal,
                                       node_ind_t node_index,
                                       traverse_action_internal act) {
-  if (traversal->wanted_actions.edit_environment) {
-    VEC_PUSH(&traversal->actions, act);
-    VEC_PUSH(&traversal->node_stack, node_index);
+  if (TR_WANTED(traversal, edit_environment)) {
+    TR_VEC_PUSH(&traversal->actions, act);
+    TR_VEC_PUSH(&traversal->node_stack, node_index);
   }
 }
 
@@ -196,28 +255,28 @@ static void tr_push_subs_one(pt_traversal *traversal, node_ind_t a) {
 
 static void tr_maybe_push_pattern_in(pt_traversal *traversal,
                                      node_ind_t node_index) {
-  if (traversal->wanted_actions.traverse_patterns_in) {
+  if (TR_WANTED(traversal, traverse_patterns_in)) {
     tr_push_in(traversal, node_index);
   }
 }
 
 static void tr_maybe_push_pattern_out(pt_traversal *traversal,
                                       node_ind_t node_index) {
-  if (traversal->wanted_actions.traverse_patterns_out) {
+  if (TR_WANTED(traversal, traverse_patterns_out)) {
     tr_push_out(traversal, node_index);
   }
 }
 
 static void tr_maybe_push_expression_in(pt_traversal *traversal,
                                         node_ind_t node_index) {
-  if (traversal->wanted_actions.traverse_expressions_in) {
+  if (TR_WANTED(traversal, traverse_expressions_in)) {
     tr_push_in(traversal, node_index);
   }
 }
 
 static void tr_maybe_push_expression_out(pt_traversal *traversal,
                                          node_ind_t node_index) {
-  if (traversal->wanted_actions.traverse_expressions_out) {
+  if (TR_WANTED(traversal, traverse_expressions_out)) {
     tr_push_out(traversal, node_index);
   }
 }
@@ -286,16 +345,16 @@ static void tr_push_inout(pt_traversal *traversal, node_ind_t node_index) {
 */
 
 static void tr_maybe_restore_scope(pt_traversal *traversal) {
-  if (traversal->wanted_actions.edit_environment) {
+  if (TR_WANTED(traversal, edit_environment)) {
     const traverse_action_internal act = TR_ACT_POP_SCOPE_TO;
-    VEC_PUSH(&traversal->actions, act);
+    TR_VEC_PUSH(&traversal->actions, act);
   }
 }
 
 static void tr_maybe_backup_scope(pt_traversal *traversal) {
-  if (traversal->wanted_actions.edit_environment) {
+  if (TR_WANTED(traversal, edit_environment)) {
     const traverse_action_internal act = TR_ACT_BACKUP_SCOPE;
-    VEC_PUSH(&traversal->actions, act);
+    TR_VEC_PUSH(&traversal->actions, act);
   }
 }
 
@@ -441,10 +500,13 @@ static void tr_handle_initial(pt_traversal *traversal) {
   }
 }
 
+#ifdef PRECALC_MODE
+static
+#endif
 pt_traversal pt_walk(parse_tree tree, traverse_mode mode) {
   pt_traversal res = {
-    .nodes = tree.nodes,
-    .inds = tree.inds,
+    .nodes = tree.data.nodes,
+    .inds = tree.data.inds,
     .mode = mode,
     .wanted_actions =
       {
@@ -456,32 +518,37 @@ pt_traversal pt_walk(parse_tree tree, traverse_mode mode) {
         .traverse_patterns_in = test_should(traverse_patterns_in, mode),
         .traverse_patterns_out = test_should(traverse_patterns_out, mode),
       },
-    .node_stack = VEC_NEW,
     .environment_amt = builtin_term_amount,
   };
+  TR_VEC_NEW(res.environment_len_stack, tree.aggregates.max_environment_backups);
+  TR_VEC_NEW(res.node_stack, tree.aggregates.max_actions_depth);
+  TR_VEC_NEW(res.actions, tree.aggregates.max_actions_depth);
   // to represent root
   // VEC_PUSH(&res.path, PT_ALL_LEN);
-  const traverse_action act = TR_END;
-  VEC_PUSH(&res.actions, act);
+  const traverse_action_internal act = TR_ACT_END;
+  TR_VEC_PUSH(&res.actions, act);
   if (res.wanted_actions.edit_environment) {
-    pt_traverse_push_letrec(&res, tree.root_subs_start, tree.root_subs_amt);
+    pt_traverse_push_letrec(&res, tree.data.root_subs_start, tree.data.root_subs_amt);
   } else {
-    traverse_push_block(&res, tree.root_subs_start, tree.root_subs_amt);
+    traverse_push_block(&res, tree.data.root_subs_start, tree.data.root_subs_amt);
   }
   return res;
 }
 
+#ifdef PRECALC_MODE
+static
+#endif
 // pre-then-postorder traversal
 pt_traverse_elem pt_walk_next(pt_traversal *traversal) {
   pt_traverse_elem res;
   while (traversal->actions.len > 0) {
     traverse_action_internal act;
-    VEC_POP(&traversal->actions, &act);
+    TR_VEC_POP(&traversal->actions, &act);
     res.action = (traverse_action)act;
 
     switch (act) {
       case TR_ACT_BACKUP_SCOPE:
-        VEC_PUSH(&traversal->environment_len_stack, traversal->environment_amt);
+        TR_VEC_PUSH(&traversal->environment_len_stack, traversal->environment_amt);
         break;
       case TR_ACT_PREDECLARE_FN:
       case TR_ACT_PUSH_SCOPE_VAR:
@@ -497,22 +564,22 @@ pt_traverse_elem pt_walk_next(pt_traversal *traversal) {
         tr_handle_initial(traversal);
         break;
       case TR_ACT_POP_SCOPE_TO:
-        VEC_POP(&traversal->environment_len_stack,
+        TR_VEC_POP(&traversal->environment_len_stack,
                 &res.data.new_environment_amount);
         traversal->environment_amt = res.data.new_environment_amount;
         return res;
       case TR_ACT_END:
-        VEC_FREE(&traversal->actions);
-        VEC_FREE(&traversal->environment_len_stack);
-        VEC_FREE(&traversal->node_stack);
+        TR_VEC_FREE(&traversal->actions);
+        TR_VEC_FREE(&traversal->environment_len_stack);
+        TR_VEC_FREE(&traversal->node_stack);
         HEDLEY_FALL_THROUGH;
       case TR_ACT_NEW_BLOCK:
         return res;
       case TR_ACT_LINK_SIG: {
         node_ind_t node_index;
         node_ind_t target_ind;
-        VEC_POP(&traversal->node_stack, &node_index);
-        VEC_POP(&traversal->node_stack, &target_ind);
+        TR_VEC_POP(&traversal->node_stack, &node_index);
+        TR_VEC_POP(&traversal->node_stack, &target_ind);
         res.data.link_sig_data.sig_index = node_index;
         res.data.link_sig_data.linked_index = target_ind;
         return res;
@@ -522,6 +589,8 @@ pt_traverse_elem pt_walk_next(pt_traversal *traversal) {
   res.action = TR_END;
   return res;
 }
+
+#ifndef PRECALC_MODE
 
 static pt_minimal_traverse_elem pt_shrink_elem(pt_traverse_elem elem) {
   pt_minimal_traverse_elem res = {
@@ -563,3 +632,5 @@ pt_precalculated_traversal pt_traverse_precalculate(parse_tree tree) {
     }
   }
 }
+
+#endif

@@ -221,7 +221,7 @@ static void test_types_match(test_state *state, const char *input_p,
     ss_init_immovable(&ss);
     fprintf(
       ss.stream, "Didn't expect typecheck errors. Got %d:\n", res.error_amt);
-    print_tc_errors(ss.stream, input, rres.tree, res);
+    print_tc_errors(ss.stream, input, rres.tree.data, res);
     ss_finalize(&ss);
     failf(state, ss.string, input);
     free(ss.string);
@@ -276,7 +276,7 @@ static void test_types_match(test_state *state, const char *input_p,
 
   free_tc_res(res);
   stfree(spans, span_bytes);
-  free_parse_tree(rres.tree);
+  free_parse_tree(rres.tree.data);
   free(input);
 }
 
@@ -304,7 +304,7 @@ static void test_typecheck_errors(test_state *state, const char *input_p,
     if (res.error_amt > 0) {
       fputs("Errors:\n", ss.stream);
     }
-    print_tc_errors(ss.stream, input, rres.tree, res);
+    print_tc_errors(ss.stream, input, rres.tree.data, res);
     ss_finalize(&ss);
     failf(state,
           "Expected %d errors, got %d.\n%s",
@@ -316,7 +316,7 @@ static void test_typecheck_errors(test_state *state, const char *input_p,
 
   free(input);
   free_tc_res(res);
-  free_parse_tree(rres.tree);
+  free_parse_tree(rres.tree.data);
   stfree(spans, span_bytes);
 }
 

@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 #include "builtins.h"
+#include "calc_tree_aggregates.h"
 #include "test_upto.h"
 #include "traverse.h"
 #include "test.h"
@@ -187,7 +188,11 @@ static void test_traversal(test_state *state, const char *input,
   if (!pres.success) {
     return;
   }
-  pt_traversal traversal = pt_walk(pres.tree, mode);
+  parse_tree tree = {
+    .data = pres.tree,
+    .aggregates = calculate_tree_aggregates(pres.tree),
+  };
+  pt_traversal traversal = pt_walk(tree, mode);
   test_elems_match(state, &traversal, elems, amount);
   free_parse_tree_res(pres);
 }

@@ -69,6 +69,6 @@ typedef struct {
 #endif
 } tc_res;
 
-void print_tc_errors(FILE *, const char *input, parse_tree, tc_res);
+void print_tc_errors(FILE *, const char *input, parse_tree_without_aggregates, tc_res);
 tc_res typecheck(parse_tree tree);
 void free_tc_res(tc_res res);

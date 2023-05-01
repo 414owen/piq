@@ -115,7 +115,7 @@ static void scope_free(scope s) {
 
 typedef struct {
   vec_binding not_found;
-  parse_tree tree;
+  parse_tree_without_aggregates tree;
   const char *restrict input;
   pt_traverse_elem elem;
   scope environment;
@@ -206,7 +206,7 @@ resolution_res resolve_bindings(parse_tree tree, const char *restrict input) {
   pt_traversal traversal = pt_walk(tree, TRAVERSE_RESOLVE_BINDINGS);
   scope_calculator_state state = {
     .not_found = VEC_NEW,
-    .tree = tree,
+    .tree = tree.data,
     .input = input,
     .environment = scope_new(),
     .type_environment = scope_new(),

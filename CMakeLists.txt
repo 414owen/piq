@@ -104,6 +104,7 @@ set (COMMON_OBJS
   src/timespec.c
   src/timing.c
   src/traverse.c
+  src/traverse_precalculate_aggregates.c
   src/initialise.c
   src/types.c
   src/print_tc_errors.c
@@ -173,9 +174,11 @@ set (COMPILE_FOR_SIZE
   src/log.c
 )
 
-foreach (file ${COMPILE_FOR_SIZE})
-  set_source_files_properties(${file} PROPERTIES COMPILE_FLAGS -Os)
-endforeach(file)
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+  foreach (file ${COMPILE_FOR_SIZE})
+    set_source_files_properties(${file} PROPERTIES COMPILE_FLAGS -Os)
+  endforeach(file)
+endif()
 
 set (LLVM_COMPILE_LINK_COMPONENTS
   Core
@@ -209,11 +212,13 @@ set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPOSupported OUTPUT IPOError)
 
-if(IPOSupported)
-    message(STATUS "IPO / LTO enabled")
-    set_property(TARGET piq test-exe PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-else()
-    message(STATUS "IPO / LTO not supported: <${IPOError}>")
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+  if(IPOSupported)
+      message(STATUS "IPO / LTO enabled")
+      set_property(TARGET piq test-exe PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+  else()
+      message(STATUS "IPO / LTO not supported: <${IPOError}>")
+  endif()
 endif()
 
 target_link_libraries(piq PRIVATE readline)

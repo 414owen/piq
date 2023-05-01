@@ -39,7 +39,7 @@ typedef struct {
 VEC_DECL(tc_constraint);
 
 typedef struct {
-  const parse_tree tree;
+  const parse_tree_without_aggregates tree;
   // const typevar *parse_node_type_vars;
   vec_tc_constraint constraints;
   type_builder *type_builder;
@@ -49,7 +49,7 @@ typedef struct {
 
 typedef vec_tc_constraint tc_constraints_res;
 
-static void annotate_parse_tree(const parse_tree tree, type_builder *builder) {
+static void annotate_parse_tree(const parse_tree_without_aggregates tree, type_builder *builder) {
   // things that cause fresh type variables to be generated:
   // * List expressions with zero elements
   // * That's it
@@ -333,7 +333,7 @@ static tc_constraints_res generate_constraints(const parse_tree tree,
                                                type_builder *type_builder) {
 
   tc_constraint_builder builder = {
-    .tree = tree,
+    .tree = tree.data,
     .constraints = VEC_NEW,
     .type_builder = type_builder,
     .environment = VEC_NEW,
@@ -735,7 +735,7 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
   return state.errors;
 }
 
-void print_tyvar_parse_node(parse_tree tree, type *types, type_ref ref) {
+void print_tyvar_parse_node(parse_tree_without_aggregates tree, type *types, type_ref ref) {
   type t = types[ref];
   if (t.tag.check != TC_VAR || t.data.type_var >= tree.node_amt) {
     return;
@@ -918,7 +918,7 @@ tc_res typecheck(const parse_tree tree) {
   type_builder type_builder = new_type_builder_with_builtins();
 
   // every parse_node index has a corresponding entry in the substitutions
-  annotate_parse_tree(tree, &type_builder);
+  annotate_parse_tree(tree.data, &type_builder);
   tc_constraints_res constraints_res =
     generate_constraints(tree, &type_builder);
 #ifdef DEBUG_TC
@@ -944,11 +944,11 @@ tc_res typecheck(const parse_tree tree) {
 
   VEC_FREE(&constraints_res);
   if (errors.len == 0) {
-    check_ambiguities(tree.node_amt, &type_builder, &errors);
+    check_ambiguities(tree.data.node_amt, &type_builder, &errors);
   }
 
   if (errors.len == 0) {
-    type_info clean_types = cleanup_types(tree.node_amt, &type_builder);
+    type_info clean_types = cleanup_types(tree.data.node_amt, &type_builder);
     free_type_builder(type_builder);
 
     VEC_FREE(&errors);

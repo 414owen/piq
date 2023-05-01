@@ -271,6 +271,8 @@ VEC_DECL(parse_node);
 typedef struct {
   node_ind_t max_depth;
   node_ind_t max_actions_depth;
+  node_ind_t max_environment_amt;
+  node_ind_t max_environment_backups;
   /*
   node_ind_t max_depth_parse_node_type_amounts[PARSE_NODE_TYPE_AMT];
   node_ind_t parse_node_type_amounts[PARSE_NODE_TYPE_AMT];
@@ -299,7 +301,7 @@ typedef struct {
 } parse_errors;
 
 typedef struct {
-  parse_tree tree;
+  parse_tree_without_aggregates tree;
   parse_errors errors;
   bool success;
   perf_values perf_values;
@@ -307,14 +309,14 @@ typedef struct {
 
 parse_tree_res parse(token *tokens, size_t token_amt);
 
-void print_parse_tree(FILE *f, const char *input, const parse_tree tree);
-char *print_parse_tree_str(const char *input, const parse_tree tree);
+void print_parse_tree(FILE *f, const char *input, const parse_tree_without_aggregates tree);
+char *print_parse_tree_str(const char *input, const parse_tree_without_aggregates tree);
 void print_parse_errors(FILE *f, const char *restrict input,
                                      const token *restrict tokens,
                                      parse_errors errors);
 char *print_parse_errors_string(const char *input, const token *tokens,
                                 const parse_tree_res pres);
-void free_parse_tree(parse_tree tree);
+void free_parse_tree(parse_tree_without_aggregates tree);
 void free_parse_tree_res(parse_tree_res res);
 extern const tree_node_repr *pt_subs_type;
 

@@ -38,7 +38,7 @@ void add_parser_timings_internal(test_state *state, tokens_res tres,
 
   state->total_parser_perf =
     perf_add(state->total_parser_perf, pres.perf_values);
-  state->total_parse_nodes_produced += pres.tree.data.node_amt;
+  state->total_parse_nodes_produced += pres.tree.node_amt;
 }
 #endif
 
@@ -113,9 +113,7 @@ parse_tree_res test_upto_parse_tree(test_state *state,
 
   add_parser_timings(state, tres, pres);
 
-  if (pres.success) {
-    pres.tree.aggregates = calculate_tree_aggregates(pres.tree.data);
-  } else {
+  if (!pres.success) {
     char *error = print_parse_errors_string(input, tres.tokens, pres);
     failf(state, "Parsing failed:\n%s", error);
     free(error);
@@ -135,7 +133,11 @@ upto_resolution_res test_upto_resolution(test_state *state,
     };
     return res;
   }
-  const resolution_res res_res = resolve_bindings(tree_res.tree, input);
+  parse_tree tree = {
+    .data = tree_res.tree,
+    .aggregates = calculate_tree_aggregates(tree_res.tree),
+  };
+  const resolution_res res_res = resolve_bindings(tree, input);
 
   add_name_resolution_timings(state, res_res);
 
@@ -150,10 +152,10 @@ upto_resolution_res test_upto_resolution(test_state *state,
     free_parse_tree_res(tree_res);
     return res;
   } else {
-    externalise_spans(&tree_res.tree);
+    externalise_spans(&tree);
     const upto_resolution_res res = {
       .success = true,
-      .tree = tree_res.tree,
+      .tree = tree,
     };
     return res;
   }
@@ -173,12 +175,12 @@ tc_res test_upto_typecheck(test_state *state, const char *restrict input,
       *success = false;
       stringstream ss;
       ss_init_immovable(&ss);
-      print_tc_errors(ss.stream, input, tree_res.tree, tc);
+      print_tc_errors(ss.stream, input, tree_res.tree.data, tc);
       ss_finalize(&ss);
       failf(state, "Typecheck failed:\n%s", ss.string);
       free(ss.string);
       free_tc_res(tc);
-      free_parse_tree(tree_res.tree);
+      free_parse_tree(tree_res.tree.data);
     } else {
       *success = true;
     }
@@ -275,7 +277,7 @@ void test_upto_codegen_with(test_state *state, const char *restrict input,
   }
 #endif
 
-  free_parse_tree(tree);
+  free_parse_tree(tree.data);
   free_tc_res(tc_res);
   llvm_jit_dispose(&ctx);
 }

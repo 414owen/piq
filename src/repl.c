@@ -34,19 +34,22 @@ static void reply(char *input, FILE *out) {
     goto end_b;
   }
 
-  pres.tree.aggregates = calculate_tree_aggregates(pres.tree);
-  resolution_res res_res = resolve_bindings(pres.tree, input);
+  parse_tree tree = {
+    .data = pres.tree,
+    .aggregates = calculate_tree_aggregates(pres.tree),
+  };
+  resolution_res res_res = resolve_bindings(tree, input);
   if (res_res.not_found.binding_amt > 0) {
     print_resolution_errors(stdout, input, res_res.not_found);
   }
-  tc_res tc_res = typecheck(pres.tree);
+  tc_res tc_res = typecheck(tree);
   if (tc_res.error_amt > 0) {
-    print_tc_errors(stdout, input, pres.tree, tc_res);
+    print_tc_errors(stdout, input, tree.data, tc_res);
     putc('\n', stdout);
     goto end_c;
   }
 
-  llvm_gen_and_print_module(test_file, pres.tree, tc_res.types, out);
+  llvm_gen_and_print_module(test_file, tree, tc_res.types, out);
   fflush(out);
 
 end_c:

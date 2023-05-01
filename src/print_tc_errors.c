@@ -8,7 +8,7 @@
 
 COLD_ATTR
 static void print_tc_error(FILE *f, tc_res res, const char *restrict input,
-                           parse_tree tree, node_ind_t err_ind) {
+                           parse_tree_without_aggregates tree, node_ind_t err_ind) {
   tc_error error = res.errors[err_ind];
   // TODO be informative, add provenance, etc.
   switch (error.type) {
@@ -52,7 +52,7 @@ static void print_tc_error(FILE *f, tc_res res, const char *restrict input,
 }
 
 COLD_ATTR
-void print_tc_errors(FILE *f, const char *restrict input, parse_tree tree,
+void print_tc_errors(FILE *f, const char *restrict input, parse_tree_without_aggregates tree,
                      tc_res res) {
   for (size_t i = 0; i < res.error_amt; i++) {
     putc('\n', f);

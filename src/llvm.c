@@ -69,7 +69,7 @@ typedef struct {
   vec_llvm_function function_stack;
 
   source_file source;
-  parse_tree parse_tree;
+  parse_tree_without_aggregates parse_tree;
   type_info types;
 
   const struct {
@@ -355,7 +355,7 @@ static llvm_cg_state llvm_new_cg_state(LLVMContextRef ctx, LLVMModuleRef mod,
     .function_stack = VEC_NEW,
 
     .source = source,
-    .parse_tree = tree,
+    .parse_tree = tree.data,
     .types = types,
 
     .llvm_cache =
