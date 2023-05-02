@@ -181,6 +181,7 @@
             [
               clang-tools
               clang-tools.clang
+              lldb
               ninja
               watchexec
               flamegraph

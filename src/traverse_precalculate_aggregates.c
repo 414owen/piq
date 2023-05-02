@@ -11,6 +11,7 @@ parse_tree_traversal_aggregates calc_tree_walk_aggregates(parse_tree_without_agg
     .max_actions_depth = 0,
     .max_environment_amt = 0,
     .max_environment_backups = 0,
+    .max_node_action_stack = 0,
   };
 
   environment_ind_t environment_amt = 0;
@@ -20,6 +21,7 @@ parse_tree_traversal_aggregates calc_tree_walk_aggregates(parse_tree_without_agg
     res.max_actions_depth = MAX(res.max_actions_depth, traversal.actions.len);
     res.max_environment_backups = MAX(res.max_environment_amt, traversal.environment_len_stack.len);
     res.max_environment_amt = MAX(res.max_environment_amt, environment_amt);
+    res.max_node_action_stack = MAX(res.max_node_action_stack, traversal.node_stack.len);
 
     pt_traverse_elem elem = pt_walk_next(&traversal);
 
@@ -40,6 +42,7 @@ parse_tree_traversal_aggregates calc_tree_walk_aggregates(parse_tree_without_agg
         environment_amt = elem.data.new_environment_amount;
         break;
       case TR_END:
+        // printf("Max action depth: %d\n", res.max_actions_depth);
         return res;
       case TR_LINK_SIG:
         break;

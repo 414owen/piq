@@ -24,11 +24,26 @@
 
 #else
 
-  #define TR_VEC_DECL_CUSTOM(type, name) \
-    typedef struct { \
-      type *data; \
-      VEC_LEN_T len; \
-    } fixed_ ## name
+#ifdef NDEBUG
+
+  #define TR_VEC_PUSH(vecptr, elem) \
+    (vecptr)->data[(vecptr)->len++] = (elem)
+
+  #define TR_VEC_NEW(vec, size) \
+    vec.data = malloc(sizeof(vec.data[0]) * size); \
+    vec.len = 0; \
+
+#else
+
+  #define TR_VEC_PUSH(vecptr, elem) \
+    (vecptr)->data[(vecptr)->len++] = (elem)
+
+  #define TR_VEC_NEW(vec, size) \
+    vec.data = malloc(sizeof(vec.data[0]) * size); \
+    vec.cap = size; \
+    vec.len = 0; \
+
+#endif
 
   #define TR_VEC_POP_(vecptr) \
     assert((vecptr)->len > 0); \
@@ -38,14 +53,7 @@
     assert((vecptr)->len > 0); \
     *(into) = (vecptr)->data[--(vecptr)->len]
 
-  #define TR_VEC_PUSH(vecptr, elem) \
-    (vecptr)->data[(vecptr)->len++] = elem
-
-  #define TR_VEC_NEW(vec, size) \
-    vec.data = malloc(sizeof(vec.data[0]) * size); \
-    vec.len = 0; \
-
-  #define TR_VEC_FREE(vec) free((vec)->data)
+  #define TR_VEC_FREE(vec) if((vec)->len > 0) free((vec)->data)
   #define TR_WANTED(traversal, wanted_field) (traversal)->wanted_actions.wanted_field
 
   #define TR_VEC_APPEND_REVERSE(vec, amt, elems) \
@@ -57,7 +65,7 @@
     }
 
   #define TR_VEC_REPLICATE(vec, amt, elem) \
-    for (VEC_LEN_T i = 0; i < (amt); i++) { (vec)->data[(vec)->len + i] = elem; } \
+    for (VEC_LEN_T i = 0; i < (amt); i++) { (vec)->data[(vec)->len + i] = (elem); } \
     (vec)->len += amt
 
   #define TR_VEC_GET(vec, ind) vec.data[ind]
@@ -119,6 +127,8 @@ typedef enum {
 } traverse_mode;
 */
 
+#ifndef PRECALC_MODE
+
 static uint8_t traverse_patterns_in =
   (1 << TRAVERSE_PRINT_TREE) | (1 << TRAVERSE_RESOLVE_BINDINGS) |
   (1 << TRAVERSE_TYPECHECK) | (1 << TRAVERSE_CODEGEN) |
@@ -147,9 +157,65 @@ static uint8_t should_annotate = (1 << TRAVERSE_TYPECHECK) |
 static uint8_t should_add_blocks = (1 << TRAVERSE_CODEGEN) |
   (1 << TRAVERSE_PRECALCULATE);
 
+#endif
+
+#ifndef NDEBUG
+
+static const char *action_names[] = {
+#define mk_entry(a) [a] = #a
+  mk_entry(TR_ACT_BACKUP_SCOPE),
+  mk_entry(TR_ACT_INITIAL),
+  mk_entry(TR_ACT_PUSH_SCOPE_VAR),
+  mk_entry(TR_ACT_PREDECLARE_FN),
+  mk_entry(TR_ACT_NEW_BLOCK),
+  mk_entry(TR_ACT_VISIT_IN),
+  mk_entry(TR_ACT_VISIT_OUT),
+  mk_entry(TR_ACT_POP_SCOPE_TO),
+  mk_entry(TR_ACT_END),
+  mk_entry(TR_ACT_LINK_SIG),
+#undef mk_entry
+};
+
+static void print_traversal_action_stack(pt_traversal *traversal) {
+  printf("\n\nSTACK\n");
+  for (VEC_LEN_T i = 0; i < traversal->actions.len; i++) {
+    traverse_action_internal act = TR_VEC_GET(traversal->actions, i);
+    printf("%d %s\n", i, action_names[act]);
+    /*
+    switch (act) {
+      case TR_ACT_INITIAL:
+      case TR_VISIT_IN:
+      case TR_VISIT_OUT:
+      case TR_PUSH_SCOPE_VAR:
+      case TR_PREDECLARE_FN:
+      case TR_LINK_SIG:
+        printf(": %s\n", parse_node_strings[.data.node_type]);
+        break;
+      case TR_POP_TO:
+        fprintf(ss.stream, ": %d\n", elem.data.amount);
+        break;
+      case TR_NEW_BLOCK:
+        fputc('\n', ss.stream);
+        break;
+      case TR_END:
+        break;
+    }
+    */
+  }
+}
+
+#endif
+
 static void tr_push_action(pt_traversal *traversal,
                            traverse_action_internal action,
                            node_ind_t node_index) {
+  (void) print_traversal_action_stack;
+#if !defined(NDEBUG) && !defined(PRECALC_MODE)
+  if (traversal->actions.len == traversal->actions.cap) {
+    printf("INVALID PUSH\n");
+    print_traversal_action_stack(traversal);
+  }
+#endif
   TR_VEC_PUSH(&traversal->actions, action);
   TR_VEC_PUSH(&traversal->node_stack, node_index);
 }
@@ -173,9 +239,11 @@ static void tr_push_out(pt_traversal *traversal, node_ind_t node_index) {
   tr_push_action(traversal, TR_ACT_VISIT_OUT, node_index);
 }
 
+#ifndef PRECALC_MODE
 static bool test_should(uint8_t t, traverse_mode mode) {
   return t & (1 << mode);
 }
+#endif
 
 static void traverse_push_block(pt_traversal *traversal, node_ind_t start,
                                 node_ind_t amount) {
@@ -201,9 +269,7 @@ static void tr_push_subs_external(pt_traversal *traversal, parse_node node) {
 }
 
 static void tr_maybe_annotate(pt_traversal *traversal, node_ind_t node_index) {
-  bool wanted = TR_WANTED(traversal, annotate);
-  if (wanted) {
-    printf("WANTED ANNOTATE\n");
+  if (TR_WANTED(traversal, annotate)) {
     const traverse_action_internal act = TR_ACT_LINK_SIG;
     TR_VEC_PUSH(&traversal->actions, act);
     TR_VEC(node_ind) stack = traversal->node_stack;
@@ -508,6 +574,7 @@ pt_traversal pt_walk(parse_tree tree, traverse_mode mode) {
     .nodes = tree.data.nodes,
     .inds = tree.data.inds,
     .mode = mode,
+    #ifndef PRECALC_MODE
     .wanted_actions =
       {
         .add_blocks = test_should(should_add_blocks, mode),
@@ -519,15 +586,16 @@ pt_traversal pt_walk(parse_tree tree, traverse_mode mode) {
         .traverse_patterns_out = test_should(traverse_patterns_out, mode),
       },
     .environment_amt = builtin_term_amount,
+    #endif
   };
   TR_VEC_NEW(res.environment_len_stack, tree.aggregates.max_environment_backups);
-  TR_VEC_NEW(res.node_stack, tree.aggregates.max_actions_depth);
+  TR_VEC_NEW(res.node_stack, tree.aggregates.max_node_action_stack);
   TR_VEC_NEW(res.actions, tree.aggregates.max_actions_depth);
   // to represent root
   // VEC_PUSH(&res.path, PT_ALL_LEN);
   const traverse_action_internal act = TR_ACT_END;
   TR_VEC_PUSH(&res.actions, act);
-  if (res.wanted_actions.edit_environment) {
+  if (TR_WANTED(&res, edit_environment)) {
     pt_traverse_push_letrec(&res, tree.data.root_subs_start, tree.data.root_subs_amt);
   } else {
     traverse_push_block(&res, tree.data.root_subs_start, tree.data.root_subs_amt);

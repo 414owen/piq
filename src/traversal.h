@@ -16,11 +16,24 @@
 
 #else
 
+#ifdef NDEBUG
+
   #define TR_VEC_DECL_CUSTOM(type, name) \
     typedef struct { \
       type *data; \
       VEC_LEN_T len; \
     } fixed_ ## name
+
+#else
+
+  #define TR_VEC_DECL_CUSTOM(type, name) \
+    typedef struct { \
+      type *data; \
+      VEC_LEN_T len; \
+      VEC_LEN_T cap; \
+    } fixed_ ## name
+
+#endif
 
   #define TR_VEC(vec_name) fixed_vec_ ## vec_name
 
@@ -136,7 +149,9 @@ typedef struct {
   TR_VEC(node_ind) node_stack;
   node_ind_t environment_amt;
   traverse_mode mode;
-  traversal_wanted_actions wanted_actions;
+  #ifndef PRECALC_MODE
+    traversal_wanted_actions wanted_actions;
+  #endif
 } pt_traversal;
 
 typedef struct {

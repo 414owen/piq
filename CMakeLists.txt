@@ -22,6 +22,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
   if (CMAKE_BUILD_TYPE STREQUAL "Release")
     add_compile_options(-s -fomit-frame-pointer)
   endif()
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-O0 -Wno-error=cpp)
+  endif()
   add_compile_options(-ffunction-sections -fdata-sections)
   add_link_options(-Wl,--gc-sections)
 

@@ -62,6 +62,7 @@ parse_tree_aggregates calculate_tree_aggregates(parse_tree_without_aggregates tr
     .max_actions_depth = tr_aggs.max_actions_depth,
     .max_environment_amt = tr_aggs.max_environment_amt,
     .max_environment_backups = tr_aggs.max_environment_backups,
+    .max_node_action_stack = tr_aggs.max_node_action_stack,
   };
   return res;
 }

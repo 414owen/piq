@@ -271,6 +271,7 @@ VEC_DECL(parse_node);
 typedef struct {
   node_ind_t max_depth;
   node_ind_t max_actions_depth;
+  node_ind_t max_node_action_stack;
   node_ind_t max_environment_amt;
   node_ind_t max_environment_backups;
   /*

@@ -7,6 +7,7 @@ typedef struct {
   node_ind_t max_actions_depth;
   node_ind_t max_environment_amt;
   node_ind_t max_environment_backups;
+  node_ind_t max_node_action_stack;
 } parse_tree_traversal_aggregates;
 
 parse_tree_traversal_aggregates calc_tree_walk_aggregates(parse_tree_without_aggregates tree_p);
