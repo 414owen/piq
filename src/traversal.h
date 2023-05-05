@@ -51,16 +51,6 @@ typedef enum {
   // - [x] block operations
   TRAVERSE_CODEGEN = 3,
 
-  // - [x] traverse patterns on the way in
-  // - [x] traverse patterns on the way out
-  // - [x] traverse expressions on the way in (eg FN)
-  // - [x] traverse expressions on the way out
-  // - [x] push scope
-  // - [x] pop scope
-  // - [x] link signatures
-  // - [x] block operations
-  TRAVERSE_PRECALCULATE = 4,
-
 } traverse_mode;
 
 typedef enum {
@@ -140,22 +130,3 @@ typedef struct {
   traverse_action action;
   pt_trav_elem_data data;
 } pt_traverse_elem;
-
-typedef union {
-  node_ind_t node_index;
-  traversal_link_sig_data link_sig_data;
-  node_ind_t new_environment_amount;
-} pt_minimal_trav_elem_data;
-
-typedef struct {
-  traverse_action action;
-  pt_minimal_trav_elem_data data;
-} pt_minimal_traverse_elem;
-
-VEC_DECL(pt_minimal_traverse_elem);
-
-typedef struct {
-  pt_minimal_traverse_elem *elems;
-  uint64_t traverse_action_amt;
-} pt_precalculated_traversal;
-
