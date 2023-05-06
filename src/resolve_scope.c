@@ -251,9 +251,6 @@ resolution_res resolve_bindings(parse_tree tree, const char *restrict input) {
   while (true) {
     state.elem = pt_walk_next(&traversal);
     switch (state.elem.action) {
-      case TR_NEW_BLOCK:
-      case TR_LINK_SIG:
-        break;
       case TR_POP_TO: {
         const u32 to_pop = state.environment.bindings.len -
                            state.elem.data.new_environment_amount;
@@ -286,6 +283,8 @@ resolution_res resolve_bindings(parse_tree tree, const char *restrict input) {
       case TR_VISIT_IN:
         precalculate_scope_visit(&state);
         break;
+      case TR_NEW_BLOCK:
+      case TR_ANNOTATE:
       case TR_VISIT_OUT:
         break;
     }

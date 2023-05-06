@@ -167,6 +167,9 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
     case PT_ALL_PAT_DATA_CONSTRUCTOR_NAME:
       print_atom_normal(s, node.type.all, span);
       break;
+    case PT_ALL_STATEMENT_ABI_C:
+      fputs(parse_node_strings_arr[PT_ALL_STATEMENT_ABI_C], s->out);
+      break;
     case PT_ALL_EX_AS:
     case PT_ALL_EX_IF:
     case PT_ALL_PAT_CONSTRUCTION:
@@ -179,7 +182,6 @@ static void print_node(printer_state *s, node_ind_t node_ind) {
     case PT_ALL_MULTI_DATA_CONSTRUCTORS:
     case PT_ALL_TY_FN:
     case PT_ALL_EX_FN:
-    case PT_ALL_STATEMENT_ABI:
     case PT_ALL_STATEMENT_DATA_DECLARATION:
       print_compound_normal(s, node);
       break;
