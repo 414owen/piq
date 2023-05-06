@@ -21,7 +21,7 @@
   UPPER_NAME
   LET
   DATA
-  HASH_ABI
+  HASH_ABI_C
   .
 
 %type commaexressions stack_ref_t
@@ -168,6 +168,10 @@ block(RES) ::= block(A) statement(B). {
   RES = A + 1;
 }
 
+statement(RES) ::= c_abi_annotation(A). {
+  RES = A;
+}
+
 statement(RES) ::= expression(A). {
   RES = A;
 }
@@ -187,14 +191,10 @@ statement_in_parens(RES) ::= sig(A). {
   RES = A;
 }
 
-statement_in_parens(RES) ::= abi_annotation(A). {
-  RES = A;
-}
-
-abi_annotation(RES) ::= HASH_ABI lower_name_node(A). {
+c_abi_annotation(RES) ::= HASH_ABI_C(A). {
   parse_node n = {
-    .type.statement = PT_STATEMENT_ABI,
-    .data.two_subs.a = push_node(s, A),
+    .type.statement = PT_STATEMENT_ABI_C,
+    .phase_data.span = span_from_token(s->tokens[A]),
   };
   RES = push_node(s, n);
 }
@@ -217,6 +217,10 @@ toplevel(RES) ::= OPEN_PAREN(O) toplevel_under(A) CLOSE_PAREN(C). {
   BREAK_PARSER;
   // TODO redo to take a node
   VEC_DATA_PTR(&s->nodes)[A].phase_data.span = span_from_token_inds(s->tokens, O, C);
+  RES = A;
+}
+
+toplevel(RES) ::= c_abi_annotation(A). {
   RES = A;
 }
 

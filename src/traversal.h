@@ -61,7 +61,7 @@ typedef enum {
   TR_ACT_VISIT_OUT,
   TR_ACT_POP_TO,
   TR_ACT_END,
-  TR_ACT_LINK_SIG,
+  TR_ACT_ANNOTATE,
 
   // First time we see a node
   TR_ACT_INITIAL,
@@ -77,7 +77,7 @@ typedef enum {
   TR_VISIT_OUT = TR_ACT_VISIT_OUT,
   TR_POP_TO = TR_ACT_POP_TO,
   TR_END = TR_ACT_END,
-  TR_LINK_SIG = TR_ACT_LINK_SIG,
+  TR_ANNOTATE = TR_ACT_ANNOTATE,
 } traverse_action;
 
 typedef union {
@@ -116,13 +116,13 @@ typedef struct {
 } traversal_node_data;
 
 typedef struct {
-  node_ind_t sig_index;
-  node_ind_t linked_index;
-} traversal_link_sig_data;
+  node_ind_t annotation_index;
+  node_ind_t target_index;
+} traversal_annotate_data;
 
 typedef union {
   traversal_node_data node_data;
-  traversal_link_sig_data link_sig_data;
+  traversal_annotate_data annotation_data;
   node_ind_t new_environment_amount;
 } pt_trav_elem_data;
 

@@ -209,9 +209,10 @@ char *read_entire_file(const char *restrict file_path) {
     long fsize = ftell(f);
     buf_ind_t max_buf = 0;
     max_buf -= 1;
-    const char *restrict err_reading = "Error reading from file";
+    const char *restrict err_reading = "Error reading from file, ";
     if (fsize < 0) {
-      perror(err_reading);
+      fputs(err_reading, stderr);
+      perror("negative size returned");
       exit(1);
     }
     if ((buf_ind_t)fsize > max_buf) {
@@ -220,12 +221,14 @@ char *read_entire_file(const char *restrict file_path) {
     }
     rewind(f);
     char *string = malloc(fsize + 1);
-    size_t amt = fread(string, fsize, 1, f);
+    size_t amt = fread(string, 1, fsize, f);
+    fclose(f);
     if (errno != 0 || (size_t)fsize != amt) {
-      perror(err_reading);
+      printf("%ld, %ld\n", fsize, amt);
+      fputs(err_reading, stderr);
+      perror(errno != 0 ? "errno set" : "returned size doesn't match");
       exit(1);
     }
-    fclose(f);
     string[fsize] = 0;
     return string;
   }

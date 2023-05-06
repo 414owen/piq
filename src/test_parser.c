@@ -228,6 +228,17 @@ static const token_type comma_or_expression_start[] = {
   TK_UNIT,
 };
 
+static const token_type statement_start[] = {
+  TK_INT,
+  TK_LOWER_NAME,
+  TK_OPEN_BRACKET,
+  TK_OPEN_PAREN,
+  TK_UPPER_NAME,
+  TK_HASH_ABI_C,
+  TK_STRING,
+  TK_UNIT,
+};
+
 #define expression_start (&comma_or_expression_start[1])
 #define expression_start_amt (STATIC_LEN(comma_or_expression_start) - 1)
 
@@ -288,7 +299,7 @@ static void test_fn_failures(test_state *state) {
   {
     test_start(state, "Without body");
     test_parser_fails_on_form(
-      state, "(fn ())", 3, expression_start_amt, expression_start);
+      state, "(fn ())", 3, STATIC_LEN(statement_start), statement_start);
     test_end(state);
   }
 
@@ -453,7 +464,6 @@ static token_type inside_block_el[] = {
   TK_SIG,
   TK_UPPER_NAME,
   TK_LET,
-  TK_HASH_ABI,
   TK_UNIT,
   TK_STRING,
 };
@@ -481,14 +491,14 @@ static void test_mismatched_parens(test_state *state) {
     {
       test_start(state, "Single close");
       test_parser_fails_on_form(
-        state, ")", 0, expression_start_amt, expression_start);
+        state, ")", 0, STATIC_LEN(statement_start), statement_start);
       test_end(state);
     }
 
     {
       test_start(state, "Three close");
       test_parser_fails_on_form(
-        state, ")))", 0, expression_start_amt, expression_start);
+        state, ")))", 0, STATIC_LEN(statement_start), statement_start);
       test_end(state);
     }
   }
@@ -610,6 +620,21 @@ static void test_parser_succeeds_statements(test_state *state) {
              "(LetStatement (TermName b) ()) ()))",
     };
     test_parser_succeeds_on(state, "(fun a () (let b ()) ())", out);
+
+    test_end(state);
+  }
+  {
+    test_start(state, "ABI and fun");
+
+    expected_output out = {.tag = STRING,
+                           .str =
+                             "CAbiAnnotation\n"
+                             "(FunctionStatement (TermName a) () "
+                             "(FunctionBodyExpression (IntExpression 12)))"};
+    test_parser_succeeds_on(state,
+                            "#abi-c\n"
+                            "(fun a (()) 12)",
+                            out);
 
     test_end(state);
   }

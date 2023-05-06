@@ -668,7 +668,7 @@ static void llvm_cg_visit_out(llvm_cg_state *state, traversal_node_data data) {
         &state->return_values, LLVMConstIntOfStringAndSize(type, str, len, 10));
       break;
     }
-    case PT_ALL_STATEMENT_ABI:
+    case PT_ALL_STATEMENT_ABI_C:
     case PT_ALL_EX_AS: {
       break;
     }
@@ -802,8 +802,6 @@ static void llvm_cg_module(LLVMContextRef ctx, LLVMModuleRef mod,
       case TR_NEW_BLOCK:
         llvm_gen_basic_block(&state, "block", VEC_PEEK(state.function_stack));
         continue;
-      case TR_END:
-        break;
       case TR_PREDECLARE_FN:
         llvm_cg_predeclare_fn(&state, elem.data.node_data);
         continue;
@@ -817,9 +815,10 @@ static void llvm_cg_module(LLVMContextRef ctx, LLVMModuleRef mod,
         llvm_cg_visit_out(&state, elem.data.node_data);
         continue;
       case TR_POP_TO:
+      case TR_ANNOTATE:
         continue;
-      case TR_LINK_SIG:
-        continue;
+      case TR_END:
+        break;
     }
     break;
   }
