@@ -101,7 +101,7 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
   const node_ind_t node_ind = elem.node_index;
   const type_ref our_type = generate_node_type(builder, node_ind);
   switch (node.type.all) {
-    case PT_ALL_STATEMENT_ABI: {
+    case PT_ALL_STATEMENT_ABI_C: {
       // TODO could speed this up by pre-computing + caching this type
       type_ref a = mk_primitive_type(builder->type_builder, TC_IS_C_ABI);
       add_type_constraint(builder, our_type, a, node_ind);
@@ -318,13 +318,16 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
   }
 }
 
-static void generate_constraints_link_sigs(tc_constraint_builder *builder,
-                                           traversal_link_sig_data elem) {
+// The way annotations work, is a constraint is generated for the
+// annotation's node, for example IS_C_ABI, then the annotation node
+// is linked to the target node (or the next annotation node)
+static void generate_constraints_annotate(tc_constraint_builder *builder,
+                                          traversal_annotate_data elem) {
   const type_ref sig_type =
-    VEC_GET(builder->type_builder->data.node_types, elem.sig_index);
-  const type_ref linked_type =
-    VEC_GET(builder->type_builder->data.node_types, elem.linked_index);
-  add_type_constraint(builder, sig_type, linked_type, elem.linked_index);
+    VEC_GET(builder->type_builder->data.node_types, elem.annotation_index);
+  const type_ref target_type =
+    VEC_GET(builder->type_builder->data.node_types, elem.target_index);
+  add_type_constraint(builder, sig_type, target_type, elem.annotation_index);
 }
 
 // I think that, for these to be solved, we have to generate constraints like
@@ -368,9 +371,9 @@ static tc_constraints_res generate_constraints(const parse_tree tree,
       case TR_POP_TO:
         builder.environment.len = pt_trav_elem.data.new_environment_amount;
         continue;
-      case TR_LINK_SIG:
-        generate_constraints_link_sigs(&builder,
-                                       pt_trav_elem.data.link_sig_data);
+      case TR_ANNOTATE:
+        generate_constraints_annotate(&builder,
+                                      pt_trav_elem.data.annotation_data);
         continue;
       case TR_NEW_BLOCK:
       case TR_END:

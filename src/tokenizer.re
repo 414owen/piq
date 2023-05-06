@@ -79,7 +79,7 @@ static token_res scan(source_file file, buf_ind_t start) {
   "["     { return mk_token(TK_OPEN_BRACKET, start, pos);   }
   "]"     { return mk_token(TK_CLOSE_BRACKET, start, pos);  }
 
-  "#abi"  { return mk_token(TK_HASH_ABI, start, pos);       }
+  "#abi-c"  { return mk_token(TK_HASH_ABI_C, start, pos);   }
 
   // parsed here, because allowing spaces between parens
   // can be used to obfuscate
