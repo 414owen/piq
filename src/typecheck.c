@@ -101,12 +101,7 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
   const node_ind_t node_ind = elem.node_index;
   const type_ref our_type = generate_node_type(builder, node_ind);
   switch (node.type.all) {
-    case PT_ALL_STATEMENT_ABI_C: {
-      // TODO could speed this up by pre-computing + caching this type
-      type_ref a = mk_primitive_type(builder->type_builder, TC_IS_C_ABI);
-      add_type_constraint(builder, our_type, a, node_ind);
-      break;
-    }
+    case PT_ALL_STATEMENT_ABI_C:
     case PT_ALL_MULTI_TYPE_PARAM_NAME:
     case PT_ALL_MULTI_TYPE_CONSTRUCTOR_NAME:
       // TODO
@@ -620,6 +615,8 @@ static void ensure_subtype(unification_state *state,
         }
       }
     }
+    // TODO: Optimize - if the intersection elements are contuous
+    // We don't have to copy them into the index array
     type_ref intersection =
       mk_type(state->types, TC_OR, subs, intersection_amt);
     update_typevar(types, constraint->last_type_var_a, intersection);
@@ -671,9 +668,7 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
     type b = VEC_GET(type_builder->types, constraint.target_b);
 
     // switcheroos
-    if ((b.tag.check == TC_VAR && a.tag.check != TC_VAR) ||
-        (b.tag.check == TC_OR && a.tag.check != TC_OR &&
-         a.tag.check != TC_VAR)) {
+    if (a.tag.check > b.tag.check) {
       tc_constraint new_constraint = tc_swap_constraint(constraint.original);
       VEC_PUSH(&state.constraints, new_constraint);
       continue;
@@ -683,14 +678,15 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
     printf("solve: %d = %d\n", constraint.target_a, constraint.target_b);
 #endif
 
-    if (a.tag.check == TC_OR) {
-      ensure_subtype(&state, &constraint);
-      continue;
-    }
-
-    if (a.tag.check == TC_VAR) {
-      unify_typevar(&state, a.data.type_var, constraint.target_b, b);
-      continue;
+    switch (a.tag.check) {
+      case TC_OR:
+        ensure_subtype(&state, &constraint);
+        continue;
+      case TC_VAR:
+        unify_typevar(&state, a.data.type_var, constraint.target_b, b);
+        continue;
+      default:
+        break;
     }
 
     if (a.tag.check != b.tag.check) {

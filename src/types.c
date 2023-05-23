@@ -166,7 +166,6 @@ static exited_early type_contains_typevar_by(const type_builder *types,
         }
         break;
       }
-      case TC_IS_C_ABI:
       case TC_OR:
       case TC_UNIT:
       case TC_I8:

@@ -42,7 +42,6 @@ static void push_str(vec_print_action *stack, char *str) {
 }
 
 static const tree_node_repr type_repr_arr[] = {
-  [TC_IS_C_ABI] = SUBS_NONE,
   [TC_VAR] = SUBS_NONE,
   [TC_UNIT] = SUBS_NONE,
   [TC_I8] = SUBS_NONE,
@@ -91,7 +90,6 @@ static char *type_head_strs[] = {
   [TC_TUP] = "Tuple",
   [TC_LIST] = "List",
   [TC_CALL] = "Call",
-  [TC_IS_C_ABI] = "CAbi",
 };
 
 static void print_type_head(FILE *f, type_check_tag head) {

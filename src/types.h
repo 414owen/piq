@@ -12,7 +12,12 @@
 #include "hashmap.h"
 #include "vec.h"
 
+// This is sorted in an order that makes it easy to
+// check constraints
+// see constraint_ord in typecheck.c
 typedef enum {
+  TC_VAR,
+  TC_OR,
   TC_UNIT,
   TC_I8,
   TC_U8,
@@ -27,9 +32,6 @@ typedef enum {
   TC_TUP,
   TC_LIST,
   TC_CALL,
-  TC_VAR,
-  TC_OR,
-  TC_IS_C_ABI,
 } type_check_tag;
 
 typedef enum {
