@@ -9,7 +9,7 @@
 const char *test_program = "(sig sndpar (Fn (I16, I32) I32))\n"
                            "(fun sndpar (a, b) b)\n"
                            "\n"
-                           "(sig test (Fn () I32))\n"
+                           "(sig (Fn () I32))\n"
                            "(fun test () (sndpar (1, 2)))";
 
 void test_diagnostics(test_state *state) {

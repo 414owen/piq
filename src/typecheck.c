@@ -257,11 +257,7 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
     }
     case PT_ALL_STATEMENT_SIG: {
       const node_ind_t sig_type_ind = PT_SIG_TYPE_IND(node);
-      const node_ind_t sig_binding_ind = PT_SIG_BINDING_IND(node);
       const type_ref sig_type_type = generate_node_type(builder, sig_type_ind);
-      const type_ref sig_binding_type =
-        generate_node_type(builder, sig_binding_ind);
-      add_type_constraint(builder, our_type, sig_binding_type, node_ind);
       add_type_constraint(builder, our_type, sig_type_type, node_ind);
       break;
     }
