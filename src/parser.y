@@ -495,14 +495,12 @@ fn(RES) ::= FN param_decls(PS) fun_body(C). {
   RES = push_node(s, n);
 }
 
-sig(RES) ::= SIG lower_name_node(A) type(B). {
+sig(RES) ::= SIG type(B). {
   BREAK_PARSER;
-  A.type.all = PT_ALL_MULTI_TERM_NAME;
   parse_node n = {
     .type.statement = PT_STATEMENT_SIG,
-    .data.two_subs = {
-      .a = push_node(s, A),
-      .b = B,
+    .data.one_sub = {
+      .ind = B,
     },
   };
   RES = push_node(s, n);

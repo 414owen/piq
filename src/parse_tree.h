@@ -64,7 +64,7 @@ typedef enum {
   X(STATEMENT_DATA_DECLARATION, "DataDeclarationStatement", PT_C_STATEMENT, SUBS_EXTERNAL) \
   X(STATEMENT_FUN, "FunctionStatement", PT_C_STATEMENT, SUBS_EXTERNAL) \
   X(STATEMENT_LET, "LetStatement", PT_C_STATEMENT, SUBS_TWO) \
-  X(STATEMENT_SIG, "TypeSignatureStatement", PT_C_STATEMENT, SUBS_TWO) \
+  X(STATEMENT_SIG, "TypeSignatureStatement", PT_C_STATEMENT, SUBS_ONE) \
   X(STATEMENT_ABI_C, "CAbiAnnotation", PT_C_STATEMENT, SUBS_NONE) \
   X(TY_CONSTRUCTION, "TypeConstructionType", PT_C_TYPE, SUBS_TWO) \
   X(TY_CONSTRUCTOR_NAME, "TypeConstructorName", PT_C_TYPE, SUBS_NONE) \
@@ -199,8 +199,7 @@ typedef union {
 #define PT_FUN_BODY_SUB_IND(inds, node, i) PT_BLOCK_SUB_IND(inds, node, i)
 #define PT_FUN_BODY_LAST_SUB_IND(inds, node) PT_BLOCK_LAST_SUB_IND(inds, node)
 
-#define PT_SIG_BINDING_IND(node) (node).data.two_subs.a
-#define PT_SIG_TYPE_IND(node) (node).data.two_subs.b
+#define PT_SIG_TYPE_IND(node) (node).data.one_sub.ind
 
 #define PT_TUP_SUB_AMT(node) 2
 #define PT_TUP_SUB_A(node) (node).data.two_subs.a

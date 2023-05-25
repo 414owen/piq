@@ -82,7 +82,7 @@ aBc
 
 ```
 // signatures and functions, pattern matching and fall-through
-(sig a (fn I32 I32 I32))
+(sig (fn I32 I32 I32))
 (fun a (1 b)
   (a (2 b)))
 (fun a (b c)
@@ -90,7 +90,7 @@ aBc
 
 
 // constants
-(sig b I64)
+(sig I64)
 (let b 1)
 
 

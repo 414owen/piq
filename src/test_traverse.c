@@ -193,7 +193,7 @@ static void test_traversal(test_state *state, const char *input,
 }
 
 static const char *input = "#abi-c\n"
-                           "(sig a (Fn I8 (I8, I8) I8))\n"
+                           "(sig (Fn I8 (I8, I8) I8))\n"
                            "(fun a (b (c, d))\n"       // env + 4
                            "  (let e (if True 2 1))\n" // env + 5
                            "  (fun f () ())\n"         // env + 6
@@ -223,7 +223,6 @@ static const char *input = "#abi-c\n"
 static test_traverse_elem print_mode_elems[] = {
   inout(PT_ALL_STATEMENT_ABI_C),
   in(PT_ALL_STATEMENT_SIG),
-  inout(PT_ALL_MULTI_TERM_NAME),
   in(PT_ALL_TY_FN),
   inout(PT_ALL_TY_CONSTRUCTOR_NAME),
   in(PT_ALL_TY_TUP),
@@ -276,7 +275,7 @@ static test_traverse_elem print_mode_elems[] = {
 };
 
 /*
-static const char *input = "(sig a (Fn I8 (I8, I8) I8))\n"
+static const char *input = "(sig (Fn I8 (I8, I8) I8))\n"
                            "(fun a (b (c, d))\n"            // env + 4
                            "  (let e 23)\n"                 // env + 5
                            "  (fun f () ())\n"              // env + 6
@@ -288,7 +287,6 @@ static test_traverse_elem resolve_bindings_elems[] = {
 
   inout(PT_ALL_STATEMENT_ABI_C),
   in(PT_ALL_STATEMENT_SIG),
-  inout(PT_ALL_MULTI_TERM_NAME),
   in(PT_ALL_TY_FN),
   in(PT_ALL_TY_CONSTRUCTOR_NAME),
   in(PT_ALL_TY_TUP),
@@ -351,7 +349,6 @@ static test_traverse_elem typecheck_elems[] = {
   inout(PT_ALL_STATEMENT_ABI_C),
   annotate(PT_ALL_STATEMENT_SIG),
   in(PT_ALL_STATEMENT_SIG),
-  inout(PT_ALL_MULTI_TERM_NAME),
   in(PT_ALL_TY_FN),
   in(PT_ALL_TY_CONSTRUCTOR_NAME),
   in(PT_ALL_TY_TUP),
@@ -413,7 +410,6 @@ static test_traverse_elem codegen_elems[] = {
 
   inout(PT_ALL_STATEMENT_ABI_C),
   in(PT_ALL_STATEMENT_SIG),
-  inout(PT_ALL_MULTI_TERM_NAME),
   out(PT_ALL_TY_CONSTRUCTOR_NAME),
   out(PT_ALL_TY_CONSTRUCTOR_NAME),
   out(PT_ALL_TY_CONSTRUCTOR_NAME),
