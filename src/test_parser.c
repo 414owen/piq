@@ -510,13 +510,12 @@ static void test_parser_succeeds_on_type(test_state *state, char *in,
                                          char *ast) {
   char *full_ast;
   {
-    int amt =
-      asprintf(&full_ast, "(TypeSignatureStatement (TermName a) %s)", ast);
+    int amt = asprintf(&full_ast, "(TypeSignatureStatement %s)", ast);
     (void)amt;
   }
   char *full_in;
   {
-    int amt = asprintf(&full_in, "(sig a %s)", in);
+    int amt = asprintf(&full_in, "(sig %s)", in);
     (void)amt;
   }
   expected_output out = {.tag = STRING, .str = full_ast};
@@ -560,12 +559,12 @@ static void test_parser_succeeds_root(test_state *state) {
 
     expected_output out = {.tag = STRING,
                            .str =
-                             "(TypeSignatureStatement (TermName a) "
+                             "(TypeSignatureStatement "
                              "(FunctionType () (TypeConstructorName I32)))\n"
                              "(FunctionStatement (TermName a) () "
                              "(FunctionBodyExpression (IntExpression 12)))"};
     test_parser_succeeds_on(state,
-                            "(sig a (Fn () I32))\n"
+                            "(sig (Fn () I32))\n"
                             "(fun a (()) 12)",
                             out);
 
@@ -576,10 +575,10 @@ static void test_parser_succeeds_root(test_state *state) {
 
     expected_output out = {
       .tag = STRING,
-      .str = "(TypeSignatureStatement (TermName a) (FunctionType "
+      .str = "(TypeSignatureStatement (FunctionType "
              "(TypeConstructorName I8) "
              "(TypeConstructorName I16) (TypeConstructorName I32)))"};
-    test_parser_succeeds_on(state, "(sig a (Fn I8 I16 I32))", out);
+    test_parser_succeeds_on(state, "(sig (Fn I8 I16 I32))", out);
 
     test_end(state);
   }

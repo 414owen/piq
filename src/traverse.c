@@ -251,14 +251,12 @@ static void tr_initial_generic(pt_traversal *traversal,
   tr_push_in(traversal, data.node_index);
 }
 
-/*
 static void tr_initial_one_sub_statement(pt_traversal *traversal,
                                          traversal_node_data data) {
   tr_push_out(traversal, data.node_index);
   tr_push_initial(traversal, data.node.data.two_subs.a);
   tr_push_in(traversal, data.node_index);
 }
-*/
 
 static void tr_initial_two_sub_statement(pt_traversal *traversal,
                                          traversal_node_data data) {
@@ -397,9 +395,9 @@ static void tr_handle_initial(pt_traversal *traversal) {
       break;
 
     case PT_ALL_STATEMENT_SIG:
-      debug_assert(pt_subs_type[PT_ALL_STATEMENT_SIG] == SUBS_TWO);
+      debug_assert(pt_subs_type[PT_ALL_STATEMENT_SIG] == SUBS_ONE);
       tr_maybe_annotate(traversal, data.node_index);
-      tr_initial_two_sub_statement(traversal, data);
+      tr_initial_one_sub_statement(traversal, data);
       break;
 
     case PT_ALL_STATEMENT_LET:

@@ -134,10 +134,10 @@ static void test_robustness(test_state *state) {
     stringstream source_file;
     ss_init_immovable(&source_file);
     static const size_t depth = 1000;
-    const char *preamble = "(sig sndpar (Fn I32 I32 I32))\n"
+    const char *preamble = "(sig (Fn I32 I32 I32))\n"
                            "(fun sndpar (a b) b)\n"
                            "\n"
-                           "(sig test (Fn I32))\n"
+                           "(sig (Fn I32))\n"
                            "(fun test () ";
     fputs(preamble, source_file.stream);
     for (size_t i = 0; i < depth; i++) {
@@ -166,7 +166,7 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Can return number");
   {
-    const char *input = "(sig test (Fn I32))\n"
+    const char *input = "(sig (Fn I32))\n"
                         "(fun test () 2)";
 
     test_llvm_code_produces_int(state, input, 2);
@@ -175,7 +175,7 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Returns last number in block");
   {
-    const char *input = "(sig test (Fn I32))\n"
+    const char *input = "(sig (Fn I32))\n"
                         "(fun test () (as U8 4) 3)";
 
     test_llvm_code_produces_int(state, input, 3);
@@ -184,12 +184,12 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Can return parameter");
   {
-    const char *input = "(sig test (Fn () ()))\n"
+    const char *input = "(sig (Fn () ()))\n"
                         "(fun test (a) a)";
     test_llvm_code_runs(state, input);
   }
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a) a)";
     i32_mapping_test_case test_cases[] = {
       {
@@ -211,12 +211,12 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Can return builtin Bool constructors");
   {
-    const char *input = "(sig test (Fn Bool))\n"
+    const char *input = "(sig (Fn Bool))\n"
                         "(fun test () True)";
     test_llvm_code_produces_bool(state, input, true);
   }
   {
-    const char *input = "(sig test (Fn Bool))\n"
+    const char *input = "(sig (Fn Bool))\n"
                         "(fun test () False)";
     test_llvm_code_produces_bool(state, input, false);
   }
@@ -224,19 +224,19 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Can use let bindings");
   {
-    const char *input = "(sig test (Fn () ()))\n"
+    const char *input = "(sig (Fn () ()))\n"
                         "(fun test (()) (let b ()) ())";
     test_llvm_code_runs(state, input);
   }
   {
-    const char *input = "(sig test (Fn ()))\n"
+    const char *input = "(sig (Fn ()))\n"
                         "(fun test () (let b ()) b)";
     test_llvm_code_runs(state, input);
   }
   {
-    const char *input = "(sig test (Fn I32))\n"
+    const char *input = "(sig (Fn I32))\n"
                         "(fun test ()\n"
-                        "  (sig b I32)\n"
+                        "  (sig I32)\n"
                         "  (let b 3) b)";
     test_llvm_code_produces_int(state, input, 3);
   }
@@ -244,9 +244,9 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Two fns and a call");
   {
-    const char *input = "(sig test (Fn I32))\n"
+    const char *input = "(sig (Fn I32))\n"
                         "(fun test () (a))\n"
-                        "(sig a (Fn I32))\n"
+                        "(sig (Fn I32))\n"
                         "(fun a () 2)";
 
     test_llvm_code_produces_int(state, input, 2);
@@ -255,15 +255,15 @@ void test_llvm(test_state *state) {
 
   test_start(state, "If expressions work");
   {
-    const char *input = "(sig test (Fn I32))\n"
+    const char *input = "(sig (Fn I32))\n"
                         "(fun test () (if True 1 2))";
     test_llvm_code_produces_int(state, input, 1);
   }
   {
-    const char *ifthenelse = "(sig ifthenelse (Fn Bool I32 I32 I32))\n"
+    const char *ifthenelse = "(sig (Fn Bool I32 I32 I32))\n"
                              "(fun ifthenelse (cond t f) (if cond t f))\n";
     {
-      const char *test = "(sig test (Fn I32))\n"
+      const char *test = "(sig (Fn I32))\n"
                          "(fun test () (ifthenelse True 1 2))";
       char *input = join_two(ifthenelse, test);
       test_llvm_code_produces_int(state, input, 1);
@@ -274,7 +274,7 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Equality builtin");
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a) (if (i32-eq? a 8) 4 5))";
 
     i32_mapping_test_case cases[] = {
@@ -293,7 +293,7 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Add builtin");
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a) (i32-add 3 a))";
 
     i32_mapping_test_case cases[] = {
@@ -320,7 +320,7 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Sub builtin");
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a) (i32-sub a 4))";
 
     i32_mapping_test_case cases[] = {
@@ -343,7 +343,7 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Mul builtin");
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a) (i32-mul a -3))";
 
     i32_mapping_test_case cases[] = {
@@ -371,7 +371,7 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Div builtin");
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a) (i32-div -12 a))";
 
     i32_mapping_test_case cases[] = {
@@ -386,7 +386,7 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Rem builtin");
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a) (i32-rem 10 a))";
 
     i32_mapping_test_case cases[] = {
@@ -399,7 +399,7 @@ void test_llvm(test_state *state) {
     test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a) (i32-rem -10 a))";
 
     i32_mapping_test_case cases[] = {
@@ -417,7 +417,7 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Mod builtin");
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a) (i32-mod 10 a))";
 
     i32_mapping_test_case cases[] = {
@@ -430,7 +430,7 @@ void test_llvm(test_state *state) {
     test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a) (i32-mod -10 a))";
 
     i32_mapping_test_case cases[] = {
@@ -448,13 +448,13 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Mutual recursion works");
   {
-    const char *input = "(sig a (Fn I32))\n"
+    const char *input = "(sig (Fn I32))\n"
                         "(fun a () (if True (b) 1))"
                         "\n"
-                        "(sig b (Fn I32))\n"
+                        "(sig (Fn I32))\n"
                         "(fun b () (if False (a) 2))"
                         "\n"
-                        "(sig test (Fn I32))\n"
+                        "(sig (Fn I32))\n"
                         "(fun test () (a))";
     test_llvm_code_produces_int(state, input, 2);
   }
@@ -462,7 +462,7 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Can use builtin comparisons as conditions");
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a)\n"
                         "  (if (i32-gte? a 47) 43 54))";
 
@@ -476,7 +476,7 @@ void test_llvm(test_state *state) {
 
   test_start(state, "Can assign builtin to var");
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a)\n"
                         "  (let f i32-mul)\n"
                         "  (f 4 a))";
@@ -492,7 +492,7 @@ void test_llvm(test_state *state) {
   test_group_start(state, "Can use builtins in complex expressions");
   test_start(state, "Results of if-expressions");
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a)\n"
                         "  (let f (if True i32-add i32-sub))\n"
                         "  (f a 10))";
@@ -504,7 +504,7 @@ void test_llvm(test_state *state) {
     test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a)\n"
                         "  (let f (if False i32-add i32-sub))\n"
                         "  (f a 10))";
@@ -516,7 +516,7 @@ void test_llvm(test_state *state) {
     test_llvm_code_maps_ints(state, input, STATIC_LEN(cases), cases);
   }
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a)\n"
                         "  (let f (if (i32-lte? a 12) i32-add i32-sub))\n"
                         "  (f 3 4))";

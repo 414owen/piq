@@ -482,7 +482,7 @@ static void test_typecheck_succeeds(test_state *state) {
   test_group_start(state, "Succeeds");
 
   {
-    const char *input = "(sig a (Fn →()←))\n"
+    const char *input = "(sig (Fn →()←))\n"
                         "(fun a () ())";
     test_start(state, "Return type ()");
     test_type types[] = {unit_t};
@@ -491,7 +491,7 @@ static void test_typecheck_succeeds(test_state *state) {
   }
 
   {
-    const char *input = "(sig a (Fn →U8←))\n"
+    const char *input = "(sig (Fn →U8←))\n"
                         "(fun a () 2)";
     test_start(state, "Return type U8");
     test_type types[] = {u8_t};
@@ -500,7 +500,7 @@ static void test_typecheck_succeeds(test_state *state) {
   }
 
   {
-    const char *input = "(sig a (Fn I8))\n"
+    const char *input = "(sig (Fn I8))\n"
                         "(fun a () →2←)";
     test_start(state, "Return value");
     test_type types[] = {i8_t};
@@ -509,7 +509,7 @@ static void test_typecheck_succeeds(test_state *state) {
   }
 
   {
-    const char *input = "(sig a (Fn U8 [U8]))\n"
+    const char *input = "(sig (Fn U8 [U8]))\n"
                         "(fun a (1) [→12←])";
     test_start(state, "[U8] Literals");
     test_type types[] = {
@@ -520,7 +520,7 @@ static void test_typecheck_succeeds(test_state *state) {
   }
 
   {
-    const char *input = "(sig a (Fn U8 [U8]))\n"
+    const char *input = "(sig (Fn U8 [U8]))\n"
                         "(fun a (1) (as I32 →2←) [→12←])";
     test_start(state, "Multi-expression block");
     test_type types[] = {
@@ -532,9 +532,9 @@ static void test_typecheck_succeeds(test_state *state) {
   }
 
   {
-    const char *input = "(sig a (Fn [U8]))\n"
+    const char *input = "(sig (Fn [U8]))\n"
                         "(fun a () \n"
-                        "  (sig b (Fn () ()))\n"
+                        "  (sig (Fn () ()))\n"
                         "  (fun b (a) ())\n"
                         "  [2])";
     test_start(state, "Param shadows binding");
@@ -544,10 +544,10 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     test_start(state, "Uses global");
-    const char *input = "(sig sndpar (Fn I16 I32 I32))\n"
+    const char *input = "(sig (Fn I16 I32 I32))\n"
                         "(fun sndpar (a b) b)\n"
                         "\n"
-                        "(sig test (Fn I32))\n"
+                        "(sig (Fn I32))\n"
                         "(fun test () (sndpar →1← →2←))";
     test_type types[] = {
       i16_t,
@@ -559,9 +559,9 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     test_start(state, "Uses let");
-    const char *input = "(sig test (Fn I32))\n"
+    const char *input = "(sig (Fn I32))\n"
                         "(fun test ()\n"
-                        " (sig b I32)\n"
+                        " (sig I32)\n"
                         " (let b →3←)\n"
                         " →b←)";
     test_type types[] = {
@@ -574,7 +574,7 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     test_start(state, "heterogeneous fn");
-    const char *input = "(sig →het← (Fn →I8← →I16← →I32← →I64←))\n"
+    const char *input = "(sig (Fn →I8← →I16← →I32← →I64←))\n"
                         "(fun →het← (→a← →b← →c←) →a← →b← →c← →64←)";
     // params *and* return type
     const test_type het_t_params[] = {
@@ -594,7 +594,6 @@ static void test_typecheck_succeeds(test_state *state) {
     };
 
     test_type types[] = {
-      het_t,
       i8_t,
       i16_t,
       i32_t,
@@ -614,7 +613,7 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     test_start(state, "Recognizes bools");
-    const char *input = "(sig test (Fn Bool))\n"
+    const char *input = "(sig (Fn Bool))\n"
                         "(fun test () (let a →False←) →True←)";
     test_type types[] = {
       bool_t,
@@ -626,7 +625,7 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     test_start(state, "Functions can be recursive");
-    const char *input = "(sig test (Fn Bool))\n"
+    const char *input = "(sig (Fn Bool))\n"
                         "(fun test () →(test)←)";
     test_type types[] = {
       bool_t,
@@ -637,9 +636,9 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     test_start(state, "Inner functions can be recursive");
-    const char *input = "(sig test (Fn Bool))\n"
+    const char *input = "(sig (Fn Bool))\n"
                         "(fun test ()\n"
-                        "  (sig a (Fn I8))\n"
+                        "  (sig (Fn I8))\n"
                         "  (fun a () (a))\n"
                         "  →(test)←)";
     test_type types[] = {
@@ -651,9 +650,9 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     test_start(state, "Functions can be mutually recursive");
-    const char *input = "(sig a (Fn Bool))\n"
+    const char *input = "(sig (Fn Bool))\n"
                         "(fun a () →(b)←)\n"
-                        "(sig b (Fn Bool))\n"
+                        "(sig (Fn Bool))\n"
                         "(fun b () →(a)←)\n";
     test_type types[] = {
       bool_t,
@@ -665,7 +664,7 @@ static void test_typecheck_succeeds(test_state *state) {
 
   {
     test_start(state, "Type inference");
-    const char *input = "(sig a (Fn Bool))\n"
+    const char *input = "(sig (Fn Bool))\n"
                         "(fun a () (let b 3) (i32-gt? →b← 2))";
     test_type types[] = {
       i32_t,
@@ -699,7 +698,7 @@ static void test_errors(test_state *state) {
       .type_exp = i32_t,
       .type_got = type,
     }};
-    static const char *prog = "(sig a (Fn I32))\n"
+    static const char *prog = "(sig (Fn I32))\n"
                               "(fun a () →(2, 3)←)";
     test_typecheck_errors(state, prog, errors, STATIC_LEN(errors));
     test_end(state);
@@ -723,7 +722,7 @@ static void test_errors(test_state *state) {
       },
     };
     test_typecheck_errors(state,
-                          "(sig a (Fn I32))\n"
+                          "(sig (Fn I32))\n"
                           "(fun a () →(fn () 1)←)",
                           errors,
                           STATIC_LEN(errors));
@@ -748,7 +747,7 @@ static void test_errors(test_state *state) {
       },
     };
     test_typecheck_errors(state,
-                          "(sig a (Fn I32))\n"
+                          "(sig (Fn I32))\n"
                           "(fun a () →[3]←)",
                           errors,
                           STATIC_LEN(errors));
@@ -765,7 +764,7 @@ static void test_errors(test_state *state) {
       },
     };
     test_typecheck_errors(state,
-                          "(sig a (Fn I32))\n"
+                          "(sig (Fn I32))\n"
                           "(fun a () →\"hi\"←)",
                           errors,
                           STATIC_LEN(errors));
@@ -782,7 +781,7 @@ static void test_errors(test_state *state) {
       },
     };
     test_typecheck_errors(state,
-                          "(sig a (Fn String))\n"
+                          "(sig (Fn String))\n"
                           "(fun a () →321←)",
                           errors,
                           STATIC_LEN(errors));
@@ -815,7 +814,7 @@ static void test_errors(test_state *state) {
   /*
   test_start(state, "Blocks must end in expressions");
   {
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (a) (let f 1))";
     const tc_err_test errors[] = {
       {
@@ -835,7 +834,7 @@ static void test_kitchen_sink(test_state *state) {
 
   {
     test_start(state, "One");
-    const char *input = "(sig test (Fn I32 I32))\n"
+    const char *input = "(sig (Fn I32 I32))\n"
                         "(fun test (→a←)\n"
                         "  (let f (if (i32-lte? a 12) i32-add i32-sub))\n"
                         "  (f 3 4))\n";
@@ -853,7 +852,7 @@ static void test_typecheck_stress(test_state *state) {
     stringstream ss;
     ss_init_immovable(&ss);
     const unsigned n = 10;
-    fputs("(sig a (Fn (", ss.stream);
+    fputs("(sig (Fn (", ss.stream);
     for (unsigned i = 1; i < n; i++) {
       fputs("U8,", ss.stream);
     }
