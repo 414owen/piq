@@ -30,7 +30,6 @@ static const char *action_names[] = {
   mk_entry(TR_VISIT_OUT),
   mk_entry(TR_POP_TO),
   mk_entry(TR_END),
-  mk_entry(TR_ANNOTATE),
 #undef mk_entry
 };
 
@@ -64,9 +63,6 @@ static char *print_ctx(test_traverse_elem *elems, int position) {
       case TR_VISIT_IN:
       case TR_VISIT_OUT:
       case TR_PREDECLARE_FN:
-      case TR_ANNOTATE:
-        fprintf(ss.stream, ": %s\n", parse_node_strings[elem.data.node_type]);
-        break;
       case TR_POP_TO:
         fprintf(ss.stream, ": %d\n", elem.data.amount);
         break;
@@ -159,15 +155,6 @@ static void test_elems_match(test_state *state, pt_traversal *traversal,
         // impossible
       case TR_NEW_BLOCK:
         break;
-      case TR_ANNOTATE: {
-        parse_node_type_all at =
-          traversal->nodes[a.data.annotation_data.target_index].type.all;
-        if (at != b.data.node_type) {
-          node_type_mismatch(state, i, elems, b.data.node_type, at);
-          return;
-        }
-        break;
-      }
     }
   }
   pt_traverse_elem b = pt_walk_next(traversal);
@@ -217,8 +204,6 @@ static const char *input = "#abi-c\n"
 
 #define pop_env_to(amt)                                                        \
   { .action = TR_POP_TO, .data.amount = amt, }
-
-#define annotate(_node_type) node_act(TR_ANNOTATE, _node_type)
 
 static test_traverse_elem print_mode_elems[] = {
   inout(PT_ALL_STATEMENT_ABI_C),
@@ -347,7 +332,6 @@ static test_traverse_elem typecheck_elems[] = {
   predeclare_fn,
 
   inout(PT_ALL_STATEMENT_ABI_C),
-  annotate(PT_ALL_STATEMENT_SIG),
   in(PT_ALL_STATEMENT_SIG),
   in(PT_ALL_TY_FN),
   in(PT_ALL_TY_CONSTRUCTOR_NAME),
@@ -356,7 +340,6 @@ static test_traverse_elem typecheck_elems[] = {
   in(PT_ALL_TY_CONSTRUCTOR_NAME),
   in(PT_ALL_TY_CONSTRUCTOR_NAME),
   out(PT_ALL_STATEMENT_SIG),
-  annotate(PT_ALL_STATEMENT_FUN),
 
   in(PT_ALL_STATEMENT_FUN),
   inout(PT_ALL_MULTI_TERM_NAME),

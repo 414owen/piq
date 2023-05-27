@@ -284,7 +284,6 @@ resolution_res resolve_bindings(parse_tree tree, const char *restrict input) {
         precalculate_scope_visit(&state);
         break;
       case TR_NEW_BLOCK:
-      case TR_ANNOTATE:
       case TR_VISIT_OUT:
         break;
     }

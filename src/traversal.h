@@ -61,7 +61,6 @@ typedef enum {
   TR_ACT_VISIT_OUT,
   TR_ACT_POP_TO,
   TR_ACT_END,
-  TR_ACT_ANNOTATE,
 
   // First time we see a node
   TR_ACT_INITIAL,
@@ -77,7 +76,6 @@ typedef enum {
   TR_VISIT_OUT = TR_ACT_VISIT_OUT,
   TR_POP_TO = TR_ACT_POP_TO,
   TR_END = TR_ACT_END,
-  TR_ANNOTATE = TR_ACT_ANNOTATE,
 } traverse_action;
 
 typedef union {
