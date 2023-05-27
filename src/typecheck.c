@@ -47,6 +47,10 @@ typedef struct {
   vec_type_ref type_environment;
 } tc_constraint_builder;
 
+typedef struct {
+  node_ind_t sig;
+} seen_annotations;
+
 typedef vec_tc_constraint tc_constraints_res;
 
 static void annotate_parse_tree(const parse_tree tree, type_builder *builder) {
@@ -309,18 +313,6 @@ static void generate_constraints_visit(tc_constraint_builder *builder,
   }
 }
 
-// The way annotations work, is a constraint is generated for the
-// annotation's node, for example IS_C_ABI, then the annotation node
-// is linked to the target node (or the next annotation node)
-static void generate_constraints_annotate(tc_constraint_builder *builder,
-                                          traversal_annotate_data elem) {
-  const type_ref sig_type =
-    VEC_GET(builder->type_builder->data.node_types, elem.annotation_index);
-  const type_ref target_type =
-    VEC_GET(builder->type_builder->data.node_types, elem.target_index);
-  add_type_constraint(builder, sig_type, target_type, elem.annotation_index);
-}
-
 // I think that, for these to be solved, we have to generate constraints like
 // this: a == b, b == c instead of: a == b, a == c
 static tc_constraints_res generate_constraints(const parse_tree tree,
@@ -361,10 +353,6 @@ static tc_constraints_res generate_constraints(const parse_tree tree,
         continue;
       case TR_POP_TO:
         builder.environment.len = pt_trav_elem.data.new_environment_amount;
-        continue;
-      case TR_ANNOTATE:
-        generate_constraints_annotate(&builder,
-                                      pt_trav_elem.data.annotation_data);
         continue;
       case TR_NEW_BLOCK:
       case TR_END:

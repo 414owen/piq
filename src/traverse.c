@@ -25,7 +25,6 @@ typedef enum {
   // - [x] traverse types/expressions on the way out
   // - [ ] push scope
   // - [ ] pop scope
-  // - [ ] annotate
   // - [ ] block operations
   TRAVERSE_PRINT_TREE = 0,
 
@@ -35,7 +34,6 @@ typedef enum {
   // - [ ] traverse types/expressions on the way out
   // - [x] push scope
   // - [x] pop scope
-  // - [ ] annotate
   // - [ ] block operations
   TRAVERSE_RESOLVE_BINDINGS = 1,
 
@@ -45,7 +43,6 @@ typedef enum {
   // - [ ] traverse types/expressions on the way out
   // - [x] push scope
   // - [x] pop scope
-  // - [x] annotate
   // - [ ] block operations
   TRAVERSE_TYPECHECK = 2,
 
@@ -55,7 +52,6 @@ typedef enum {
   // - [x] traverse types/expressions on the way out
   // - [x] push scope
   // - [x] pop scope
-  // - [ ] annotate
   // - [x] block operations
   TRAVERSE_CODEGEN = 3,
 
@@ -78,8 +74,6 @@ static uint8_t traverse_expressions_out =
 static uint8_t should_edit_environment = (1 << TRAVERSE_RESOLVE_BINDINGS) |
                                          (1 << TRAVERSE_TYPECHECK) |
                                          (1 << TRAVERSE_CODEGEN);
-
-static uint8_t should_annotate = (1 << TRAVERSE_TYPECHECK);
 
 static uint8_t should_add_blocks = (1 << TRAVERSE_CODEGEN);
 
@@ -134,17 +128,6 @@ static void tr_push_subs_external(pt_traversal *traversal, parse_node node) {
                      &traversal->inds[node.data.more_subs.start]);
   const traverse_action_internal act = TR_ACT_INITIAL;
   VEC_REPLICATE(&traversal->actions, node.data.more_subs.amt, act);
-}
-
-static void tr_maybe_annotate(pt_traversal *traversal, node_ind_t node_index) {
-  if (traversal->wanted_actions.annotate) {
-    const traverse_action_internal act = TR_ACT_ANNOTATE;
-    VEC_PUSH(&traversal->actions, act);
-    const vec_node_ind stack = traversal->node_stack;
-    const node_ind_t target = VEC_PEEK(stack);
-    VEC_PUSH(&traversal->node_stack, target);
-    VEC_PUSH(&traversal->node_stack, node_index);
-  }
 }
 
 // To be used with PUSH_SCOPE or PREDECLARE_FN
@@ -389,14 +372,12 @@ static void tr_handle_initial(pt_traversal *traversal) {
 
     case PT_ALL_STATEMENT_ABI_C:
       debug_assert(pt_subs_type[PT_ALL_STATEMENT_ABI_C] == SUBS_NONE);
-      tr_maybe_annotate(traversal, data.node_index);
       tr_push_out(traversal, data.node_index);
       tr_push_in(traversal, data.node_index);
       break;
 
     case PT_ALL_STATEMENT_SIG:
       debug_assert(pt_subs_type[PT_ALL_STATEMENT_SIG] == SUBS_ONE);
-      tr_maybe_annotate(traversal, data.node_index);
       tr_initial_one_sub_statement(traversal, data);
       break;
 
@@ -444,7 +425,6 @@ pt_traversal pt_walk(parse_tree tree, traverse_mode mode) {
       {
         .add_blocks = test_should(should_add_blocks, mode),
         .edit_environment = test_should(should_edit_environment, mode),
-        .annotate = test_should(should_annotate, mode),
         .traverse_expressions_in = test_should(traverse_expressions_in, mode),
         .traverse_expressions_out = test_should(traverse_expressions_out, mode),
         .traverse_patterns_in = test_should(traverse_patterns_in, mode),
@@ -503,15 +483,6 @@ pt_traverse_elem pt_walk_next(pt_traversal *traversal) {
         break;
       case TR_ACT_NEW_BLOCK:
         break;
-      case TR_ACT_ANNOTATE: {
-        node_ind_t node_index;
-        node_ind_t target_ind;
-        VEC_POP(&traversal->node_stack, &node_index);
-        VEC_POP(&traversal->node_stack, &target_ind);
-        res.data.annotation_data.annotation_index = node_index;
-        res.data.annotation_data.target_index = target_ind;
-        break;
-      }
     }
     return res;
   }

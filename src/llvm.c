@@ -815,7 +815,6 @@ static void llvm_cg_module(LLVMContextRef ctx, LLVMModuleRef mod,
         llvm_cg_visit_out(&state, elem.data.node_data);
         continue;
       case TR_POP_TO:
-      case TR_ANNOTATE:
         continue;
       case TR_END:
         break;
