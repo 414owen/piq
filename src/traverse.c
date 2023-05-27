@@ -25,7 +25,7 @@ typedef enum {
   // - [x] traverse types/expressions on the way out
   // - [ ] push scope
   // - [ ] pop scope
-  // - [ ] link signatures
+  // - [ ] annotate
   // - [ ] block operations
   TRAVERSE_PRINT_TREE = 0,
 
@@ -35,7 +35,7 @@ typedef enum {
   // - [ ] traverse types/expressions on the way out
   // - [x] push scope
   // - [x] pop scope
-  // - [ ] link signatures
+  // - [ ] annotate
   // - [ ] block operations
   TRAVERSE_RESOLVE_BINDINGS = 1,
 
@@ -45,7 +45,7 @@ typedef enum {
   // - [ ] traverse types/expressions on the way out
   // - [x] push scope
   // - [x] pop scope
-  // - [x] link signatures
+  // - [x] annotate
   // - [ ] block operations
   TRAVERSE_TYPECHECK = 2,
 
@@ -55,7 +55,7 @@ typedef enum {
   // - [x] traverse types/expressions on the way out
   // - [x] push scope
   // - [x] pop scope
-  // - [ ] link signatures
+  // - [ ] annotate
   // - [x] block operations
   TRAVERSE_CODEGEN = 3,
 
