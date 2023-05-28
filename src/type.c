@@ -156,7 +156,7 @@ void print_type(FILE *f, type *types, node_ind_t *inds, node_ind_t root) {
             push_str(&stack, "]");
             break;
           default:
-            assert(type_reprs[node.tag.check] == SUBS_ONE);
+            assert(type_reprs[node.tag.check] == SUBS_NONE);
             print_type_head(f, node.tag.check);
             break;
         }
