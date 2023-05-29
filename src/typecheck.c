@@ -748,7 +748,10 @@ static void check_ambiguities(node_ind_t parse_node_amt, type_builder *builder,
   type_ref *node_type_inds = VEC_DATA_PTR(&builder->data.node_types);
   node_ind_t *substitutions = VEC_DATA_PTR(&builder->data.substitutions);
   for (node_ind_t node_ind = 0; node_ind < parse_node_amt; node_ind++) {
+
+    // root type index for this parse node
     type_ref root_ind = node_type_inds[node_ind];
+
     vec_type_ref stack = VEC_NEW;
     VEC_PUSH(&stack, root_ind);
     while (stack.len > 0) {
@@ -758,6 +761,15 @@ static void check_ambiguities(node_ind_t parse_node_amt, type_builder *builder,
         continue;
       }
       type t = types[type_ind];
+      if (t.tag.check == TC_OR) {
+        tc_error err = {
+          .type = TC_ERR_AMBIGUOUS,
+          .pos = node_ind,
+          // TODO do we need this?
+          .data.ambiguous.index = type_ind,
+        };
+        VEC_PUSH(errors, err);
+      }
       if (t.tag.check == TC_VAR) {
         node_ind_t target = substitutions[t.data.type_var];
         if (t.data.type_var < parse_node_amt && target != root_ind) {
