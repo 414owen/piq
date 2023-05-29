@@ -12,26 +12,32 @@
 #include "hashmap.h"
 #include "vec.h"
 
+// X(tag, tree_repr, llvm_string)
+#define DECL_TYPES \
+  X(BOOL,     SUBS_NONE,  "u1",    "Bool") \
+  X(CALL,      SUBS_TWO,  NULL,    "Call") \
+  X(FN,   SUBS_EXTERNAL,  NULL,      "Fn") \
+  X(I16,      SUBS_NONE, "i16",     "I16") \
+  X(I32,      SUBS_NONE, "i32",     "I32") \
+  X(I64,      SUBS_NONE, "i64",     "I64") \
+  X(I8,       SUBS_NONE, "i32",      "I8") \
+  X(LIST,      SUBS_ONE,  NULL,    "List") \
+  X(OR,   SUBS_EXTERNAL,  NULL,      "OR") \
+  X(TUP,       SUBS_TWO,  NULL,   "Tuple") \
+  X(U16,      SUBS_NONE, "u16",     "U16") \
+  X(U32,      SUBS_NONE, "u32",     "U32") \
+  X(U64,      SUBS_NONE, "u64",     "U64") \
+  X(U8,       SUBS_NONE,  "u8",      "U8") \
+  X(UNIT,     SUBS_NONE,  NULL,      "()") \
+  X(VAR,      SUBS_NONE,  NULL, "Typevar")
+
 // This is sorted in an order that makes it easy to
 // check constraints
 // see constraint_ord in typecheck.c
 typedef enum {
-  TC_VAR,
-  TC_OR,
-  TC_UNIT,
-  TC_I8,
-  TC_U8,
-  TC_I16,
-  TC_U16,
-  TC_I32,
-  TC_U32,
-  TC_I64,
-  TC_U64,
-  TC_FN,
-  TC_BOOL,
-  TC_TUP,
-  TC_LIST,
-  TC_CALL,
+#define X(name, ...) TC_ ## name,
+  DECL_TYPES
+#undef X
 } type_check_tag;
 
 typedef enum {

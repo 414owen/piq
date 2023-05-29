@@ -42,27 +42,9 @@ static void push_str(vec_print_action *stack, char *str) {
 }
 
 static const tree_node_repr type_repr_arr[] = {
-  [TC_VAR] = SUBS_NONE,
-  [TC_UNIT] = SUBS_NONE,
-  [TC_I8] = SUBS_NONE,
-  [TC_U8] = SUBS_NONE,
-  [TC_I16] = SUBS_NONE,
-  [TC_U16] = SUBS_NONE,
-  [TC_I32] = SUBS_NONE,
-  [TC_U32] = SUBS_NONE,
-  [TC_I64] = SUBS_NONE,
-  [TC_U64] = SUBS_NONE,
-  [TC_BOOL] = SUBS_NONE,
-
-  [TC_LIST] = SUBS_ONE,
-
-  // TODO shouldn't this be exernal
-  [TC_CALL] = SUBS_TWO,
-  [TC_TUP] = SUBS_TWO,
-
-  [TC_OR] = SUBS_EXTERNAL,
-  [TC_FN] = SUBS_EXTERNAL,
-
+#define X(_, repr, ...) repr,
+  DECL_TYPES
+#undef X
 };
 
 const tree_node_repr *const restrict type_reprs = type_repr_arr;
@@ -74,22 +56,9 @@ bool inline_types_eq(type a, type b) {
 }
 
 static char *type_head_strs[] = {
-  [TC_OR] = "OR",
-  [TC_UNIT] = "()",
-  [TC_I8] = "I8",
-  [TC_U8] = "U8",
-  [TC_I16] = "I16",
-  [TC_U16] = "U16",
-  [TC_I32] = "I32",
-  [TC_U32] = "U32",
-  [TC_I64] = "I64",
-  [TC_U64] = "U64",
-  [TC_VAR] = "TypeVar",
-  [TC_BOOL] = "Bool",
-  [TC_FN] = "Fn",
-  [TC_TUP] = "Tuple",
-  [TC_LIST] = "List",
-  [TC_CALL] = "Call",
+#define X(name, repr, llvm_name, str) str,
+  DECL_TYPES
+#undef X
 };
 
 static void print_type_head(FILE *f, type_check_tag head) {
