@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <editline.h>
+#include <editline/readline.h>
 
 #include "diagnostic.h"
 #include "llvm.h"

@@ -75,7 +75,7 @@
             cmake
             re2c
             lemon
-            editline
+            libedit
           ];
 
           cmakeFlags = if installTests then [

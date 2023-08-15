@@ -242,7 +242,7 @@ else()
     message(STATUS "IPO / LTO not supported: <${IPOError}>")
 endif()
 
-target_link_libraries(piq PRIVATE editline)
+target_link_libraries(piq PRIVATE edit)
 
 foreach(exe piq)
   set_property(TARGET ${exe} PROPERTY C_STANDARD 99)
