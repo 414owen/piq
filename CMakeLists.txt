@@ -9,6 +9,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 enable_testing()
 
+if (DEFINED CI)
+  add_definitions(-DBUILD_FOR_CI)
+endif()
+
 if (MSVC)
     # warning level 4
     add_compile_options(/W4)

@@ -33,7 +33,7 @@ static void run_tests(test_state *state) {
   test_semantics(state);
   // CI is currently throwing std::bad_allow when
   // jitting...
-#ifndef CI
+#ifndef BUILD_FOR_CI
   test_llvm(state);
 #endif
 }
