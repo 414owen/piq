@@ -1,6 +1,6 @@
 # piq
 
-![ci](https://github.com/414owen/piq/actions/workflows/tests.yml/badge.svg)
+[![Tests](https://github.com/414owen/piq/actions/workflows/tests.yml/badge.svg)](https://github.com/414owen/piq/actions/workflows/tests.yml)
 
 <img alt="logo" src="https://user-images.githubusercontent.com/1714287/230741705-009d4511-9423-426f-b31b-f7254fc38884.svg" height="100">
 
