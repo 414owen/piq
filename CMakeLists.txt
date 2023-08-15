@@ -68,7 +68,7 @@ set (COMMON_OBJS
   src/hashers.c
   src/global_settings.c
   src/log.c
-  src/llvm_text.c
+  # src/llvm_text.c
   src/externalise_spans.c
   src/reorder_tree.c
 )
