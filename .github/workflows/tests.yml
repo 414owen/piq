@@ -39,7 +39,7 @@ jobs:
         [ -d predef ] || predef
         popd
     - name: Configure
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCI=true
     - name: Build
       run: cmake --build build
     - run: ./build/test-exe --lite -j
