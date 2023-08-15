@@ -11,9 +11,7 @@ typedef struct {
   vec_string toplevels;
 } llvm_text_state;
 
-static void print_type_llvm_text(FILE *out, type_info types, type_ref root) {
-  
-}
+static void print_type_llvm_text(FILE *out, type_info types, type_ref root) {}
 
 static void gen_letrec_llvm_text(FILE *out, type_info types, type_ref root) {
   for (node_ind_t di = 0; di < tree.root_subs_amt; di++) {
@@ -61,7 +59,7 @@ static llvm_text_types gen_types_llvm_text(FILE *out, type_info types) {
     switch (t.tag.normal) {
       case T_I16:
         break;
-      // TODO
+        // TODO
     }
   }
 
@@ -84,5 +82,5 @@ static llvm_text_types gen_types_llvm_text(FILE *out, type_info types) {
   }
 }
 
-void codegen_llvm_module_text(const char *mod_name, parse_tree tree, type_info types, FILE *out) {
-}
+void codegen_llvm_module_text(const char *mod_name, parse_tree tree,
+                              type_info types, FILE *out) {}
