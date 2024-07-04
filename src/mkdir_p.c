@@ -10,7 +10,6 @@
 
 #include "mkdir.h"
 #include "consts.h"
-#include "dir_exists.h"
 #include "util.h"
 
 NON_NULL_PARAMS

@@ -46,7 +46,6 @@ set (COMMON_OBJS
   src/bitset.c
   src/consts.c
   src/diagnostic.c
-  src/dir_exists.c
   src/mkdir_p.c
   src/parser.c
   src/parse_tree.c
