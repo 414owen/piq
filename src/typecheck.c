@@ -730,7 +730,7 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
   return state.errors;
 }
 
-void print_tyvar_parse_node(parse_tree tree, type *types, type_ref ref) {
+static void print_tyvar_parse_node(parse_tree tree, type *types, type_ref ref) {
   type t = types[ref];
   if (t.tag.check != TC_VAR || t.data.type_var >= tree.node_amt) {
     return;
