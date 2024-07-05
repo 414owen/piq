@@ -17,7 +17,6 @@ jobs:
   Checks:
     runs-on: ubuntu-latest
     steps:
-    - uses: webiny/action-conventional-commits@v1.1.0
     - uses: actions/checkout@v2
     - run: ./scripts/checks/formatting.sh
     - run: ./scripts/checks/headers-have-pragmas.sh
