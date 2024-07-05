@@ -33,7 +33,7 @@ jobs:
         pushd /usr/include
         [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -O ./hedley.h
         predef() {
-          sudo svn checkout https://github.com/natefoo/predef/trunk/predef
+          sudo svn checkout https://github.com/natefoo/predef/master/predef
         }
         [ -d predef ] || predef
         popd
