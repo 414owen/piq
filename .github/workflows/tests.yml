@@ -3,8 +3,6 @@ name: Tests
 on:
   pull_request:
   push:
-    branches:
-      - master
 
 defaults:
   run:
@@ -33,7 +31,18 @@ jobs:
         pushd /usr/include
         [ -f hedley.h ] || sudo wget https://raw.githubusercontent.com/nemequ/hedley/master/hedley.h -O ./hedley.h
         predef() {
-          sudo svn checkout https://github.com/natefoo/predef/master/predef
+          pushd /tmp
+          echo "Cloning predef"
+          git clone -n --depth=1 --filter=tree:0 https://github.com/natefoo/predef.git predef_tmp
+          pushd predef_tmp
+          echo "Sparse checking out predef"
+          git sparse-checkout set --no-cone predef
+          git checkout
+          ls -lah
+          popd
+          sudo mv predef_tmp/predef /usr/include/predef
+          rm -r predef_tmp
+          popd
         }
         [ -d predef ] || predef
         popd
