@@ -42,7 +42,7 @@
 
   #define timespec_add(a, b) (a + b)
 
-  #define timespec_subtract difftime
+  #define timespec_subtract(a, b) (a - b)
 #endif
 
 uint64_t timespec_to_nanoseconds(timespec);

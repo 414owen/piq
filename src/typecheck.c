@@ -730,6 +730,7 @@ static vec_tc_error solve_constraints(tc_constraints_res p_constraints,
   return state.errors;
 }
 
+#ifdef DEBUG_TC
 static void print_tyvar_parse_node(parse_tree tree, type *types, type_ref ref) {
   type t = types[ref];
   if (t.tag.check != TC_VAR || t.data.type_var >= tree.node_amt) {
@@ -739,6 +740,7 @@ static void print_tyvar_parse_node(parse_tree tree, type *types, type_ref ref) {
   puts(parse_node_strings[tree.nodes[t.data.type_var].type.all]);
   putc('\n', stdout);
 }
+#endif
 
 static void check_ambiguities(node_ind_t parse_node_amt, type_builder *builder,
                               vec_tc_error *errors) {

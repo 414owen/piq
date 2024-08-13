@@ -199,6 +199,7 @@ static u32 ahm_lookup_internal(a_hashmap *hm, const void *key, const hasher hsh,
       // mod
       i &= mask;
     }
+    // TODO does this work with wraparound?
     first_empty = MIN(first_empty, i);
     if (bs_get(hm->tombstoned, i)) {
       i++;

@@ -25,13 +25,16 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_compile_options(-O0 -Wno-error=cpp)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-
+if (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   if (CMAKE_BUILD_TYPE STREQUAL "Release")
     add_compile_options(-s -fomit-frame-pointer)
   endif()
   add_compile_options(-ffunction-sections -fdata-sections)
-  add_link_options(-Wl,--gc-sections)
+  if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+    add_link_options(-Wl,-dead_strip)
+  else()
+    add_link_options(-Wl,--gc-sections)
+  endif()
 
 endif()
 
@@ -47,6 +50,7 @@ set (COMMON_OBJS
   src/consts.c
   src/diagnostic.c
   src/mkdir_p.c
+  src/dir_exists.c
   src/parser.c
   src/parse_tree.c
   src/builtins.c

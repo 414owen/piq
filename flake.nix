@@ -83,7 +83,7 @@
           ] else [];
 
           buildInputs = with pkgs; [
-            llvmPackages_14.libllvm
+            llvmPackages.libllvm
             hedley
             predef
           ];

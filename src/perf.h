@@ -9,13 +9,14 @@
 #include <predef/predef/os.h>
 
 #include "util.h"
+#include "timing.h"
 
 #ifdef PREDEF_OS_LINUX
 # include "platform/linux/perf.h"
 #else
 
 typedef struct {
-  timespec time_taken;
+  timespec start_time;
 } perf_state;
 
 #endif

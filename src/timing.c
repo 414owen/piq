@@ -12,11 +12,11 @@
 
 #ifdef PREDEF_OS_WINDOWS
 #include "platform/windows/timing.c"
-#elif defined(PREDEF_STANDARD_POSIX_2001)
+#else
 #include "platform/posix/timing.c"
 #endif
 
 difftime_t time_since_monotonic(const timespec start) {
-  timespec end = get_monotonic_time();
+  const timespec end = get_monotonic_time();
   return timespec_subtract(end, start);
 }

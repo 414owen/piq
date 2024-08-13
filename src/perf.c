@@ -19,11 +19,17 @@ perf_state perf_start(void) {
 
 perf_values perf_add(perf_values a, perf_values b) {
   perf_values res = {
-    .time_taken = timespec_add(a, b),
+    .time_taken = timespec_add(a.time_taken, b.time_taken),
   };
   return res;
 }
 
-perf_values perf_zero = {.time_taken = {0}};
+perf_values perf_zero = {.time_taken = 0};
+
+perf_values perf_end(perf_state state) {
+  perf_values res;
+  res.time_taken = time_since_monotonic(state.start_time);
+  return res;
+}
 
 #endif

@@ -120,7 +120,7 @@ static void test_llvm_code_runs(test_state *state, const char *restrict input) {
   test_upto_codegen_with(state, input, &test, 1);
 }
 
-static void init() {
+static void init(void) {
   LLVMInitializeCore(LLVMGetGlobalPassRegistry());
   LLVMInitializeNativeTarget();
   LLVMInitializeNativeAsmPrinter();

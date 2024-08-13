@@ -454,7 +454,7 @@ void *__malloc_fill(size_t num, size_t elemsize, void *elem) {
 
 #ifdef PREDEF_OS_WINDOWS
 #include "platform/windows/rm_r.c"
-#elif defined(PREDEF_STANDARD_POSIX_2001)
+#else
 #include "platform/posix/rm_r.c"
 #endif
 

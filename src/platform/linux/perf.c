@@ -150,4 +150,8 @@ perf_values perf_zero = {
   .hw_cache_misses = 0,
 };
 
+#else
+
+extern int errno;
+
 #endif

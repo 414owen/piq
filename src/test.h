@@ -9,6 +9,7 @@
 #include <time.h>
 
 #include "defs.h"
+#include "timing.h"
 #include "token.h"
 #include "vec.h"
 
